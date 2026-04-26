@@ -1,0 +1,848 @@
+/* Ensure full height propagates from Ionic */
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ═══════════════════════════════════════════════
+   MUTASHABIHAT TEST  –  matches QuizTest visual style
+   ═══════════════════════════════════════════════ */
+
+/* ── Outer centering wrapper ─────────────────── */
+.mst-test-page-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-dark-page);
+  color: var(--color-text-primary);
+  display: flex;
+  justify-content: center;
+  padding-bottom: 72px;
+  box-sizing: border-box;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+/* ── Layout — vertical stack ─────────────────── */
+.mst-container {
+  width: 100%;
+  max-width: 600px;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 4px;
+}
+.mst-container.with-sidebar { gap: 4px; }
+
+/* ── Sidebar (viewer) — top 75% ─────────────── */
+.mst-sidebar-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 2;
+  order: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #faf7f0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,.25);
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Sibling navigator inside sidebar */
+.mst-sibling-nav {
+  background: #fff9e6;
+  border-bottom: 2px solid #d4b48c;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.mst-sibling-title {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  direction: rtl;
+}
+
+.mst-sibling-count {
+  background: #8b4513;
+  color: white;
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+}
+
+.mst-sibling-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.mst-sibling-tab {
+  padding: 4px 10px;
+  border: 2px solid #d4b48c;
+  border-radius: 20px;
+  background: white;
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all .2s;
+  direction: rtl;
+}
+.mst-sibling-tab.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #d4b48c;
+}
+
+.mst-sibling-verse {
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d4b48c;
+}
+.mst-sibling-verse-text {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 1rem;
+  direction: rtl;
+  color: #2c3e50;
+  line-height: 1.8;
+  margin: 0 0 4px;
+}
+.mst-sibling-meta {
+  font-size: 0.75rem;
+  color: #8b7355;
+  font-family: "Traditional Arabic","Amiri",serif;
+  direction: rtl;
+  margin: 0;
+}
+
+.mst-page-viewer { flex: 1; min-height: 0; overflow: hidden; }
+
+/* ── Main quiz panel — bottom 25% ──────────── */
+.mst-main {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  order: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* When the context viewer is open, guarantee the main panel keeps enough
+   vertical space for the header + 4 stacked action buttons + input.
+   Otherwise the actions column (Hint/Context/Submit/Skip) gets clipped
+   by the card's overflow:hidden. */
+.mst-container.with-sidebar .mst-main {
+  flex: 0 0 auto;
+  min-height: 320px;
+}
+.mst-container.with-sidebar .mst-sidebar-wrapper {
+  flex: 1 1 auto;
+}
+
+/* ── Header ─────────────────────────────────── */
+.mst-header {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fbf7f0;
+  border-radius: 10px;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid #d4b48c;
+  flex-shrink: 0;
+  min-height: 40px;
+}
+.mst-progress { flex: 2; margin-right: 10px; }
+.mst-progress-text {
+  display: block;
+  margin-bottom: 3px;
+  color: #2c3e50;
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.9rem;
+}
+.mst-bar {
+  height: 5px;
+  background: #e0d5b5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mst-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b4513, #d4b48c);
+  transition: width .35s ease;
+}
+
+.mst-score-pill {
+  flex: 1;
+  text-align: center;
+  font-size: 1.1rem;
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.mst-exit-btn {
+  background: none;
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+  padding: 10px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all .25s;
+  white-space: nowrap;
+  min-height: 44px;
+}
+.mst-exit-btn:hover { background: #e74c3c; color: white; }
+
+/* ── Card ───────────────────────────────────── */
+.mst-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fbf7f0;
+  border-radius: 12px;
+  padding: 5px 10px;
+  border: 2px solid #d4b48c;
+  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Card body: buttons column on the left, content on the right */
+.mst-card-body {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+  direction: ltr; /* actions on physical left */
+}
+
+/* Left column: action buttons stacked vertically */
+.mst-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 58px;
+  justify-content: flex-start;
+}
+
+/* Right: verse box + input + result */
+.mst-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  direction: rtl;
+}
+.mst-card-main::-webkit-scrollbar { display: none; }
+
+/* ── Info strip ─────────────────────────────── */
+.mst-info-strip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 4px 8px;
+  background: linear-gradient(to bottom, #e8dccc, #dac09a);
+  border-radius: 20px;
+  margin-bottom: 3px;
+  direction: rtl;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-height: 0;
+}
+.mst-info-strip::-webkit-scrollbar { display: none; }
+
+/* Top row — kept for compat, just inline flex now */
+.mst-info-top-row {
+  display: contents; /* children render directly inside mst-info-strip */
+}
+
+.mst-surah-badge {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.88rem;
+  font-weight: bold;
+  color: #2c3e50;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mst-meta {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.75rem;
+  color: #8b4513;
+  background: rgba(255,255,255,.3);
+  padding: 1px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mst-similar-badge {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.75rem;
+  background: #8b4513;
+  color: #fff9e6;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Inline chips row (inside info-strip) ─── */
+.mst-inline-chips {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  overflow-x: visible;
+  direction: rtl;
+  flex-shrink: 0;
+}
+
+.mst-inline-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1.5px solid #d4b48c;
+  background: rgba(255,255,255,0.75);
+  cursor: pointer;
+  transition: all .18s;
+  direction: rtl;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.mst-inline-chip:hover {
+  border-color: #8b4513;
+  background: white;
+}
+.mst-inline-chip.active.target {
+  background: rgba(255,215,0,0.22);
+  border-color: #d4b48c;
+  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+}
+.mst-inline-chip.active.sibling {
+  background: rgba(74,144,226,0.12);
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+}
+.mst-inline-chip.sibling {
+  border-color: rgba(74,144,226,0.5);
+}
+
+/* ── Verse box ──────────────────────────────── */
+.mst-verse-box {
+  background: #fff9e6;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  padding: 5px 8px;
+  text-align: center;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.mst-verse-shared {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  line-height: 1.7;
+  color: #2c3e50;
+  direction: rtl;
+  margin: 0;
+}
+
+.mst-hint-inline {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: #b8860b;
+  font-weight: 600;
+  border-bottom: 2px dashed #b8860b;
+}
+
+.mst-prompt {
+  color: #8b7355;
+  font-size: 0.8rem;
+  font-style: italic;
+  border-top: 1px dotted #d4b48c;
+  padding-top: 4px;
+  margin: 4px 0 0;
+}
+
+/* ── Siblings teaser ────────────────────────── */
+.mst-siblings-teaser {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #fff3cd;
+  border: 1.5px solid #f39c12;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.82rem;
+  color: #856404;
+  direction: rtl;
+  flex-shrink: 0;
+}
+.mst-tease-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+/* ── Input ──────────────────────────────────── */
+.mst-answer-row { margin-bottom: 4px; flex-shrink: 0; }
+
+.mst-input {
+  width: 100%;
+  padding: 12px 12px;
+  font-size: 1rem;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  font-family: "Traditional Arabic","Amiri",serif;
+  direction: rtl;
+  transition: all .3s;
+  background: white;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+.mst-input:focus {
+  border-color: #2c3e50;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(44,62,80,.1);
+}
+.mst-input.answered {
+  background: #f5f0e8;
+  color: #888;
+  cursor: default;
+}
+
+/* ── Action buttons ─────────────────────────── */
+/* mst-actions now defined in mst-card-body section */
+
+.mst-btn {
+  flex: 0 0 auto;
+  padding: 10px 2px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-family: "Traditional Arabic","Amiri",serif;
+  cursor: pointer;
+  transition: all .25s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+}
+.mst-btn-en { font-size: 0.58rem; opacity: .75; }
+.mst-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.mst-hint    { background: #ffd700; color: #856404; }
+.mst-hint:hover:not(:disabled)    { background: #ffed4a; transform: scale(1.02); }
+
+.mst-context { background: #4a90e2; color: white; }
+.mst-context.active { background: #2c6fad; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
+.mst-context:hover:not(:disabled) { background: #5fa3f0; transform: scale(1.02); }
+
+.mst-submit  { background: linear-gradient(135deg,#34495e,#2c3e50); color: white; }
+.mst-submit:hover:not(:disabled)  { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
+
+.mst-skip    { background: #95a5a6; color: white; }
+.mst-skip:hover:not(:disabled)    { background: #7f8c8d; transform: scale(1.02); }
+
+/* ── Result box ─────────────────────────────── */
+.mst-result {
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  animation: mstSlide .3s ease;
+  flex-shrink: 0;
+}
+.mst-result.correct  { background: #d4edda; border: 2px solid #27ae60; }
+.mst-result.wrong    { background: #f8d7da; border: 2px solid #e74c3c; }
+.mst-result.skipped  { background: #e8f4fd; border: 2px solid #95a5a6; }
+
+.mst-result-icon { font-size: 1rem; }
+.mst-result-text {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: #2c3e50;
+  direction: rtl;
+}
+
+.mst-correct-answer { text-align: center; direction: rtl; margin-top: 4px; }
+.mst-correct-label  { font-size: 0.85rem; color: #666; font-family: "Traditional Arabic","Amiri",serif; }
+.mst-correct-text   { font-size: 1rem; color: #2c3e50; font-family: "Traditional Arabic","Amiri",serif; font-weight: bold; direction: rtl; }
+
+/* Sibling reveal section after answering */
+.mst-siblings-reveal {
+  width: 100%;
+  margin-top: 10px;
+  direction: rtl;
+}
+.mst-siblings-reveal-title {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.85rem;
+  color: #2c3e50;
+  font-weight: bold;
+  margin: 0 0 6px;
+}
+.mst-sibling-item {
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border: 1px solid #d4b48c;
+}
+.mst-sibling-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.mst-sibling-surah {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #8b4513;
+}
+.mst-sibling-ref {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.8rem;
+  color: #8b7355;
+}
+.mst-sibling-text {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 1rem;
+  color: #2c3e50;
+  line-height: 1.7;
+  margin: 0;
+  direction: rtl;
+}
+
+/* ── Next button ────────────────────────────── */
+.mst-next-btn {
+  width: 100%;
+  padding: 12px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: "Traditional Arabic","Amiri",serif;
+  cursor: pointer;
+  transition: all .3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  min-height: 44px;
+}
+.mst-next-btn:hover { background: #2ecc71; transform: scale(1.02); }
+
+/* ── Loading / Error / Complete ─────────────── */
+.mst-loading,
+.mst-error,
+.mst-complete {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+}
+
+.mst-spinner {
+  border: 5px solid rgba(255,255,255,.3);
+  border-top: 5px solid #d4b48c;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: mstSpin 1s linear infinite;
+  margin-bottom: 15px;
+}
+@keyframes mstSpin { to { transform: rotate(360deg); } }
+
+.mst-error-box {
+  background: #fbf7f0;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  border: 3px solid #e74c3c;
+  color: #2c3e50;
+  white-space: pre-line;
+}
+.mst-error-box p { margin: 0 0 16px; font-family: "Traditional Arabic","Amiri",serif; }
+.mst-error-box button {
+  padding: 10px 24px;
+  background: linear-gradient(135deg,#34495e,#2c3e50);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Complete screen */
+.mst-complete-card {
+  background: #fbf7f0;
+  border-radius: 20px;
+  padding: 30px 35px;
+  text-align: center;
+  max-width: 380px;
+  border: 3px solid #d4b48c;
+  color: #2c3e50;
+}
+.mst-complete-badge { font-size: 3rem; margin-bottom: 8px; }
+.mst-complete-card h2 {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 1.7rem;
+  margin: 0 0 4px;
+}
+.mst-complete-sub { color: #8b7355; font-size: 0.85rem; margin: 0 0 18px; font-style: italic; }
+
+.mst-score-ring {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.mst-score-num   { font-size: 3rem; font-weight: bold; color: #2c3e50; }
+.mst-score-sep   { font-size: 2rem; color: #8b7355; }
+.mst-score-total { font-size: 1.8rem; color: #8b7355; }
+.mst-score-pct   { font-size: 1.3rem; color: #2c3e50; margin: 0 0 20px; }
+
+.mst-complete-actions { display: flex; gap: 10px; justify-content: center; }
+.mst-complete-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-family: "Traditional Arabic","Amiri",serif;
+  cursor: pointer;
+  transition: all .25s;
+}
+.mst-complete-actions button:first-child { background: linear-gradient(135deg,#34495e,#2c3e50); color: white; }
+.mst-complete-actions button:last-child  { background: #e0d5b5; color: #2c3e50; }
+.mst-complete-actions button:hover { transform: scale(1.05); }
+
+/* ── Animations ─────────────────────────────── */
+@keyframes mstSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ── Verse selector toolbar ─────────────────── */
+.mst-verse-toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  padding: 6px 8px;
+  background: #fff9e6;
+  border-bottom: 2px solid #d4b48c;
+  overflow-x: auto;
+  flex-shrink: 0;
+  direction: rtl;
+  scrollbar-width: none;
+}
+.mst-verse-toolbar::-webkit-scrollbar { display: none; }
+
+.mst-verse-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  border: 2px solid #d4b48c;
+  background: white;
+  cursor: pointer;
+  transition: all .2s;
+  direction: rtl;
+  min-width: 90px;
+  max-width: 130px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.mst-verse-chip:hover { border-color: #8b4513; }
+.mst-verse-chip.active.target {
+  background: rgba(255,215,0,0.18);
+  border-color: #d4b48c;
+  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+}
+.mst-verse-chip.active.sibling {
+  background: rgba(74,144,226,0.1);
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+}
+.mst-verse-chip.sibling { border-color: rgba(74,144,226,0.4); }
+
+.mst-chip-surah {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: #2c3e50;
+  white-space: nowrap;
+}
+.mst-chip-meta {
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.68rem;
+  color: #8b4513;
+  white-space: nowrap;
+}
+/* Preview text hidden — chips are pill-shaped now */
+.mst-chip-preview { display: none; }
+
+/* ── Open context hint button (after answering) ─ */
+.mst-open-context-hint {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(74,144,226,0.1);
+  border: 1.5px solid #4a90e2;
+  border-radius: 8px;
+  color: #2c6fad;
+  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  direction: rtl;
+  transition: all .2s;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.mst-open-context-hint:hover { background: rgba(74,144,226,0.18); }
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 768px) {
+  .mst-sidebar-wrapper { flex: 3; }
+  .mst-main { flex: 1; }
+  .mst-actions { flex-direction: column; }
+  .mst-verse-shared { font-size: 1.2rem; line-height: 1.9rem; }
+  .mst-header { flex-wrap: wrap; height: auto; }
+  .mst-juz-grid { grid-template-columns: repeat(5,1fr); }
+
+  /* Keep the action column visible when context is open on small screens */
+  .mst-container.with-sidebar .mst-main {
+    flex: 0 0 auto;
+    min-height: 320px;
+  }
+  .mst-container.with-sidebar .mst-sidebar-wrapper {
+    flex: 1 1 auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   NIGHT-MODE OVERRIDES
+   ═══════════════════════════════════════════════ */
+[data-theme="night"] .mst-card,
+[data-theme="night"] .mst-complete-card,
+[data-theme="night"] .mst-error-box {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  box-shadow: var(--shadow-card-lift);
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .mst-info-strip,
+[data-theme="night"] .mst-verse-box {
+  background: rgba(212, 180, 140, 0.08);
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .mst-meta,
+[data-theme="night"] .mst-surah-badge {
+  color: var(--color-gold);
+}
+[data-theme="night"] .mst-inline-chip {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  border-color: var(--color-input-border);
+}
+[data-theme="night"] .mst-input {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  border-color: var(--color-input-border);
+}
+[data-theme="night"] .mst-input::placeholder {
+  color: var(--color-text-muted);
+}
+[data-theme="night"] .mst-correct-text,
+[data-theme="night"] .mst-prompt {
+  color: var(--color-gold);
+}
+[data-theme="night"] .mst-correct-label,
+[data-theme="night"] .mst-progress-text,
+[data-theme="night"] .mst-complete-sub,
+[data-theme="night"] .mst-score-pct {
+  color: var(--color-text-muted);
+}
+[data-theme="night"] .mst-score-pill {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-input-border);
+}
+[data-theme="night"] .mst-bar {
+  background: var(--color-progress-track);
+}
+[data-theme="night"] .mst-result.correct { background: rgba(76, 175, 125, 0.15); color: #6cd699; }
+[data-theme="night"] .mst-result.wrong   { background: rgba(231, 76, 60, 0.15);  color: #f37b6f; }
+[data-theme="night"] .mst-result.skipped { background: rgba(241, 196, 15, 0.12); color: #f0d068; }
+[data-theme="night"] .mst-complete-actions button {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-input-border);
+}
+[data-theme="night"] .mst-loading,
+[data-theme="night"] .mst-error,
+[data-theme="night"] .mst-complete {
+  color: var(--color-text-primary);
+}

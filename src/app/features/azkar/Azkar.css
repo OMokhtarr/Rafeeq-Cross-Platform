@@ -1,0 +1,547 @@
+/* Ensure full height propagates from Ionic */
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AZKAR  —  merged from Electron app + new app design system
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Outer centering wrapper ──────────────────────────────── */
+.azkar-page-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+
+/* In day mode keep the warm parchment gradient as a subtle nod to the
+   original design — only night mode gets pure flat dark. */
+[data-theme="day"] .azkar-page-wrapper {
+  background: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
+}
+
+/* ── Container ────────────────────────────────────────────── */
+
+.azkar-container {
+  height: 100%;
+  overflow-y: auto;
+  /* Bottom padding leaves room for the fixed BottomNavBar (~72px) */
+  padding: 0 0 calc(3rem + 72px);
+  font-family: "Scheherazade New", "Amiri", serif;
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Scrollbar */
+.azkar-container::-webkit-scrollbar { width: 8px; }
+.azkar-container::-webkit-scrollbar-track { background: #f0ead6; border-radius: 4px; }
+.azkar-container::-webkit-scrollbar-thumb {
+  background: #d4b48c;
+  border-radius: 4px;
+  border: 2px solid #f0ead6;
+}
+.azkar-container::-webkit-scrollbar-thumb:hover { background: #b8936a; }
+
+/* ── Home Header ──────────────────────────────────────────── */
+
+.azkar-home-header {
+  text-align: center;
+  padding: 2.5rem 1rem 1.5rem;
+  background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%);
+  border-bottom: 3px solid #d4b48c;
+}
+
+.azkar-home-header h1 {
+  font-size: 2.8rem;
+  color: #d4b48c;
+  margin-bottom: 0.4rem;
+}
+
+.azkar-home-header p {
+  font-size: 0.95rem;
+  color: #c8d6e5;
+  opacity: 0.85;
+  font-family: "Georgia", serif;
+}
+
+/* ── Categories list ──────────────────────────────────────── */
+
+.azkar-categories {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Category card — Electron style */
+.azkar-cat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  background: white;
+  border: none;
+  border-right: 5px solid var(--cat-color, #1a6b3c);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-align: right;
+  width: 100%;
+}
+
+.azkar-cat-card:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.azkar-cat-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.2rem;
+  text-align: right;
+}
+
+.azkar-cat-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.azkar-cat-subtitle {
+  font-family: "Georgia", serif;
+  font-size: 0.8rem;
+  color: #8a7a6a;
+  letter-spacing: 0.4px;
+  margin: 0;
+}
+
+.azkar-cat-count {
+  font-size: 0.9rem;
+  color: var(--cat-color, #1a6b3c);
+  font-weight: 600;
+}
+
+.azkar-cat-arrow {
+  font-size: 1.4rem;
+  color: var(--cat-color, #1a6b3c);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.azkar-cat-card:hover .azkar-cat-arrow {
+  transform: translateX(-4px);
+}
+
+/* ── Detail sticky header ─────────────────────────────────── */
+
+.azkar-header {
+  background: linear-gradient(
+    135deg,
+    var(--cat-color, #1a6b3c) 0%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.azkar-back-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: "Scheherazade New", "Amiri", serif;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.azkar-back-btn:hover { background: rgba(255, 255, 255, 0.35); }
+
+.azkar-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex: 1;
+}
+
+.azkar-header-title h1 {
+  font-size: 1.6rem;
+  color: white;
+  margin: 0;
+}
+
+.azkar-header-title p {
+  font-family: "Georgia", serif;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+}
+
+.azkar-all-done {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  color: white;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* ── Azkar items list ─────────────────────────────────────── */
+
+.azkar-list {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Individual zikr item — Electron style */
+.azkar-item {
+  background: white;
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  border-right: 4px solid var(--cat-color, #1a6b3c);
+  transition: opacity 0.3s;
+}
+
+.azkar-item.completed {
+  opacity: 0.6;
+  background: #f5f9f5;
+}
+
+/* Item top row: number badge + source */
+.azkar-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.azkar-item-num {
+  width: 26px;
+  height: 26px;
+  background: var(--cat-color, #1a6b3c);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-family: "Georgia", serif;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.azkar-item-source {
+  font-family: "Georgia", serif;
+  font-size: 0.72rem;
+  color: #8a7a6a;
+  background: #f7f3ec;
+  padding: 0.2rem 0.7rem;
+  border-radius: 12px;
+}
+
+/* Optional note */
+.azkar-note {
+  background: #fef9ec;
+  border-right: 3px solid #f0c040;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #8b6914;
+  line-height: 1.6;
+}
+
+/* Main Arabic text */
+.azkar-item-text {
+  font-size: 1.35rem;
+  line-height: 2.1;
+  color: #1a2a3a;
+  text-align: right;
+  direction: rtl;
+  margin: 0 0 0.6rem;
+}
+
+/* Optional translation */
+.azkar-item-translation {
+  font-family: "Georgia", serif;
+  font-size: 0.85rem;
+  color: #5a6a7a;
+  line-height: 1.7;
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.8rem;
+  background: #f0f4f8;
+  border-radius: 8px;
+  border-right: 3px solid #a0b8cc;
+  text-align: right;
+  direction: rtl;
+}
+
+/* Progress bar */
+.azkar-progress-bar {
+  height: 5px;
+  background: #e8e0d0;
+  border-radius: 3px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.azkar-progress-fill {
+  height: 100%;
+  background: var(--cat-color, #1a6b3c);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+/* Footer row */
+.azkar-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.azkar-repeat-label {
+  font-size: 0.88rem;
+  color: #5a4a3a;
+  font-family: "Georgia", serif;
+}
+
+.azkar-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Count button */
+.azkar-count-btn {
+  background: var(--cat-color, #1a6b3c);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.4rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  font-family: "Scheherazade New", "Amiri", serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  transition: filter 0.15s, transform 0.1s;
+  min-height: 48px;
+  min-width: 88px;
+}
+.azkar-count-btn:active { transform: scale(0.95); }
+.azkar-count-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.azkar-count-btn.done {
+  background: color-mix(in srgb, var(--color-quran) 12%, transparent);
+  color: var(--color-quran);
+  border: 1.5px solid var(--color-quran);
+  cursor: default;
+  animation: azkar-complete-pulse 0.6s ease-out;
+}
+.azkar-count-btn:disabled { opacity: 0.7; }
+
+@keyframes azkar-complete-pulse {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(39,174,96,0.45); }
+  50%  { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(39,174,96,0); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(39,174,96,0); }
+}
+
+.azkar-count-inner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.count-number { font-size: 1.3rem; font-weight: 700; }
+.count-slash  { opacity: 0.6; font-size: 0.95rem; }
+.count-total  { font-size: 0.95rem; opacity: 0.85; }
+
+/* Reset button */
+.azkar-reset-btn {
+  background: none;
+  border: 1px solid #ccc;
+  color: #888;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: "Scheherazade New", "Amiri", serif;
+  font-size: 1.1rem;
+  transition: border-color 0.15s, color 0.15s;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.azkar-reset-btn:hover { border-color: #888; color: #555; }
+
+/* ── Footer nav ───────────────────────────────────────────── */
+
+.azkar-footer-nav {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.azkar-back-bottom {
+  background: #2c3e50;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: "Scheherazade New", "Amiri", serif;
+  font-size: 1.1rem;
+  transition: background 0.15s;
+}
+.azkar-back-bottom:hover { background: #3d5166; }
+
+/* ── Home footer ──────────────────────────────────────────── */
+
+.azkar-home-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.azkar-home-footer p {
+  font-size: 1.2rem;
+  color: #8a7a6a;
+  opacity: 0.7;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+
+@media (max-width: 500px) {
+  .azkar-item-text {
+    font-size: 1.2rem;
+    line-height: 2;
+  }
+
+  .azkar-home-header h1 {
+    font-size: 2.2rem;
+  }
+
+  .azkar-cat-card {
+    padding: 1rem;
+  }
+}
+
+/* ── Main home button ─────────────────────────────────────── */
+.azkar-main-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  background: rgba(212, 180, 140, 0.12);
+  border: 2px solid rgba(212, 180, 140, 0.45);
+  color: #b8956a;
+  padding: 10px 28px;
+  border-radius: 24px;
+  cursor: pointer;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1rem;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.azkar-main-home-btn:hover {
+  background: rgba(212, 180, 140, 0.22);
+  border-color: #d4b48c;
+  color: #d4b48c;
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NIGHT-MODE OVERRIDES
+   Re-color the cards and chrome that were defined with
+   light-mode hex values above. Layout is unchanged.
+   ═══════════════════════════════════════════════════════════ */
+[data-theme="night"] .azkar-item {
+  background: var(--color-bg-card);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .azkar-item.completed {
+  background: #0f1a0f;
+}
+[data-theme="night"] .azkar-item-text {
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .azkar-item-source {
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="night"] .azkar-note {
+  background: rgba(240, 192, 64, 0.10);
+  color: #e8c878;
+}
+[data-theme="night"] .azkar-item-translation {
+  color: #b8c8d8;
+  background: rgba(160, 184, 204, 0.08);
+  border-right-color: rgba(160, 184, 204, 0.45);
+}
+[data-theme="night"] .azkar-progress-bar {
+  background: var(--color-progress-track);
+}
+[data-theme="night"] .azkar-cat-card {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.40);
+}
+[data-theme="night"] .azkar-cat-title {
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .azkar-cat-subtitle,
+[data-theme="night"] .azkar-repeat-label {
+  color: var(--color-text-muted);
+}
+[data-theme="night"] .azkar-home-header h1 {
+  color: var(--color-gold);
+}
+[data-theme="night"] .azkar-home-header p {
+  color: var(--color-text-secondary);
+}
+[data-theme="night"] .azkar-home-footer p {
+  color: var(--color-text-muted);
+}
+[data-theme="night"] .azkar-back-bottom {
+  background: var(--color-bg-card-alt);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .azkar-back-bottom:hover {
+  background: var(--color-bg-card);
+}

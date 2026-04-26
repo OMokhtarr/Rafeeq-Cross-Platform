@@ -1,0 +1,325 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    "Traditional Arabic",
+    "Amiri",
+    "Scheherazade New",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--transition-theme),
+    color var(--transition-theme);
+}
+
+.App {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-nav {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  padding: 3px 20px;
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 2px solid #d4b48c;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.app-nav a {
+  color: white;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-home-link {
+  display: flex;
+  align-items: center;
+  color: #d4b48c;
+  font-size: 1rem;
+  gap: 0.8rem;
+  font-weight: 500;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  color: white;
+}
+
+.nav-text {
+  font-size: 1rem;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.routes-wrapper {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.routes-wrapper > * {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  text-align: center;
+  color: var(--color-text-primary);
+  margin-bottom: 2rem;
+  font-size: 2.2rem;
+}
+
+.page-viewer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.page-navigation button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.page-navigation button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.page-navigation input {
+  width: 80px;
+  padding: 8px;
+  font-size: 16px;
+  text-align: center;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.page-info {
+  text-align: center;
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.quran-page {
+  background-color: #fff9e6;
+  border: 1px solid #e0d5b5;
+  border-radius: 10px;
+  padding: 30px;
+  min-height: 600px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aya-container {
+  display: flex;
+  margin-bottom: 25px;
+  padding: 10px;
+  border-bottom: 1px solid #e0d5b5;
+}
+
+.aya-number {
+  min-width: 60px;
+  text-align: center;
+  margin-right: 20px;
+}
+
+.aya-badge {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background-color: #8b4513;
+  color: white;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 40px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.juz-badge {
+  display: block;
+  font-size: 12px;
+  color: #8b4513;
+  margin-top: 5px;
+}
+
+.aya-text {
+  flex: 1;
+}
+
+.aya-text-arabic {
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade", serif;
+  font-size: 24px;
+  line-height: 2;
+  direction: rtl;
+  text-align: right;
+  margin-bottom: 5px;
+}
+
+.aya-text-latin {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.aya-reference {
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  color: #666;
+}
+
+.page-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.arabic-text {
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  direction: rtl;
+  text-align: right;
+}
+
+.latin-text {
+  direction: ltr;
+  text-align: left;
+}
+
+/* ── Rafeeq Nav Brand ── */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+}
+.brand-ar {
+  font-family: "Scheherazade New", "Amiri", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #d4b48c;
+}
+.brand-sep {
+  color: rgba(212, 180, 140, 0.4);
+  font-size: 0.85rem;
+}
+.brand-en {
+  font-family: "Georgia", serif;
+  font-size: 0.75rem;
+  color: #c8d6e5;
+  letter-spacing: 1.5px;
+}
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Safe area insets for edge-to-edge display on Android 15+ */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+}
+
+/* Apply to main content areas */
+ion-content {
+  --padding-top: var(--safe-area-inset-top);
+  --padding-bottom: var(--safe-area-inset-bottom);
+  --padding-start: var(--safe-area-inset-left);
+  --padding-end: var(--safe-area-inset-right);
+}
+
+/* For fixed headers */
+ion-header {
+  padding-top: var(--safe-area-inset-top);
+}
+
+/* For fixed footers */
+ion-footer {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* For any content that needs safe area padding */
+.safe-area-padding {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}

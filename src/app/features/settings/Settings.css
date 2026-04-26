@@ -1,0 +1,348 @@
+/* Ensure full height propagates from Ionic */
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ═══════════════════════════════════════════════
+   SETTINGS PAGE
+   ═══════════════════════════════════════════════ */
+
+.settings-page-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+
+.settings-container {
+  width: 100%;
+  max-width: 600px;
+  /* Extra bottom padding for fixed BottomNavBar (~72px) */
+  padding: 0 0 calc(40px + 72px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ─────────────────────────────────── */
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.settings-back-btn {
+  background: none;
+  border: 2px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+}
+
+.settings-back-btn:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+
+.settings-header-text h1 {
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-2xl);
+  color: var(--color-gold);
+  margin: 0 0 2px;
+}
+
+.settings-header-text p {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Section ─────────────────────────────────── */
+.settings-section {
+  margin: 18px 16px 0;
+}
+
+.settings-section-title {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px 4px;
+  opacity: 0.85;
+}
+
+.settings-card {
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition:
+    background var(--transition-theme),
+    border-color var(--transition-theme);
+}
+
+/* ── Row ─────────────────────────────────────── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-row-border);
+  transition: background var(--transition-fast);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+/* Press feedback on rows — but NOT on rows containing a slider, since
+   dragging would trigger a constant flashing background. */
+.settings-row:not(.settings-row-slider):active {
+  background: var(--color-gold-faint);
+}
+
+.settings-row-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Icon container — design spec components-settings.html:
+   34×34, rounded 10px, flat neutral grey #f0f0f0 (day) / dark card (night),
+   icon stroke is neutral grey. */
+.settings-row-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f0f0f0;
+  color: #555555;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+[data-theme="night"] .settings-row-icon {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-muted);
+}
+
+.settings-row-icon svg {
+  display: block;
+}
+
+.settings-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-family: var(--font-arabic);
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  margin: 0 0 1px;
+  font-weight: 600;
+}
+
+.settings-row-desc {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* ── Toggle switch ────────────────────────────── */
+.settings-toggle {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.settings-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.settings-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-progress-track);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: background var(--transition-slow);
+}
+
+.settings-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  top: 3px;
+  inset-inline-end: 3px;
+  transition: transform var(--transition-slow);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+
+.settings-toggle input:checked + .settings-toggle-slider {
+  background: var(--color-quran);
+}
+
+[dir="rtl"] .settings-toggle input:checked + .settings-toggle-slider::before {
+  transform: translateX(-22px);
+}
+[dir="ltr"] .settings-toggle input:checked + .settings-toggle-slider::before {
+  transform: translateX(22px);
+}
+
+/* ── Select dropdown ──────────────────────────── */
+.settings-select {
+  background: var(--color-input-bg);
+  border: 1.5px solid var(--color-input-border);
+  color: var(--color-text-primary);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-base);
+  max-width: 140px;
+  min-height: 40px;
+}
+
+.settings-select:focus {
+  border-color: var(--color-gold);
+}
+
+/* ── Slider ────────────────────────────────────── */
+.settings-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.settings-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--color-gold-subtle);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--color-quran);
+  /* Some Android browsers stutter the thumb if margin is unset */
+  margin: 0;
+  padding: 0;
+  /* Larger touch target without growing the visual track */
+  touch-action: pan-y;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-quran);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  border: none;
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-quran);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  border: none;
+}
+
+/* Fixed-width value pill so the slider doesn't reflow as digits change. */
+.settings-slider-val {
+  font-family: var(--font-latin);
+  font-size: 0.75rem;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  min-width: 38px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Action button row ─────────────────────────── */
+.settings-action-btn {
+  background: none;
+  border: 1.5px solid var(--color-input-border);
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  color: #c0392b;
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  white-space: nowrap;
+  transition:
+    opacity var(--transition-base),
+    background var(--transition-base);
+}
+
+.settings-action-btn:hover {
+  background: rgba(192, 57, 43, 0.08);
+  opacity: 0.9;
+}
+
+/* ── Version footer ────────────────────────────── */
+.settings-version {
+  margin: 28px 16px 0;
+  text-align: center;
+}
+
+.settings-version p {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 3px 0;
+}
+
+.settings-version strong {
+  color: var(--color-gold);
+}

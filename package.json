@@ -1,0 +1,69 @@
+{
+  "name": "rafeeq",
+  "version": "1.1.0",
+  "description": "Rafeeq — Quran Quiz & Viewer (Ionic + Capacitor)",
+  "private": true,
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "build:prod": "react-scripts build",
+    "ios:sync": "npm run build:prod && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:run": "npx cap run ios",
+    "android:sync": "npm run build:prod && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npx cap run android",
+    "electron:dev": "concurrently \"react-scripts start\" \"wait-on http://localhost:3000 && npx cap open @capacitor-community/electron\"",
+    "electron:sync": "npm run build:prod && npx cap sync @capacitor-community/electron",
+    "electron:build": "npm run electron:sync && cd electron && npm run electron:build",
+    "analyze": "npm run build:prod -- --stats-json && npx webpack-bundle-analyzer build/stats.json",
+    "lighthouse": "npx lighthouse http://localhost:8100 --view",
+    "test": "react-scripts test",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.7.8",
+    "@capacitor/app": "^5.0.8",
+    "@capacitor/cli": "^5.7.8",
+    "@capacitor/core": "^5.7.8",
+    "@capacitor/filesystem": "^5.2.2",
+    "@capacitor/haptics": "^5.0.8",
+    "@capacitor/ios": "^5.7.8",
+    "@capacitor/preferences": "^5.0.8",
+    "@capacitor/splash-screen": "^5.0.8",
+    "@capacitor/status-bar": "^5.0.8",
+    "@ionic/react": "^7.0.0",
+    "@ionic/react-router": "^8.7.18",
+    "ajv": "^8.18.0",
+    "ionicons": "^7.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router": "^5.3.4",
+    "react-router-dom": "^5.3.4",
+    "react-scripts": "5.0.1"
+  },
+  "devDependencies": {
+    "@capacitor-community/electron": "^5.0.1",
+    "@playwright/test": "^1.40.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@types/react-router": "^5.1.20",
+    "@types/react-router-dom": "^5.3.3",
+    "concurrently": "^8.2.2",
+    "typescript": "4.9.5",
+    "wait-on": "^7.2.0",
+    "webpack-bundle-analyzer": "^4.10.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

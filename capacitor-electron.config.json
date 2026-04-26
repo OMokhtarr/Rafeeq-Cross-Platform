@@ -1,0 +1,10 @@
+{
+  "appId": "com.rafeeq.quranquiz",
+  "appName": "Rafeeq رفيق",
+  "electron": {
+    "customUrlScheme": "rafeeq",
+    "deepLinkingEnabled": false,
+    "nodeIntegration": false,
+    "appendUserAgent": "Rafeeq/1.0"
+  }
+}

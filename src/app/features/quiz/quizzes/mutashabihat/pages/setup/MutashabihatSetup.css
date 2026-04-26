@@ -1,0 +1,469 @@
+/* Ensure full height propagates from Ionic */
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ═══════════════════════════════════════════════
+   MUTASHABIHAT SETUP  —  identical design to QuizSetup
+   ═══════════════════════════════════════════════ */
+
+.ms-setup-page-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-dark-page);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 10px calc(10px + 72px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+.ms-setup-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.ms-setup-card {
+  background-color: #fbf7f0;
+  border-radius: 20px;
+  padding: 12px 18px;
+  max-width: 600px;
+  width: 100%;
+  height: 100%;
+  max-height: calc(100vh - 20px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 3px solid #d4b48c;
+  direction: rtl;
+  box-sizing: border-box;
+}
+
+/* ── Header ─────────────────────────────────── */
+.ms-header {
+  text-align: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.ms-title {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1.7rem;
+  color: #2c3e50;
+  margin: 0 0 2px;
+}
+
+.ms-subtitle {
+  color: #8b7355;
+  font-size: 0.8rem;
+  font-style: italic;
+  margin: 0;
+  direction: ltr;
+}
+
+/* ── Info box ───────────────────────────────── */
+.ms-info-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #fff9e6;
+  border: 2px solid #d4b48c;
+  border-radius: 12px;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.ms-info-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ms-info-box p {
+  margin: 0;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.88rem;
+  color: #2c3e50;
+  line-height: 1.5;
+}
+
+/* ── Section ────────────────────────────────── */
+.ms-section {
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.ms-section.ms-section-scrollable {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ms-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-weight: bold;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1rem;
+}
+
+.ms-count-badge {
+  background: #2c3e50;
+  color: #d4b48c;
+  border-radius: 20px;
+  padding: 1px 9px;
+  font-size: 0.8rem;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-weight: normal;
+  margin-right: auto;
+}
+
+/* ── Scope type buttons ─────────────────────── */
+.ms-type-row {
+  display: flex;
+  gap: 6px;
+  direction: rtl;
+}
+
+.ms-type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.ms-type-btn.active {
+  background: #2c3e50;
+  border-color: #d4b48c;
+  color: white;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+.ms-type-icon {
+  font-size: 1rem;
+}
+.ms-type-ar {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.9rem;
+}
+.ms-type-en {
+  font-size: 0.6rem;
+  opacity: 0.75;
+}
+
+/* ── Surah chip grid ────────────────────────── */
+.ms-surah-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-quiz) var(--color-bg-card-alt);
+}
+.ms-surah-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.ms-surah-grid::-webkit-scrollbar-thumb {
+  background: var(--color-quiz);
+  border-radius: 10px;
+}
+
+/* RTL chip: name on the right, number badge on the left */
+.ms-surah-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 2px solid #d4b48c;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  direction: rtl;
+  width: 100%;
+}
+.ms-surah-chip:hover {
+  background: #f5ede0;
+}
+.ms-surah-chip.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #d4b48c;
+}
+
+.ms-chip-name {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.92rem;
+  flex: 1;
+  text-align: right;
+}
+
+.ms-chip-num {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.72rem;
+  color: var(--color-quiz);
+  background: var(--color-gold-subtle);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+.ms-surah-chip.active .ms-chip-num {
+  color: #d4b48c;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ms-hint-text {
+  color: #8b7355;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 6px;
+  font-style: italic;
+  font-family: "Traditional Arabic", "Amiri", serif;
+}
+
+/* ── Page range ─────────────────────────────── */
+.ms-page-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.ms-page-input {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ms-page-input span {
+  color: #8b7355;
+  font-size: 0.9rem;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  text-align: right;
+}
+.ms-page-input input {
+  padding: 8px;
+  border: 2px solid #d4b48c;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ms-range-info {
+  color: #1e3c2c;
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin: 4px 0 0;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  text-align: right;
+}
+
+/* ── Juz grid ───────────────────────────────── */
+.ms-juz-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  direction: rtl;
+}
+
+.ms-juz-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ms-juz-chip:hover {
+  background: #f5ede0;
+}
+.ms-juz-chip.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #d4b48c;
+}
+.ms-juz-label {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.68rem;
+  opacity: 0.7;
+}
+.ms-juz-num {
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+/* ── Question count ─────────────────────────── */
+.ms-count-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  direction: rtl;
+}
+
+.ms-count-btn {
+  flex: 1;
+  padding: 9px 5px;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  background: white;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ms-count-btn:hover {
+  background: #f5ede0;
+}
+.ms-count-btn.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #d4b48c;
+}
+
+.ms-count-custom {
+  width: 70px;
+  padding: 9px 5px;
+  border: 2px solid #d4b48c;
+  border-radius: 10px;
+  font-size: 1rem;
+  text-align: center;
+  direction: ltr;
+}
+
+/* ── Start button ───────────────────────────── */
+.ms-start-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  border: none;
+  border-radius: 40px;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.ms-start-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+.ms-start-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ms-btn-en {
+  font-size: 0.78rem;
+  opacity: 0.8;
+  font-family: sans-serif;
+}
+
+/* ── Back button ────────────────────────────── */
+.ms-back-btn {
+  display: block;
+  margin: 8px auto 0;
+  background: none;
+  border: 2px solid #d4b48c;
+  color: #2c3e50;
+  padding: 6px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.ms-back-btn:hover {
+  background: #f0e9d8;
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 600px) {
+  .ms-juz-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .ms-surah-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+  .ms-count-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   NIGHT-MODE OVERRIDES
+   ═══════════════════════════════════════════════ */
+[data-theme="night"] .ms-setup-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  box-shadow: var(--shadow-card-lift);
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .ms-title,
+[data-theme="night"] .ms-label {
+  color: var(--color-gold);
+}
+[data-theme="night"] .ms-subtitle,
+[data-theme="night"] .ms-info-box p,
+[data-theme="night"] .ms-hint-text,
+[data-theme="night"] .ms-range-info {
+  color: var(--color-text-muted);
+}
+[data-theme="night"] .ms-info-box {
+  background: rgba(212, 180, 140, 0.08);
+}
+[data-theme="night"] .ms-type-btn,
+[data-theme="night"] .ms-surah-chip,
+[data-theme="night"] .ms-juz-chip,
+[data-theme="night"] .ms-count-btn,
+[data-theme="night"] .ms-page-input input,
+[data-theme="night"] .ms-count-custom {
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  border-color: var(--color-input-border);
+}
+[data-theme="night"] .ms-back-btn {
+  color: var(--color-gold);
+}
