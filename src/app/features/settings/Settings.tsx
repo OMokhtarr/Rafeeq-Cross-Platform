@@ -341,6 +341,32 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
+            {/* ── Language — two-button row per design index.html ── */}
+            <div className="settings-section">
+              <p className="settings-section-title">{ts.sectionLanguage}</p>
+              <div className="settings-card">
+                <div className="settings-row settings-row-stack">
+                  <p className="settings-row-label">{ts.language}</p>
+                  <div className="settings-lang-row">
+                    <button
+                      type="button"
+                      className={"settings-lang-btn" + (lang === "ar" ? " is-active" : "")}
+                      onClick={() => setLang("ar")}
+                    >
+                      {ts.arabic}
+                    </button>
+                    <button
+                      type="button"
+                      className={"settings-lang-btn" + (lang === "en" ? " is-active" : "")}
+                      onClick={() => setLang("en")}
+                    >
+                      {ts.english}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* ── Appearance ── */}
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionAppearance}</p>
@@ -351,24 +377,6 @@ const Settings: React.FC = () => {
                   desc={ts.nightModeDesc}
                   checked={isNight}
                   onChange={v => setTheme(v ? "night" : "day")}
-                />
-              </div>
-            </div>
-
-            {/* ── Language ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionLanguage}</p>
-              <div className="settings-card">
-                <SelectRow
-                  icon={ICONS.globe}
-                  label={ts.language}
-                  desc={ts.languageDesc}
-                  value={lang}
-                  options={[
-                    { value: "ar", label: ts.arabic },
-                    { value: "en", label: ts.english },
-                  ]}
-                  onChange={v => setLang(v as "ar" | "en")}
                 />
               </div>
             </div>

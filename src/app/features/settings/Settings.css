@@ -184,6 +184,50 @@ ion-content::part(scroll) {
   line-height: 1.3;
 }
 
+/* ── Stacked row (label above content) — used for Language buttons ── */
+.settings-row-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.settings-row-stack .settings-row-label {
+  margin: 0;
+}
+
+/* ── Language button row (matches index.html LangBtn pair) ── */
+.settings-lang-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-lang-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: 1.5px solid var(--color-settings-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
+  min-height: 40px;
+}
+
+.settings-lang-btn.is-active {
+  border-color: var(--color-quran);
+  background: color-mix(in srgb, var(--color-quran) 12%, transparent);
+  color: var(--color-quran);
+}
+
+.settings-lang-btn:hover:not(.is-active) {
+  background: var(--color-gold-faint);
+}
+
 /* ── Toggle switch ────────────────────────────── */
 .settings-toggle {
   position: relative;
@@ -216,7 +260,7 @@ ion-content::part(scroll) {
   border-radius: 50%;
   background: white;
   top: 3px;
-  inset-inline-end: 3px;
+  inset-inline-start: 3px;
   transition: transform var(--transition-slow);
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
@@ -226,10 +270,10 @@ ion-content::part(scroll) {
 }
 
 [dir="rtl"] .settings-toggle input:checked + .settings-toggle-slider::before {
-  transform: translateX(-22px);
+  transform: translateX(-20px);
 }
 [dir="ltr"] .settings-toggle input:checked + .settings-toggle-slider::before {
-  transform: translateX(22px);
+  transform: translateX(20px);
 }
 
 /* ── Select dropdown ──────────────────────────── */

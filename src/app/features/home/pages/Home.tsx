@@ -36,20 +36,29 @@ const Home: React.FC = () => {
                 <span className="home-wordmark-en">{t.appSub}</span>
               </div>
 
-              {/* Centered Basmalah — the focal element */}
+              {/* Centered Basmalah — the focal element, framed with gold dividers */}
               <div className="home-basmalah-wrap">
-                <div className="home-basmalah" lang="ar" dir="rtl">
-                  {t.home.bismillah}
+                <div className="home-basmalah-block">
+                  <div className="home-basmalah-divider" aria-hidden="true" />
+                  <div className="home-basmalah" lang="ar" dir="rtl">
+                    {t.home.bismillah}
+                  </div>
+                  <div className="home-basmalah-divider" aria-hidden="true" />
                 </div>
               </div>
 
               {/* Brand stack at the bottom of the stage */}
               <div className="home-brand">
-                <span className="home-brand-ar">{t.appName}</span>
-                <span className="home-brand-sep">·</span>
-                <span className="home-brand-en">RAFEEQ</span>
+                <div className="home-brand-line">
+                  <span className="home-brand-ar">{t.appName}</span>
+                  <span className="home-brand-sep">·</span>
+                  <span className="home-brand-en">RAFEEQ</span>
+                </div>
                 <div className="home-brand-tag">{t.tagline}</div>
               </div>
+
+              {/* Bottom gradient fade — blends into the app bg above the tab bar */}
+              <div className="home-stage-fade" aria-hidden="true" />
             </div>
 
             <BottomNavBar active="home" />

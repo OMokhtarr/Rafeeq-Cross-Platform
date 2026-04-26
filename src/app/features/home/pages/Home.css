@@ -177,6 +177,45 @@ ion-content::part(scroll) {
   /* keep them in a single horizontal row */
 }
 
+/* ── Basmalah block: gold divider — bismillah — gold divider ── */
+.home-basmalah-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.home-basmalah-divider {
+  width: 60px;
+  height: 1px;
+  background: rgba(212, 180, 140, 0.4);
+}
+
+[data-theme="day"] .home-basmalah-divider {
+  background: rgba(160, 120, 40, 0.4);
+}
+
+/* Brand line keeps Arabic + sep + Latin on one row; tag drops below */
+.home-brand-line {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+/* Bottom gradient fade — blends content into the tab-bar surface */
+.home-stage-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(13, 31, 20, 0.85));
+}
+
+[data-theme="day"] .home-stage-fade {
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.85));
+}
+
 @media (max-height: 560px) {
   .home-wordmark {
     top: 1rem;
@@ -186,5 +225,8 @@ ion-content::part(scroll) {
   }
   .home-basmalah {
     font-size: clamp(1.8rem, 7vw, 2.6rem);
+  }
+  .home-basmalah-block {
+    gap: 14px;
   }
 }

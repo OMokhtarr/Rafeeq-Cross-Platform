@@ -15,7 +15,7 @@ ion-content::part(scroll) {
 .ms-setup-page-wrapper {
   width: 100%;
   height: 100%;
-  background: var(--gradient-dark-page);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
@@ -38,7 +38,7 @@ ion-content::part(scroll) {
 }
 
 .ms-setup-card {
-  background-color: #fbf7f0;
+  background-color: var(--color-bg-card);
   border-radius: 20px;
   padding: 12px 18px;
   max-width: 600px;
@@ -49,7 +49,7 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  border: 3px solid #d4b48c;
+  border: 3px solid var(--color-gold);
   direction: rtl;
   box-sizing: border-box;
 }
@@ -64,12 +64,12 @@ ion-content::part(scroll) {
 .ms-title {
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1.7rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   margin: 0 0 2px;
 }
 
 .ms-subtitle {
-  color: #8b7355;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   font-style: italic;
   margin: 0;
@@ -81,8 +81,8 @@ ion-content::part(scroll) {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  background: #fff9e6;
-  border: 2px solid #d4b48c;
+  background: var(--color-gold-faint);
+  border: 2px solid var(--color-gold);
   border-radius: 12px;
   padding: 7px 12px;
   margin-bottom: 10px;
@@ -98,7 +98,7 @@ ion-content::part(scroll) {
   margin: 0;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.88rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   line-height: 1.5;
 }
 
@@ -121,15 +121,15 @@ ion-content::part(scroll) {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   font-weight: bold;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1rem;
 }
 
 .ms-count-badge {
-  background: #2c3e50;
-  color: #d4b48c;
+  background: var(--color-text-primary);
+  color: var(--color-gold);
   border-radius: 20px;
   padding: 1px 9px;
   font-size: 0.8rem;
@@ -153,15 +153,15 @@ ion-content::part(scroll) {
   justify-content: center;
   gap: 5px;
   padding: 6px 4px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   background: white;
   cursor: pointer;
   transition: all 0.25s;
 }
 .ms-type-btn.active {
-  background: #2c3e50;
-  border-color: #d4b48c;
+  background: var(--color-text-primary);
+  border-color: var(--color-gold);
   color: white;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
@@ -204,7 +204,7 @@ ion-content::part(scroll) {
   justify-content: space-between;
   gap: 4px;
   padding: 6px 8px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 8px;
   background: white;
   cursor: pointer;
@@ -213,12 +213,12 @@ ion-content::part(scroll) {
   width: 100%;
 }
 .ms-surah-chip:hover {
-  background: #f5ede0;
+  background: var(--color-gold-faint);
 }
 .ms-surah-chip.active {
-  background: #2c3e50;
+  background: var(--color-text-primary);
   color: white;
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
 }
 
 .ms-chip-name {
@@ -239,12 +239,12 @@ ion-content::part(scroll) {
   line-height: 1.6;
 }
 .ms-surah-chip.active .ms-chip-num {
-  color: #d4b48c;
+  color: var(--color-gold);
   background: rgba(255, 255, 255, 0.18);
 }
 
 .ms-hint-text {
-  color: #8b7355;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   text-align: center;
   margin-top: 6px;
@@ -267,14 +267,14 @@ ion-content::part(scroll) {
   gap: 4px;
 }
 .ms-page-input span {
-  color: #8b7355;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
   font-family: "Traditional Arabic", "Amiri", serif;
   text-align: right;
 }
 .ms-page-input input {
   padding: 8px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 8px;
   font-size: 1rem;
   text-align: center;
@@ -283,7 +283,7 @@ ion-content::part(scroll) {
 }
 
 .ms-range-info {
-  color: #1e3c2c;
+  color: var(--color-quran);
   font-weight: bold;
   font-size: 0.9rem;
   margin: 4px 0 0;
@@ -304,19 +304,19 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   padding: 8px 4px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
 }
 .ms-juz-chip:hover {
-  background: #f5ede0;
+  background: var(--color-gold-faint);
 }
 .ms-juz-chip.active {
-  background: #2c3e50;
+  background: var(--color-text-primary);
   color: white;
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
 }
 .ms-juz-label {
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -340,7 +340,7 @@ ion-content::part(scroll) {
 .ms-count-btn {
   flex: 1;
   padding: 9px 5px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   background: white;
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -349,18 +349,18 @@ ion-content::part(scroll) {
   transition: all 0.2s;
 }
 .ms-count-btn:hover {
-  background: #f5ede0;
+  background: var(--color-gold-faint);
 }
 .ms-count-btn.active {
-  background: #2c3e50;
+  background: var(--color-text-primary);
   color: white;
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
 }
 
 .ms-count-custom {
   width: 70px;
   padding: 9px 5px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   font-size: 1rem;
   text-align: center;
@@ -371,7 +371,7 @@ ion-content::part(scroll) {
 .ms-start-btn {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
   color: white;
   border: none;
   border-radius: 40px;
@@ -405,8 +405,8 @@ ion-content::part(scroll) {
   display: block;
   margin: 8px auto 0;
   background: none;
-  border: 2px solid #d4b48c;
-  color: #2c3e50;
+  border: 2px solid var(--color-gold);
+  color: var(--color-text-primary);
   padding: 6px 20px;
   border-radius: 20px;
   cursor: pointer;
@@ -416,7 +416,7 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 .ms-back-btn:hover {
-  background: #f0e9d8;
+  background: var(--color-bg-card-alt);
 }
 
 /* ── Responsive ─────────────────────────────── */
@@ -432,38 +432,3 @@ ion-content::part(scroll) {
   }
 }
 
-/* ═══════════════════════════════════════════════
-   NIGHT-MODE OVERRIDES
-   ═══════════════════════════════════════════════ */
-[data-theme="night"] .ms-setup-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  box-shadow: var(--shadow-card-lift);
-  color: var(--color-text-primary);
-}
-[data-theme="night"] .ms-title,
-[data-theme="night"] .ms-label {
-  color: var(--color-gold);
-}
-[data-theme="night"] .ms-subtitle,
-[data-theme="night"] .ms-info-box p,
-[data-theme="night"] .ms-hint-text,
-[data-theme="night"] .ms-range-info {
-  color: var(--color-text-muted);
-}
-[data-theme="night"] .ms-info-box {
-  background: rgba(212, 180, 140, 0.08);
-}
-[data-theme="night"] .ms-type-btn,
-[data-theme="night"] .ms-surah-chip,
-[data-theme="night"] .ms-juz-chip,
-[data-theme="night"] .ms-count-btn,
-[data-theme="night"] .ms-page-input input,
-[data-theme="night"] .ms-count-custom {
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-  border-color: var(--color-input-border);
-}
-[data-theme="night"] .ms-back-btn {
-  color: var(--color-gold);
-}

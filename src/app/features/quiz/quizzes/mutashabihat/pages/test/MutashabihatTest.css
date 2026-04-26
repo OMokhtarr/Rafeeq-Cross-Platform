@@ -16,7 +16,7 @@ ion-content::part(scroll) {
 .mst-test-page-wrapper {
   width: 100%;
   height: 100%;
-  background: var(--gradient-dark-page);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
   justify-content: center;
@@ -50,7 +50,7 @@ ion-content::part(scroll) {
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: #faf7f0;
+  background: var(--color-bg-card);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0,0,0,.25);
@@ -60,8 +60,8 @@ ion-content::part(scroll) {
 
 /* Sibling navigator inside sidebar */
 .mst-sibling-nav {
-  background: #fff9e6;
-  border-bottom: 2px solid #d4b48c;
+  background: var(--color-gold-faint);
+  border-bottom: 2px solid var(--color-gold);
   padding: 10px 12px;
   flex-shrink: 0;
 }
@@ -70,7 +70,7 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.95rem;
   font-weight: bold;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   margin: 0 0 8px;
   display: flex;
   align-items: center;
@@ -79,7 +79,7 @@ ion-content::part(scroll) {
 }
 
 .mst-sibling-count {
-  background: #8b4513;
+  background: var(--color-quiz);
   color: white;
   border-radius: 20px;
   padding: 1px 8px;
@@ -95,7 +95,7 @@ ion-content::part(scroll) {
 
 .mst-sibling-tab {
   padding: 4px 10px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 20px;
   background: white;
   font-family: "Traditional Arabic","Amiri",serif;
@@ -105,28 +105,28 @@ ion-content::part(scroll) {
   direction: rtl;
 }
 .mst-sibling-tab.active {
-  background: #2c3e50;
+  background: var(--color-text-primary);
   color: white;
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
 }
 
 .mst-sibling-verse {
   background: white;
   border-radius: 8px;
   padding: 8px 12px;
-  border: 1px solid #d4b48c;
+  border: 1px solid var(--color-gold);
 }
 .mst-sibling-verse-text {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 1rem;
   direction: rtl;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   line-height: 1.8;
   margin: 0 0 4px;
 }
 .mst-sibling-meta {
   font-size: 0.75rem;
-  color: #8b7355;
+  color: var(--color-text-muted);
   font-family: "Traditional Arabic","Amiri",serif;
   direction: rtl;
   margin: 0;
@@ -164,14 +164,14 @@ ion-content::part(scroll) {
 .mst-header {
   width: 100%;
   box-sizing: border-box;
-  background: #fbf7f0;
+  background: var(--color-bg-card);
   border-radius: 10px;
   padding: 4px 10px;
   margin-bottom: 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   flex-shrink: 0;
   min-height: 40px;
 }
@@ -179,19 +179,19 @@ ion-content::part(scroll) {
 .mst-progress-text {
   display: block;
   margin-bottom: 3px;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.9rem;
 }
 .mst-bar {
   height: 5px;
-  background: #e0d5b5;
+  background: var(--color-progress-track);
   border-radius: 4px;
   overflow: hidden;
 }
 .mst-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #8b4513, #d4b48c);
+  background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
   transition: width .35s ease;
 }
 
@@ -201,7 +201,7 @@ ion-content::part(scroll) {
   font-size: 1.1rem;
   font-family: "Traditional Arabic","Amiri",serif;
   font-weight: bold;
-  color: #2c3e50;
+  color: var(--color-text-primary);
 }
 
 .mst-exit-btn {
@@ -222,10 +222,10 @@ ion-content::part(scroll) {
 .mst-card {
   width: 100%;
   box-sizing: border-box;
-  background: #fbf7f0;
+  background: var(--color-bg-card);
   border-radius: 12px;
   padding: 5px 10px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   box-shadow: 0 3px 8px rgba(0,0,0,.12);
   flex: 1;
   overflow: hidden;
@@ -299,14 +299,14 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.88rem;
   font-weight: bold;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .mst-meta {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.75rem;
-  color: #8b4513;
+  color: var(--color-quiz);
   background: rgba(255,255,255,.3);
   padding: 1px 7px;
   border-radius: 20px;
@@ -316,8 +316,8 @@ ion-content::part(scroll) {
 .mst-similar-badge {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.75rem;
-  background: #8b4513;
-  color: #fff9e6;
+  background: var(--color-quiz);
+  color: var(--color-gold-faint);
   padding: 2px 8px;
   border-radius: 20px;
   flex-shrink: 0;
@@ -342,7 +342,7 @@ ion-content::part(scroll) {
   gap: 4px;
   padding: 2px 7px;
   border-radius: 20px;
-  border: 1.5px solid #d4b48c;
+  border: 1.5px solid var(--color-gold);
   background: rgba(255,255,255,0.75);
   cursor: pointer;
   transition: all .18s;
@@ -351,12 +351,12 @@ ion-content::part(scroll) {
   white-space: nowrap;
 }
 .mst-inline-chip:hover {
-  border-color: #8b4513;
+  border-color: var(--color-quiz);
   background: white;
 }
 .mst-inline-chip.active.target {
   background: rgba(255,215,0,0.22);
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
   box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
 }
 .mst-inline-chip.active.sibling {
@@ -370,8 +370,8 @@ ion-content::part(scroll) {
 
 /* ── Verse box ──────────────────────────────── */
 .mst-verse-box {
-  background: #fff9e6;
-  border: 2px solid #d4b48c;
+  background: var(--color-gold-faint);
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   padding: 5px 8px;
   text-align: center;
@@ -383,7 +383,7 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   line-height: 1.7;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   direction: rtl;
   margin: 0;
 }
@@ -397,10 +397,10 @@ ion-content::part(scroll) {
 }
 
 .mst-prompt {
-  color: #8b7355;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   font-style: italic;
-  border-top: 1px dotted #d4b48c;
+  border-top: 1px dotted var(--color-gold);
   padding-top: 4px;
   margin: 4px 0 0;
 }
@@ -430,7 +430,7 @@ ion-content::part(scroll) {
   width: 100%;
   padding: 12px 12px;
   font-size: 1rem;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   border-radius: 10px;
   font-family: "Traditional Arabic","Amiri",serif;
   direction: rtl;
@@ -440,7 +440,7 @@ ion-content::part(scroll) {
   min-height: 44px;
 }
 .mst-input:focus {
-  border-color: #2c3e50;
+  border-color: var(--color-text-primary);
   outline: none;
   box-shadow: 0 0 0 4px rgba(44,62,80,.1);
 }
@@ -481,7 +481,7 @@ ion-content::part(scroll) {
 .mst-context.active { background: #2c6fad; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
 .mst-context:hover:not(:disabled) { background: #5fa3f0; transform: scale(1.02); }
 
-.mst-submit  { background: linear-gradient(135deg,#34495e,#2c3e50); color: white; }
+.mst-submit  { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
 .mst-submit:hover:not(:disabled)  { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
 
 .mst-skip    { background: #95a5a6; color: white; }
@@ -508,13 +508,13 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.82rem;
   font-weight: bold;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   direction: rtl;
 }
 
 .mst-correct-answer { text-align: center; direction: rtl; margin-top: 4px; }
 .mst-correct-label  { font-size: 0.85rem; color: #666; font-family: "Traditional Arabic","Amiri",serif; }
-.mst-correct-text   { font-size: 1rem; color: #2c3e50; font-family: "Traditional Arabic","Amiri",serif; font-weight: bold; direction: rtl; }
+.mst-correct-text   { font-size: 1rem; color: var(--color-text-primary); font-family: "Traditional Arabic","Amiri",serif; font-weight: bold; direction: rtl; }
 
 /* Sibling reveal section after answering */
 .mst-siblings-reveal {
@@ -525,7 +525,7 @@ ion-content::part(scroll) {
 .mst-siblings-reveal-title {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.85rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   font-weight: bold;
   margin: 0 0 6px;
 }
@@ -534,7 +534,7 @@ ion-content::part(scroll) {
   border-radius: 8px;
   padding: 8px 12px;
   margin-bottom: 6px;
-  border: 1px solid #d4b48c;
+  border: 1px solid var(--color-gold);
 }
 .mst-sibling-header {
   display: flex;
@@ -546,17 +546,17 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.85rem;
   font-weight: bold;
-  color: #8b4513;
+  color: var(--color-quiz);
 }
 .mst-sibling-ref {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.8rem;
-  color: #8b7355;
+  color: var(--color-text-muted);
 }
 .mst-sibling-text {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 1rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   line-height: 1.7;
   margin: 0;
   direction: rtl;
@@ -593,13 +593,13 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
   color: white;
 }
 
 .mst-spinner {
   border: 5px solid rgba(255,255,255,.3);
-  border-top: 5px solid #d4b48c;
+  border-top: 5px solid var(--color-gold);
   border-radius: 50%;
   width: 50px;
   height: 50px;
@@ -609,19 +609,19 @@ ion-content::part(scroll) {
 @keyframes mstSpin { to { transform: rotate(360deg); } }
 
 .mst-error-box {
-  background: #fbf7f0;
+  background: var(--color-bg-card);
   border-radius: 20px;
   padding: 30px;
   text-align: center;
   max-width: 400px;
   border: 3px solid #e74c3c;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   white-space: pre-line;
 }
 .mst-error-box p { margin: 0 0 16px; font-family: "Traditional Arabic","Amiri",serif; }
 .mst-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(135deg,#34495e,#2c3e50);
+  background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary));
   color: white;
   border: none;
   border-radius: 30px;
@@ -631,13 +631,13 @@ ion-content::part(scroll) {
 
 /* Complete screen */
 .mst-complete-card {
-  background: #fbf7f0;
+  background: var(--color-bg-card);
   border-radius: 20px;
   padding: 30px 35px;
   text-align: center;
   max-width: 380px;
-  border: 3px solid #d4b48c;
-  color: #2c3e50;
+  border: 3px solid var(--color-gold);
+  color: var(--color-text-primary);
 }
 .mst-complete-badge { font-size: 3rem; margin-bottom: 8px; }
 .mst-complete-card h2 {
@@ -645,7 +645,7 @@ ion-content::part(scroll) {
   font-size: 1.7rem;
   margin: 0 0 4px;
 }
-.mst-complete-sub { color: #8b7355; font-size: 0.85rem; margin: 0 0 18px; font-style: italic; }
+.mst-complete-sub { color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 18px; font-style: italic; }
 
 .mst-score-ring {
   display: flex;
@@ -654,10 +654,10 @@ ion-content::part(scroll) {
   gap: 4px;
   margin-bottom: 4px;
 }
-.mst-score-num   { font-size: 3rem; font-weight: bold; color: #2c3e50; }
-.mst-score-sep   { font-size: 2rem; color: #8b7355; }
-.mst-score-total { font-size: 1.8rem; color: #8b7355; }
-.mst-score-pct   { font-size: 1.3rem; color: #2c3e50; margin: 0 0 20px; }
+.mst-score-num   { font-size: 3rem; font-weight: bold; color: var(--color-text-primary); }
+.mst-score-sep   { font-size: 2rem; color: var(--color-text-muted); }
+.mst-score-total { font-size: 1.8rem; color: var(--color-text-muted); }
+.mst-score-pct   { font-size: 1.3rem; color: var(--color-text-primary); margin: 0 0 20px; }
 
 .mst-complete-actions { display: flex; gap: 10px; justify-content: center; }
 .mst-complete-actions button {
@@ -669,8 +669,8 @@ ion-content::part(scroll) {
   cursor: pointer;
   transition: all .25s;
 }
-.mst-complete-actions button:first-child { background: linear-gradient(135deg,#34495e,#2c3e50); color: white; }
-.mst-complete-actions button:last-child  { background: #e0d5b5; color: #2c3e50; }
+.mst-complete-actions button:first-child { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
+.mst-complete-actions button:last-child  { background: var(--color-progress-track); color: var(--color-text-primary); }
 .mst-complete-actions button:hover { transform: scale(1.05); }
 
 /* ── Animations ─────────────────────────────── */
@@ -686,8 +686,8 @@ ion-content::part(scroll) {
   flex-direction: row;
   gap: 5px;
   padding: 6px 8px;
-  background: #fff9e6;
-  border-bottom: 2px solid #d4b48c;
+  background: var(--color-gold-faint);
+  border-bottom: 2px solid var(--color-gold);
   overflow-x: auto;
   flex-shrink: 0;
   direction: rtl;
@@ -702,7 +702,7 @@ ion-content::part(scroll) {
   gap: 2px;
   padding: 5px 9px;
   border-radius: 10px;
-  border: 2px solid #d4b48c;
+  border: 2px solid var(--color-gold);
   background: white;
   cursor: pointer;
   transition: all .2s;
@@ -712,10 +712,10 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   text-align: right;
 }
-.mst-verse-chip:hover { border-color: #8b4513; }
+.mst-verse-chip:hover { border-color: var(--color-quiz); }
 .mst-verse-chip.active.target {
   background: rgba(255,215,0,0.18);
-  border-color: #d4b48c;
+  border-color: var(--color-gold);
   box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
 }
 .mst-verse-chip.active.sibling {
@@ -729,13 +729,13 @@ ion-content::part(scroll) {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.78rem;
   font-weight: bold;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 .mst-chip-meta {
   font-family: "Traditional Arabic","Amiri",serif;
   font-size: 0.68rem;
-  color: #8b4513;
+  color: var(--color-quiz);
   white-space: nowrap;
 }
 /* Preview text hidden — chips are pill-shaped now */
@@ -782,67 +782,7 @@ ion-content::part(scroll) {
   }
 }
 
-/* ═══════════════════════════════════════════════
-   NIGHT-MODE OVERRIDES
-   ═══════════════════════════════════════════════ */
-[data-theme="night"] .mst-card,
-[data-theme="night"] .mst-complete-card,
-[data-theme="night"] .mst-error-box {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  box-shadow: var(--shadow-card-lift);
-  color: var(--color-text-primary);
-}
-[data-theme="night"] .mst-info-strip,
-[data-theme="night"] .mst-verse-box {
-  background: rgba(212, 180, 140, 0.08);
-  color: var(--color-text-primary);
-}
-[data-theme="night"] .mst-meta,
-[data-theme="night"] .mst-surah-badge {
-  color: var(--color-gold);
-}
-[data-theme="night"] .mst-inline-chip {
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-  border-color: var(--color-input-border);
-}
-[data-theme="night"] .mst-input {
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-  border-color: var(--color-input-border);
-}
-[data-theme="night"] .mst-input::placeholder {
-  color: var(--color-text-muted);
-}
-[data-theme="night"] .mst-correct-text,
-[data-theme="night"] .mst-prompt {
-  color: var(--color-gold);
-}
-[data-theme="night"] .mst-correct-label,
-[data-theme="night"] .mst-progress-text,
-[data-theme="night"] .mst-complete-sub,
-[data-theme="night"] .mst-score-pct {
-  color: var(--color-text-muted);
-}
-[data-theme="night"] .mst-score-pill {
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-input-border);
-}
-[data-theme="night"] .mst-bar {
-  background: var(--color-progress-track);
-}
+/* Night-mode tweaks: lift result-state colors so they read on a dark surface. */
 [data-theme="night"] .mst-result.correct { background: rgba(76, 175, 125, 0.15); color: #6cd699; }
 [data-theme="night"] .mst-result.wrong   { background: rgba(231, 76, 60, 0.15);  color: #f37b6f; }
 [data-theme="night"] .mst-result.skipped { background: rgba(241, 196, 15, 0.12); color: #f0d068; }
-[data-theme="night"] .mst-complete-actions button {
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-input-border);
-}
-[data-theme="night"] .mst-loading,
-[data-theme="night"] .mst-error,
-[data-theme="night"] .mst-complete {
-  color: var(--color-text-primary);
-}
