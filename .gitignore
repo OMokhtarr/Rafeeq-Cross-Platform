@@ -13,6 +13,7 @@ ios/DerivedData/
 # Electron
 electron/build/
 electron/dist/
+electron/electon.zip
 
 # Logs
 *.log
@@ -28,6 +29,7 @@ yarn-error.log*
 # IDE
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
