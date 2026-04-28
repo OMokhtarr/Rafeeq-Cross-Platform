@@ -13,6 +13,11 @@ import { useHistory } from "react-router-dom";
 import { useTheme } from "../../core/context/ThemeContext";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import {
+  MUSHAFS,
+  DEFAULT_MUSHAF,
+  type MushafKind,
+} from "../../core/services/api/mushaf.config";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +26,7 @@ interface AppSettings {
   arabicFontSize: number;       // 14–32
   showTransliteration: boolean;
   // Quran
+  mushaf: MushafKind;
   reciter: string;
   showTajweedColors: boolean;
   autoNextPage: boolean;
@@ -39,6 +45,7 @@ interface AppSettings {
 const DEFAULTS: AppSettings = {
   arabicFontSize: 22,
   showTransliteration: false,
+  mushaf: DEFAULT_MUSHAF,
   reciter: "husary",
   showTajweedColors: true,
   autoNextPage: false,
@@ -409,6 +416,17 @@ const Settings: React.FC = () => {
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionQuran}</p>
               <div className="settings-card">
+                <SelectRow
+                  icon={ICONS.book}
+                  label="المصحف"
+                  desc="اختر طريقة عرض المصحف"
+                  value={s.mushaf}
+                  options={Object.values(MUSHAFS).map((m) => ({
+                    value: m.kind,
+                    label: lang === "ar" ? m.labelAr : m.labelEn,
+                  }))}
+                  onChange={(v) => set("mushaf", v as MushafKind)}
+                />
                 <SelectRow
                   icon={ICONS.mic}
                   label={ts.reciter}

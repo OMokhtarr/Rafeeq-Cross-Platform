@@ -1,20 +1,20 @@
 /**
  * PAGE VIEWER
  *
- * Uses pageData to know exactly which verses belong to each page.
- * pageData[pg] = [startSura, startAya]
- * pageData[pg+1] = [nextSura, nextAya]  ← exclusive end
+ * Renders the Madani Mushaf page-by-page. Verses are rendered glyph-by-glyph
+ * by <MushafPage>; this component owns:
+ *   - page navigation (arrows, surah picker, swipe)
+ *   - the hamburger side drawer (surah list, search, settings, selection ops)
+ *   - verse selection + hidden-verses orchestration via VerseVisibilityContext
  *
- * Font sizing strategy:
- *  1. Load exactly the verses for this page (from quran.service, which
- *     already uses pageData internally).
- *  2. Measure available height = mushaf-page height − bismillah − footer − padding.
- *  3. Binary-search the largest font where ALL page verses fit in that height
- *     using a hidden probe div.
- *  4. No verses are ever dropped — every verse on the page is shown.
- *     If the font hits the minimum (10px) and still overflows, the probe
- *     switches to overflow:hidden so the last line clips cleanly rather than
- *     bleeding into the footer.
+ * UX changes vs. the old toolbar:
+ *   - Search and Settings buttons are no longer on the top toolbar — both
+ *     live inside the hamburger drawer so the toolbar stays minimal.
+ *   - The "view" (hide-all toggle) is replaced with a per-verse selection
+ *     model. Tap or long-press a verse to select; selected verses can be
+ *     hidden via the action bar at the bottom of the screen.
+ *   - Hidden verses persist across page navigation, search jumps, and other
+ *     viewer surfaces (MushafContextViewer) via VerseVisibilityContext.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -22,36 +22,26 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import { pageData } from "../../../data/quranData";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import MushafPage from "../../shared/components/mushaf-page/MushafPage";
 import {
   getPage,
   prefetchPage,
+  getKnownPageCeiling,
   surahNamesArabic,
   getSurahName,
 } from "../../core/services/data/quran.service";
 import { toHindiNumbers, removeDiacritics } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
+import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
 import "./PageViewer.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Verse {
-  sura: number;
-  aya: number;
-  text: string;
-  page: number;
-  suraName?: string;
-  suraNameAr?: string;
-}
+import type { Verse } from "../../shared/models/verse.model";
 
 interface SearchEntry extends Verse {
   normalizedText: string;
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const LINE_HEIGHT_RATIO = 1.85;
-const FONT_MIN = 10;
-const FONT_MAX = 32;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -59,6 +49,20 @@ const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const { t, isRTL } = useLang();
+
+  // Verse selection + hidden state lives in app-wide context so it survives
+  // navigation, search jumps, and switches between PageViewer and the
+  // MushafContextViewer used inside quizzes.
+  const {
+    selected,
+    toggleSelected,
+    clearSelection,
+    selectionCount,
+    hidden,
+    showAll,
+    hideSelected,
+    hiddenCount,
+  } = useVerseVisibility();
 
   // Read ?page=N from query string when navigating in (e.g. from SurahJuz)
   const initialPage = (() => {
@@ -70,144 +74,32 @@ const PageViewer: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dynamicFontSize, setDynamicFontSize] = useState(16);
   const [selectedSurah, setSelectedSurah] = useState(1);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [showVerses, setShowVerses] = useState(true);
+
+  // Drawer + nested panels (search/settings live INSIDE the drawer now,
+  // not on the top toolbar). drawerOpen toggles the side sheet itself;
+  // drawerView selects which panel inside the drawer is visible.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  type DrawerView = "menu" | "search" | "settings";
+  const [drawerView, setDrawerView] = useState<DrawerView>("menu");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchEntry[]>([]);
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState("متوسط");
   const [fontType, setFontType] = useState("أميري");
-  const [workerReady, setWorkerReady] = useState(false);
+  const [, setWorkerReady] = useState(false);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const pageRef = useRef<HTMLDivElement>(null); // .mushaf-page
-  const bismillahRef = useRef<HTMLDivElement>(null); // bismillah strip
-  const textFlowRef = useRef<HTMLDivElement>(null); // text content div
-  const footerRef = useRef<HTMLDivElement>(null); // hizb footer
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchWorkerRef = useRef<Worker | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const rafRef = useRef<number>(0);
 
-  const totalPages = pageData.length - 1;
-
-  // ── Exact available height for text ───────────────────────────────────────
-  // clientHeight already excludes border, but INCLUDES padding — so we must
-  // subtract padding-top/-bottom read from computed style (stays correct even
-  // if .mushaf-page padding is changed in CSS).
-  const getAvailableHeight = useCallback((): number => {
-    if (!pageRef.current) return 0;
-    const el = pageRef.current;
-    const cs = window.getComputedStyle(el);
-    const padT = parseFloat(cs.paddingTop) || 0;
-    const padB = parseFloat(cs.paddingBottom) || 0;
-    const bismillahH = bismillahRef.current?.offsetHeight ?? 0;
-    const footerH = footerRef.current?.offsetHeight ?? 0;
-    return el.clientHeight - padT - padB - bismillahH - footerH;
-  }, []);
-
-  // ── Binary-search font size so ALL page verses fit ────────────────────────
-  // We never drop verses — we just shrink the font until everything fits.
-  const fitVerses = useCallback(
-    (allVerses: Verse[]) => {
-      if (!allVerses.length || !textFlowRef.current) return;
-
-      const availH = getAvailableHeight();
-      if (availH <= 0) return;
-
-      const containerW = textFlowRef.current.clientWidth;
-
-      // Build probe. containerW is textFlowRef.clientWidth — which already
-      // EXCLUDES the text-flow's own horizontal padding. Setting padding:0
-      // on the probe avoids double-counting (the old `padding:0 20px` made
-      // the probe narrower than reality and caused the font to shrink too
-      // aggressively).
-      const probe = document.createElement("div");
-      probe.style.cssText = [
-        "position:absolute",
-        "visibility:hidden",
-        "pointer-events:none",
-        `width:${containerW}px`,
-        `line-height:${LINE_HEIGHT_RATIO}`,
-        'font-family:"Traditional Arabic","Amiri","Scheherazade New",serif',
-        "text-align:justify",
-        "direction:rtl",
-        "word-spacing:0.15em",
-        "letter-spacing:0.03em",
-        "white-space:normal",
-        "overflow:visible",
-        "padding:0",
-        "box-sizing:border-box",
-      ].join(";");
-      document.body.appendChild(probe);
-
-      // Build inner HTML for all verses once
-      const html = allVerses
-        .map(
-          (v) =>
-            `<span style="display:inline">${v.text}</span>` +
-            `<span style="display:inline-flex;margin:0 10px;font-size:1.8em;opacity:0.15;vertical-align:middle">۝</span>`,
-        )
-        .join("");
-
-      // Binary search: largest font where scrollHeight <= availH
-      let lo = FONT_MIN,
-        hi = FONT_MAX,
-        bestFs = FONT_MIN;
-      for (let i = 0; i < 8; i++) {
-        const mid = Math.floor((lo + hi) / 2);
-        probe.style.fontSize = `${mid}px`;
-        probe.innerHTML = html;
-        if (probe.scrollHeight <= availH + 1) {
-          bestFs = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-
-      document.body.removeChild(probe);
-      setDynamicFontSize(bestFs);
-    },
-    [getAvailableHeight],
-  );
-
-  // ── Re-fit on load / resize / orientation / keyboard ─────────────────────
-  useEffect(() => {
-    if (loading || !verses.length) return;
-
-    const run = () => {
-      cancelAnimationFrame(rafRef.current);
-      // Two rAF frames: first lets React paint bismillah+footer into DOM,
-      // second measures their actual heights.
-      rafRef.current = requestAnimationFrame(() =>
-        requestAnimationFrame(() => fitVerses(verses)),
-      );
-    };
-
-    run();
-
-    const ro = new ResizeObserver(run);
-    if (pageRef.current) ro.observe(pageRef.current);
-
-    // visualViewport fires on soft-keyboard open/close on Android; orientation
-    // change on phones/tablets flipping between portrait and landscape.
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", run);
-    window.addEventListener("orientationchange", run);
-
-    return () => {
-      ro.disconnect();
-      vv?.removeEventListener("resize", run);
-      window.removeEventListener("orientationchange", run);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [loading, verses, fitVerses]);
+  // pageData has 606 entries (index 0 unused, 1..604 real pages, 605 is the
+  // exclusive end-marker [115, 1]). Real Mushaf pages: 1..604.
+  const totalPages = 604;
 
   // ── Search worker ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,6 +115,12 @@ const PageViewer: React.FC = () => {
       const allVerses: SearchEntry[] = [];
       for (let page = 1; page <= totalPages; page++) {
         const pv = await getPage(page);
+        if (!pv.length) {
+          // Either rejected by the page-range guard or 404 ceiling reached.
+          // Either way, no point in continuing past this point this session.
+          if (getKnownPageCeiling() !== null) break;
+          continue;
+        }
         pv.forEach((v) =>
           allVerses.push({ ...v, normalizedText: removeDiacritics(v.text) }),
         );
@@ -249,22 +147,44 @@ const PageViewer: React.FC = () => {
     setVerses([]);
 
     getPage(currentPage).then((pageVerses) => {
-      if (!cancelled) {
-        setVerses(pageVerses);
-        setLoading(false);
-        setHighlightedVerse(null);
-        prefetchPage(currentPage - 1);
-        prefetchPage(currentPage + 1);
+      if (cancelled) return;
+      if (!pageVerses.length) {
+        // Page not served by the current credentials (prelive sandbox).
+        // Fall back to the last known-good page so the reader isn't blank.
+        const ceiling = getKnownPageCeiling();
+        if (ceiling !== null && currentPage > ceiling) {
+          setCurrentPage(ceiling);
+          return;
+        }
       }
+      setVerses(pageVerses);
+      setLoading(false);
+      setHighlightedVerse(null);
+      prefetchPage(currentPage - 1);
+      prefetchPage(currentPage + 1);
     });
     return () => {
       cancelled = true;
     };
   }, [currentPage]);
 
+  // Auto-focus the search input when the drawer flips to the search view.
   useEffect(() => {
-    if (searchOpen && searchInputRef.current) searchInputRef.current.focus();
-  }, [searchOpen]);
+    if (drawerOpen && drawerView === "search" && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [drawerOpen, drawerView]);
+
+  // Lock body scroll while the drawer is open (mobile feels broken otherwise).
+  useEffect(() => {
+    if (drawerOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [drawerOpen]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const getSurahStartPage = (surahIndex: number): number => {
@@ -281,12 +201,12 @@ const PageViewer: React.FC = () => {
     setCurrentPage(getSurahStartPage(surah));
   };
 
-  const goToPrevious = () => {
-    if (currentPage > 1) setCurrentPage((p) => p - 1);
-  };
-  const goToNext = () => {
-    if (currentPage < totalPages) setCurrentPage((p) => p + 1);
-  };
+  const goToPrevious = useCallback(() => {
+    setCurrentPage((p) => (p > 1 ? p - 1 : p));
+  }, []);
+  const goToNext = useCallback(() => {
+    setCurrentPage((p) => (p < totalPages ? p + 1 : p));
+  }, [totalPages]);
 
   const getPageInfo = () => {
     if (currentPage < 1 || currentPage > totalPages) return null;
@@ -305,6 +225,18 @@ const PageViewer: React.FC = () => {
   const isSurahStart =
     verses.length > 0 && verses[0].aya === 1 && verses[0].sura !== 9;
 
+  // Drawer open/close helpers — keep nested panels reset.
+  const openDrawer = (view: DrawerView = "menu") => {
+    setDrawerView(view);
+    setDrawerOpen(true);
+  };
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setDrawerView("menu");
+    clearSearch();
+  };
+
+  // ── Search ────────────────────────────────────────────────────────────────
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim() || !searchWorkerRef.current) {
@@ -316,9 +248,7 @@ const PageViewer: React.FC = () => {
 
   const handleResultClick = (result: SearchEntry) => {
     setCurrentPage(result.page);
-    setSearchOpen(false);
-    setSearchQuery("");
-    setSearchResults([]);
+    closeDrawer();
     setHighlightedVerse(`${result.sura}:${result.aya}`);
     setTimeout(() => setHighlightedVerse(null), 3000);
   };
@@ -328,27 +258,18 @@ const PageViewer: React.FC = () => {
     setSearchResults([]);
   };
 
-  // ── Render all page verses (no dropping) ─────────────────────────────────
-  const renderVersesInFlow = () =>
-    verses.map((v) => {
-      const key = `${v.sura}:${v.aya}`;
-      const isHighlighted = highlightedVerse === key;
-      return (
-        <React.Fragment key={key}>
-          <span
-            className={`verse-text ${!showVerses ? "hidden" : ""} ${isHighlighted ? "highlighted" : ""}`}
-          >
-            {v.text}
-          </span>
-          <span
-            className={`verse-separator ${isHighlighted ? "highlighted" : ""}`}
-          >
-            <span className="separator-number">{toHindiNumbers(v.aya)}</span>
-            <span className="separator-symbol">۝</span>
-          </span>
-        </React.Fragment>
-      );
-    });
+  // ── Selection / hide actions ─────────────────────────────────────────────
+  // Tap (or long-press) a verse → toggle membership in the selection set.
+  const handleVerseTap = useCallback(
+    (key: string) => {
+      // Tapping a hidden verse is the natural gesture to bring it back —
+      // it's already excluded from selection visually, so we simply toggle
+      // selection on it; the user can then "Show selected" from the action
+      // bar. (Or use Show all from the drawer.)
+      toggleSelected(key);
+    },
+    [toggleSelected],
+  );
 
   // ── Swipe ─────────────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -372,14 +293,14 @@ const PageViewer: React.FC = () => {
     <IonPage>
       <IonContent fullscreen scrollY={false}>
         <div className="mushaf-container">
-          {/* ── Toolbar ── */}
+          {/* ── Toolbar (slimmed: hamburger + page nav + surah; no search/settings) ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
               <button
                 className="toolbar-button menu-button"
-                onClick={() => history.push("/surah-juz")}
+                onClick={() => openDrawer("menu")}
                 title={t.mushaf.juz}
-                aria-label={t.mushaf.juz}
+                aria-label="القائمة"
               >
                 <svg
                   className="menu-icon"
@@ -452,79 +373,11 @@ const PageViewer: React.FC = () => {
               </div>
             </div>
 
+            {/* Right side intentionally minimal — search & settings moved
+                into the hamburger drawer per redesign. The Arabic surah
+                quick-select stays in the DOM (hidden by CSS) for any
+                legacy code referencing #surah-quick-select. */}
             <div className="toolbar-right">
-              <div className="toolbar-actions">
-                <button
-                  className={`toolbar-button search-button ${searchOpen ? "active" : ""}`}
-                  onClick={() => {
-                    setSearchOpen((o) => !o);
-                    if (!searchOpen) setSettingsOpen(false);
-                    else clearSearch();
-                  }}
-                  title="بحث"
-                  aria-label="بحث"
-                  aria-pressed={searchOpen}
-                >
-                  <svg
-                    className="search-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </button>
-                <button
-                  className={`toolbar-button settings-button ${settingsOpen ? "active" : ""}`}
-                  onClick={() => {
-                    setSettingsOpen((o) => !o);
-                    if (!settingsOpen) {
-                      setSearchOpen(false);
-                      clearSearch();
-                    }
-                  }}
-                  title="الإعدادات"
-                  aria-label="الإعدادات"
-                  aria-pressed={settingsOpen}
-                >
-                  <svg
-                    className="settings-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24" />
-                  </svg>
-                </button>
-                <button
-                  className={`toolbar-button view-button ${!showVerses ? "active" : ""}`}
-                  onClick={() => setShowVerses((v) => !v)}
-                  title={showVerses ? "إخفاء الآيات" : "إظهار الآيات"}
-                  aria-label={showVerses ? "إخفاء الآيات" : "إظهار الآيات"}
-                  aria-pressed={!showVerses}
-                >
-                  <svg
-                    className="view-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </button>
-              </div>
               <select
                 className="surah-quick-select"
                 value={selectedSurah}
@@ -539,141 +392,6 @@ const PageViewer: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Search Panel ── */}
-          {searchOpen && (
-            <div className="search-panel">
-              <form onSubmit={handleSearch} className="search-form">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="ابحث في القرآن الكريم (بدون تشكيل)..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (!e.target.value.trim()) setSearchResults([]);
-                  }}
-                  className="search-input"
-                />
-                <button type="submit" className="search-submit">
-                  بحث
-                </button>
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className="search-clear"
-                    onClick={clearSearch}
-                  >
-                    ✕
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="search-close"
-                  onClick={() => {
-                    setSearchOpen(false);
-                    clearSearch();
-                  }}
-                >
-                  إلغاء
-                </button>
-              </form>
-              {searchResults.length > 0 && (
-                <div className="search-results">
-                  <div className="results-header">
-                    <span>نتائج البحث: {searchResults.length}</span>
-                  </div>
-                  <div className="results-list">
-                    {searchResults.map((r, i) => (
-                      <div
-                        key={`${r.sura}-${r.aya}-${i}`}
-                        className="result-item"
-                        onClick={() => handleResultClick(r)}
-                      >
-                        <div className="result-main">
-                          <span className="result-surah">{r.suraNameAr}</span>
-                          <span className="result-verse">
-                            الآية {toHindiNumbers(r.aya)}
-                          </span>
-                        </div>
-                        <div className="result-meta">
-                          <span className="result-page">
-                            صفحة {toHindiNumbers(r.page)}
-                          </span>
-                          <span className="result-preview">
-                            {r.text?.length > 50
-                              ? r.text.substring(0, 50) + "..."
-                              : r.text}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {searchQuery && searchResults.length === 0 && (
-                <div className="no-results">
-                  <p>لا توجد نتائج لـ "{searchQuery}"</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Settings Panel ── */}
-          {settingsOpen && (
-            <div className="settings-panel">
-              <div className="settings-header">
-                <h3>الإعدادات</h3>
-                <button
-                  className="settings-close"
-                  onClick={() => setSettingsOpen(false)}
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="settings-content">
-                <div className="setting-item">
-                  <label>حجم الخط</label>
-                  <select
-                    className="setting-select"
-                    value={fontSize}
-                    onChange={(e) => setFontSize(e.target.value)}
-                  >
-                    <option>صغير</option>
-                    <option>متوسط</option>
-                    <option>كبير</option>
-                    <option>كبير جداً</option>
-                  </select>
-                </div>
-                <div className="setting-item">
-                  <label>نوع الخط</label>
-                  <select
-                    className="setting-select"
-                    value={fontType}
-                    onChange={(e) => setFontType(e.target.value)}
-                  >
-                    <option>أميري</option>
-                    <option>تقليدي</option>
-                    <option>عثمان</option>
-                    <option>نسخ</option>
-                  </select>
-                </div>
-                <div className="setting-item">
-                  <label>الوضع الليلي</label>
-                  <button className="toggle-button">إيقاف</button>
-                </div>
-                <div className="setting-item">
-                  <label>ترجمة</label>
-                  <select className="setting-select">
-                    <option>بدون ترجمة</option>
-                    <option>الإنجليزية</option>
-                    <option>الأوردية</option>
-                    <option>الملايوية</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ── Mushaf Content ── */}
           <div
             className="mushaf-content mushaf-content-with-nav"
@@ -687,36 +405,330 @@ const PageViewer: React.FC = () => {
                 <p>{t.mushaf.loading}</p>
               </div>
             ) : (
-              <div className="mushaf-page" ref={pageRef}>
-                {/* Bismillah — ref so height is excluded from text budget */}
-                {isSurahStart && (
-                  <div className="bismillah-line" ref={bismillahRef}>
-                    <span className="bismillah-text">﷽</span>
-                  </div>
-                )}
+              <div className="mushaf-page">
+                {/* QPC V1 page-perfect rendering. Bismillah is drawn by the
+                    component using the QCF_BSML font. Selection + hide are
+                    driven by the VerseVisibilityContext sets. */}
+                <MushafPage
+                  page={currentPage}
+                  verses={verses}
+                  showBismillah={isSurahStart}
+                  selected={selected}
+                  hidden={hidden}
+                  onVerseTap={handleVerseTap}
+                  target={
+                    highlightedVerse
+                      ? {
+                          sura: parseInt(highlightedVerse.split(":")[0]),
+                          aya: parseInt(highlightedVerse.split(":")[1]),
+                        }
+                      : undefined
+                  }
+                />
 
-                {/* Text flow — font scaled to fit ALL page verses */}
-                <div
-                  className="mushaf-text-flow"
-                  ref={textFlowRef}
-                  style={{
-                    fontSize: `${dynamicFontSize}px`,
-                    lineHeight: `${LINE_HEIGHT_RATIO}`,
-                  }}
-                >
-                  {renderVersesInFlow()}
-                </div>
-
-                {/* Footer — ref so height is excluded from text budget */}
-                <div className="page-footer" ref={footerRef}>
+                {/* Footer — kept for hizb indicator below the Mushaf page. */}
+                <div className="page-footer">
                   {t.mushaf.hizb} {toHindiNumbers(Math.ceil(currentPage / 4))}
                 </div>
               </div>
             )}
           </div>
 
+          {/* ── Selection action bar ─────────────────────────────────────
+              Slides up only when the user has actually selected verses,
+              so it never gets in the way of normal reading. */}
+          {selectionCount > 0 && (
+            <div
+              className="selection-bar"
+              role="toolbar"
+              aria-label="إجراءات التحديد"
+            >
+              <span className="selection-count">
+                {toHindiNumbers(selectionCount)} آية محددة
+              </span>
+              <div className="selection-actions">
+                <button
+                  className="sel-btn sel-btn-primary"
+                  onClick={hideSelected}
+                  title="إخفاء الآيات المحددة"
+                >
+                  إخفاء
+                </button>
+                <button
+                  className="sel-btn"
+                  onClick={clearSelection}
+                  title="إلغاء التحديد"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ── Persistent bottom navigation (Home + tabs) ── */}
           <BottomNavBar active="quran" />
+
+          {/* ── Side drawer (hamburger menu) ─────────────────────────────
+              Hosts: surah/juz quick-jump, search, settings link, and the
+              hidden-verses controls. Search & Settings used to be on the
+              top toolbar; per redesign they now live here. */}
+          {drawerOpen && (
+            <>
+              <div
+                className="drawer-backdrop"
+                onClick={closeDrawer}
+                aria-hidden="true"
+              />
+              <aside
+                className={`side-drawer ${drawerView === "search" ? "drawer-search-mode" : ""}`}
+                role="dialog"
+                aria-label="القائمة الجانبية"
+              >
+                <header className="drawer-header">
+                  {drawerView !== "menu" && (
+                    <button
+                      className="drawer-back"
+                      onClick={() => {
+                        setDrawerView("menu");
+                        clearSearch();
+                      }}
+                      aria-label="رجوع"
+                    >
+                      ›
+                    </button>
+                  )}
+                  <h3 className="drawer-title">
+                    {drawerView === "menu" && "القائمة"}
+                    {drawerView === "search" && "بحث في القرآن"}
+                    {drawerView === "settings" && "الإعدادات"}
+                  </h3>
+                  <button
+                    className="drawer-close"
+                    onClick={closeDrawer}
+                    aria-label="إغلاق"
+                  >
+                    ✕
+                  </button>
+                </header>
+
+                <div className="drawer-body">
+                  {drawerView === "menu" && (
+                    <nav className="drawer-menu">
+                      <button
+                        className="drawer-item"
+                        onClick={() => {
+                          closeDrawer();
+                          history.push("/surah-juz");
+                        }}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ☰
+                        </span>
+                        <span className="drawer-item-label">
+                          السور والأجزاء
+                        </span>
+                      </button>
+
+                      <button
+                        className="drawer-item"
+                        onClick={() => setDrawerView("search")}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          🔍
+                        </span>
+                        <span className="drawer-item-label">بحث</span>
+                      </button>
+
+                      <button
+                        className="drawer-item"
+                        onClick={() => setDrawerView("settings")}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ⚙
+                        </span>
+                        <span className="drawer-item-label">الإعدادات</span>
+                      </button>
+
+                      <div className="drawer-divider" />
+
+                      {/* Hidden-verses controls. Tapping individual verses
+                          in the page selects them; hiding/clearing is
+                          available either via the floating selection bar
+                          or here in the drawer for "show all hidden". */}
+                      <button
+                        className="drawer-item"
+                        onClick={() => {
+                          hideSelected();
+                          closeDrawer();
+                        }}
+                        disabled={selectionCount === 0}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ◐
+                        </span>
+                        <span className="drawer-item-label">
+                          إخفاء الآيات المحددة
+                          {selectionCount > 0 &&
+                            ` (${toHindiNumbers(selectionCount)})`}
+                        </span>
+                      </button>
+
+                      <button
+                        className="drawer-item"
+                        onClick={() => {
+                          clearSelection();
+                        }}
+                        disabled={selectionCount === 0}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ⊘
+                        </span>
+                        <span className="drawer-item-label">
+                          إلغاء التحديد
+                        </span>
+                      </button>
+
+                      <button
+                        className="drawer-item drawer-item-warn"
+                        onClick={() => {
+                          showAll();
+                        }}
+                        disabled={hiddenCount === 0}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          👁
+                        </span>
+                        <span className="drawer-item-label">
+                          إظهار كل الآيات المخفية
+                          {hiddenCount > 0 &&
+                            ` (${toHindiNumbers(hiddenCount)})`}
+                        </span>
+                      </button>
+                    </nav>
+                  )}
+
+                  {drawerView === "search" && (
+                    <div className="drawer-search">
+                      <form onSubmit={handleSearch} className="search-form">
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          placeholder="ابحث في القرآن الكريم (بدون تشكيل)..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            if (!e.target.value.trim()) setSearchResults([]);
+                          }}
+                          className="search-input"
+                        />
+                        <div className="search-form-actions">
+                          <button type="submit" className="search-submit">
+                            بحث
+                          </button>
+                          {searchQuery && (
+                            <button
+                              type="button"
+                              className="search-clear"
+                              onClick={clearSearch}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </form>
+                      {searchResults.length > 0 && (
+                        <div className="search-results">
+                          <div className="results-header">
+                            <span>
+                              نتائج البحث: {toHindiNumbers(searchResults.length)}
+                            </span>
+                          </div>
+                          <div className="results-list">
+                            {searchResults.map((r, i) => (
+                              <div
+                                key={`${r.sura}-${r.aya}-${i}`}
+                                className="result-item"
+                                onClick={() => handleResultClick(r)}
+                              >
+                                <div className="result-main">
+                                  <span className="result-surah">
+                                    {r.suraNameAr}
+                                  </span>
+                                  <span className="result-verse">
+                                    الآية {toHindiNumbers(r.aya)}
+                                  </span>
+                                </div>
+                                <div className="result-meta">
+                                  <span className="result-page">
+                                    صفحة {toHindiNumbers(r.page)}
+                                  </span>
+                                  <span className="result-preview">
+                                    {r.text?.length > 50
+                                      ? r.text.substring(0, 50) + "..."
+                                      : r.text}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {searchQuery && searchResults.length === 0 && (
+                        <div className="no-results">
+                          <p>لا توجد نتائج لـ "{searchQuery}"</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {drawerView === "settings" && (
+                    <div className="drawer-settings">
+                      <div className="setting-item">
+                        <label>حجم الخط</label>
+                        <select
+                          className="setting-select"
+                          value={fontSize}
+                          onChange={(e) => setFontSize(e.target.value)}
+                        >
+                          <option>صغير</option>
+                          <option>متوسط</option>
+                          <option>كبير</option>
+                          <option>كبير جداً</option>
+                        </select>
+                      </div>
+                      <div className="setting-item">
+                        <label>نوع الخط</label>
+                        <select
+                          className="setting-select"
+                          value={fontType}
+                          onChange={(e) => setFontType(e.target.value)}
+                        >
+                          <option>أميري</option>
+                          <option>تقليدي</option>
+                          <option>عثمان</option>
+                          <option>نسخ</option>
+                        </select>
+                      </div>
+                      <button
+                        className="drawer-item"
+                        onClick={() => {
+                          closeDrawer();
+                          history.push("/settings");
+                        }}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ⚙
+                        </span>
+                        <span className="drawer-item-label">
+                          المزيد من الإعدادات
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </>
+          )}
         </div>
       </IonContent>
     </IonPage>

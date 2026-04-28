@@ -1,0 +1,9 @@
+name = "rafeeq-token-broker"
+main = "src/index.ts"
+compatibility_date = "2026-01-15"
+
+# Secrets are NOT defined here — set them via:
+#   wrangler secret put QF_CLIENT_ID
+#   wrangler secret put QF_CLIENT_SECRET
+#   wrangler secret put QF_TOKEN_URL
+#   wrangler secret put ALLOWED_ORIGIN

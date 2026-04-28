@@ -1,0 +1,149 @@
+.mushaf-page-glyph {
+  direction: rtl;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
+  font-size: clamp(20px, 4.6vw, 34px);
+  line-height: 1.7;
+  color: var(--color-mushaf-text, #1a1a1a);
+}
+
+.mushaf-bismillah {
+  text-align: center;
+  font-size: 1.3em;
+  margin-bottom: 0.4em;
+}
+
+.mushaf-line {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.mushaf-word {
+  display: inline-block;
+}
+
+.mushaf-ayah-end {
+  display: inline-block;
+  margin: 0 0.15em;
+  position: relative;
+}
+
+.mushaf-word-target,
+.mushaf-ayah-end-target {
+  background: rgba(255, 215, 0, 0.32);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(212, 180, 140, 0.5);
+}
+
+/* ── Selection ──────────────────────────────────────────────────────────
+   Day: warm amber tint with a parchment ring.
+   Night: navy-friendly gold tint that doesn't blow out the glyphs.
+   ──────────────────────────────────────────────────────────────────── */
+.mushaf-verse-selected {
+  background: rgba(212, 180, 140, 0.32);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(139, 69, 19, 0.45);
+  cursor: pointer;
+}
+
+[data-theme="night"] .mushaf-verse-selected {
+  background: rgba(255, 215, 0, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55);
+}
+
+/* ── Hidden ─────────────────────────────────────────────────────────────
+   We don't strip the glyphs (that would break Madani justification).
+   Instead, fade them and pin a small placeholder badge on the ayah-end
+   ornament so the user can clearly see *that* a verse is hidden and
+   tap to bring it back.
+   ──────────────────────────────────────────────────────────────────── */
+.mushaf-verse-hidden {
+  color: transparent !important;
+  text-shadow: none !important;
+  background: linear-gradient(
+    to bottom,
+    transparent 45%,
+    rgba(139, 69, 19, 0.35) 45%,
+    rgba(139, 69, 19, 0.35) 55%,
+    transparent 55%
+  );
+  cursor: pointer;
+  user-select: none;
+}
+
+[data-theme="night"] .mushaf-verse-hidden {
+  background: linear-gradient(
+    to bottom,
+    transparent 45%,
+    rgba(212, 180, 140, 0.35) 45%,
+    rgba(212, 180, 140, 0.35) 55%,
+    transparent 55%
+  );
+}
+
+/* The end-of-ayah glyph keeps its silhouette so the verse boundary stays
+   readable; we just fade it. */
+.mushaf-verse-hidden.mushaf-ayah-end {
+  background: none;
+  opacity: 0.35;
+  color: var(--color-mushaf-text, #1a1a1a) !important;
+}
+
+[data-theme="night"] .mushaf-verse-hidden.mushaf-ayah-end {
+  color: var(--color-mushaf-text, #f4ecd8) !important;
+}
+
+/* Small placeholder badge — pinned to the ayah-end ornament once per verse */
+.mushaf-hidden-badge {
+  position: absolute;
+  top: -0.45em;
+  inset-inline-end: -0.55em;
+  font-size: 0.45em;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  background: #8b4513;
+  color: #fff9e6;
+  border-radius: 999px;
+  padding: 0.05em 0.45em;
+  line-height: 1.4;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-theme="night"] .mushaf-hidden-badge {
+  background: var(--color-gold, #d4b48c);
+  color: #1a2336;
+}
+
+.mushaf-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 60vh;
+}
+
+.mushaf-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-top-color: var(--ion-color-primary, #2c7a4b);
+  border-radius: 50%;
+  animation: mushaf-spin 0.9s linear infinite;
+}
+
+@keyframes mushaf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

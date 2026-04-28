@@ -7,7 +7,9 @@
  */
 
 const DB_NAME = "rafeeq-quran";
-const DB_VERSION = 1;
+// v2: added `pages` (cached API responses, key=pageNumber) and `fonts`
+//     (QPC V1 .ttf blobs from jsDelivr, key=pageNumber).
+const DB_VERSION = 2;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -31,6 +33,18 @@ export class IDBService {
         if (!db.objectStoreNames.contains("meta")) {
           db.createObjectStore("meta", { keyPath: "key" });
         }
+
+        // pages store: cached API verse-by-page payloads.
+        // record shape: { page: number, verses: Verse[] }
+        if (!db.objectStoreNames.contains("pages")) {
+          db.createObjectStore("pages", { keyPath: "page" });
+        }
+
+        // fonts store: cached QPC V1 .ttf bytes per page.
+        // record shape: { page: number, blob: Blob }
+        if (!db.objectStoreNames.contains("fonts")) {
+          db.createObjectStore("fonts", { keyPath: "page" });
+        }
       };
 
       req.onsuccess = (e) => {
@@ -44,7 +58,7 @@ export class IDBService {
 
   // ── Reads ──────────────────────────────────────────────────────────────────
 
-  async get<T>(store: string, key: string): Promise<T | null> {
+  async get<T>(store: string, key: string | number): Promise<T | null> {
     await this.open();
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(store, "readonly");

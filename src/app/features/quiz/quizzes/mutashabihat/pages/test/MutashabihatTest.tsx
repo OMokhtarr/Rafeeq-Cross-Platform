@@ -15,7 +15,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
-import VerseContextViewer from "../../../../../../shared/components/verse-context/VerseContextViewer";
+import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
 import {
   getAllMutashabihatGroups,
   filterGroupsBySurahs,
@@ -25,7 +25,10 @@ import {
   checkMutashabihatAnswer,
 } from "../../services/mutashabihat.service";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
-import { ensureSeeded } from "../../../../../../core/services/data/quran.service";
+import {
+  ensureSeeded,
+  getAllVersesAsMap,
+} from "../../../../../../core/services/data/quran.service";
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
@@ -73,20 +76,11 @@ const MutashabihatTest: React.FC = () => {
 
         const config: MutashabihatConfig = JSON.parse(value);
 
-        // Ensure Quran data is seeded before building the index
         await ensureSeeded();
 
-        // Build verse map from in-memory cache for getAllMutashabihatGroups
-        // The cache was warmed by ensureSeeded() above
-        // We import the raw verseCache via a helper that reads from IDB
-        const { idb } =
-          await import("../../../../../../core/services/storage/idb.service");
-        const storedVerses = await idb.getAll<{ id: string; text: string }>(
-          "verses",
-        );
-        const verseMap: Record<string, string> = {};
-        for (const v of storedVerses) verseMap[v.id] = v.text;
-
+        // Build full verse map by walking pages 1..604 via the API/IDB path.
+        // First run downloads all pages (slow); subsequent runs hit IDB.
+        const verseMap = await getAllVersesAsMap();
         const allGroups = getAllMutashabihatGroups(verseMap);
 
         let filtered =
@@ -267,7 +261,7 @@ const MutashabihatTest: React.FC = () => {
           {showContext && (
             <div className="mst-sidebar-wrapper">
               <div className="mst-page-viewer">
-                <VerseContextViewer
+                <MushafContextViewer
                   verse={{
                     sura: activeViewerVerse.sura,
                     aya: activeViewerVerse.aya,
@@ -276,10 +270,6 @@ const MutashabihatTest: React.FC = () => {
                     suraName: activeViewerVerse.suraName,
                     suraNameAr: activeViewerVerse.suraNameAr,
                   }}
-                  snippet={activeViewerVerse.isTarget ? q.displayedPortion : (activeViewerVerse.text ?? "")}
-                  hiddenPortion={activeViewerVerse.isTarget ? q.hiddenPortion : ""}
-                  hintLevel={activeViewerVerse.isTarget ? hintLevel : 0}
-                  showAnswer={activeViewerVerse.isTarget ? answered : false}
                   isOpen={showContext}
                   onClose={() => setShowContext(false)}
                   mode="sidebar"

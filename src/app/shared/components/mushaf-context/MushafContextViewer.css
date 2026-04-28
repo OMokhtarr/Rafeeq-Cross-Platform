@@ -1,0 +1,198 @@
+.mcv-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--color-mushaf-bg, #faf7f0);
+  color: var(--color-mushaf-text, #2c1810);
+  overflow: hidden;
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  box-sizing: border-box;
+  transition:
+    background-color var(--transition-theme, 0.2s),
+    color var(--transition-theme, 0.2s);
+}
+
+[data-theme="night"] .mcv-container {
+  background: #1f2a3b;
+  color: #f4ecd8;
+}
+
+.mcv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-bottom: 2px solid #d4b48c;
+  flex-shrink: 0;
+  direction: rtl;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mcv-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mcv-surah-name {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #d4b48c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcv-hizb-badge {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(212, 180, 140, 0.3);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: "Traditional Arabic", "Amiri", serif;
+}
+
+.mcv-page-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(212, 180, 140, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mcv-nav-btn {
+  background: none;
+  border: none;
+  color: #d4b48c;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.mcv-nav-btn:hover:not(:disabled) {
+  background: rgba(212, 180, 140, 0.25);
+}
+.mcv-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.mcv-page-num {
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: #fff;
+  padding: 0 6px;
+  min-width: 22px;
+  text-align: center;
+  white-space: nowrap;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  border-right: 1px solid rgba(212, 180, 140, 0.25);
+  border-left: 1px solid rgba(212, 180, 140, 0.25);
+  line-height: 26px;
+}
+
+.mcv-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mcv-jump-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  background: rgba(212, 180, 140, 0.18);
+  border: 1.5px solid rgba(212, 180, 140, 0.45);
+  color: #d4b48c;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  transition: all 0.15s;
+  height: 24px;
+}
+.mcv-jump-btn:hover {
+  background: rgba(212, 180, 140, 0.35);
+  color: #fff;
+}
+
+.mcv-close-btn {
+  background: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.mcv-close-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mcv-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4px 8px 6px;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mcv-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8b7355;
+}
+
+.mcv-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #e8dfcc;
+  border-top-color: #8b4513;
+  border-radius: 50%;
+  animation: mcv-spin 0.9s linear infinite;
+}
+
+.mcv-loading p {
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+@keyframes mcv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -45,6 +45,7 @@ import { ensureSeeded } from "./app/core/services/data/quran.service";
 // App-wide context
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
+import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 
 setupIonicReact({ mode: "md" });
 
@@ -58,8 +59,9 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <IonApp>
-          <IonReactRouter>
+        <VerseVisibilityProvider>
+          <IonApp>
+            <IonReactRouter>
             <IonRouterOutlet id="main">
               <Route exact path="/" component={Home} />
               <Route exact path="/viewer" component={PageViewer} />
@@ -85,8 +87,9 @@ const App: React.FC = () => {
               <Route exact path="/settings" component={Settings} />
               <Redirect exact from="/home" to="/" />
             </IonRouterOutlet>
-          </IonReactRouter>
-        </IonApp>
+            </IonReactRouter>
+          </IonApp>
+        </VerseVisibilityProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

@@ -944,3 +944,363 @@ body {
 * {
   scrollbar-width: none;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Side drawer (hamburger menu)
+   Replaces the old in-toolbar search/settings popovers. Hosts the surah
+   nav, search, settings, and selection-management actions. Themed for
+   day (parchment) and night (navy/gold) just like the toolbar.
+   ───────────────────────────────────────────────────────────────────── */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 14, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1500;
+  animation: drawer-fade 0.18s ease-out;
+}
+
+@keyframes drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: min(360px, 88vw);
+  max-width: 100vw;
+  background: var(--color-bg-toolbar, #fdfaf3);
+  color: var(--color-text-primary, #2c1810);
+  border-inline-end: 2px solid var(--color-gold, #d4b48c);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  animation: drawer-slide-in 0.22s ease-out;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  direction: rtl;
+}
+
+@keyframes drawer-slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+[data-theme="night"] .side-drawer {
+  background: linear-gradient(180deg, #1f2a3b 0%, #243248 100%);
+  color: #f4ecd8;
+  border-inline-end: 2px solid var(--color-gold, #d4b48c);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8e0d0;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  margin: 0;
+}
+
+.drawer-back,
+.drawer-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 180, 140, 0.4);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.drawer-back:hover,
+.drawer-close:hover {
+  background: rgba(212, 180, 140, 0.3);
+}
+
+.drawer-back:active,
+.drawer-close:active {
+  transform: scale(0.94);
+}
+
+.drawer-back {
+  /* RTL "back" arrow points to the right side of the screen */
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  min-height: 0;
+}
+
+.drawer-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: inherit;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1rem;
+  text-align: start;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.drawer-item:hover:not(:disabled) {
+  background: var(--color-gold-faint, rgba(212, 180, 140, 0.18));
+  border-color: rgba(212, 180, 140, 0.4);
+}
+
+[data-theme="night"] .drawer-item:hover:not(:disabled) {
+  background: rgba(212, 180, 140, 0.14);
+}
+
+.drawer-item:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.drawer-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.drawer-item-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  color: var(--color-gold, #d4b48c);
+  flex-shrink: 0;
+}
+
+.drawer-item-label {
+  flex: 1;
+}
+
+.drawer-item-warn .drawer-item-icon {
+  color: #c0392b;
+}
+
+[data-theme="night"] .drawer-item-warn .drawer-item-icon {
+  color: #e08e80;
+}
+
+.drawer-divider {
+  height: 1px;
+  background: rgba(212, 180, 140, 0.35);
+  margin: 8px 4px;
+}
+
+/* Search panel inside the drawer reuses the original .search-form,
+   .search-input, .search-results styles already defined above — we
+   only need the wrapper and a slight layout tweak. */
+.drawer-search {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawer-search .search-form {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0;
+}
+
+.drawer-search .search-input {
+  width: 100%;
+  font-size: 1rem;
+  padding: 10px 16px;
+}
+
+.drawer-search .search-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.drawer-search .search-submit {
+  flex: 1;
+  padding: 10px 18px;
+}
+
+.drawer-search .search-clear {
+  flex-shrink: 0;
+  padding: 8px 14px;
+}
+
+.drawer-search .search-results {
+  margin-top: 10px;
+}
+
+[data-theme="night"] .drawer-search .search-results {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(212, 180, 140, 0.35);
+}
+
+[data-theme="night"] .drawer-search .result-item {
+  border-bottom-color: rgba(212, 180, 140, 0.18);
+}
+
+[data-theme="night"] .drawer-search .result-item:hover {
+  background: rgba(212, 180, 140, 0.12);
+}
+
+[data-theme="night"] .drawer-search .result-surah {
+  color: #f4ecd8;
+}
+
+[data-theme="night"] .drawer-search .result-preview {
+  color: #c8bfae;
+}
+
+.drawer-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-settings .setting-item {
+  border-bottom-color: rgba(212, 180, 140, 0.3);
+}
+
+[data-theme="night"] .drawer-settings .setting-item label {
+  color: #f4ecd8;
+}
+
+[data-theme="night"] .drawer-settings .setting-select {
+  background: rgba(0, 0, 0, 0.25);
+  color: #f4ecd8;
+  border-color: rgba(212, 180, 140, 0.45);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Selection action bar — appears only when at least one verse is selected.
+   Sits above the BottomNavBar but below modals.
+   ───────────────────────────────────────────────────────────────────── */
+.selection-bar {
+  position: fixed;
+  inset-inline: 12px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg-toolbar, #fdfaf3);
+  border: 1.5px solid var(--color-gold, #d4b48c);
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  z-index: 200;
+  direction: rtl;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  animation: selbar-pop 0.18s ease-out;
+}
+
+@keyframes selbar-pop {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+[data-theme="night"] .selection-bar {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-color: var(--color-gold, #d4b48c);
+  color: #fff;
+}
+
+.selection-count {
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sel-btn {
+  border: 1px solid var(--color-gold, #d4b48c);
+  background: transparent;
+  color: inherit;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 0.95rem;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.sel-btn:hover {
+  background: rgba(212, 180, 140, 0.18);
+}
+
+.sel-btn:active {
+  transform: scale(0.96);
+}
+
+.sel-btn-primary {
+  background: #8b4513;
+  color: #fff;
+  border-color: #8b4513;
+}
+
+.sel-btn-primary:hover {
+  background: #a0522d;
+}
+
+[data-theme="night"] .sel-btn-primary {
+  background: var(--color-gold, #d4b48c);
+  color: #1a2336;
+  border-color: var(--color-gold, #d4b48c);
+}
+
+[data-theme="night"] .sel-btn-primary:hover {
+  background: #e6c89e;
+}
+
+@media (max-width: 480px) {
+  .side-drawer {
+    width: 92vw;
+  }
+  .selection-bar {
+    inset-inline: 8px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .sel-btn {
+    padding: 7px 10px;
+    font-size: 0.9rem;
+  }
+}

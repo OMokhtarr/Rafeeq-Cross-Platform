@@ -15,7 +15,7 @@ export interface Verse {
   sura: number;
   /** Ayah number within the surah */
   aya: number;
-  /** Arabic text (with tashkeel) */
+  /** Arabic text (with tashkeel) — Uthmani Unicode, used by quiz/search/etc. */
   text: string;
   /** Mushaf page number 1–604 */
   page: number;
@@ -25,6 +25,27 @@ export interface Verse {
   suraName?: string;
   /** Juz number 1–30 (derived from page) */
   juz?: number;
+  /**
+   * Per-word data from the API. Present after the API path has loaded the
+   * verse; absent if only the legacy text seed is available. Used by the
+   * Madani renderer (MushafPage) to draw page-perfect glyphs.
+   */
+  words?: VerseWord[];
+}
+
+export interface VerseWord {
+  /** 1-based position within the verse, including the end-of-ayah marker. */
+  position: number;
+  /** "word" for actual words, "end" for the ayah-number ornament. */
+  charType: "word" | "end";
+  /** Plain Uthmani Unicode for this word (also available as the ornament). */
+  textUthmani: string;
+  /** QPC V1 glyph code — pair with font p{NNN}.ttf for true Madani layout. */
+  codeV1: string;
+  /** Mushaf line number 1–15 on the page this word lives on. */
+  lineNumber: number;
+  /** Mushaf page number 1–604. */
+  pageNumber: number;
 }
 
 // ─── Quiz question shapes ─────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
-import VerseContextViewer from "../../../../../../shared/components/verse-context/VerseContextViewer";
+import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { removeDiacritics } from "../../../../../../core/utils/arabic.util";
 import { ensureSeeded } from "../../../../../../core/services/data/quran.service";
@@ -296,7 +296,7 @@ const AkmelAlAyah: React.FC = () => {
           {showContext && (
             <div className="aa-sidebar-wrapper">
               <div className="aa-page-viewer">
-                <VerseContextViewer
+                <MushafContextViewer
                   verse={{
                     sura: q.sura,
                     aya: q.aya,
@@ -305,10 +305,6 @@ const AkmelAlAyah: React.FC = () => {
                     suraName: q.suraName,
                     suraNameAr: q.suraNameAr,
                   }}
-                  snippet={q.versePart ?? q.displayedPortion}
-                  hiddenPortion={q.hiddenPortion ?? q.correctAnswer ?? ""}
-                  hintLevel={hintLevel}
-                  showAnswer={answered}
                   isOpen={showContext}
                   onClose={() => setShowContext(false)}
                   mode="sidebar"
