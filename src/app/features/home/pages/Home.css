@@ -36,7 +36,7 @@ ion-content::part(scroll) {
 }
 
 [data-theme="day"] .home-screen {
-  background: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
+  background: linear-gradient(160deg, #12281c 0%, #103d21 100%);
 }
 
 /* ── Stage: everything above the tab bar ── */
@@ -201,19 +201,12 @@ ion-content::part(scroll) {
   align-items: baseline;
 }
 
-/* Bottom gradient fade — blends content into the tab-bar surface */
-.home-stage-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, rgba(13, 31, 20, 0.85));
-}
-
 [data-theme="day"] .home-stage-fade {
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.85));
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.85)
+  );
 }
 
 @media (max-height: 560px) {

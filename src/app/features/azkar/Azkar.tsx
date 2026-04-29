@@ -200,136 +200,143 @@ const Azkar: React.FC = () => {
       <IonPage>
         <IonContent fullscreen>
           <div className="azkar-page-wrapper">
-          <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
-
-            {/* Sticky header */}
-            <div
-              className="azkar-header"
-              style={{ "--cat-color": cat.color } as React.CSSProperties}
-            >
-              <button
-                className="azkar-back-btn"
-                onClick={() => setSelectedCategory(null)}
+            <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
+              {/* Sticky header */}
+              <div
+                className="azkar-header"
+                style={{ "--cat-color": cat.color } as React.CSSProperties}
               >
-                {ta.back}
-              </button>
-              <div className="azkar-header-title">
-                <div>
-                  <h1 lang="ar" dir="rtl">{cat.title}</h1>
-                  <p lang="ar" dir="rtl">{cat.subtitle}</p>
-                </div>
-              </div>
-              {allDone && (
-                <div className="azkar-all-done">{ta.allDone}</div>
-              )}
-            </div>
-
-            {/* Items list */}
-            <div className="azkar-list">
-              {cat.azkar.map((zikr: any, index: number) => {
-                const count = counters[zikr.id] || 0;
-                const isDone = completed[zikr.id];
-                const progress =
-                  zikr.repeat > 1
-                    ? (count / zikr.repeat) * 100
-                    : isDone
-                    ? 100
-                    : 0;
-
-                return (
-                  <div
-                    key={zikr.id}
-                    className={`azkar-item ${isDone ? "completed" : ""}`}
-                    style={{ "--cat-color": cat.color } as React.CSSProperties}
-                    onTouchStart={onItemTouchStart(zikr.id)}
-                    onTouchEnd={onItemTouchEnd(zikr.id)}
-                  >
-                    {/* Item header: number badge + source */}
-                    <div className="azkar-item-header">
-                      <span className="azkar-item-num">{index + 1}</span>
-                      {zikr.source && (
-                        <span className="azkar-item-source">{zikr.source}</span>
-                      )}
-                    </div>
-
-                    {/* Optional note */}
-                    {zikr.note && (
-                      <div className="azkar-note">{zikr.note}</div>
-                    )}
-
-                    {/* Main Arabic text */}
-                    <p className="azkar-item-text" lang="ar">
-                      {zikr.text}
+                <button
+                  className="azkar-back-btn"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  {ta.back}
+                </button>
+                <div className="azkar-header-title">
+                  <div>
+                    <h1 lang="ar" dir="rtl">
+                      {cat.title}
+                    </h1>
+                    <p lang="ar" dir="rtl">
+                      {cat.subtitle}
                     </p>
+                  </div>
+                </div>
+                {allDone && <div className="azkar-all-done">{ta.allDone}</div>}
+              </div>
 
-                    {/* Optional translation */}
-                    {zikr.translation && (
-                      <p className="azkar-item-translation">
-                        {zikr.translation}
-                      </p>
-                    )}
+              {/* Items list */}
+              <div className="azkar-list">
+                {cat.azkar.map((zikr: any, index: number) => {
+                  const count = counters[zikr.id] || 0;
+                  const isDone = completed[zikr.id];
+                  const progress =
+                    zikr.repeat > 1
+                      ? (count / zikr.repeat) * 100
+                      : isDone
+                        ? 100
+                        : 0;
 
-                    {/* Progress bar for multi-repeat */}
-                    {zikr.repeat > 1 && (
-                      <div className="azkar-progress-bar">
-                        <div
-                          className="azkar-progress-fill"
-                          style={{ width: `${progress}%` }}
-                        />
+                  return (
+                    <div
+                      key={zikr.id}
+                      className={`azkar-item ${isDone ? "completed" : ""}`}
+                      style={
+                        { "--cat-color": cat.color } as React.CSSProperties
+                      }
+                      onTouchStart={onItemTouchStart(zikr.id)}
+                      onTouchEnd={onItemTouchEnd(zikr.id)}
+                    >
+                      {/* Item header: number badge + source */}
+                      <div className="azkar-item-header">
+                        <span className="azkar-item-num">{index + 1}</span>
+                        {zikr.source && (
+                          <span className="azkar-item-source">
+                            {zikr.source}
+                          </span>
+                        )}
                       </div>
-                    )}
 
-                    {/* Footer: counter + reset */}
-                    <div className="azkar-item-footer">
-                      {zikr.repeat > 1 && !isDone && (
-                        <span className="azkar-repeat-label">
-                          {count} / {zikr.repeat}
-                        </span>
+                      {/* Optional note */}
+                      {zikr.note && (
+                        <div className="azkar-note">{zikr.note}</div>
                       )}
-                      <div className="azkar-counter">
-                        <button
-                          className={`azkar-count-btn ${isDone ? "done" : ""}`}
-                          onClick={() =>
-                            handleCount(zikr.id, zikr.repeat ?? 1)
-                          }
-                          disabled={isDone}
-                        >
-                          {isDone ? (
-                            ta.done
-                          ) : zikr.repeat === 1 ? (
-                            ta.doneAlt
-                          ) : (
-                            <span className="azkar-count-inner">
-                              <span className="count-number">{count}</span>
-                              <span className="count-slash">/</span>
-                              <span className="count-total">{zikr.repeat}</span>
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          className="azkar-reset-btn"
-                          onClick={() => resetCounter(zikr.id)}
-                          title={ta.resetTitle}
-                          aria-label={ta.resetTitle}
-                        >
-                          {ta.reset}
-                        </button>
+
+                      {/* Main Arabic text */}
+                      <p className="azkar-item-text" lang="ar">
+                        {zikr.text}
+                      </p>
+
+                      {/* Optional translation */}
+                      {zikr.translation && (
+                        <p className="azkar-item-translation">
+                          {zikr.translation}
+                        </p>
+                      )}
+
+                      {/* Progress bar for multi-repeat */}
+                      {zikr.repeat > 1 && (
+                        <div className="azkar-progress-bar">
+                          <div
+                            className="azkar-progress-fill"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Footer: counter + reset */}
+                      <div className="azkar-item-footer">
+                        {zikr.repeat > 1 && !isDone && (
+                          <span className="azkar-repeat-label">
+                            {count} / {zikr.repeat}
+                          </span>
+                        )}
+                        <div className="azkar-counter">
+                          <button
+                            className={`azkar-count-btn ${isDone ? "done" : ""}`}
+                            onClick={() =>
+                              handleCount(zikr.id, zikr.repeat ?? 1)
+                            }
+                            disabled={isDone}
+                          >
+                            {isDone ? (
+                              ta.done
+                            ) : zikr.repeat === 1 ? (
+                              ta.doneAlt
+                            ) : (
+                              <span className="azkar-count-inner">
+                                <span className="count-number">{count}</span>
+                                <span className="count-slash">/</span>
+                                <span className="count-total">
+                                  {zikr.repeat}
+                                </span>
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            className="azkar-reset-btn"
+                            onClick={() => resetCounter(zikr.id)}
+                            title={ta.resetTitle}
+                            aria-label={ta.resetTitle}
+                          >
+                            {ta.reset}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            <div className="azkar-footer-nav">
-              <button
-                className="azkar-back-bottom"
-                onClick={() => setSelectedCategory(null)}
-              >
-                {ta.backToCategories}
-              </button>
+              <div className="azkar-footer-nav">
+                <button
+                  className="azkar-back-bottom"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  {ta.backToCategories}
+                </button>
+              </div>
             </div>
-          </div>
           </div>
           <BottomNavBar active="azkar" fixed />
         </IonContent>
@@ -342,42 +349,31 @@ const Azkar: React.FC = () => {
     <IonPage>
       <IonContent fullscreen>
         <div className="azkar-page-wrapper">
-        <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
-          <div className="azkar-home-header">
-            <h1>{ta.title}</h1>
-            <p>{ta.subtitle}</p>
+          <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
+            <div className="azkar-categories">
+              {azkarData.map((cat: any) => (
+                <button
+                  key={cat.id}
+                  className="azkar-cat-card"
+                  style={{ "--cat-color": cat.color } as React.CSSProperties}
+                  onClick={() => handleCategorySelect(cat.id)}
+                >
+                  <div className="azkar-cat-body">
+                    <h2 className="azkar-cat-title" lang="ar" dir="rtl">
+                      {cat.title}
+                    </h2>
+                    <p className="azkar-cat-subtitle" lang="ar" dir="rtl">
+                      {cat.subtitle}
+                    </p>
+                    <span className="azkar-cat-count">
+                      {cat.azkar.length} {ta.zikr}
+                    </span>
+                  </div>
+                  <span className="azkar-cat-arrow">{isRTL ? "←" : "→"}</span>
+                </button>
+              ))}
+            </div>
           </div>
-
-          <div className="azkar-categories">
-            {azkarData.map((cat: any) => (
-              <button
-                key={cat.id}
-                className="azkar-cat-card"
-                style={{ "--cat-color": cat.color } as React.CSSProperties}
-                onClick={() => handleCategorySelect(cat.id)}
-              >
-                <div className="azkar-cat-body">
-                  <h2 className="azkar-cat-title" lang="ar" dir="rtl">{cat.title}</h2>
-                  <p className="azkar-cat-subtitle" lang="ar" dir="rtl">{cat.subtitle}</p>
-                  <span className="azkar-cat-count">
-                    {cat.azkar.length} {ta.zikr}
-                  </span>
-                </div>
-                <span className="azkar-cat-arrow">{isRTL ? "←" : "→"}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="azkar-home-footer">
-            <p>{ta.quote}</p>
-            <button
-              className="azkar-main-home-btn"
-              onClick={() => history.push("/")}
-            >
-              {ta.backHome}
-            </button>
-          </div>
-        </div>
         </div>
         <BottomNavBar active="azkar" fixed />
       </IonContent>

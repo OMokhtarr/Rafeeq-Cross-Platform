@@ -30,12 +30,6 @@ const Home: React.FC = () => {
         <div className="home-page-outer">
           <div className="home-screen">
             <div className="home-stage">
-              {/* Top wordmark */}
-              <div className="home-wordmark" aria-hidden="true">
-                <span className="home-wordmark-ar">{t.appName}</span>
-                <span className="home-wordmark-en">{t.appSub}</span>
-              </div>
-
               {/* Centered Basmalah — the focal element, framed with gold dividers */}
               <div className="home-basmalah-wrap">
                 <div className="home-basmalah-block">
@@ -54,7 +48,6 @@ const Home: React.FC = () => {
                   <span className="home-brand-sep">·</span>
                   <span className="home-brand-en">RAFEEQ</span>
                 </div>
-                <div className="home-brand-tag">{t.tagline}</div>
               </div>
 
               {/* Bottom gradient fade — blends into the app bg above the tab bar */}

@@ -27,7 +27,7 @@ import "./Settings.css";
 // ── Types ────────────────────────────────────────────────────────────────────
 interface AppSettings {
   // Display
-  arabicFontSize: number;       // 14–32
+  arabicFontSize: number; // 14–32
   showTransliteration: boolean;
   // Quran
   mushaf: MushafKind;
@@ -222,7 +222,13 @@ interface ToggleRowProps {
   checked: boolean;
   onChange: (v: boolean) => void;
 }
-const ToggleRow: React.FC<ToggleRowProps> = ({ icon, label, desc, checked, onChange }) => (
+const ToggleRow: React.FC<ToggleRowProps> = ({
+  icon,
+  label,
+  desc,
+  checked,
+  onChange,
+}) => (
   <div className="settings-row">
     <div className="settings-row-info">
       <span className="settings-row-icon">{icon}</span>
@@ -232,7 +238,11 @@ const ToggleRow: React.FC<ToggleRowProps> = ({ icon, label, desc, checked, onCha
       </div>
     </div>
     <label className="settings-toggle">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       <span className="settings-toggle-slider" />
     </label>
   </div>
@@ -246,7 +256,14 @@ interface SelectRowProps {
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }
-const SelectRow: React.FC<SelectRowProps> = ({ icon, label, desc, value, options, onChange }) => (
+const SelectRow: React.FC<SelectRowProps> = ({
+  icon,
+  label,
+  desc,
+  value,
+  options,
+  onChange,
+}) => (
   <div className="settings-row">
     <div className="settings-row-info">
       <span className="settings-row-icon">{icon}</span>
@@ -258,10 +275,12 @@ const SelectRow: React.FC<SelectRowProps> = ({ icon, label, desc, value, options
     <select
       className="settings-select"
       value={value}
-      onChange={e => onChange(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
     >
-      {options.map(o => (
-        <option key={o.value} value={o.value}>{o.label}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
       ))}
     </select>
   </div>
@@ -277,7 +296,16 @@ interface SliderRowProps {
   unit?: string;
   onChange: (v: number) => void;
 }
-const SliderRow: React.FC<SliderRowProps> = ({ icon, label, desc, value, min, max, unit, onChange }) => (
+const SliderRow: React.FC<SliderRowProps> = ({
+  icon,
+  label,
+  desc,
+  value,
+  min,
+  max,
+  unit,
+  onChange,
+}) => (
   <div className="settings-row settings-row-slider">
     <div className="settings-row-info">
       <span className="settings-row-icon">{icon}</span>
@@ -297,9 +325,12 @@ const SliderRow: React.FC<SliderRowProps> = ({ icon, label, desc, value, min, ma
         // Force LTR direction so dragging right always increases the value,
         // regardless of the page's RTL document direction.
         dir="ltr"
-        onChange={e => onChange(Number(e.target.value))}
+        onChange={(e) => onChange(Number(e.target.value))}
       />
-      <span className="settings-slider-val">{value}{unit}</span>
+      <span className="settings-slider-val">
+        {value}
+        {unit}
+      </span>
     </div>
   </div>
 );
@@ -348,7 +379,7 @@ const Settings: React.FC = () => {
   }, [s]);
 
   const set = <K extends keyof AppSettings>(key: K, val: AppSettings[K]) =>
-    setS(prev => ({ ...prev, [key]: val }));
+    setS((prev) => ({ ...prev, [key]: val }));
 
   const resetAll = () => {
     setS({ ...DEFAULTS });
@@ -363,22 +394,6 @@ const Settings: React.FC = () => {
       <IonContent fullscreen>
         <div className="settings-page-wrapper">
           <div className="settings-container">
-
-            {/* ── Header ── */}
-            <div className="settings-header">
-              <button
-                className="settings-back-btn"
-                onClick={() => history.push("/")}
-                aria-label="Back"
-              >
-                {isRTL ? "←" : "→"}
-              </button>
-              <div className="settings-header-text">
-                <h1>{ts.title} {saved && ts.saved}</h1>
-                <p>{ts.subtitle}</p>
-              </div>
-            </div>
-
             {/* ── Language — two-button row per design index.html ── */}
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionLanguage}</p>
@@ -388,14 +403,20 @@ const Settings: React.FC = () => {
                   <div className="settings-lang-row">
                     <button
                       type="button"
-                      className={"settings-lang-btn" + (lang === "ar" ? " is-active" : "")}
+                      className={
+                        "settings-lang-btn" +
+                        (lang === "ar" ? " is-active" : "")
+                      }
                       onClick={() => setLang("ar")}
                     >
                       {ts.arabic}
                     </button>
                     <button
                       type="button"
-                      className={"settings-lang-btn" + (lang === "en" ? " is-active" : "")}
+                      className={
+                        "settings-lang-btn" +
+                        (lang === "en" ? " is-active" : "")
+                      }
                       onClick={() => setLang("en")}
                     >
                       {ts.english}
@@ -414,7 +435,7 @@ const Settings: React.FC = () => {
                   label={ts.nightMode}
                   desc={ts.nightModeDesc}
                   checked={isNight}
-                  onChange={v => setTheme(v ? "night" : "day")}
+                  onChange={(v) => setTheme(v ? "night" : "day")}
                 />
               </div>
             </div>
@@ -431,14 +452,14 @@ const Settings: React.FC = () => {
                   min={14}
                   max={32}
                   unit="px"
-                  onChange={v => set("arabicFontSize", v)}
+                  onChange={(v) => set("arabicFontSize", v)}
                 />
                 <ToggleRow
                   icon={ICONS.type}
                   label={ts.transliteration}
                   desc={ts.transliterationDesc}
                   checked={s.showTransliteration}
-                  onChange={v => set("showTransliteration", v)}
+                  onChange={(v) => set("showTransliteration", v)}
                 />
               </div>
             </div>
@@ -463,15 +484,20 @@ const Settings: React.FC = () => {
                   label={ts.reciter}
                   desc={ts.reciterDesc}
                   value={s.reciter}
-                  options={ts.reciters.map(r => ({ value: r.value, label: r.label }))}
-                  onChange={v => set("reciter", v)}
+                  options={ts.reciters.map((r) => ({
+                    value: r.value,
+                    label: r.label,
+                  }))}
+                  onChange={(v) => set("reciter", v)}
                 />
                 <SelectRow
                   icon={ICONS.globe}
                   label={lang === "ar" ? "الترجمة" : "Translation"}
                   desc={
                     translationsLoading
-                      ? lang === "ar" ? "جاري التحميل..." : "Loading editions..."
+                      ? lang === "ar"
+                        ? "جاري التحميل..."
+                        : "Loading editions..."
                       : lang === "ar"
                         ? "اختر ترجمة لعرضها أسفل كل آية"
                         : "Pick a translation to show under each verse"
@@ -504,14 +530,14 @@ const Settings: React.FC = () => {
                   label={ts.tajweed}
                   desc={ts.tajweedDesc}
                   checked={s.showTajweedColors}
-                  onChange={v => set("showTajweedColors", v)}
+                  onChange={(v) => set("showTajweedColors", v)}
                 />
                 <ToggleRow
                   icon={ICONS.book}
                   label={ts.autoNextPage}
                   desc={ts.autoNextPageDesc}
                   checked={s.autoNextPage}
-                  onChange={v => set("autoNextPage", v)}
+                  onChange={(v) => set("autoNextPage", v)}
                 />
               </div>
             </div>
@@ -525,22 +551,25 @@ const Settings: React.FC = () => {
                   label={ts.quizDifficulty}
                   desc={ts.quizDifficultyDesc}
                   value={s.quizDifficulty}
-                  options={ts.difficulties.map(d => ({ value: d.value, label: d.label }))}
-                  onChange={v => set("quizDifficulty", v)}
+                  options={ts.difficulties.map((d) => ({
+                    value: d.value,
+                    label: d.label,
+                  }))}
+                  onChange={(v) => set("quizDifficulty", v)}
                 />
                 <ToggleRow
                   icon={ICONS.bulb}
                   label={ts.showHints}
                   desc={ts.showHintsDesc}
                   checked={s.showHintsDefault}
-                  onChange={v => set("showHintsDefault", v)}
+                  onChange={(v) => set("showHintsDefault", v)}
                 />
                 <ToggleRow
                   icon={ICONS.speaker}
                   label={ts.soundEffects}
                   desc={ts.soundEffectsDesc}
                   checked={s.soundEffects}
-                  onChange={v => set("soundEffects", v)}
+                  onChange={(v) => set("soundEffects", v)}
                 />
               </div>
             </div>
@@ -554,35 +583,37 @@ const Settings: React.FC = () => {
                   label={ts.azkarVibration}
                   desc={ts.azkarVibrationDesc}
                   checked={s.azkarVibration}
-                  onChange={v => set("azkarVibration", v)}
+                  onChange={(v) => set("azkarVibration", v)}
                 />
                 <ToggleRow
                   icon={ICONS.bell}
                   label={ts.azkarCounterSound}
                   desc={ts.azkarCounterSoundDesc}
                   checked={s.azkarCounterSound}
-                  onChange={v => set("azkarCounterSound", v)}
+                  onChange={(v) => set("azkarCounterSound", v)}
                 />
               </div>
             </div>
 
             {/* ── Notifications ── */}
             <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionNotifications}</p>
+              <p className="settings-section-title">
+                {ts.sectionNotifications}
+              </p>
               <div className="settings-card">
                 <ToggleRow
                   icon={ICONS.mosque}
                   label={ts.prayerReminders}
                   desc={ts.prayerRemindersDesc}
                   checked={s.prayerReminders}
-                  onChange={v => set("prayerReminders", v)}
+                  onChange={(v) => set("prayerReminders", v)}
                 />
                 <ToggleRow
                   icon={ICONS.beads}
                   label={ts.azkarReminders}
                   desc={ts.azkarRemindersDesc}
                   checked={s.azkarReminders}
-                  onChange={v => set("azkarReminders", v)}
+                  onChange={(v) => set("azkarReminders", v)}
                 />
               </div>
             </div>
@@ -596,7 +627,9 @@ const Settings: React.FC = () => {
                     <span className="settings-row-icon">{ICONS.refresh}</span>
                     <div className="settings-row-text">
                       <p className="settings-row-label">{ts.resetDefaults}</p>
-                      <p className="settings-row-desc">{ts.resetDefaultsDesc}</p>
+                      <p className="settings-row-desc">
+                        {ts.resetDefaultsDesc}
+                      </p>
                     </div>
                   </div>
                   <button className="settings-action-btn" onClick={resetAll}>
@@ -608,11 +641,12 @@ const Settings: React.FC = () => {
 
             {/* ── Version ── */}
             <div className="settings-version">
-              <p><strong>{t.appName}</strong></p>
+              <p>
+                <strong>{t.appName}</strong>
+              </p>
               <p>{ts.version}</p>
               <p>{ts.quote}</p>
             </div>
-
           </div>
         </div>
         <BottomNavBar active="settings" fixed />
