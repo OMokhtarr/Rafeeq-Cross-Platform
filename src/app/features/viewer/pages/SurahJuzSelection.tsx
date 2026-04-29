@@ -17,6 +17,7 @@ import { pageData } from "../../../../data/quranData";
 import { surahNamesArabic } from "../../../core/services/data/quran.service";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
 import { useLang } from "../../../core/context/LanguageContext";
+import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
 import "./SurahJuzSelection.css";
 
 // ─── Static metadata ──────────────────────────────────────────────────────────
@@ -264,7 +265,7 @@ const SurahJuzSelection: React.FC = () => {
           </div>
 
           {/* ── List ── */}
-          <div className="sjs-list-wrap">
+          <div className="sjs-list-wrap sjs-list-wrap-with-nav">
             {tab === "surah" ? (
               <ul className="sjs-list">
                 {surahs.map((s) => (
@@ -361,6 +362,7 @@ const SurahJuzSelection: React.FC = () => {
               </ul>
             )}
           </div>
+          <BottomNavBar active="quran" />
         </div>
       </IonContent>
     </IonPage>

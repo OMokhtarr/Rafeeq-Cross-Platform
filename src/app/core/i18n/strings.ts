@@ -129,6 +129,49 @@ export interface AppStrings {
     juz: string;
     hizb: string;
     loading: string;
+    menu: string;
+    surahsAndJuz: string;
+    search: string;
+    settings: string;
+    searchPlaceholder: string;
+    searchTitle: string;
+    settingsTitle: string;
+    searching: string;
+    searchError: string;
+    searchResults: string;
+    noResults: string;
+    verseLabel: string;
+    pageLabelInResult: string;
+    fontSize: string;
+    fontType: string;
+    translation: string;
+    showTranslation: string;
+    hideTranslation: string;
+    translationDisabledHint: string;
+    moreSettings: string;
+    hideSelected: string;
+    clearSelection: string;
+    showAllHidden: string;
+    selectionCount: (n: string) => string;
+    hide: string;
+    cancelSelection: string;
+    backLabel: string;
+    closeLabel: string;
+    fontSizeOptions: { value: string; label: string }[];
+    fontTypeOptions: { value: string; label: string }[];
+    translationLoading: string;
+    translationError: string;
+    audioError: string;
+    actionSheetTitle: (verseKey: string) => string;
+    play: string;
+    pause: string;
+    tafsir: string;
+    tafsirUnavailable: string;
+    tafsirLoading: string;
+    tafsirError: string;
+    translationUnavailable: string;
+    toggleHideTitle: string;
+    toggleShowTitle: string;
   };
 
   settings: {
@@ -298,6 +341,59 @@ const ar: AppStrings = {
     juz: "جزء",
     hizb: "حزب",
     loading: "جاري تحميل الصفحة...",
+    menu: "القائمة",
+    surahsAndJuz: "السور والأجزاء",
+    search: "بحث",
+    settings: "الإعدادات",
+    searchPlaceholder: "ابحث في القرآن الكريم...",
+    searchTitle: "بحث في القرآن",
+    settingsTitle: "الإعدادات",
+    searching: "جاري البحث…",
+    searchError: "تعذر البحث الآن، حاول مرة أخرى",
+    searchResults: "نتائج البحث",
+    noResults: "لا توجد نتائج",
+    verseLabel: "الآية",
+    pageLabelInResult: "صفحة",
+    fontSize: "حجم الخط",
+    fontType: "نوع الخط",
+    translation: "الترجمة",
+    showTranslation: "إظهار الترجمة",
+    hideTranslation: "إخفاء الترجمة",
+    translationDisabledHint: "اختر ترجمة من الإعدادات أولاً",
+    moreSettings: "المزيد من الإعدادات",
+    hideSelected: "إخفاء الآيات المحددة",
+    clearSelection: "إلغاء التحديد",
+    showAllHidden: "إظهار كل الآيات المخفية",
+    selectionCount: (n: string) => `${n} آية محددة`,
+    hide: "إخفاء",
+    cancelSelection: "إلغاء التحديد",
+    backLabel: "رجوع",
+    closeLabel: "إغلاق",
+    fontSizeOptions: [
+      { value: "small", label: "صغير" },
+      { value: "medium", label: "متوسط" },
+      { value: "large", label: "كبير" },
+      { value: "xlarge", label: "كبير جداً" },
+    ],
+    fontTypeOptions: [
+      { value: "amiri", label: "أميري" },
+      { value: "traditional", label: "تقليدي" },
+      { value: "uthmani", label: "عثمان" },
+      { value: "naskh", label: "نسخ" },
+    ],
+    translationLoading: "جاري تحميل الترجمة…",
+    translationError: "تعذر تحميل الترجمة",
+    audioError: "تعذر تشغيل الصوت",
+    actionSheetTitle: (verseKey: string) => `الآية ${verseKey}`,
+    play: "تشغيل",
+    pause: "إيقاف",
+    tafsir: "التفسير",
+    tafsirUnavailable: "التفسير غير متوفر بعد",
+    tafsirLoading: "جاري تحميل التفسير…",
+    tafsirError: "تعذر تحميل التفسير",
+    translationUnavailable: "اختر ترجمة من الإعدادات",
+    toggleHideTitle: "إخفاء الآيات المحددة",
+    toggleShowTitle: "إظهار الآيات المحددة",
   },
   settings: {
     title: "الإعدادات",
@@ -476,6 +572,59 @@ const en: AppStrings = {
     juz: "Juz",
     hizb: "Hizb",
     loading: "Loading page...",
+    menu: "Menu",
+    surahsAndJuz: "Surahs & Juz",
+    search: "Search",
+    settings: "Settings",
+    searchPlaceholder: "Search the Quran...",
+    searchTitle: "Search the Quran",
+    settingsTitle: "Settings",
+    searching: "Searching…",
+    searchError: "Search failed, please try again",
+    searchResults: "Results",
+    noResults: "No results",
+    verseLabel: "Verse",
+    pageLabelInResult: "Page",
+    fontSize: "Font size",
+    fontType: "Font type",
+    translation: "Translation",
+    showTranslation: "Show translation",
+    hideTranslation: "Hide translation",
+    translationDisabledHint: "Pick a translation in Settings first",
+    moreSettings: "More settings",
+    hideSelected: "Hide selected verses",
+    clearSelection: "Clear selection",
+    showAllHidden: "Show all hidden verses",
+    selectionCount: (n: string) => `${n} verse${n === "1" ? "" : "s"} selected`,
+    hide: "Hide",
+    cancelSelection: "Cancel selection",
+    backLabel: "Back",
+    closeLabel: "Close",
+    fontSizeOptions: [
+      { value: "small", label: "Small" },
+      { value: "medium", label: "Medium" },
+      { value: "large", label: "Large" },
+      { value: "xlarge", label: "X-Large" },
+    ],
+    fontTypeOptions: [
+      { value: "amiri", label: "Amiri" },
+      { value: "traditional", label: "Traditional" },
+      { value: "uthmani", label: "Uthmani" },
+      { value: "naskh", label: "Naskh" },
+    ],
+    translationLoading: "Loading translation…",
+    translationError: "Could not load translation",
+    audioError: "Could not play audio",
+    actionSheetTitle: (verseKey: string) => `Verse ${verseKey}`,
+    play: "Play",
+    pause: "Pause",
+    tafsir: "Tafsir",
+    tafsirUnavailable: "Tafsir is not available yet",
+    tafsirLoading: "Loading tafsir…",
+    tafsirError: "Could not load tafsir",
+    translationUnavailable: "Pick a translation in Settings",
+    toggleHideTitle: "Hide selected verses",
+    toggleShowTitle: "Show selected verses",
   },
   settings: {
     title: "Settings",

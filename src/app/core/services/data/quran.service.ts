@@ -24,8 +24,10 @@ import {
 } from "./repositories/ayah.repository";
 import {
   fetchVersesByPage,
+  fetchTranslationsByPage,
   QuranApiNotFound,
   type PageVerseDTO,
+  type PageTranslation,
 } from "../api/quran-api.client";
 import { MUSHAFS, DEFAULT_MUSHAF, type MushafKind } from "../api/mushaf.config";
 import type { Verse } from "../../../shared/models/verse.model";
@@ -206,6 +208,62 @@ export async function getJuzVerses(juzNumbers: number[]): Promise<Verse[]> {
     out.push(...(await getPage(p)));
   }
   return out;
+}
+
+// ─── Translations ─────────────────────────────────────────────────────────────
+
+interface CachedTranslationPage {
+  id: string; // `${editionId}:${page}`
+  edition: string;
+  page: number;
+  items: PageTranslation[];
+}
+
+const translationMem = new Map<string, PageTranslation[]>();
+const translationInflight = new Map<string, Promise<PageTranslation[]>>();
+
+export async function getPageTranslations(
+  page: number,
+  editionId: string,
+): Promise<PageTranslation[]> {
+  if (!editionId) return [];
+  if (!Number.isFinite(page) || page < 1 || page > TOTAL_PAGES) return [];
+
+  const key = `${editionId}:${page}`;
+  const memHit = translationMem.get(key);
+  if (memHit) return memHit;
+
+  const pending = translationInflight.get(key);
+  if (pending) return pending;
+
+  const work = (async () => {
+    const idbHit = await idb
+      .get<CachedTranslationPage>("translations", key)
+      .catch(() => null);
+    if (idbHit?.items?.length) {
+      translationMem.set(key, idbHit.items);
+      return idbHit.items;
+    }
+
+    const items = await fetchTranslationsByPage(page, editionId);
+    await idb
+      .put<CachedTranslationPage>("translations", {
+        id: key,
+        edition: editionId,
+        page,
+        items,
+      })
+      .catch(() => {});
+    translationMem.set(key, items);
+    return items;
+  })();
+
+  translationInflight.set(key, work);
+  try {
+    return await work;
+  } finally {
+    translationInflight.delete(key);
+  }
 }
 
 export async function getPageRangeVerses(

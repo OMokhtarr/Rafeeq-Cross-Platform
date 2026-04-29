@@ -47,7 +47,7 @@ body {
 }
 
 [data-theme="night"] .top-toolbar {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   border-bottom: 3px solid var(--color-gold);
   color: white;
 }
@@ -67,7 +67,9 @@ body {
   cursor: pointer;
   padding: 0;
   border-radius: 8px;
-  transition: background-color 0.2s ease, transform 0.15s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,6 +117,30 @@ body {
   border-radius: 8px;
 }
 
+/* Hide-toggle button lives next to the page-navigation-compact pill.
+   Compact size to match the prev/next arrows; eye icon flips state. */
+.toolbar-button.hide-toggle-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-inline-start: 4px;
+}
+
+.toolbar-button.hide-toggle-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.toolbar-button.hide-toggle-button.active {
+  background-color: rgba(212, 180, 140, 0.35);
+  color: var(--color-gold, #8b4513);
+}
+
+[data-theme="night"] .toolbar-button.hide-toggle-button.active {
+  background-color: rgba(212, 180, 140, 0.25);
+  color: var(--color-gold, #d4b48c);
+}
+
 [data-theme="night"] .page-navigation-compact {
   background-color: rgba(255, 255, 255, 0.12);
 }
@@ -127,7 +153,9 @@ body {
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 6px;
-  transition: background-color 0.2s ease, transform 0.15s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
   min-width: 28px;
   min-height: 28px;
   display: flex;
@@ -417,7 +445,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   color: white;
   border-radius: 13px 13px 0 0;
 }
@@ -461,7 +489,7 @@ body {
 }
 .setting-item label {
   font-size: 1rem;
-  color: #2c3e50;
+  color: #1c1c1c;
   font-family: "Traditional Arabic", serif;
 }
 
@@ -490,7 +518,11 @@ body {
   background-color: #a0522d;
 }
 
-/* Mushaf content */
+/* Mushaf content
+   No scrolling here — the page text must fit between the toolbar (top)
+   and the page-footer / BottomNavBar (bottom). MushafPage runs a JS probe
+   that sizes the font so all 15 lines fit the available box; clipping
+   keeps any sub-pixel overflow from spilling past the hizb footer. */
 .mushaf-content {
   flex: 1;
   background-color: var(--color-mushaf-bg);
@@ -509,7 +541,12 @@ body {
     border-color var(--transition-theme);
 }
 
-.mushaf-content::before {
+/* Trim the bottom margin so the page never sits behind the nav bar. */
+.mushaf-content.mushaf-content-with-nav {
+  margin-bottom: 8px;
+}
+
+/* .mushaf-content::before {
   content: "";
   position: absolute;
   top: 10px;
@@ -519,9 +556,9 @@ body {
   border-top: 2px solid #d4b48c;
   border-left: 2px solid #d4b48c;
   opacity: 0.3;
-}
+} */
 
-.mushaf-content::after {
+/* .mushaf-content::after {
   content: "";
   position: absolute;
   bottom: 10px;
@@ -531,19 +568,24 @@ body {
   border-bottom: 2px solid #d4b48c;
   border-right: 2px solid #d4b48c;
   opacity: 0.3;
-}
+} */
 
 .mushaf-page {
+  /* Fills the parent (.mushaf-content). The parent is overflow:hidden and
+     bounded by flex, so the page must NOT establish a min-height larger
+     than the parent — the JS probe inside <MushafPage> picks the font
+     size that fits the available height. min-height:0 + flex:1 lets the
+     glyph block + page-footer share the column without overflowing. */
+  flex: 1;
+  min-height: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   position: relative;
   z-index: 1;
   background-color: var(--color-mushaf-bg);
   color: var(--color-mushaf-text);
-  /* Bottom padding respects gesture-bar / home-indicator safe area. */
-  padding: 16px 30px max(16px, env(safe-area-inset-bottom));
+  padding: 16px 30px;
   max-width: 750px;
   margin: 0 auto;
   width: 100%;
@@ -564,14 +606,14 @@ body {
   position: relative;
 }
 
-.bismillah-line::before,
+/* .bismillah-line::before,
 .bismillah-line::after {
   content: "۞";
   color: #8b4513;
   font-size: 1.8rem;
   opacity: 0.6;
   margin: 0 20px;
-}
+} */
 
 .bismillah-text {
   font-size: 2rem;
@@ -767,7 +809,7 @@ body {
 
 .results-header {
   padding: 12px 20px;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   color: white;
   font-family: "Traditional Arabic", serif;
   font-size: 1.1rem;
@@ -828,15 +870,15 @@ body {
 }
 
 .result-page {
-  color: #2c3e50;
+  color: #1c1c1c;
   font-family: "Traditional Arabic", serif;
 }
 
-.result-page::before {
+/* .result-page::before {
   content: "📄";
   margin-left: 5px;
   opacity: 0.7;
-}
+} */
 
 .result-preview {
   color: #666;
@@ -961,8 +1003,12 @@ body {
 }
 
 @keyframes drawer-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .side-drawer {
@@ -985,12 +1031,16 @@ body {
 }
 
 @keyframes drawer-slide-in {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 [data-theme="night"] .side-drawer {
-  background: linear-gradient(180deg, #1f2a3b 0%, #243248 100%);
+  background: linear-gradient(180deg, #1c1c1c 0%, #243248 100%);
   color: #f4ecd8;
   border-inline-end: 2px solid var(--color-gold, #d4b48c);
 }
@@ -1001,7 +1051,7 @@ body {
   gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid #e8e0d0;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   color: #fff;
   flex-shrink: 0;
 }
@@ -1027,7 +1077,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, transform 0.15s;
+  transition:
+    background 0.15s,
+    transform 0.15s;
 }
 
 .drawer-back:hover,
@@ -1073,7 +1125,10 @@ body {
   font-size: 1rem;
   text-align: start;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
 }
 
 .drawer-item:hover:not(:disabled) {
@@ -1229,12 +1284,18 @@ body {
 }
 
 @keyframes selbar-pop {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 [data-theme="night"] .selection-bar {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   border-color: var(--color-gold, #d4b48c);
   color: #fff;
 }
@@ -1259,7 +1320,9 @@ body {
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.95rem;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 }
 
 .sel-btn:hover {
@@ -1302,5 +1365,156 @@ body {
   .sel-btn {
     padding: 7px 10px;
     font-size: 0.9rem;
+  }
+}
+
+/* ── Verse rail (audio + translation) ──────────────────────────────────── */
+.verse-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  border-top: 1px dashed var(--color-border, #d8cfb9);
+}
+.verse-rail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.verse-audio-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-toolbar, #fff);
+  color: var(--color-text-primary, #1f2a44);
+  border: 1px solid var(--color-border, #d8cfb9);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 56px;
+  justify-content: center;
+}
+.verse-audio-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.verse-audio-btn.playing {
+  background: #e9c46a;
+  color: #2c3e50;
+  border-color: #d4a13a;
+}
+.verse-audio-label {
+  font-family: "Amiri", "Traditional Arabic", serif;
+  font-size: 13px;
+}
+.verse-audio-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.verse-translation {
+  flex: 1;
+  font-style: italic;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  text-align: left;
+  /* English translation always reads ltr regardless of app language. */
+  direction: ltr;
+}
+
+[data-theme="night"] .verse-translation {
+  color: var(--color-text-secondary, #b0a898);
+}
+
+[data-theme="night"] .verse-rail {
+  border-top-color: rgba(212, 180, 140, 0.25);
+}
+
+[data-theme="night"] .verse-audio-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-on-dark, #ffffff);
+  border-color: rgba(212, 180, 140, 0.3);
+}
+
+[data-theme="night"] .page-footer {
+  border-top-color: rgba(212, 180, 140, 0.3);
+  color: var(--color-footer-text, rgba(212, 180, 140, 0.6));
+}
+.audio-error {
+  padding: 8px 16px;
+  color: #b91c1c;
+  text-align: center;
+}
+.search-status {
+  padding: 8px 4px;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #6b7280);
+}
+.search-status.search-error {
+  color: #b91c1c;
+}
+
+/* ── Translation loading / error banners ──────────────────────────────── */
+.translation-loading-banner,
+.translation-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 16px 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--font-arabic, "Amiri", serif);
+  font-size: 0.92rem;
+  background: var(--color-gold-faint, rgba(212, 180, 140, 0.08));
+  color: var(--color-text-secondary, #6b7280);
+  border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+}
+
+[data-theme="night"] .translation-loading-banner {
+  background: rgba(212, 180, 140, 0.08);
+  color: var(--color-text-secondary, #b0a898);
+}
+
+.translation-error-banner {
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
+/* ── Responsive: small phones in landscape / very short viewports ─────── */
+@media (max-height: 560px) {
+  .mushaf-content {
+    margin: 8px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .mushaf-page {
+    padding: 8px 16px;
+  }
+  .top-toolbar {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mushaf-content {
+    margin: 8px;
+    padding: 10px;
+  }
+  .mushaf-page {
+    padding: 10px 12px;
   }
 }

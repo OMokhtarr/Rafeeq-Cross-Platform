@@ -21,11 +21,21 @@ import {
 } from "../../../../../../core/services/data/quran.service";
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
+import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import type {
   QuizConfig,
   QuizQuestion,
 } from "../../../../../../shared/models/verse.model";
 import "./AkmelAlAyah.css";
+
+const SETTINGS_KEY = "rafiq_settings_v1";
+function isSoundOn(): boolean {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return JSON.parse(raw).soundEffects !== false;
+  } catch {}
+  return true;
+}
 
 // ── Inline verse splitter ─────────────────────────────────────────────────────
 
@@ -82,6 +92,7 @@ const AkmelAlAyah: React.FC = () => {
   const [score, setScore] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const beep = useFeedbackBeep();
 
   // ── Load config + generate questions ──────────────────────────────────────
   useEffect(() => {
@@ -169,13 +180,15 @@ const AkmelAlAyah: React.FC = () => {
     setCorrect(isCorrect);
     if (isCorrect) setScore((s) => s + 1);
     setAnswered(true);
-  }, [userAnswer, answered, q]);
+    if (isSoundOn()) beep(isCorrect ? "correct" : "wrong");
+  }, [userAnswer, answered, q, beep]);
 
   const handleSkip = () => {
     if (answered || !q) return;
     setSkipped(true);
     setAnswered(true);
     setCorrect(false);
+    if (isSoundOn()) beep("wrong");
   };
 
   const handleNext = () => {

@@ -11,13 +11,13 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
-  color: var(--color-text-primary, #2c3e50);
+  color: var(--color-text-primary, #1c1c1c);
   overflow: hidden;
 }
 
 [data-theme="night"] .sjs-page,
 [data-theme="dark"] .sjs-page {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   color: #fff;
 }
 
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.85rem;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   border-bottom: 3px solid var(--color-gold, #d4b48c);
   color: #fff;
   flex-shrink: 0;
@@ -46,7 +46,9 @@
   border: 2px solid rgba(212, 180, 140, 0.4);
   color: #fff;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .sjs-back:hover {
@@ -148,7 +150,7 @@
 }
 
 .sjs-tab-active {
-  color: var(--color-text-primary, #2c3e50);
+  color: var(--color-text-primary, #1c1c1c);
 }
 
 [data-theme="night"] .sjs-tab-active,
@@ -156,7 +158,7 @@
   color: #fff;
 }
 
-.sjs-tab-active::after {
+/* .sjs-tab-active::after {
   content: "";
   position: absolute;
   bottom: -1px;
@@ -165,7 +167,7 @@
   height: 3px;
   background: var(--color-gold, #d4b48c);
   border-radius: 2px;
-}
+} */
 
 /* ── List ── */
 .sjs-list-wrap {
@@ -173,6 +175,14 @@
   overflow-y: auto;
   padding: 1rem 1rem 1.5rem;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* When the BottomNavBar is rendered as a flex sibling below this wrap,
+   no extra padding is needed — but keep a small breathing gap so the
+   last list row doesn't kiss the nav border. */
+.sjs-list-wrap-with-nav {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
 
 .sjs-list {
@@ -282,7 +292,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.15;
-  color: var(--color-text-primary, #2c3e50);
+  color: var(--color-text-primary, #1c1c1c);
   direction: rtl;
   text-align: start;
 }
@@ -296,7 +306,7 @@
   font-family: var(--font-latin, Georgia, serif);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--color-text-primary, #2c3e50);
+  color: var(--color-text-primary, #1c1c1c);
   line-height: 1.2;
 }
 

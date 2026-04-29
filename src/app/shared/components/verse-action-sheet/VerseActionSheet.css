@@ -1,0 +1,205 @@
+/* Verse action sheet — slide-up bottom sheet for long-pressed verses. */
+
+.vas-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 14, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1700;
+  animation: vas-fade 0.18s ease-out;
+}
+
+@keyframes vas-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.vas-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1800;
+  background: var(--color-bg-toolbar, #fdfaf3);
+  color: var(--color-text-primary, #2c1810);
+  border-top: 2px solid var(--color-gold, #d4b48c);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.22);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: vas-slide-up 0.22s ease-out;
+}
+
+@keyframes vas-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+[data-theme="night"] .vas-sheet {
+  background: linear-gradient(180deg, #1c1c1c 0%, #243248 100%);
+  color: #f4ecd8;
+}
+
+.vas-handle {
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 0;
+  background: rgba(212, 180, 140, 0.55);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.vas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(212, 180, 140, 0.3);
+  flex-shrink: 0;
+}
+
+.vas-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vas-close {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(212, 180, 140, 0.4);
+  color: inherit;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="night"] .vas-close {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vas-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.vas-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vas-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-gold, #8b4513);
+}
+
+[data-theme="night"] .vas-section-title {
+  color: var(--color-gold, #d4b48c);
+}
+
+.vas-audio-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-gold, #d4b48c);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: 1rem;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.vas-audio-btn:hover:not(:disabled) {
+  background: rgba(212, 180, 140, 0.18);
+}
+
+.vas-audio-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.vas-audio-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.vas-audio-btn.playing {
+  background: #8b4513;
+  color: #fff;
+  border-color: #8b4513;
+}
+
+[data-theme="night"] .vas-audio-btn.playing {
+  background: var(--color-gold, #d4b48c);
+  color: #1a2336;
+  border-color: var(--color-gold, #d4b48c);
+}
+
+.vas-translation {
+  margin: 0;
+  font-style: italic;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #4a4a4a);
+}
+
+[data-theme="night"] .vas-translation {
+  color: #c8bfae;
+}
+
+.vas-tafsir {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.vas-empty {
+  margin: 0;
+  color: var(--color-text-muted, #8b7355);
+  font-size: 0.92rem;
+}
+
+.vas-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted, #8b7355);
+  font-size: 0.92rem;
+}
+
+.vas-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: vas-spin 0.8s linear infinite;
+}
+
+@keyframes vas-spin {
+  to { transform: rotate(360deg); }
+}
+
+.vas-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}

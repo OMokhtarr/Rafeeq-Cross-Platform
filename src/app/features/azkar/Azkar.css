@@ -26,7 +26,6 @@ ion-content::part(scroll) {
     color var(--transition-theme);
 }
 
-
 /* In day mode keep the warm parchment gradient as a subtle nod to the
    original design — only night mode gets pure flat dark. */
 [data-theme="day"] .azkar-page-wrapper {
@@ -47,21 +46,28 @@ ion-content::part(scroll) {
 }
 
 /* Scrollbar */
-.azkar-container::-webkit-scrollbar { width: 8px; }
-.azkar-container::-webkit-scrollbar-track { background: #f0ead6; border-radius: 4px; }
+.azkar-container::-webkit-scrollbar {
+  width: 8px;
+}
+.azkar-container::-webkit-scrollbar-track {
+  background: #f0ead6;
+  border-radius: 4px;
+}
 .azkar-container::-webkit-scrollbar-thumb {
   background: #d4b48c;
   border-radius: 4px;
   border: 2px solid #f0ead6;
 }
-.azkar-container::-webkit-scrollbar-thumb:hover { background: #b8936a; }
+.azkar-container::-webkit-scrollbar-thumb:hover {
+  background: #b8936a;
+}
 
 /* ── Home Header ──────────────────────────────────────────── */
 
 .azkar-home-header {
   text-align: center;
   padding: 2.5rem 1rem 1.5rem;
-  background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   border-bottom: 3px solid #d4b48c;
 }
 
@@ -101,7 +107,9 @@ ion-content::part(scroll) {
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
   text-align: right;
   width: 100%;
 }
@@ -122,7 +130,7 @@ ion-content::part(scroll) {
 .azkar-cat-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: #1c1c1c;
   margin: 0;
 }
 
@@ -180,7 +188,9 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   transition: background 0.15s;
 }
-.azkar-back-btn:hover { background: rgba(255, 255, 255, 0.35); }
+.azkar-back-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
 
 .azkar-header-title {
   display: flex;
@@ -356,12 +366,18 @@ ion-content::part(scroll) {
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  transition: filter 0.15s, transform 0.1s;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
   min-height: 48px;
   min-width: 88px;
 }
-.azkar-count-btn:active { transform: scale(0.95); }
-.azkar-count-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.azkar-count-btn:active {
+  transform: scale(0.95);
+}
+.azkar-count-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
 .azkar-count-btn.done {
   background: color-mix(in srgb, var(--color-quran) 12%, transparent);
   color: var(--color-quran);
@@ -369,12 +385,23 @@ ion-content::part(scroll) {
   cursor: default;
   animation: azkar-complete-pulse 0.6s ease-out;
 }
-.azkar-count-btn:disabled { opacity: 0.7; }
+.azkar-count-btn:disabled {
+  opacity: 0.7;
+}
 
 @keyframes azkar-complete-pulse {
-  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(39,174,96,0.45); }
-  50%  { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(39,174,96,0); }
-  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(39,174,96,0); }
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.45);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 10px rgba(39, 174, 96, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(39, 174, 96, 0);
+  }
 }
 
 .azkar-count-inner {
@@ -383,9 +410,18 @@ ion-content::part(scroll) {
   gap: 0.25rem;
 }
 
-.count-number { font-size: 1.3rem; font-weight: 700; }
-.count-slash  { opacity: 0.6; font-size: 0.95rem; }
-.count-total  { font-size: 0.95rem; opacity: 0.85; }
+.count-number {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.count-slash {
+  opacity: 0.6;
+  font-size: 0.95rem;
+}
+.count-total {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
 
 /* Reset button */
 .azkar-reset-btn {
@@ -397,14 +433,19 @@ ion-content::part(scroll) {
   cursor: pointer;
   font-family: "Scheherazade New", "Amiri", serif;
   font-size: 1.1rem;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
   min-width: 44px;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.azkar-reset-btn:hover { border-color: #888; color: #555; }
+.azkar-reset-btn:hover {
+  border-color: #888;
+  color: #555;
+}
 
 /* ── Footer nav ───────────────────────────────────────────── */
 
@@ -417,7 +458,7 @@ ion-content::part(scroll) {
 }
 
 .azkar-back-bottom {
-  background: #2c3e50;
+  background: #1c1c1c;
   color: white;
   border: none;
   padding: 0.8rem 2rem;
@@ -427,7 +468,9 @@ ion-content::part(scroll) {
   font-size: 1.1rem;
   transition: background 0.15s;
 }
-.azkar-back-bottom:hover { background: #3d5166; }
+.azkar-back-bottom:hover {
+  background: #3d5166;
+}
 
 /* ── Home footer ──────────────────────────────────────────── */
 
@@ -505,7 +548,7 @@ ion-content::part(scroll) {
   background: rgba(255, 255, 255, 0.06);
 }
 [data-theme="night"] .azkar-note {
-  background: rgba(240, 192, 64, 0.10);
+  background: rgba(240, 192, 64, 0.1);
   color: #e8c878;
 }
 [data-theme="night"] .azkar-item-translation {
@@ -519,7 +562,7 @@ ion-content::part(scroll) {
 [data-theme="night"] .azkar-cat-card {
   background: var(--color-bg-card);
   color: var(--color-text-primary);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.40);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 [data-theme="night"] .azkar-cat-title {
   color: var(--color-text-primary);

@@ -44,7 +44,9 @@ ion-content::part(scroll) {
 }
 
 /* ── Header ─────────────────────────────────── */
-.ql-header { text-align: center; }
+.ql-header {
+  text-align: center;
+}
 
 .ql-title {
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -99,7 +101,7 @@ ion-content::part(scroll) {
 .ql-card-name {
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1.35rem;
-  color: #2c3e50;
+  color: #1c1c1c;
   margin: 0 0 3px;
 }
 
@@ -157,9 +159,15 @@ ion-content::part(scroll) {
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 600px) {
-  .ql-container { padding: 15px; }
-  .ql-card { padding: 12px 14px; }
-  .ql-card-name { font-size: 1.15rem; }
+  .ql-container {
+    padding: 15px;
+  }
+  .ql-card {
+    padding: 12px 14px;
+  }
+  .ql-card-name {
+    font-size: 1.15rem;
+  }
 }
 
 /* ═══════════════════════════════════════════════

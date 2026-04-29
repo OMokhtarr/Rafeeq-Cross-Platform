@@ -9,7 +9,8 @@
 const DB_NAME = "rafeeq-quran";
 // v2: added `pages` (cached API responses, key=pageNumber) and `fonts`
 //     (QPC V1 .ttf blobs from jsDelivr, key=pageNumber).
-const DB_VERSION = 2;
+// v3: added `translations` (cached translation pages, key=`${editionId}:${page}`).
+const DB_VERSION = 3;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -44,6 +45,12 @@ export class IDBService {
         // record shape: { page: number, blob: Blob }
         if (!db.objectStoreNames.contains("fonts")) {
           db.createObjectStore("fonts", { keyPath: "page" });
+        }
+
+        // translations store: cached translation payloads per (edition, page).
+        // record shape: { id: `${editionId}:${page}`, edition, page, items }
+        if (!db.objectStoreNames.contains("translations")) {
+          db.createObjectStore("translations", { keyPath: "id" });
         }
       };
 

@@ -171,7 +171,7 @@ const azkarData = [
     title: "أذكار النوم",
     subtitle: "تُقال عند الأوى إلى الفراش",
     icon: "🌛",
-    color: "#2c3e50",
+    color: "#1c1c1c",
     azkar: [
       {
         id: "sl-1",
@@ -679,7 +679,7 @@ const azkarData = [
     title: "أذكار يومية متفرقة",
     subtitle: "أذكار لأحوال شتى",
     icon: "📿",
-    color: "#34495e",
+    color: "#1c1c1c",
     azkar: [
       {
         id: "dm-1",

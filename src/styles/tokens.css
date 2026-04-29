@@ -7,90 +7,102 @@
  * Defaults to night.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Scheherazade+New:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Scheherazade+New:wght@400;500;600;700&display=swap");
 
 :root {
-
   /* ── BRAND PALETTE (theme-invariant) ─────────────── */
 
-  --color-forest-deep:    #0d1f14;
-  --color-forest-mid:     #1a2a3a;
-  --color-navy-dark:      #2c3e50;
-  --color-navy-mid:       #34495e;
-  --color-navy-light:     #3d5166;
+  --color-forest-deep: #0d1f14;
+  --color-forest-mid: #1c1c1c;
+  --color-navy-dark: #1c1c1c;
+  --color-navy-mid: #1c1c1c;
+  --color-navy-light: #3d5166;
 
   --color-parchment-light: #faf7f0;
-  --color-parchment-mid:   #f0ead6;
-  --color-parchment-card:  #fbf7f0;
-  --color-parchment-note:  #fef9ec;
+  --color-parchment-mid: #f0ead6;
+  --color-parchment-card: #fbf7f0;
+  --color-parchment-note: #fef9ec;
 
-  --color-steel-blue:     #c8d6e5;
+  --color-steel-blue: #c8d6e5;
 
   /* ── CATEGORY COLORS (theme-invariant) ───────────── */
   /* Quran/Quiz/Azkar are overridden per theme below — these are the
      day-mode defaults. Ahadith and Settings are flat across modes. */
 
-  --color-ahadith:  #6b3a8a;
+  --color-ahadith: #6b3a8a;
   --color-settings: #7f8c8d;
 
   /* ── TYPOGRAPHY ──────────────────────────────────── */
 
-  --font-arabic:         "Scheherazade New", "Amiri", "Traditional Arabic", serif;
-  --font-arabic-display: "Amiri", "Scheherazade New", "Traditional Arabic", serif;
-  --font-latin:          "Georgia", "Times New Roman", serif;
-  --font-mono:           "Courier New", monospace;
+  --font-arabic: "Scheherazade New", "Amiri", "Traditional Arabic", serif;
+  --font-arabic-display:
+    "Amiri", "Scheherazade New", "Traditional Arabic", serif;
+  --font-latin: "Georgia", "Times New Roman", serif;
+  --font-mono: "Courier New", monospace;
 
-  --text-xs:    0.5rem;
-  --text-sm:    0.72rem;
-  --text-base:  0.9rem;
-  --text-md:    1rem;
-  --text-lg:    1.2rem;
-  --text-xl:    1.35rem;
-  --text-2xl:   1.6rem;
-  --text-3xl:   2rem;
-  --text-4xl:   2.8rem;
+  --text-xs: 0.5rem;
+  --text-sm: 0.72rem;
+  --text-base: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.6rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.8rem;
 
-  --leading-tight:   1.4;
-  --leading-normal:  1.7;
-  --leading-relaxed: 2.0;
-  --leading-arabic:  2.1;
-  --leading-mushaf:  1.85;
+  --leading-tight: 1.4;
+  --leading-normal: 1.7;
+  --leading-relaxed: 2;
+  --leading-arabic: 2.1;
+  --leading-mushaf: 1.85;
 
-  --tracking-wide:   1.5px;
+  --tracking-wide: 1.5px;
   --tracking-normal: 0.3px;
 
   /* ── SPACING ─────────────────────────────────────── */
 
-  --space-1:  0.25rem;
-  --space-2:  0.5rem;
-  --space-3:  0.75rem;
-  --space-4:  1rem;
-  --space-5:  1.25rem;
-  --space-6:  1.5rem;
-  --space-8:  2rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
   --space-10: 2.5rem;
 
   /* ── BORDER RADIUS ───────────────────────────────── */
 
-  --radius-sm:   4px;
-  --radius-md:   8px;
-  --radius-lg:   12px;
-  --radius-xl:   16px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 22px;
   --radius-full: 9999px;
 
   /* ── TRANSITIONS ─────────────────────────────────── */
 
-  --transition-fast:  0.15s ease;
-  --transition-base:  0.20s ease;
-  --transition-slow:  0.25s ease;
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.25s ease;
   --transition-theme: 0.4s ease;
 
   /* ── LAYOUT ──────────────────────────────────────── */
 
   --max-width-content: 700px;
-  --max-width-mobile:  600px;
-  --touch-target:      44px;
+  --max-width-mobile: 600px;
+  --touch-target: 44px;
+
+  /* ── BOTTOM NAV ───────────────────────────────────
+     Single source of truth for the persistent BottomNavBar height.
+     Pages that render the nav reserve this much space so content is
+     never hidden behind it. Includes the iOS home-indicator safe area. */
+  --bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 480px) {
+  :root {
+    --bottom-nav-height: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -105,151 +117,159 @@
 :root,
 :root[data-theme="night"] {
   /* Surfaces */
-  --color-bg-app:           #000000;
-  --color-bg-status:        #000000;
-  --color-bg-toolbar:       #111111;
-  --color-bg-content:       #111111;
-  --color-bg-page:          #111111;     /* darkPageBg */
-  --color-bg-header:        #0a0a0a;
-  --color-bg-tab:           #0a0a0a;
-  --color-bg-card:          #1c1c1c;
-  --color-bg-card-alt:      #181818;
+  --color-bg-app: #000000;
+  --color-bg-status: #000000;
+  --color-bg-toolbar: #111111;
+  --color-bg-content: #111111;
+  --color-bg-page: #111111; /* darkPageBg */
+  --color-bg-header: #0a0a0a;
+  --color-bg-tab: #0a0a0a;
+  --color-bg-card: #1c1c1c;
+  --color-bg-card-alt: #181818;
 
   /* Text */
-  --color-text-primary:     #e8e8e8;
-  --color-text-secondary:   #b0a898;
-  --color-text-muted:       #707070;
-  --color-text-on-dark:     #ffffff;
-  --color-status-text:      #ffffff;
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #b0a898;
+  --color-text-muted: #707070;
+  --color-text-on-dark: #ffffff;
+  --color-status-text: #ffffff;
 
   /* Toolbar text */
-  --color-toolbar-text:     #ffffff;
-  --color-toolbar-sub:      #a0a0a0;
-  --color-toolbar-border:   rgba(212, 180, 140, 0.30);
+  --color-toolbar-text: #ffffff;
+  --color-toolbar-sub: #a0a0a0;
+  --color-toolbar-border: rgba(212, 180, 140, 0.3);
 
   /* Gold */
-  --color-gold:             #d4b48c;
-  --color-gold-deep:        #b8936a;
-  --color-gold-subtle:      rgba(212, 180, 140, 0.25);
-  --color-gold-faint:       rgba(212, 180, 140, 0.08);
+  --color-gold: #d4b48c;
+  --color-gold-deep: #b8936a;
+  --color-gold-subtle: rgba(212, 180, 140, 0.25);
+  --color-gold-faint: rgba(212, 180, 140, 0.08);
 
   /* Category accents */
-  --color-quran:            #4caf7d;
-  --color-quiz:             #c8773a;
-  --color-azkar:            #5a9fd4;
+  --color-quran: #4caf7d;
+  --color-quiz: #c8773a;
+  --color-azkar: #5a9fd4;
 
   /* Borders */
-  --color-border-gold:      var(--color-gold);
-  --color-border-subtle:    rgba(255, 255, 255, 0.08);
-  --color-border-card:      rgba(212, 180, 140, 0.25);
-  --color-row-border:       rgba(255, 255, 255, 0.08);
-  --color-tab-border:       rgba(255, 255, 255, 0.08);
-  --color-settings-border:  rgba(212, 180, 140, 0.25);
+  --color-border-gold: var(--color-gold);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-card: rgba(212, 180, 140, 0.25);
+  --color-row-border: rgba(255, 255, 255, 0.08);
+  --color-tab-border: rgba(255, 255, 255, 0.08);
+  --color-settings-border: rgba(212, 180, 140, 0.25);
 
   /* Inputs */
-  --color-input-bg:         rgba(255, 255, 255, 0.06);
-  --color-input-border:     rgba(212, 180, 140, 0.35);
+  --color-input-bg: rgba(255, 255, 255, 0.06);
+  --color-input-border: rgba(212, 180, 140, 0.35);
 
   /* Tabs */
-  --color-tab-inactive:     rgba(255, 255, 255, 0.4);
+  --color-tab-inactive: rgba(255, 255, 255, 0.4);
 
   /* Buttons (back / circular) */
-  --color-back-btn-border:  rgba(212, 180, 140, 0.35);
-  --color-back-btn-color:   #d4b48c;
+  --color-back-btn-border: rgba(212, 180, 140, 0.35);
+  --color-back-btn-color: #d4b48c;
 
   /* Mushaf surfaces */
-  --color-mushaf-bg:        #1a1a1a;
-  --color-mushaf-border:    #333333;
-  --color-mushaf-text:      #e8e0d0;
+  --color-mushaf-bg: #1a1a1a;
+  --color-mushaf-border: #333333;
+  --color-mushaf-text: #e8e0d0;
 
   /* Section / footer text */
-  --color-section-title:    var(--color-gold);
+  --color-section-title: var(--color-gold);
   --color-section-title-op: 0.85;
-  --color-footer-text:      rgba(212, 180, 140, 0.4);
+  --color-footer-text: rgba(212, 180, 140, 0.4);
 
   /* Progress */
-  --color-progress-track:   #2a2a2a;
+  --color-progress-track: #2a2a2a;
 
   /* Gradients */
-  --gradient-toolbar:       linear-gradient(135deg, #1a1a1a 0%, #111111 100%);
-  --gradient-content:       linear-gradient(160deg, #111111 0%, #0a0a0a 100%);
-  --gradient-dark-page:     linear-gradient(135deg, #1a1a1a 0%, #111111 100%);
-  --gradient-hero-fade:     linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.92));
+  --gradient-toolbar: linear-gradient(135deg, #1a1a1a 0%, #111111 100%);
+  --gradient-content: linear-gradient(160deg, #111111 0%, #0a0a0a 100%);
+  --gradient-dark-page: linear-gradient(135deg, #1a1a1a 0%, #111111 100%);
+  --gradient-hero-fade: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 0, 0, 0.92)
+  );
 
   /* Shadows */
-  --shadow-card:            0 2px 10px rgba(0, 0, 0, 0.40);
-  --shadow-card-hover:      0 6px 20px rgba(0, 0, 0, 0.55);
-  --shadow-card-lift:       0 10px 25px rgba(0, 0, 0, 0.65);
-  --shadow-toolbar:         0 4px 12px rgba(0, 0, 0, 0.50);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.55);
+  --shadow-card-lift: 0 10px 25px rgba(0, 0, 0, 0.65);
+  --shadow-toolbar: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 /* ─────────────────────────────────────────────────────
    DAY THEME — values verbatim from AppContext.jsx THEMES.day
    ───────────────────────────────────────────────────── */
 :root[data-theme="day"] {
-  --color-bg-app:           #ffffff;
-  --color-bg-status:        #ffffff;
-  --color-bg-toolbar:       #ffffff;
-  --color-bg-content:       #f9f9f9;
-  --color-bg-page:          #f4f4f4;
-  --color-bg-header:        #f4f4f4;
-  --color-bg-tab:           #ffffff;
-  --color-bg-card:          #ffffff;
-  --color-bg-card-alt:      #f8f8f8;
+  --color-bg-app: #ffffff;
+  --color-bg-status: #ffffff;
+  --color-bg-toolbar: #ffffff;
+  --color-bg-content: #f9f9f9;
+  --color-bg-page: #f4f4f4;
+  --color-bg-header: #f4f4f4;
+  --color-bg-tab: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-alt: #f8f8f8;
 
-  --color-text-primary:     #1a1a1a;
-  --color-text-secondary:   #4a4a4a;
-  --color-text-muted:       #888888;
-  --color-text-on-dark:     #ffffff;
-  --color-status-text:      #1a1a1a;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #4a4a4a;
+  --color-text-muted: #888888;
+  --color-text-on-dark: #ffffff;
+  --color-status-text: #1a1a1a;
 
-  --color-toolbar-text:     #1a1a1a;
-  --color-toolbar-sub:      #6a6a6a;
-  --color-toolbar-border:   rgba(0, 0, 0, 0.10);
+  --color-toolbar-text: #1a1a1a;
+  --color-toolbar-sub: #6a6a6a;
+  --color-toolbar-border: rgba(0, 0, 0, 0.1);
 
-  --color-gold:             #a07828;
-  --color-gold-deep:        #7a5a18;
-  --color-gold-subtle:      rgba(160, 120, 40, 0.20);
-  --color-gold-faint:       rgba(160, 120, 40, 0.08);
+  --color-gold: #a07828;
+  --color-gold-deep: #7a5a18;
+  --color-gold-subtle: rgba(160, 120, 40, 0.2);
+  --color-gold-faint: rgba(160, 120, 40, 0.08);
 
-  --color-quran:            #1a6b3c;
-  --color-quiz:             #8b4513;
-  --color-azkar:            #2c5f8a;
+  --color-quran: #1a6b3c;
+  --color-quiz: #8b4513;
+  --color-azkar: #2c5f8a;
 
-  --color-border-gold:      var(--color-gold);
-  --color-border-subtle:    rgba(0, 0, 0, 0.10);
-  --color-border-card:      rgba(0, 0, 0, 0.10);
-  --color-row-border:       rgba(0, 0, 0, 0.07);
-  --color-tab-border:       rgba(0, 0, 0, 0.10);
-  --color-settings-border:  rgba(0, 0, 0, 0.10);
+  --color-border-gold: var(--color-gold);
+  --color-border-subtle: rgba(0, 0, 0, 0.1);
+  --color-border-card: rgba(0, 0, 0, 0.1);
+  --color-row-border: rgba(0, 0, 0, 0.07);
+  --color-tab-border: rgba(0, 0, 0, 0.1);
+  --color-settings-border: rgba(0, 0, 0, 0.1);
 
-  --color-input-bg:         rgba(0, 0, 0, 0.04);
-  --color-input-border:     rgba(0, 0, 0, 0.15);
+  --color-input-bg: rgba(0, 0, 0, 0.04);
+  --color-input-border: rgba(0, 0, 0, 0.15);
 
-  --color-tab-inactive:     rgba(0, 0, 0, 0.35);
+  --color-tab-inactive: rgba(0, 0, 0, 0.35);
 
-  --color-back-btn-border:  rgba(0, 0, 0, 0.20);
-  --color-back-btn-color:   #1a1a1a;
+  --color-back-btn-border: rgba(0, 0, 0, 0.2);
+  --color-back-btn-color: #1a1a1a;
 
-  --color-mushaf-bg:        #fffef5;
-  --color-mushaf-border:    #ddd5b0;
-  --color-mushaf-text:      #1a1a1a;
+  --color-mushaf-bg: #fffef5;
+  --color-mushaf-border: #ddd5b0;
+  --color-mushaf-text: #1a1a1a;
 
-  --color-section-title:    var(--color-gold);
+  --color-section-title: var(--color-gold);
   --color-section-title-op: 1;
-  --color-footer-text:      rgba(0, 0, 0, 0.30);
+  --color-footer-text: rgba(0, 0, 0, 0.3);
 
-  --color-progress-track:   #e0e0e0;
+  --color-progress-track: #e0e0e0;
 
-  --gradient-toolbar:       linear-gradient(135deg, #ffffff 0%, #f4f4f4 100%);
-  --gradient-content:       linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
-  --gradient-dark-page:     linear-gradient(135deg, #ffffff 0%, #f4f4f4 100%);
-  --gradient-hero-fade:     linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.92));
+  --gradient-toolbar: linear-gradient(135deg, #ffffff 0%, #f4f4f4 100%);
+  --gradient-content: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
+  --gradient-dark-page: linear-gradient(135deg, #ffffff 0%, #f4f4f4 100%);
+  --gradient-hero-fade: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.92)
+  );
 
-  --shadow-card:            0 2px 10px rgba(0, 0, 0, 0.07);
-  --shadow-card-hover:      0 6px 20px rgba(0, 0, 0, 0.12);
-  --shadow-card-lift:       0 10px 25px rgba(0, 0, 0, 0.18);
-  --shadow-toolbar:         0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.07);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.12);
+  --shadow-card-lift: 0 10px 25px rgba(0, 0, 0, 0.18);
+  --shadow-toolbar: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* ─────────────────────────────────────────────────────

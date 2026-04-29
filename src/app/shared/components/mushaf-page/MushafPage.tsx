@@ -33,6 +33,7 @@ import {
   ensurePageFont,
   ensureBismillahFont,
   fontFamilyForPage,
+  BISMILLAH_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
 import "./MushafPage.css";
 
@@ -50,6 +51,12 @@ interface Props {
   hidden?: Set<string>;
   /** Tap/long-press a word → toggle selection. Receives "sura:aya". */
   onVerseTap?: (verseKey: string) => void;
+  /**
+   * Optional separate handler for long-press / right-click. When provided,
+   * long-press triggers this instead of `onVerseTap` — used by PageViewer
+   * to open the verse action sheet (audio / translation / tafsir).
+   */
+  onVerseLongPress?: (verseKey: string) => void;
 }
 
 const LONG_PRESS_MS = 350;
@@ -62,6 +69,7 @@ const MushafPage: React.FC<Props> = ({
   selected,
   hidden,
   onVerseTap,
+  onVerseLongPress,
 }) => {
   const [fontReady, setFontReady] = useState(false);
 
@@ -103,6 +111,14 @@ const MushafPage: React.FC<Props> = ({
   const family = fontFamilyForPage(page);
 
   // Helpers — kept out of JSX for readability
+  const longPressFire = (key: string) => {
+    // Long-press / right-click prefers the dedicated handler when given
+    // (PageViewer uses it to open the verse action sheet). Falls back to
+    // the tap handler so older callers without onVerseLongPress keep
+    // their original "long-press = toggle selection" behavior.
+    (onVerseLongPress ?? onVerseTap)?.(key);
+  };
+
   const handleClick = (key: string) => {
     if (!onVerseTap) return;
     if (consumedByLongPress.current) {
@@ -113,12 +129,12 @@ const MushafPage: React.FC<Props> = ({
   };
 
   const startPress = (key: string) => {
-    if (!onVerseTap) return;
+    if (!onVerseTap && !onVerseLongPress) return;
     pressKey.current = key;
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
     pressTimer.current = window.setTimeout(() => {
       consumedByLongPress.current = true;
-      onVerseTap(key);
+      longPressFire(key);
     }, LONG_PRESS_MS);
   };
 
@@ -132,7 +148,14 @@ const MushafPage: React.FC<Props> = ({
 
   return (
     <div className="mushaf-page-glyph" style={{ fontFamily: family }}>
-      {showBismillah && <div className="mushaf-bismillah">ﭑ ﭒ ﭓ ﭔ</div>}
+      {showBismillah && (
+        <div
+          className="mushaf-bismillah"
+          style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
+        >
+          ﭑ ﭒ ﭓ
+        </div>
+      )}
       {lines.map((line) => (
         <div className="mushaf-line" key={line.lineNumber}>
           {line.words.map((tw, i) => {
@@ -156,28 +179,33 @@ const MushafPage: React.FC<Props> = ({
 
             // Show the "آية مخفية" badge once per verse — pinned to the
             // verse-end ornament so it doesn't disturb word-level layout.
-            const showHiddenBadge =
-              isHidden && tw.word.charType === "end";
+            const showHiddenBadge = isHidden && tw.word.charType === "end";
 
             return (
               <span
                 key={`${line.lineNumber}-${i}`}
                 className={cls}
                 data-verse-key={key}
-                onClick={
-                  onVerseTap ? () => handleClick(key) : undefined
-                }
+                onClick={onVerseTap ? () => handleClick(key) : undefined}
                 onTouchStart={
-                  onVerseTap ? () => startPress(key) : undefined
+                  onVerseTap || onVerseLongPress
+                    ? () => startPress(key)
+                    : undefined
                 }
-                onTouchEnd={onVerseTap ? cancelPress : undefined}
-                onTouchMove={onVerseTap ? cancelPress : undefined}
+                onTouchEnd={
+                  onVerseTap || onVerseLongPress ? cancelPress : undefined
+                }
+                onTouchMove={
+                  onVerseTap || onVerseLongPress ? cancelPress : undefined
+                }
                 onContextMenu={
-                  onVerseTap
+                  onVerseTap || onVerseLongPress
                     ? (e) => {
-                        // Right-click / long-press on desktop also toggles.
+                        // Right-click / long-press on desktop fires the
+                        // long-press handler (action sheet) when provided,
+                        // else falls back to the tap toggle.
                         e.preventDefault();
-                        onVerseTap(key);
+                        longPressFire(key);
                       }
                     : undefined
                 }

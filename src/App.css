@@ -37,7 +37,7 @@ body {
 }
 
 .app-nav {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   padding: 3px 20px;
   display: flex;
   gap: 2rem;
@@ -304,6 +304,19 @@ ion-content {
   --padding-bottom: var(--safe-area-inset-bottom);
   --padding-start: var(--safe-area-inset-left);
   --padding-end: var(--safe-area-inset-right);
+}
+
+/* Mobile-first width cap: every page (and its BottomNavBar, since the nav
+   lives inside IonContent) is constrained to 600px and centered, matching
+   the Home screen. The dark app background fills any leftover bezel on
+   wide screens. */
+ion-page {
+  background: var(--color-bg-app);
+}
+
+ion-content::part(scroll) {
+  max-width: var(--max-width-mobile, 600px);
+  margin-inline: auto;
 }
 
 /* For fixed headers */
