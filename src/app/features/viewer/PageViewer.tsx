@@ -345,7 +345,7 @@ const PageViewer: React.FC = () => {
   if (!surahOptions.current) {
     surahOptions.current = getChapters().map((ch) => ({
       id: ch.id,
-      name: ch.nameArabic,
+      name: ch.name_arabic,
     }));
   }
 

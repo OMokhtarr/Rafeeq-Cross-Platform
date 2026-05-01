@@ -94,7 +94,7 @@ function expandRange(
   const chapters = getChapters();
   const ayahCount = (sura: number) => {
     const ch = chapters.find((c) => c.id === sura);
-    return ch ? ch.versesCount : 0;
+    return ch ? ch.verses_count : 0;
   };
 
   let s = start.sura;
@@ -128,7 +128,7 @@ function pageEnd(page: number): VerseKeyLocal {
   const prevSura = next.sura - 1;
   const chapters = getChapters();
   const prevCh = chapters.find((c) => c.id === prevSura);
-  return { sura: prevSura, aya: prevCh ? prevCh.versesCount : 1 };
+  return { sura: prevSura, aya: prevCh ? prevCh.verses_count : 1 };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ const PlaybackSettings: React.FC = () => {
   const setRangeToSurah = (s: number) => {
     const ch = getChapters().find((c) => c.id === s);
     setStartVerse({ sura: s, aya: 1 });
-    setEndVerse({ sura: s, aya: ch ? ch.versesCount : 1 });
+    setEndVerse({ sura: s, aya: ch ? ch.verses_count : 1 });
   };
   const setRangeToJuz = (j: number) => {
     setStartVerse(getJuzStart(j));
@@ -294,7 +294,7 @@ const PlaybackSettings: React.FC = () => {
     () =>
       getChapters().map((c) => ({
         value: c.id,
-        label: `${lang === "ar" ? c.nameArabic : c.translatedName?.name} (${c.id})`,
+        label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${c.id})`,
       })),
     [lang],
   );
@@ -304,7 +304,7 @@ const PlaybackSettings: React.FC = () => {
     onChange: (v: VerseKeyLocal) => void,
   ) => {
     const maxAyah =
-      getChapters().find((c) => c.id === value.sura)?.versesCount ?? 1;
+      getChapters().find((c) => c.id === value.sura)?.verses_count ?? 1;
     return (
       <div className="pb-verse-picker" dir={isRTL ? "rtl" : "ltr"}>
         <select

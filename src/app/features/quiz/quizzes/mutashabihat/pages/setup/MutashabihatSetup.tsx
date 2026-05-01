@@ -28,7 +28,7 @@ const MutashabihatSetup: React.FC = () => {
   const surahNamesArabic = useMemo(() => {
     const chapters = getChapters();
     // index 0 is empty, so return ['', ...names]
-    return ["", ...chapters.map((ch) => ch.nameArabic)];
+    return ["", ...chapters.map((ch) => ch.name_arabic)];
   }, []);
 
   const toggleSurah = (num: number) =>

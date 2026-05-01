@@ -29,7 +29,7 @@ const AkmelAlAyahSetup: React.FC = () => {
   // Build surah names list from metadata service
   const surahNamesArabic = useMemo(() => {
     const chapters = getChapters();
-    return ["", ...chapters.map((ch) => ch.nameArabic)];
+    return ["", ...chapters.map((ch) => ch.name_arabic)];
   }, []);
 
   const toggleJuz = (j: number) =>
