@@ -12,6 +12,7 @@
  *   /mutashabihat-setup   → Mutashabihat setup
  *   /mutashabihat-test    → Mutashabihat test runner
  *   /settings             → App settings
+ *   /playback             → Playback Settings (range/reciter/speed/repeat + queue)
  */
 
 import React, { useEffect } from "react";
@@ -38,6 +39,7 @@ import AkmelAlAyah from "./app/features/quiz/quizzes/akmel-alayah/pages/test/Akm
 import MutashabihatSetup from "./app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup";
 import MutashabihatTest from "./app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest";
 import Settings from "app/features/settings/Settings";
+import PlaybackSettings from "./app/features/playback/PlaybackSettings";
 
 // Data seeding
 import { ensureSeeded } from "./app/core/services/data/quran.service";
@@ -85,6 +87,7 @@ const App: React.FC = () => {
                 component={MutashabihatTest}
               />
               <Route exact path="/settings" component={Settings} />
+              <Route exact path="/playback" component={PlaybackSettings} />
               <Redirect exact from="/home" to="/" />
             </IonRouterOutlet>
             </IonReactRouter>

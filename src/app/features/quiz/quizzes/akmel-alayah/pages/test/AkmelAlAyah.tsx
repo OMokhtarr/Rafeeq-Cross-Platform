@@ -318,6 +318,10 @@ const AkmelAlAyah: React.FC = () => {
                     suraName: q.suraName,
                     suraNameAr: q.suraNameAr,
                   }}
+                  snippet={q.versePart ?? q.displayedPortion}
+                  hiddenPortion={q.hiddenPortion}
+                  hintLevel={hintLevel}
+                  showAnswer={answered}
                   isOpen={showContext}
                   onClose={() => setShowContext(false)}
                   mode="sidebar"

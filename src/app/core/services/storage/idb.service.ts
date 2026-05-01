@@ -10,7 +10,8 @@ const DB_NAME = "rafeeq-quran";
 // v2: added `pages` (cached API responses, key=pageNumber) and `fonts`
 //     (QPC V1 .ttf blobs from jsDelivr, key=pageNumber).
 // v3: added `translations` (cached translation pages, key=`${editionId}:${page}`).
-const DB_VERSION = 3;
+// v4: added `audio` (cached per-ayah audio blobs, key=`${reciter}:${sura}:${aya}`).
+const DB_VERSION = 4;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -51,6 +52,12 @@ export class IDBService {
         // record shape: { id: `${editionId}:${page}`, edition, page, items }
         if (!db.objectStoreNames.contains("translations")) {
           db.createObjectStore("translations", { keyPath: "id" });
+        }
+
+        // audio store: cached per-ayah recitation blobs.
+        // record shape: { id: `${reciter}:${sura}:${aya}`, blob: Blob, mime: string }
+        if (!db.objectStoreNames.contains("audio")) {
+          db.createObjectStore("audio", { keyPath: "id" });
         }
       };
 
@@ -118,6 +125,26 @@ export class IDBService {
     for (let i = 0; i < items.length; i += chunkSize) {
       await this._putChunk(store, items.slice(i, i + chunkSize));
     }
+  }
+
+  async delete(store: string, key: string | number): Promise<void> {
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(store, "readwrite");
+      const req = tx.objectStore(store).delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async clear(store: string): Promise<void> {
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(store, "readwrite");
+      const req = tx.objectStore(store).clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   }
 
   private _putChunk<T>(store: string, chunk: T[]): Promise<void> {

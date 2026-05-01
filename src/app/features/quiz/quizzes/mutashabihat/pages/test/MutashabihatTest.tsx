@@ -283,6 +283,10 @@ const MutashabihatTest: React.FC = () => {
                     suraName: activeViewerVerse.suraName,
                     suraNameAr: activeViewerVerse.suraNameAr,
                   }}
+                  snippet={q?.displayedPortion}
+                  hiddenPortion={q?.hiddenPortion}
+                  hintLevel={hintLevel}
+                  showAnswer={answered}
                   isOpen={showContext}
                   onClose={() => setShowContext(false)}
                   mode="sidebar"

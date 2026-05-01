@@ -11,7 +11,7 @@
  * don't apply here. Highlighting the verse is what the user needs.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   getPage,
   surahNamesArabic,
@@ -37,23 +37,65 @@ interface VerseInfo {
 
 interface Props {
   verse: VerseInfo;
-  /** Kept for API parity with VerseContextViewer; unused here. */
+  /** Visible part of the target verse (the question prompt). Used to compute
+   *  the initial reveal — words past it are masked until the user taps
+   *  "Hint" to reveal them one at a time. */
   snippet?: string;
+  /** Hidden portion (kept for API parity; the renderer derives masked words
+   *  from the per-word data, not from this string). */
   hiddenPortion?: string;
+  /** Quiz-level hint level. Forwarded only as the initial value; the viewer
+   *  owns its own internal hint state so the user can keep revealing inside
+   *  the panel without leaving it. */
   hintLevel?: number;
+  /** When true, every word of the target verse is revealed (used after the
+   *  user submits/skips). */
   showAnswer?: boolean;
   isOpen: boolean;
   onClose: () => void;
   mode?: "sidebar";
 }
 
-const MushafContextViewer: React.FC<Props> = ({ verse, isOpen, onClose }) => {
+const MushafContextViewer: React.FC<Props> = ({
+  verse,
+  snippet,
+  hintLevel: externalHintLevel,
+  showAnswer,
+  isOpen,
+  onClose,
+}) => {
   const [currentPage, setCurrentPage] = useState(verse.page);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  // Internal hint state — increments by 1 each tap. Resets whenever the
+  // target verse changes. Seeded from the parent's hintLevel so a hint the
+  // user already used in the main quiz panel carries over.
+  const [internalHint, setInternalHint] = useState(externalHintLevel ?? 0);
   // Read the persistent hidden-verses set so reader-state survives the
   // jump into this side-panel viewer (and back out again).
   const { hidden, showVerse } = useVerseVisibility();
+
+  // Number of words in the question's visible snippet. The target verse
+  // shows exactly these words by default; "Hint" reveals one more word
+  // each press until the verse is complete.
+  const snippetWordCount = useMemo(() => {
+    if (!snippet) return 0;
+    return snippet.trim().split(/\s+/).filter(Boolean).length;
+  }, [snippet]);
+
+  // Total words in the target verse on this page (so we know when to
+  // disable the hint button).
+  const targetVerse = useMemo(
+    () => verses.find((v) => v.sura === verse.sura && v.aya === verse.aya),
+    [verses, verse.sura, verse.aya],
+  );
+  const targetWordCount =
+    targetVerse?.words?.filter((w) => w.charType === "word").length ?? 0;
+
+  // Reset internal hint when the target verse identity changes.
+  useEffect(() => {
+    setInternalHint(externalHintLevel ?? 0);
+  }, [verse.sura, verse.aya, externalHintLevel]);
 
   // Tapping a hidden verse here unhides it — the only selection gesture
   // exposed in the quiz context viewer. Selection per se is intentionally
@@ -99,6 +141,39 @@ const MushafContextViewer: React.FC<Props> = ({ verse, isOpen, onClose }) => {
 
   const targetOnPage = currentPage === verse.page;
 
+  // ── Quiz styling ─────────────────────────────────────────────────────────
+  // Grey: every verse on the target page that comes BEFORE the target. Only
+  // applies when the target verse is on the visible page; otherwise we just
+  // render the page normally so the user can skim around.
+  const greySet = useMemo(() => {
+    if (!targetOnPage) return undefined;
+    const set = new Set<string>();
+    for (const v of verses) {
+      if (v.sura < verse.sura || (v.sura === verse.sura && v.aya < verse.aya)) {
+        set.add(`${v.sura}:${v.aya}`);
+      } else {
+        break;
+      }
+    }
+    return set;
+  }, [verses, targetOnPage, verse.sura, verse.aya]);
+
+  // Effective revealed-word count for the partial-target masking. After
+  // submit/skip the parent flips `showAnswer` true — fully reveal then.
+  const effectiveReveal = showAnswer
+    ? targetWordCount
+    : Math.min(targetWordCount, snippetWordCount + internalHint);
+
+  const partialTarget = targetOnPage
+    ? {
+        sura: verse.sura,
+        aya: verse.aya,
+        revealedWordCount: effectiveReveal,
+      }
+    : undefined;
+
+  const canHint = targetOnPage && effectiveReveal < targetWordCount;
+
   if (!isOpen) return null;
 
   return (
@@ -130,6 +205,16 @@ const MushafContextViewer: React.FC<Props> = ({ verse, isOpen, onClose }) => {
         </div>
 
         <div className="mcv-header-actions">
+          {canHint && (
+            <button
+              className="mcv-hint-btn"
+              onClick={() => setInternalHint((n) => n + 1)}
+              title="إظهار كلمة"
+              aria-label="إظهار كلمة من الآية"
+            >
+              💡
+            </button>
+          )}
           {!targetOnPage && (
             <button
               className="mcv-jump-btn"
@@ -158,6 +243,8 @@ const MushafContextViewer: React.FC<Props> = ({ verse, isOpen, onClose }) => {
             showBismillah={showBismillah}
             target={targetOnPage ? { sura: verse.sura, aya: verse.aya } : undefined}
             hidden={hidden}
+            grey={greySet}
+            partialTarget={partialTarget}
             onVerseTap={handleVerseTap}
           />
         )}

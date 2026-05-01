@@ -172,6 +172,41 @@ export interface AppStrings {
     translationUnavailable: string;
     toggleHideTitle: string;
     toggleShowTitle: string;
+    nextVerseTitle: string;
+  };
+
+  playback: {
+    title: string;
+    selectRange: string;
+    startingVerse: string;
+    endingVerse: string;
+    reciter: string;
+    manageDownloads: string;
+    playSpeed: string;
+    playEachVerse: string;
+    playTheRange: string;
+    quickSelect: string;
+    playAudio: string;
+    pause: string;
+    resume: string;
+    times: (n: number) => string;
+    loop: string;
+    quickPage: (n: string) => string;
+    quickFromPage: (n: string) => string;
+    quickSurah: (name: string) => string;
+    quickJuz: (n: string) => string;
+    quickHizb: (n: string) => string;
+    quickAll: string;
+    closeLabel: string;
+    downloadsTitle: string;
+    downloadStart: string;
+    downloadCancel: string;
+    downloadClear: string;
+    downloadProgress: (done: string, total: string) => string;
+    downloadEmpty: string;
+    nowPlaying: string;
+    speedDefault: string;
+    rangeInvalid: string;
   };
 
   settings: {
@@ -394,7 +429,43 @@ const ar: AppStrings = {
     translationUnavailable: "اختر ترجمة من الإعدادات",
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
+    nextVerseTitle: "إظهار الآية التالية",
   },
+  playback: {
+    title: "إعدادات التشغيل",
+    selectRange: "اختر النطاق",
+    startingVerse: "الآية الأولى",
+    endingVerse: "الآية الأخيرة",
+    reciter: "القارئ",
+    manageDownloads: "إدارة التحميلات",
+    playSpeed: "سرعة التلاوة",
+    playEachVerse: "تكرار الآية",
+    playTheRange: "تكرار النطاق",
+    quickSelect: "اختيار سريع",
+    playAudio: "تشغيل التلاوة",
+    pause: "إيقاف",
+    resume: "متابعة",
+    times: (n: number) => (n === 1 ? "مرة واحدة" : `${n} مرات`),
+    loop: "تكرار مستمر",
+    quickPage: (n: string) => `الصفحة ${n}`,
+    quickFromPage: (n: string) => `من الصفحة ${n}`,
+    quickSurah: (name: string) => `سورة ${name}`,
+    quickJuz: (n: string) => `الجزء ${n}`,
+    quickHizb: (n: string) => `الحزب ${n}`,
+    quickAll: "كامل المصحف",
+    closeLabel: "إغلاق",
+    downloadsTitle: "إدارة التحميلات",
+    downloadStart: "تحميل النطاق المختار",
+    downloadCancel: "إيقاف التحميل",
+    downloadClear: "مسح التحميلات",
+    downloadProgress: (done: string, total: string) =>
+      `تم تحميل ${done} من ${total}`,
+    downloadEmpty: "لا توجد ملفات محفوظة بعد",
+    nowPlaying: "قيد التشغيل",
+    speedDefault: "افتراضي",
+    rangeInvalid: "نطاق غير صالح",
+  },
+
   settings: {
     title: "الإعدادات",
     subtitle: "تخصيص تجربة التطبيق",
@@ -448,6 +519,7 @@ const ar: AppStrings = {
       { value: "hard", label: "صعب" },
     ],
     reciters: [
+      { value: "minshawi-murattal", label: "محمد صديق المنشاوي (مرتل)" },
       { value: "husary", label: "الحصري" },
       { value: "minshawi", label: "المنشاوي" },
       { value: "sudais", label: "السديس" },
@@ -625,7 +697,43 @@ const en: AppStrings = {
     translationUnavailable: "Pick a translation in Settings",
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
+    nextVerseTitle: "Reveal next verse",
   },
+  playback: {
+    title: "Playback Settings",
+    selectRange: "Select Range",
+    startingVerse: "Starting Verse",
+    endingVerse: "Ending Verse",
+    reciter: "Reciter",
+    manageDownloads: "Manage downloads",
+    playSpeed: "Play speed",
+    playEachVerse: "Play each verse",
+    playTheRange: "Play the range",
+    quickSelect: "Quick Select",
+    playAudio: "Play Audio",
+    pause: "Pause",
+    resume: "Resume",
+    times: (n: number) => (n === 1 ? "1 time" : `${n} times`),
+    loop: "Loop",
+    quickPage: (n: string) => `PG. ${n}`,
+    quickFromPage: (n: string) => `from PG. ${n}`,
+    quickSurah: (name: string) => `Surah ${name}`,
+    quickJuz: (n: string) => `Juz ${n}`,
+    quickHizb: (n: string) => `Hizb ${n}`,
+    quickAll: "All",
+    closeLabel: "Close",
+    downloadsTitle: "Manage downloads",
+    downloadStart: "Download selected range",
+    downloadCancel: "Stop download",
+    downloadClear: "Clear cached audio",
+    downloadProgress: (done: string, total: string) =>
+      `Downloaded ${done} of ${total}`,
+    downloadEmpty: "No audio cached yet",
+    nowPlaying: "Now playing",
+    speedDefault: "default",
+    rangeInvalid: "Invalid range",
+  },
+
   settings: {
     title: "Settings",
     subtitle: "Customize your experience",
@@ -679,6 +787,7 @@ const en: AppStrings = {
       { value: "hard", label: "Hard" },
     ],
     reciters: [
+      { value: "minshawi-murattal", label: "Muhammad Siddiq Al Minshawy (Murattal)" },
       { value: "husary", label: "Al-Husary" },
       { value: "minshawi", label: "Al-Minshawi" },
       { value: "sudais", label: "Al-Sudais" },

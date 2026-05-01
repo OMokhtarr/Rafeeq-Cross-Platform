@@ -141,6 +141,27 @@ body {
   color: var(--color-gold, #d4b48c);
 }
 
+/* Next-verse button — same compact size as hide-toggle, green accent on hover. */
+.toolbar-button.next-verse-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-inline-start: 4px;
+}
+
+.toolbar-button.next-verse-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.toolbar-button.next-verse-button:hover:not(:disabled) {
+  color: #2e7d32;
+}
+
+[data-theme="night"] .toolbar-button.next-verse-button:hover:not(:disabled) {
+  color: #6ee7a3;
+}
+
 [data-theme="night"] .page-navigation-compact {
   background-color: rgba(255, 255, 255, 0.12);
 }

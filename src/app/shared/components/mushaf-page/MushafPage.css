@@ -28,6 +28,133 @@
   margin-bottom: 0.4em;
 }
 
+/* ── Decorative Surah-name header ──────────────────────────────────────────
+   Renders above the Bismillah at the top of any page that starts a new
+   surah. Visually a wide horizontal banner with an inner cartouche holding
+   the surah name, flanked by arabesque rosettes — built entirely from CSS
+   so it scales with the page font and adapts to day/night themes. */
+.mushaf-surah-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.15em auto 0.45em;
+  padding: 0;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.mushaf-surah-header-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60%;
+  max-width: 92%;
+  padding: 0.55em 3.4em;
+  border: 2px solid var(--color-mushaf-text, #1a1a1a);
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0 6px,
+      rgba(212, 180, 140, 0.18) 6px 7px
+    );
+  box-shadow:
+    inset 0 0 0 1px var(--color-mushaf-text, #1a1a1a),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px var(--color-mushaf-text, #1a1a1a);
+}
+
+/* Side rosettes — small ornamental medallions using radial-gradient flowers. */
+.mushaf-surah-header-frame::before,
+.mushaf-surah-header-frame::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1.6em;
+  height: 1.6em;
+  transform: translateY(-50%);
+  border: 1.5px solid var(--color-mushaf-text, #1a1a1a);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at center,
+      var(--color-mushaf-text, #1a1a1a) 0 0.18em,
+      transparent 0.22em
+    ),
+    conic-gradient(
+      from 0deg,
+      transparent 0deg 30deg,
+      rgba(212, 180, 140, 0.45) 30deg 60deg,
+      transparent 60deg 90deg,
+      rgba(212, 180, 140, 0.45) 90deg 120deg,
+      transparent 120deg 150deg,
+      rgba(212, 180, 140, 0.45) 150deg 180deg,
+      transparent 180deg 210deg,
+      rgba(212, 180, 140, 0.45) 210deg 240deg,
+      transparent 240deg 270deg,
+      rgba(212, 180, 140, 0.45) 270deg 300deg,
+      transparent 300deg 330deg,
+      rgba(212, 180, 140, 0.45) 330deg 360deg
+    );
+}
+
+.mushaf-surah-header-frame::before {
+  inset-inline-start: 0.55em;
+}
+
+.mushaf-surah-header-frame::after {
+  inset-inline-end: 0.55em;
+}
+
+.mushaf-surah-header-name {
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--color-mushaf-text, #1a1a1a);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="night"] .mushaf-surah-header-frame {
+  border-color: var(--color-mushaf-text, #f4ecd8);
+  box-shadow:
+    inset 0 0 0 1px var(--color-mushaf-text, #f4ecd8),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px var(--color-mushaf-text, #f4ecd8);
+}
+
+[data-theme="night"] .mushaf-surah-header-frame::before,
+[data-theme="night"] .mushaf-surah-header-frame::after {
+  border-color: var(--color-mushaf-text, #f4ecd8);
+  background:
+    radial-gradient(
+      circle at center,
+      var(--color-mushaf-text, #f4ecd8) 0 0.18em,
+      transparent 0.22em
+    ),
+    conic-gradient(
+      from 0deg,
+      transparent 0deg 30deg,
+      rgba(212, 180, 140, 0.55) 30deg 60deg,
+      transparent 60deg 90deg,
+      rgba(212, 180, 140, 0.55) 90deg 120deg,
+      transparent 120deg 150deg,
+      rgba(212, 180, 140, 0.55) 150deg 180deg,
+      transparent 180deg 210deg,
+      rgba(212, 180, 140, 0.55) 210deg 240deg,
+      transparent 240deg 270deg,
+      rgba(212, 180, 140, 0.55) 270deg 300deg,
+      transparent 300deg 330deg,
+      rgba(212, 180, 140, 0.55) 330deg 360deg
+    );
+}
+
+[data-theme="night"] .mushaf-surah-header-name {
+  color: var(--color-mushaf-text, #f4ecd8);
+}
+
 .mushaf-line {
   display: flex;
   flex-direction: row;
@@ -62,6 +189,38 @@
   border-radius: 4px;
   box-shadow: 0 0 0 1px rgba(139, 69, 19, 0.45);
   cursor: pointer;
+}
+
+/* ── Grey (quiz context: previous verses) ─────────────────────────────
+   Verses preceding the question's target are de-emphasized so the user's
+   eye lands on the partially-masked target. Glyphs stay readable but lose
+   their saturation — the verse-end ornament gets the same treatment. */
+.mushaf-verse-grey,
+.mushaf-verse-grey.mushaf-ayah-end {
+  color: #9a9a9a !important;
+  opacity: 0.85;
+}
+
+[data-theme="night"] .mushaf-verse-grey,
+[data-theme="night"] .mushaf-verse-grey.mushaf-ayah-end {
+  color: #8a8a8a !important;
+}
+
+/* ── Green (next-verse reveal) ─────────────────────────────────────────
+   Used by the "show next verse" toolbar button: when pressed, the next
+   hidden verse is unhidden AND marked green so the user can spot the
+   newly revealed verse at a glance. Overrides the hidden styles since a
+   verse is never green and hidden at the same time. */
+.mushaf-verse-green,
+.mushaf-verse-green.mushaf-ayah-end {
+  color: #2e7d32 !important;
+  background: none;
+  text-shadow: none;
+}
+
+[data-theme="night"] .mushaf-verse-green,
+[data-theme="night"] .mushaf-verse-green.mushaf-ayah-end {
+  color: #6ee7a3 !important;
 }
 
 [data-theme="night"] .mushaf-verse-selected {

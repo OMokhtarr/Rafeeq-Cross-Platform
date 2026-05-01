@@ -27,7 +27,7 @@
  * paint instantly.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Verse, VerseWord } from "../../models/verse.model";
 import {
   ensurePageFont,
@@ -35,6 +35,7 @@ import {
   fontFamilyForPage,
   BISMILLAH_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
+import { surahNamesArabic } from "../../../core/services/data/quran.service";
 import "./MushafPage.css";
 
 interface Props {
@@ -49,6 +50,19 @@ interface Props {
   selected?: Set<string>;
   /** Set of "sura:aya" keys currently hidden (faded + badge). */
   hidden?: Set<string>;
+  /** Set of "sura:aya" keys to render in green (used by the next-verse reveal). */
+  green?: Set<string>;
+  /** Set of "sura:aya" keys to render in grey (used by quiz context — verses
+   *  before the target verse are de-emphasized). */
+  grey?: Set<string>;
+  /**
+   * For quiz context: keep only the first `revealedWordCount` *words* of the
+   * named verse visible; later words are hidden. The verse-end ornament
+   * (and ornaments for any later verses) stays visible. As the user presses
+   * the hint button, the caller increments `revealedWordCount` to reveal
+   * the verse one word at a time.
+   */
+  partialTarget?: { sura: number; aya: number; revealedWordCount: number };
   /** Tap/long-press a word → toggle selection. Receives "sura:aya". */
   onVerseTap?: (verseKey: string) => void;
   /**
@@ -68,6 +82,9 @@ const MushafPage: React.FC<Props> = ({
   target,
   selected,
   hidden,
+  green,
+  grey,
+  partialTarget,
   onVerseTap,
   onVerseLongPress,
 }) => {
@@ -79,6 +96,14 @@ const MushafPage: React.FC<Props> = ({
   const pressTimer = useRef<number | null>(null);
   const pressKey = useRef<string | null>(null);
   const consumedByLongPress = useRef(false);
+
+  // Container-aware font sizing. The 15 Madani lines must fit between the
+  // top chrome (surah header / bismillah) and the bottom of the parent
+  // box. Word→line grouping is fixed by the API (`lineNumber`), so we only
+  // need to scale the font; the flex `justify-content: space-between` on
+  // each .mushaf-line keeps spacing consistent at any font size.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +123,71 @@ const MushafPage: React.FC<Props> = ({
       cancelled = true;
     };
   }, [page, showBismillah]);
+
+  // Container-aware font sizing.
+  //
+  // The Madani page uses 15 lines (.mushaf-line). Each line is a flex row
+  // whose height = fontSize × line-height. The .mushaf-page-glyph parent
+  // uses justify-content: space-between, so DOM-probing won't reveal
+  // overflow — instead we compute the largest font size analytically:
+  //
+  //   maxFont = (availableHeight - chrome) / (lineCount * lineHeight)
+  //
+  // where chrome is the surah-header banner + bismillah strip (when
+  // shown). Re-runs on parent resize and orientation change.
+  useLayoutEffect(() => {
+    if (!fontReady) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    const LINE_HEIGHT_RATIO = 1.7; // mirrors .mushaf-page-glyph CSS
+    const LINE_GAP_RATIO = 0.25; // mirrors .mushaf-page-glyph `gap: 0.25em`
+    const BISMILLAH_LINES = 1.6; // strip is ~1.3em font + 0.4em margin
+    const SURAH_HEADER_LINES = 2.6; // banner with padding ≈ 2.6 line-heights
+    const FONT_MIN = 8;
+    const FONT_MAX = 40;
+
+    const computeFit = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const parent = el.parentElement;
+      if (!parent) return;
+
+      // Use the parent's content box height — the .mushaf-page-glyph fills it.
+      const parentStyle = window.getComputedStyle(parent);
+      const padT = parseFloat(parentStyle.paddingTop) || 0;
+      const padB = parseFloat(parentStyle.paddingBottom) || 0;
+      const availH = parent.clientHeight - padT - padB;
+      if (availH <= 0) return;
+
+      const lineCount = Math.max(1, groupByLine(verses).length);
+      const chromeLines =
+        (showBismillah ? BISMILLAH_LINES : 0) +
+        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0);
+
+      // Total height in "em units" =
+      //   chromeLines * LINE_HEIGHT_RATIO
+      // + lineCount * LINE_HEIGHT_RATIO
+      // + (lineCount - 1) * LINE_GAP_RATIO
+      const emPerPx =
+        (chromeLines + lineCount) * LINE_HEIGHT_RATIO +
+        Math.max(0, lineCount - 1) * LINE_GAP_RATIO;
+
+      // 0.96 leaves ~4% safety margin so sub-pixel rounding never clips.
+      const targetPx = Math.floor((availH * 0.96) / emPerPx);
+      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, targetPx));
+      setFittedFontPx(clamped);
+    };
+
+    computeFit();
+    const ro = new ResizeObserver(computeFit);
+    if (node.parentElement) ro.observe(node.parentElement);
+    window.addEventListener("orientationchange", computeFit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("orientationchange", computeFit);
+    };
+  }, [fontReady, verses, showBismillah]);
 
   if (!fontReady) {
     return (
@@ -146,8 +236,33 @@ const MushafPage: React.FC<Props> = ({
     pressKey.current = null;
   };
 
+  // Decorative surah-name header — shown whenever the first verse on the
+  // page is aya 1 (i.e. this page starts a new surah). At-Tawbah (9) gets
+  // the header even though it has no Bismillah after it.
+  const surahStartVerse =
+    verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
+  const surahHeaderName = surahStartVerse
+    ? surahNamesArabic[surahStartVerse.sura] ?? `سورة ${surahStartVerse.sura}`
+    : null;
+
   return (
-    <div className="mushaf-page-glyph" style={{ fontFamily: family }}>
+    <div
+      className="mushaf-page-glyph"
+      ref={containerRef}
+      style={{
+        fontFamily: family,
+        ...(fittedFontPx !== null ? { fontSize: `${fittedFontPx}px` } : null),
+      }}
+    >
+      {surahHeaderName && (
+        <div className="mushaf-surah-header" aria-label={surahHeaderName}>
+          <span className="mushaf-surah-header-frame">
+            <span className="mushaf-surah-header-name">
+              سُورَةُ {surahHeaderName}
+            </span>
+          </span>
+        </div>
+      )}
       {showBismillah && (
         <div
           className="mushaf-bismillah"
@@ -164,6 +279,21 @@ const MushafPage: React.FC<Props> = ({
               !!target && tw.sura === target.sura && tw.aya === target.aya;
             const isSelected = !!selected?.has(key);
             const isHidden = !!hidden?.has(key);
+            const isGreen = !!green?.has(key);
+            const isGrey = !!grey?.has(key);
+
+            // Partial-target hiding: for the named verse, hide any "word"
+            // whose 1-based position is past the revealed count. The end-of-
+            // ayah ornament is always shown so the verse boundary stays
+            // legible even when the target is fully masked.
+            const isPartialTargetVerse =
+              !!partialTarget &&
+              tw.sura === partialTarget.sura &&
+              tw.aya === partialTarget.aya;
+            const isWordPastReveal =
+              isPartialTargetVerse &&
+              tw.word.charType === "word" &&
+              tw.word.position > partialTarget!.revealedWordCount;
 
             const base =
               tw.word.charType === "end" ? "mushaf-ayah-end" : "mushaf-word";
@@ -172,6 +302,9 @@ const MushafPage: React.FC<Props> = ({
               isTarget ? `${base}-target` : "",
               isSelected ? "mushaf-verse-selected" : "",
               isHidden ? "mushaf-verse-hidden" : "",
+              isGreen ? "mushaf-verse-green" : "",
+              isGrey ? "mushaf-verse-grey" : "",
+              isWordPastReveal ? "mushaf-verse-hidden" : "",
               tw.word.charType === "end" ? "mushaf-verse-end-marker" : "",
             ]
               .filter(Boolean)

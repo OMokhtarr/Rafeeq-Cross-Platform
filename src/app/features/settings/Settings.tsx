@@ -480,17 +480,6 @@ const Settings: React.FC = () => {
                   onChange={(v) => set("mushaf", v as MushafKind)}
                 />
                 <SelectRow
-                  icon={ICONS.mic}
-                  label={ts.reciter}
-                  desc={ts.reciterDesc}
-                  value={s.reciter}
-                  options={ts.reciters.map((r) => ({
-                    value: r.value,
-                    label: r.label,
-                  }))}
-                  onChange={(v) => set("reciter", v)}
-                />
-                <SelectRow
                   icon={ICONS.globe}
                   label={lang === "ar" ? "الترجمة" : "Translation"}
                   desc={

@@ -333,6 +333,11 @@ interface AudioApiResponse {
 const RECITER_ID_BY_SLUG: Record<string, string> = {
   husary: "2",
   minshawi: "4",
+  // Minshawy murattal (the calmer rendition shown in the playback screen).
+  // The Foundation API does not expose a separate id for it on every
+  // deployment, so reuse the regular Minshawi recording — the slug remains
+  // distinct so the UI can label it correctly.
+  "minshawi-murattal": "4",
   sudais: "9",
   afasy: "7",
   ghamdi: "10",

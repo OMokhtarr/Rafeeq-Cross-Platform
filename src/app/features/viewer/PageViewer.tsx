@@ -122,6 +122,9 @@ const PageViewer: React.FC = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
+  // The verse last revealed by the "next verse" toolbar button — rendered
+  // in green by <MushafPage>. Cleared on page change.
+  const [greenVerse, setGreenVerse] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState("متوسط");
   const [fontType, setFontType] = useState("أميري");
 
@@ -139,6 +142,9 @@ const PageViewer: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  // When the next-verse button rolls over to a new page, this holds the
+  // target page so the load effect can mark its first verse green.
+  const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
 
@@ -176,6 +182,19 @@ const PageViewer: React.FC = () => {
       setVerses(pageVerses);
       setLoading(false);
       setHighlightedVerse(null);
+      // If the next-verse button drove this page change, unhide and mark
+      // the page's first verse green; otherwise just clear any prior green.
+      if (
+        pendingGreenForPage.current === currentPage &&
+        pageVerses.length > 0
+      ) {
+        const firstKey = `${pageVerses[0].sura}:${pageVerses[0].aya}`;
+        if (hidden.has(firstKey)) showVerse(firstKey);
+        setGreenVerse(firstKey);
+        pendingGreenForPage.current = null;
+      } else {
+        setGreenVerse(null);
+      }
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
     });
@@ -308,19 +327,46 @@ const PageViewer: React.FC = () => {
   }, [audio]);
 
   // ── Hide-toggle (for the toolbar button) ─────────────────────────────────
-  // True when at least one selected verse is currently hidden — toolbar
-  // button uses this to flip between "hide selected" and "show selected".
-  const anySelectedHidden = Array.from(selected).some((k) => hidden.has(k));
-  const toggleSelectedHidden = useCallback(() => {
-    if (selectionCount === 0) return;
-    if (anySelectedHidden) {
-      // Restore every selected verse — keep the selection itself intact
-      // so the user can toggle back and forth without re-selecting.
-      for (const k of selected) showVerse(k);
+  // Page-wide: toggles every verse currently rendered on the page.
+  // If at least one verse on the page is hidden, the press shows all;
+  // otherwise it hides all.
+  const pageVerseKeys = verses.map((v) => `${v.sura}:${v.aya}`);
+  const anyPageHidden = pageVerseKeys.some((k) => hidden.has(k));
+  const allPageHidden =
+    pageVerseKeys.length > 0 && pageVerseKeys.every((k) => hidden.has(k));
+  const togglePageHidden = useCallback(() => {
+    if (pageVerseKeys.length === 0) return;
+    if (anyPageHidden) {
+      for (const k of pageVerseKeys) showVerse(k);
     } else {
-      hideMany(selected);
+      hideMany(pageVerseKeys);
     }
-  }, [anySelectedHidden, hideMany, selected, selectionCount, showVerse]);
+  }, [anyPageHidden, hideMany, pageVerseKeys, showVerse]);
+
+  // ── Next-verse reveal ────────────────────────────────────────────────────
+  // Reveal the first hidden verse on the page in green. If every verse on
+  // the page is already shown, navigate to the next page and mark its first
+  // verse green (the load effect picks up `pendingGreenForPage`).
+  const handleNextVerse = useCallback(() => {
+    if (verses.length === 0) return;
+    const firstHiddenKey = pageVerseKeys.find((k) => hidden.has(k));
+    if (firstHiddenKey) {
+      showVerse(firstHiddenKey);
+      setGreenVerse(firstHiddenKey);
+      return;
+    }
+    if (currentPage < totalPages) {
+      pendingGreenForPage.current = currentPage + 1;
+      setCurrentPage(currentPage + 1);
+    }
+  }, [
+    currentPage,
+    hidden,
+    pageVerseKeys,
+    showVerse,
+    totalPages,
+    verses.length,
+  ]);
 
   // ── Swipe ─────────────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -391,28 +437,27 @@ const PageViewer: React.FC = () => {
                   {isRTL ? "→" : "←"}
                 </button>
               </div>
-              {/* Hide-toggle: blanks out the text of every selected verse
-                  while leaving its verse-end ornament + number visible.
-                  Disabled when nothing is selected. Flips icon based on
-                  whether any selected verse is currently hidden. */}
+              {/* Hide-toggle: page-wide blanket show/hide of every verse on
+                  the current page. Pressing while any verse on the page is
+                  hidden restores all; otherwise it hides all. */}
               <button
                 type="button"
-                className={`toolbar-button hide-toggle-button ${anySelectedHidden ? "active" : ""}`}
-                onClick={toggleSelectedHidden}
-                disabled={selectionCount === 0}
+                className={`toolbar-button hide-toggle-button ${anyPageHidden ? "active" : ""}`}
+                onClick={togglePageHidden}
+                disabled={verses.length === 0}
                 title={
-                  anySelectedHidden
+                  anyPageHidden
                     ? t.mushaf.toggleShowTitle
                     : t.mushaf.toggleHideTitle
                 }
                 aria-label={
-                  anySelectedHidden
+                  anyPageHidden
                     ? t.mushaf.toggleShowTitle
                     : t.mushaf.toggleHideTitle
                 }
-                aria-pressed={anySelectedHidden}
+                aria-pressed={anyPageHidden}
               >
-                {anySelectedHidden ? (
+                {anyPageHidden ? (
                   // eye-off
                   <svg
                     viewBox="0 0 24 24"
@@ -447,6 +492,35 @@ const PageViewer: React.FC = () => {
                     <circle cx="12" cy="12" r="3" />
                   </svg>
                 )}
+              </button>
+              {/* Next-verse reveal: shows the next hidden verse on the page in
+                  green; rolls over to the first verse of the next page when
+                  every verse on the current page is already shown. */}
+              <button
+                type="button"
+                className="toolbar-button next-verse-button"
+                onClick={handleNextVerse}
+                disabled={
+                  verses.length === 0 ||
+                  (!pageVerseKeys.some((k) => hidden.has(k)) &&
+                    currentPage >= totalPages)
+                }
+                title={t.mushaf.nextVerseTitle}
+                aria-label={t.mushaf.nextVerseTitle}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </button>
             </div>
 
@@ -520,6 +594,7 @@ const PageViewer: React.FC = () => {
                   showBismillah={isSurahStart}
                   selected={selected}
                   hidden={hidden}
+                  green={greenVerse ? new Set([greenVerse]) : undefined}
                   onVerseTap={handleVerseTap}
                   onVerseLongPress={handleVerseLongPress}
                   target={
@@ -611,6 +686,21 @@ const PageViewer: React.FC = () => {
                           🔍
                         </span>
                         <span className="drawer-item-label">{t.mushaf.search}</span>
+                      </button>
+
+                      <button
+                        className="drawer-item"
+                        onClick={() => {
+                          closeDrawer();
+                          history.push(`/playback?page=${currentPage}`);
+                        }}
+                      >
+                        <span className="drawer-item-icon" aria-hidden>
+                          ▶
+                        </span>
+                        <span className="drawer-item-label">
+                          {t.playback.title}
+                        </span>
                       </button>
 
                       <button
