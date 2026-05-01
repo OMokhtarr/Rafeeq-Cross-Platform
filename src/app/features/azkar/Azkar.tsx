@@ -337,8 +337,8 @@ const Azkar: React.FC = () => {
                 </button>
               </div>
             </div>
+            <BottomNavBar active="azkar" />
           </div>
-          <BottomNavBar active="azkar" fixed />
         </IonContent>
       </IonPage>
     );
@@ -374,8 +374,8 @@ const Azkar: React.FC = () => {
               ))}
             </div>
           </div>
+          <BottomNavBar active="azkar" />
         </div>
-        <BottomNavBar active="azkar" fixed />
       </IonContent>
     </IonPage>
   );

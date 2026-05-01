@@ -12,34 +12,28 @@ ion-content::part(scroll) {
    AKMEL AL-AYAH TEST  –  matches QuizTest visual style
    ═══════════════════════════════════════════════ */
 
-/* ── Outer centering wrapper ─────────────────── */
 .aa-test-page-wrapper {
   width: 100%;
   height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  justify-content: center;
-  /* Bottom padding leaves room for fixed BottomNavBar (~72px) */
-  padding-bottom: 72px;
-  box-sizing: border-box;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
-}
-
-/* ── Layout — vertical stack ─────────────────── */
-.aa-container {
-  width: 100%;
-  max-width: 600px;
-  box-sizing: border-box;
-  height: 100%;
-  padding: 4px;
-  display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 4px;
 }
+
+/* Then adjust .aa-container so it takes all remaining space */
+.aa-container {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 10px 10px 10px; /* small uniform padding, no extra bottom */
+  box-sizing: border-box;
+}
+
 .aa-container.with-sidebar {
   gap: 4px;
 }
@@ -50,8 +44,6 @@ ion-content::part(scroll) {
   box-sizing: border-box;
   flex: 2;
   order: 2;
-  width: 100%;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   background: var(--color-bg-card);
@@ -147,8 +139,6 @@ ion-content::part(scroll) {
   box-sizing: border-box;
   flex: 1;
   order: 1;
-  width: 100%;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -241,7 +231,7 @@ ion-content::part(scroll) {
   border-radius: 12px;
   padding: 5px 10px;
   border: 2px solid var(--color-gold);
-  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
   flex: 1;
   overflow: hidden;
   min-height: 0;
@@ -278,7 +268,9 @@ ion-content::part(scroll) {
   overflow-x: hidden;
   scrollbar-width: none;
 }
-.aa-card-main::-webkit-scrollbar { display: none; }
+.aa-card-main::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── Info strip ─────────────────────────────── */
 .aa-info-strip {
@@ -296,7 +288,9 @@ ion-content::part(scroll) {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.aa-info-strip::-webkit-scrollbar { display: none; }
+.aa-info-strip::-webkit-scrollbar {
+  display: none;
+}
 
 .aa-surah-badge {
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -473,7 +467,11 @@ ion-content::part(scroll) {
 }
 
 .aa-submit {
-  background: linear-gradient(135deg, var(--color-text-primary), var(--color-text-primary));
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
   color: white;
 }
 .aa-submit:hover:not(:disabled) {
@@ -624,7 +622,11 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary) 0%,
+    var(--color-text-primary) 100%
+  );
   color: white;
 }
 
@@ -659,7 +661,11 @@ ion-content::part(scroll) {
 }
 .aa-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(135deg, var(--color-text-primary), var(--color-text-primary));
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
   color: white;
   border: none;
   border-radius: 30px;
@@ -734,7 +740,11 @@ ion-content::part(scroll) {
   transition: all 0.25s;
 }
 .aa-complete-actions button:first-child {
-  background: linear-gradient(135deg, var(--color-text-primary), var(--color-text-primary));
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
   color: white;
 }
 .aa-complete-actions button:last-child {
@@ -759,11 +769,24 @@ ion-content::part(scroll) {
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
-  .aa-sidebar-wrapper { flex: 3; }
-  .aa-main { flex: 1; min-height: 0; }
-  .aa-actions { flex-direction: column; }
-  .aa-verse-shared { font-size: 1.2rem; line-height: 1.9rem; }
-  .aa-header { flex-wrap: wrap; height: auto; }
+  .aa-sidebar-wrapper {
+    flex: 3;
+  }
+  .aa-main {
+    flex: 1;
+    min-height: 0;
+  }
+  .aa-actions {
+    flex-direction: column;
+  }
+  .aa-verse-shared {
+    font-size: 1.2rem;
+    line-height: 1.9rem;
+  }
+  .aa-header {
+    flex-wrap: wrap;
+    height: auto;
+  }
   .aa-juz-grid {
     grid-template-columns: repeat(5, 1fr);
   }
@@ -779,6 +802,15 @@ ion-content::part(scroll) {
 }
 
 /* Night-mode tweaks: lift result-state colors so they read on a dark surface. */
-[data-theme="night"] .aa-result.correct { background: rgba(76, 175, 125, 0.15); color: #6cd699; }
-[data-theme="night"] .aa-result.wrong   { background: rgba(231, 76, 60, 0.15);  color: #f37b6f; }
-[data-theme="night"] .aa-result.skipped { background: rgba(241, 196, 15, 0.12); color: #f0d068; }
+[data-theme="night"] .aa-result.correct {
+  background: rgba(76, 175, 125, 0.15);
+  color: #6cd699;
+}
+[data-theme="night"] .aa-result.wrong {
+  background: rgba(231, 76, 60, 0.15);
+  color: #f37b6f;
+}
+[data-theme="night"] .aa-result.skipped {
+  background: rgba(241, 196, 15, 0.12);
+  color: #f0d068;
+}

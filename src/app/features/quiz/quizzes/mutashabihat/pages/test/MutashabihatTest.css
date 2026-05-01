@@ -19,9 +19,10 @@ ion-content::part(scroll) {
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  justify-content: center;
-  padding-bottom: 72px;
+  flex-direction: column;
+  align-items: center;
   box-sizing: border-box;
+  overflow: hidden;
   transition:
     background var(--transition-theme),
     color var(--transition-theme);
@@ -32,14 +33,17 @@ ion-content::part(scroll) {
   width: 100%;
   max-width: 600px;
   box-sizing: border-box;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   padding: 4px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   gap: 4px;
 }
-.mst-container.with-sidebar { gap: 4px; }
+.mst-container.with-sidebar {
+  gap: 4px;
+}
 
 /* ── Sidebar (viewer) — top 75% ─────────────── */
 .mst-sidebar-wrapper {
@@ -53,7 +57,7 @@ ion-content::part(scroll) {
   background: var(--color-bg-card);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
   min-height: 0;
   box-sizing: border-box;
 }
@@ -67,7 +71,7 @@ ion-content::part(scroll) {
 }
 
 .mst-sibling-title {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.95rem;
   font-weight: bold;
   color: var(--color-text-primary);
@@ -98,10 +102,10 @@ ion-content::part(scroll) {
   border: 2px solid var(--color-gold);
   border-radius: 20px;
   background: white;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all .2s;
+  transition: all 0.2s;
   direction: rtl;
 }
 .mst-sibling-tab.active {
@@ -117,7 +121,7 @@ ion-content::part(scroll) {
   border: 1px solid var(--color-gold);
 }
 .mst-sibling-verse-text {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1rem;
   direction: rtl;
   color: var(--color-text-primary);
@@ -127,12 +131,16 @@ ion-content::part(scroll) {
 .mst-sibling-meta {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   direction: rtl;
   margin: 0;
 }
 
-.mst-page-viewer { flex: 1; min-height: 0; overflow: hidden; }
+.mst-page-viewer {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 
 /* ── Main quiz panel — bottom 25% ──────────── */
 .mst-main {
@@ -175,12 +183,15 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   min-height: 40px;
 }
-.mst-progress { flex: 2; margin-right: 10px; }
+.mst-progress {
+  flex: 2;
+  margin-right: 10px;
+}
 .mst-progress-text {
   display: block;
   margin-bottom: 3px;
   color: var(--color-text-primary);
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.9rem;
 }
 .mst-bar {
@@ -192,14 +203,14 @@ ion-content::part(scroll) {
 .mst-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
-  transition: width .35s ease;
+  transition: width 0.35s ease;
 }
 
 .mst-score-pill {
   flex: 1;
   text-align: center;
   font-size: 1.1rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-weight: bold;
   color: var(--color-text-primary);
 }
@@ -212,11 +223,14 @@ ion-content::part(scroll) {
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: all .25s;
+  transition: all 0.25s;
   white-space: nowrap;
   min-height: 44px;
 }
-.mst-exit-btn:hover { background: #e74c3c; color: white; }
+.mst-exit-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
 
 /* ── Card ───────────────────────────────────── */
 .mst-card {
@@ -226,7 +240,7 @@ ion-content::part(scroll) {
   border-radius: 12px;
   padding: 5px 10px;
   border: 2px solid var(--color-gold);
-  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
   flex: 1;
   overflow: hidden;
   min-height: 0;
@@ -269,7 +283,9 @@ ion-content::part(scroll) {
   scrollbar-width: none;
   direction: rtl;
 }
-.mst-card-main::-webkit-scrollbar { display: none; }
+.mst-card-main::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── Info strip ─────────────────────────────── */
 .mst-info-strip {
@@ -288,7 +304,9 @@ ion-content::part(scroll) {
   scrollbar-width: none;
   min-height: 0;
 }
-.mst-info-strip::-webkit-scrollbar { display: none; }
+.mst-info-strip::-webkit-scrollbar {
+  display: none;
+}
 
 /* Top row — kept for compat, just inline flex now */
 .mst-info-top-row {
@@ -296,7 +314,7 @@ ion-content::part(scroll) {
 }
 
 .mst-surah-badge {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.88rem;
   font-weight: bold;
   color: var(--color-text-primary);
@@ -304,17 +322,17 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 .mst-meta {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.75rem;
   color: var(--color-quiz);
-  background: rgba(255,255,255,.3);
+  background: rgba(255, 255, 255, 0.3);
   padding: 1px 7px;
   border-radius: 20px;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .mst-similar-badge {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.75rem;
   background: var(--color-quiz);
   color: var(--color-gold-faint);
@@ -343,9 +361,9 @@ ion-content::part(scroll) {
   padding: 2px 7px;
   border-radius: 20px;
   border: 1.5px solid var(--color-gold);
-  background: rgba(255,255,255,0.75);
+  background: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  transition: all .18s;
+  transition: all 0.18s;
   direction: rtl;
   flex-shrink: 0;
   white-space: nowrap;
@@ -355,17 +373,17 @@ ion-content::part(scroll) {
   background: white;
 }
 .mst-inline-chip.active.target {
-  background: rgba(255,215,0,0.22);
+  background: rgba(255, 215, 0, 0.22);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
 }
 .mst-inline-chip.active.sibling {
-  background: rgba(74,144,226,0.12);
+  background: rgba(74, 144, 226, 0.12);
   border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 .mst-inline-chip.sibling {
-  border-color: rgba(74,144,226,0.5);
+  border-color: rgba(74, 144, 226, 0.5);
 }
 
 /* ── Verse box ──────────────────────────────── */
@@ -380,7 +398,7 @@ ion-content::part(scroll) {
 }
 
 .mst-verse-shared {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   line-height: 1.7;
   color: var(--color-text-primary);
@@ -389,7 +407,7 @@ ion-content::part(scroll) {
 }
 
 .mst-hint-inline {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   color: #b8860b;
   font-weight: 600;
@@ -415,16 +433,22 @@ ion-content::part(scroll) {
   border-radius: 8px;
   padding: 4px 8px;
   margin-bottom: 4px;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.82rem;
   color: #856404;
   direction: rtl;
   flex-shrink: 0;
 }
-.mst-tease-icon { font-size: 1.1rem; flex-shrink: 0; }
+.mst-tease-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
 
 /* ── Input ──────────────────────────────────── */
-.mst-answer-row { margin-bottom: 4px; flex-shrink: 0; }
+.mst-answer-row {
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
 
 .mst-input {
   width: 100%;
@@ -432,9 +456,9 @@ ion-content::part(scroll) {
   font-size: 1rem;
   border: 2px solid var(--color-gold);
   border-radius: 10px;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   direction: rtl;
-  transition: all .3s;
+  transition: all 0.3s;
   background: white;
   box-sizing: border-box;
   min-height: 44px;
@@ -442,7 +466,7 @@ ion-content::part(scroll) {
 .mst-input:focus {
   border-color: var(--color-text-primary);
   outline: none;
-  box-shadow: 0 0 0 4px rgba(44,62,80,.1);
+  box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.1);
 }
 .mst-input.answered {
   background: #f5f0e8;
@@ -459,9 +483,9 @@ ion-content::part(scroll) {
   border: none;
   border-radius: 8px;
   font-size: 0.72rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   cursor: pointer;
-  transition: all .25s;
+  transition: all 0.25s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -471,21 +495,58 @@ ion-content::part(scroll) {
   width: 100%;
   min-height: 44px;
 }
-.mst-btn-en { font-size: 0.58rem; opacity: .75; }
-.mst-btn:disabled { opacity: .4; cursor: not-allowed; }
+.mst-btn-en {
+  font-size: 0.58rem;
+  opacity: 0.75;
+}
+.mst-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-.mst-hint    { background: #ffd700; color: #856404; }
-.mst-hint:hover:not(:disabled)    { background: #ffed4a; transform: scale(1.02); }
+.mst-hint {
+  background: #ffd700;
+  color: #856404;
+}
+.mst-hint:hover:not(:disabled) {
+  background: #ffed4a;
+  transform: scale(1.02);
+}
 
-.mst-context { background: #4a90e2; color: white; }
-.mst-context.active { background: #2c6fad; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
-.mst-context:hover:not(:disabled) { background: #5fa3f0; transform: scale(1.02); }
+.mst-context {
+  background: #4a90e2;
+  color: white;
+}
+.mst-context.active {
+  background: #2c6fad;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.mst-context:hover:not(:disabled) {
+  background: #5fa3f0;
+  transform: scale(1.02);
+}
 
-.mst-submit  { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
-.mst-submit:hover:not(:disabled)  { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
+.mst-submit {
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
+  color: white;
+}
+.mst-submit:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
 
-.mst-skip    { background: #95a5a6; color: white; }
-.mst-skip:hover:not(:disabled)    { background: #7f8c8d; transform: scale(1.02); }
+.mst-skip {
+  background: #95a5a6;
+  color: white;
+}
+.mst-skip:hover:not(:disabled) {
+  background: #7f8c8d;
+  transform: scale(1.02);
+}
 
 /* ── Result box ─────────────────────────────── */
 .mst-result {
@@ -496,25 +557,50 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  animation: mstSlide .3s ease;
+  animation: mstSlide 0.3s ease;
   flex-shrink: 0;
 }
-.mst-result.correct  { background: #d4edda; border: 2px solid #27ae60; }
-.mst-result.wrong    { background: #f8d7da; border: 2px solid #e74c3c; }
-.mst-result.skipped  { background: #e8f4fd; border: 2px solid #95a5a6; }
+.mst-result.correct {
+  background: #d4edda;
+  border: 2px solid #27ae60;
+}
+.mst-result.wrong {
+  background: #f8d7da;
+  border: 2px solid #e74c3c;
+}
+.mst-result.skipped {
+  background: #e8f4fd;
+  border: 2px solid #95a5a6;
+}
 
-.mst-result-icon { font-size: 1rem; }
+.mst-result-icon {
+  font-size: 1rem;
+}
 .mst-result-text {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.82rem;
   font-weight: bold;
   color: var(--color-text-primary);
   direction: rtl;
 }
 
-.mst-correct-answer { text-align: center; direction: rtl; margin-top: 4px; }
-.mst-correct-label  { font-size: 0.85rem; color: #666; font-family: "Traditional Arabic","Amiri",serif; }
-.mst-correct-text   { font-size: 1rem; color: var(--color-text-primary); font-family: "Traditional Arabic","Amiri",serif; font-weight: bold; direction: rtl; }
+.mst-correct-answer {
+  text-align: center;
+  direction: rtl;
+  margin-top: 4px;
+}
+.mst-correct-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: "Traditional Arabic", "Amiri", serif;
+}
+.mst-correct-text {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-family: "Traditional Arabic", "Amiri", serif;
+  font-weight: bold;
+  direction: rtl;
+}
 
 /* Sibling reveal section after answering */
 .mst-siblings-reveal {
@@ -523,7 +609,7 @@ ion-content::part(scroll) {
   direction: rtl;
 }
 .mst-siblings-reveal-title {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.85rem;
   color: var(--color-text-primary);
   font-weight: bold;
@@ -543,18 +629,18 @@ ion-content::part(scroll) {
   margin-bottom: 4px;
 }
 .mst-sibling-surah {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.85rem;
   font-weight: bold;
   color: var(--color-quiz);
 }
 .mst-sibling-ref {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
 .mst-sibling-text {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1rem;
   color: var(--color-text-primary);
   line-height: 1.7;
@@ -571,9 +657,9 @@ ion-content::part(scroll) {
   border: none;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   cursor: pointer;
-  transition: all .3s;
+  transition: all 0.3s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -582,7 +668,10 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   min-height: 44px;
 }
-.mst-next-btn:hover { background: #2ecc71; transform: scale(1.02); }
+.mst-next-btn:hover {
+  background: #2ecc71;
+  transform: scale(1.02);
+}
 
 /* ── Loading / Error / Complete ─────────────── */
 .mst-loading,
@@ -593,12 +682,16 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary) 0%,
+    var(--color-text-primary) 100%
+  );
   color: white;
 }
 
 .mst-spinner {
-  border: 5px solid rgba(255,255,255,.3);
+  border: 5px solid rgba(255, 255, 255, 0.3);
   border-top: 5px solid var(--color-gold);
   border-radius: 50%;
   width: 50px;
@@ -606,7 +699,11 @@ ion-content::part(scroll) {
   animation: mstSpin 1s linear infinite;
   margin-bottom: 15px;
 }
-@keyframes mstSpin { to { transform: rotate(360deg); } }
+@keyframes mstSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .mst-error-box {
   background: var(--color-bg-card);
@@ -618,10 +715,17 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
   white-space: pre-line;
 }
-.mst-error-box p { margin: 0 0 16px; font-family: "Traditional Arabic","Amiri",serif; }
+.mst-error-box p {
+  margin: 0 0 16px;
+  font-family: "Traditional Arabic", "Amiri", serif;
+}
 .mst-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary));
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
   color: white;
   border: none;
   border-radius: 30px;
@@ -639,13 +743,21 @@ ion-content::part(scroll) {
   border: 3px solid var(--color-gold);
   color: var(--color-text-primary);
 }
-.mst-complete-badge { font-size: 3rem; margin-bottom: 8px; }
+.mst-complete-badge {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
 .mst-complete-card h2 {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1.7rem;
   margin: 0 0 4px;
 }
-.mst-complete-sub { color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 18px; font-style: italic; }
+.mst-complete-sub {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 18px;
+  font-style: italic;
+}
 
 .mst-score-ring {
   display: flex;
@@ -654,31 +766,66 @@ ion-content::part(scroll) {
   gap: 4px;
   margin-bottom: 4px;
 }
-.mst-score-num   { font-size: 3rem; font-weight: bold; color: var(--color-text-primary); }
-.mst-score-sep   { font-size: 2rem; color: var(--color-text-muted); }
-.mst-score-total { font-size: 1.8rem; color: var(--color-text-muted); }
-.mst-score-pct   { font-size: 1.3rem; color: var(--color-text-primary); margin: 0 0 20px; }
+.mst-score-num {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+.mst-score-sep {
+  font-size: 2rem;
+  color: var(--color-text-muted);
+}
+.mst-score-total {
+  font-size: 1.8rem;
+  color: var(--color-text-muted);
+}
+.mst-score-pct {
+  font-size: 1.3rem;
+  color: var(--color-text-primary);
+  margin: 0 0 20px;
+}
 
-.mst-complete-actions { display: flex; gap: 10px; justify-content: center; }
+.mst-complete-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
 .mst-complete-actions button {
   padding: 10px 20px;
   border: none;
   border-radius: 12px;
   font-size: 1rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   cursor: pointer;
-  transition: all .25s;
+  transition: all 0.25s;
 }
-.mst-complete-actions button:first-child { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
-.mst-complete-actions button:last-child  { background: var(--color-progress-track); color: var(--color-text-primary); }
-.mst-complete-actions button:hover { transform: scale(1.05); }
+.mst-complete-actions button:first-child {
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
+  color: white;
+}
+.mst-complete-actions button:last-child {
+  background: var(--color-progress-track);
+  color: var(--color-text-primary);
+}
+.mst-complete-actions button:hover {
+  transform: scale(1.05);
+}
 
 /* ── Animations ─────────────────────────────── */
 @keyframes mstSlide {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
 
 /* ── Verse selector toolbar ─────────────────── */
 .mst-verse-toolbar {
@@ -693,7 +840,9 @@ ion-content::part(scroll) {
   direction: rtl;
   scrollbar-width: none;
 }
-.mst-verse-toolbar::-webkit-scrollbar { display: none; }
+.mst-verse-toolbar::-webkit-scrollbar {
+  display: none;
+}
 
 .mst-verse-chip {
   display: flex;
@@ -705,51 +854,57 @@ ion-content::part(scroll) {
   border: 2px solid var(--color-gold);
   background: white;
   cursor: pointer;
-  transition: all .2s;
+  transition: all 0.2s;
   direction: rtl;
   min-width: 90px;
   max-width: 130px;
   flex-shrink: 0;
   text-align: right;
 }
-.mst-verse-chip:hover { border-color: var(--color-quiz); }
+.mst-verse-chip:hover {
+  border-color: var(--color-quiz);
+}
 .mst-verse-chip.active.target {
-  background: rgba(255,215,0,0.18);
+  background: rgba(255, 215, 0, 0.18);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
 }
 .mst-verse-chip.active.sibling {
-  background: rgba(74,144,226,0.1);
+  background: rgba(74, 144, 226, 0.1);
   border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
-.mst-verse-chip.sibling { border-color: rgba(74,144,226,0.4); }
+.mst-verse-chip.sibling {
+  border-color: rgba(74, 144, 226, 0.4);
+}
 
 .mst-chip-surah {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.78rem;
   font-weight: bold;
   color: var(--color-text-primary);
   white-space: nowrap;
 }
 .mst-chip-meta {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.68rem;
   color: var(--color-quiz);
   white-space: nowrap;
 }
 /* Preview text hidden — chips are pill-shaped now */
-.mst-chip-preview { display: none; }
+.mst-chip-preview {
+  display: none;
+}
 
 /* ── Open context hint button (after answering) ─ */
 .mst-open-context-hint {
   width: 100%;
   padding: 6px 10px;
-  background: rgba(74,144,226,0.1);
+  background: rgba(74, 144, 226, 0.1);
   border: 1.5px solid #4a90e2;
   border-radius: 8px;
   color: #2c6fad;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.82rem;
   cursor: pointer;
   display: flex;
@@ -757,20 +912,36 @@ ion-content::part(scroll) {
   justify-content: center;
   gap: 6px;
   direction: rtl;
-  transition: all .2s;
+  transition: all 0.2s;
   flex-shrink: 0;
   margin-top: 4px;
 }
-.mst-open-context-hint:hover { background: rgba(74,144,226,0.18); }
+.mst-open-context-hint:hover {
+  background: rgba(74, 144, 226, 0.18);
+}
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
-  .mst-sidebar-wrapper { flex: 3; }
-  .mst-main { flex: 1; }
-  .mst-actions { flex-direction: column; }
-  .mst-verse-shared { font-size: 1.2rem; line-height: 1.9rem; }
-  .mst-header { flex-wrap: wrap; height: auto; }
-  .mst-juz-grid { grid-template-columns: repeat(5,1fr); }
+  .mst-sidebar-wrapper {
+    flex: 3;
+  }
+  .mst-main {
+    flex: 1;
+  }
+  .mst-actions {
+    flex-direction: column;
+  }
+  .mst-verse-shared {
+    font-size: 1.2rem;
+    line-height: 1.9rem;
+  }
+  .mst-header {
+    flex-wrap: wrap;
+    height: auto;
+  }
+  .mst-juz-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 
   /* Keep the action column visible when context is open on small screens */
   .mst-container.with-sidebar .mst-main {
@@ -783,6 +954,15 @@ ion-content::part(scroll) {
 }
 
 /* Night-mode tweaks: lift result-state colors so they read on a dark surface. */
-[data-theme="night"] .mst-result.correct { background: rgba(76, 175, 125, 0.15); color: #6cd699; }
-[data-theme="night"] .mst-result.wrong   { background: rgba(231, 76, 60, 0.15);  color: #f37b6f; }
-[data-theme="night"] .mst-result.skipped { background: rgba(241, 196, 15, 0.12); color: #f0d068; }
+[data-theme="night"] .mst-result.correct {
+  background: rgba(76, 175, 125, 0.15);
+  color: #6cd699;
+}
+[data-theme="night"] .mst-result.wrong {
+  background: rgba(231, 76, 60, 0.15);
+  color: #f37b6f;
+}
+[data-theme="night"] .mst-result.skipped {
+  background: rgba(241, 196, 15, 0.12);
+  color: #f0d068;
+}

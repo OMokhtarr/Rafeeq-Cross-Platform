@@ -248,8 +248,8 @@ const MutashabihatSetup: React.FC = () => {
               </button>
             </div>
           </div>
+          <BottomNavBar active="quiz" />
         </div>
-        <BottomNavBar active="quiz" fixed />
       </IonContent>
     </IonPage>
   );

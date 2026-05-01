@@ -1,4 +1,3 @@
-/* Ensure full height propagates from Ionic */
 ion-content {
   --background: var(--color-bg-content);
 }
@@ -7,10 +6,6 @@ ion-content::part(scroll) {
   display: flex;
   align-items: stretch;
 }
-
-/* ═══════════════════════════════════════════════════════════
-   AZKAR  —  merged from Electron app + new app design system
-   ═══════════════════════════════════════════════════════════ */
 
 /* ── Outer centering wrapper ──────────────────────────────── */
 .azkar-page-wrapper {
@@ -26,8 +21,6 @@ ion-content::part(scroll) {
     color var(--transition-theme);
 }
 
-/* In day mode keep the warm parchment gradient as a subtle nod to the
-   original design — only night mode gets pure flat dark. */
 [data-theme="day"] .azkar-page-wrapper {
   background: linear-gradient(
     160deg,
@@ -37,37 +30,19 @@ ion-content::part(scroll) {
 }
 
 /* ── Container ────────────────────────────────────────────── */
-
 .azkar-container {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  /* Bottom padding leaves room for the fixed BottomNavBar (~72px) */
-  padding: 0 0 calc(3rem + 72px);
   font-family: "Scheherazade New", "Amiri", serif;
   max-width: 700px;
   width: 100%;
   box-sizing: border-box;
-}
-
-/* Scrollbar */
-.azkar-container::-webkit-scrollbar {
-  width: 8px;
-}
-.azkar-container::-webkit-scrollbar-track {
-  background: var(--color-parchment-mid, #f0ead6);
-  border-radius: 4px;
-}
-.azkar-container::-webkit-scrollbar-thumb {
-  background: var(--color-gold, #d4b48c);
-  border-radius: 4px;
-  border: 2px solid var(--color-parchment-mid, #f0ead6);
-}
-.azkar-container::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold-deep, #b8936a);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* ── Home Header ──────────────────────────────────────────── */
-
 .azkar-home-header {
   text-align: center;
   padding: 2.5rem 1rem 1.5rem;
@@ -78,13 +53,11 @@ ion-content::part(scroll) {
   );
   border-bottom: 3px solid var(--color-gold, #d4b48c);
 }
-
 .azkar-home-header h1 {
   font-size: 2.8rem;
   color: var(--color-gold, #d4b48c);
   margin-bottom: 0.4rem;
 }
-
 .azkar-home-header p {
   font-size: 0.95rem;
   color: var(--color-steel-blue, #c8d6e5);
@@ -93,7 +66,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Categories list ──────────────────────────────────────── */
-
 .azkar-categories {
   padding: 1.5rem;
   display: flex;
@@ -103,14 +75,12 @@ ion-content::part(scroll) {
   margin: 0 auto;
 }
 
-/* Category card — Electron style */
 .azkar-cat-card {
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 1.2rem 1.4rem;
   background: var(--color-bg-card, #ffffff);
-  border: none;
   border-right: 5px solid var(--cat-color, var(--color-quran));
   border-radius: 12px;
   cursor: pointer;
@@ -121,12 +91,10 @@ ion-content::part(scroll) {
   text-align: right;
   width: 100%;
 }
-
 .azkar-cat-card:hover {
   transform: translateX(-4px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
-
 .azkar-cat-body {
   display: flex;
   flex-direction: column;
@@ -134,14 +102,12 @@ ion-content::part(scroll) {
   gap: 0.2rem;
   text-align: right;
 }
-
 .azkar-cat-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-text-primary, #1c1c1c);
   margin: 0;
 }
-
 .azkar-cat-subtitle {
   font-family: "Georgia", serif;
   font-size: 0.8rem;
@@ -149,13 +115,11 @@ ion-content::part(scroll) {
   letter-spacing: 0.4px;
   margin: 0;
 }
-
 .azkar-cat-count {
   font-size: 0.9rem;
   color: var(--cat-color, var(--color-quran));
   font-weight: 600;
 }
-
 .azkar-cat-arrow {
   font-size: 1.4rem;
   color: var(--cat-color, var(--color-quran));
@@ -167,7 +131,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Detail sticky header ─────────────────────────────────── */
-
 .azkar-header {
   background: linear-gradient(
     135deg,
@@ -183,7 +146,6 @@ ion-content::part(scroll) {
   z-index: 10;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
-
 .azkar-back-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -199,27 +161,23 @@ ion-content::part(scroll) {
 .azkar-back-btn:hover {
   background: rgba(255, 255, 255, 0.35);
 }
-
 .azkar-header-title {
   display: flex;
   align-items: center;
   gap: 0.7rem;
   flex: 1;
 }
-
 .azkar-header-title h1 {
   font-size: 1.6rem;
   color: white;
   margin: 0;
 }
-
 .azkar-header-title p {
   font-family: "Georgia", serif;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.75);
   margin: 0;
 }
-
 .azkar-all-done {
   background: rgba(255, 255, 255, 0.2);
   padding: 0.3rem 0.8rem;
@@ -230,7 +188,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Azkar items list ─────────────────────────────────────── */
-
 .azkar-list {
   padding: 1.5rem;
   display: flex;
@@ -240,7 +197,6 @@ ion-content::part(scroll) {
   margin: 0 auto;
 }
 
-/* Individual zikr item — Electron style */
 .azkar-item {
   background: var(--color-bg-card, #ffffff);
   border-radius: 14px;
@@ -249,20 +205,16 @@ ion-content::part(scroll) {
   border-right: 4px solid var(--cat-color, var(--color-quran));
   transition: opacity 0.3s;
 }
-
 .azkar-item.completed {
   opacity: 0.6;
   background: var(--color-bg-card-alt, #f5f9f5);
 }
-
-/* Item top row: number badge + source */
 .azkar-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.7rem;
 }
-
 .azkar-item-num {
   width: 26px;
   height: 26px;
@@ -277,7 +229,6 @@ ion-content::part(scroll) {
   font-weight: 700;
   flex-shrink: 0;
 }
-
 .azkar-item-source {
   font-family: "Georgia", serif;
   font-size: 0.72rem;
@@ -286,8 +237,6 @@ ion-content::part(scroll) {
   padding: 0.2rem 0.7rem;
   border-radius: 12px;
 }
-
-/* Optional note */
 .azkar-note {
   background: var(--color-parchment-note, #fef9ec);
   border-right: 3px solid #f0c040;
@@ -298,8 +247,6 @@ ion-content::part(scroll) {
   color: #8b6914;
   line-height: 1.6;
 }
-
-/* Main Arabic text */
 .azkar-item-text {
   font-size: 1.35rem;
   line-height: 2.1;
@@ -308,8 +255,6 @@ ion-content::part(scroll) {
   direction: rtl;
   margin: 0 0 0.6rem;
 }
-
-/* Optional translation */
 .azkar-item-translation {
   font-family: "Georgia", serif;
   font-size: 0.85rem;
@@ -323,8 +268,6 @@ ion-content::part(scroll) {
   text-align: right;
   direction: rtl;
 }
-
-/* Progress bar */
 .azkar-progress-bar {
   height: 5px;
   background: var(--color-progress-track, #e8e0d0);
@@ -332,28 +275,23 @@ ion-content::part(scroll) {
   margin-bottom: 0.75rem;
   overflow: hidden;
 }
-
 .azkar-progress-fill {
   height: 100%;
   background: var(--cat-color, var(--color-quran));
   border-radius: 3px;
   transition: width 0.2s ease;
 }
-
-/* Footer row */
 .azkar-item-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
 }
-
 .azkar-repeat-label {
   font-size: 0.88rem;
   color: var(--color-text-secondary, #5a4a3a);
   font-family: "Georgia", serif;
 }
-
 .azkar-counter {
   display: flex;
   align-items: center;
@@ -417,7 +355,6 @@ ion-content::part(scroll) {
   align-items: baseline;
   gap: 0.25rem;
 }
-
 .count-number {
   font-size: 1.3rem;
   font-weight: 700;
@@ -431,7 +368,6 @@ ion-content::part(scroll) {
   opacity: 0.85;
 }
 
-/* Reset button */
 .azkar-reset-btn {
   background: none;
   border: 1px solid var(--color-border-subtle, #ccc);
@@ -456,7 +392,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Footer nav ───────────────────────────────────────────── */
-
 .azkar-footer-nav {
   display: flex;
   justify-content: center;
@@ -464,7 +399,6 @@ ion-content::part(scroll) {
   max-width: 700px;
   margin: 0 auto;
 }
-
 .azkar-back-bottom {
   background: var(--color-bg-header, #1c1c1c);
   color: white;
@@ -481,12 +415,10 @@ ion-content::part(scroll) {
 }
 
 /* ── Home footer ──────────────────────────────────────────── */
-
 .azkar-home-footer {
   text-align: center;
   padding: 2rem 1rem;
 }
-
 .azkar-home-footer p {
   font-size: 1.2rem;
   color: var(--color-text-muted, #8a7a6a);
@@ -494,52 +426,20 @@ ion-content::part(scroll) {
 }
 
 /* ── Responsive ───────────────────────────────────────────── */
-
 @media (max-width: 500px) {
   .azkar-item-text {
     font-size: 1.2rem;
     line-height: 2;
   }
-
   .azkar-home-header h1 {
     font-size: 2.2rem;
   }
-
   .azkar-cat-card {
     padding: 1rem;
   }
 }
 
-/* ── Main home button ─────────────────────────────────────── */
-.azkar-main-home-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  background: rgba(212, 180, 140, 0.12);
-  border: 2px solid rgba(212, 180, 140, 0.45);
-  color: #b8956a;
-  padding: 10px 28px;
-  border-radius: 24px;
-  cursor: pointer;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1rem;
-  transition: all 0.2s;
-  letter-spacing: 0.02em;
-}
-
-.azkar-main-home-btn:hover {
-  background: rgba(212, 180, 140, 0.22);
-  border-color: #d4b48c;
-  color: #d4b48c;
-  transform: translateY(-2px);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   NIGHT-MODE OVERRIDES
-   Re-color the cards and chrome that were defined with
-   light-mode hex values above. Layout is unchanged.
-   ═══════════════════════════════════════════════════════════ */
+/* Night‑mode overrides */
 [data-theme="night"] .azkar-item {
   background: var(--color-bg-card);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);

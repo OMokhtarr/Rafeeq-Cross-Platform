@@ -20,7 +20,7 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-y: auto;
+  overflow: hidden;
   transition:
     background var(--transition-theme),
     color var(--transition-theme);
@@ -29,11 +29,13 @@ ion-content::part(scroll) {
 .settings-container {
   width: 100%;
   max-width: 600px;
-  /* Extra bottom padding for fixed BottomNavBar (~72px) */
-  padding: 0 0 calc(40px + 72px);
+  flex: 1;
+  overflow-y: auto;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -122,8 +124,6 @@ ion-content::part(scroll) {
   border-bottom: none;
 }
 
-/* Press feedback on rows — but NOT on rows containing a slider, since
-   dragging would trigger a constant flashing background. */
 .settings-row:not(.settings-row-slider):active {
   background: var(--color-gold-faint);
 }
@@ -136,9 +136,7 @@ ion-content::part(scroll) {
   min-width: 0;
 }
 
-/* Icon container — design spec components-settings.html:
-   34×34, rounded 10px, flat neutral grey #f0f0f0 (day) / dark card (night),
-   icon stroke is neutral grey. */
+/* Icon container */
 .settings-row-icon {
   width: 34px;
   height: 34px;
@@ -183,7 +181,7 @@ ion-content::part(scroll) {
   line-height: 1.3;
 }
 
-/* ── Stacked row (label above content) — used for Language buttons ── */
+/* ── Stacked row ── */
 .settings-row-stack {
   flex-direction: column;
   align-items: stretch;
@@ -194,7 +192,7 @@ ion-content::part(scroll) {
   margin: 0;
 }
 
-/* ── Language button row (matches index.html LangBtn pair) ── */
+/* ── Language button row ── */
 .settings-lang-row {
   display: flex;
   gap: 8px;
@@ -289,21 +287,14 @@ ion-content::part(scroll) {
   transition: border-color var(--transition-base);
   max-width: 140px;
   min-height: 40px;
-  color-scheme: light; /* day theme uses light dropdown */
+  color-scheme: light;
 }
 
-/* Night theme → dark dropdown */
 [data-theme="night"] .settings-select {
   color-scheme: dark;
 }
 
-/* Also style the options for a consistent look */
 .settings-select option {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-}
-
-[data-theme="night"] .settings-select option {
   background: var(--color-bg-card);
   color: var(--color-text-primary);
 }
@@ -324,15 +315,9 @@ ion-content::part(scroll) {
   -webkit-appearance: none;
   appearance: none;
   width: 90px;
-
-  /* Give the input the same height as the thumb so the track sits
-     nicely centered, eliminating the visual gap above the thumb. */
   height: 18px;
   border-radius: 4px;
-  background: transparent; /* we'll draw the track on a pseudo or via the
-                                        built‑in track, but the background stays
-                                        transparent so the actual track colour
-                                        shows through */
+  background: transparent;
   outline: none;
   cursor: pointer;
   accent-color: var(--color-quran);
@@ -341,7 +326,6 @@ ion-content::part(scroll) {
   touch-action: pan-y;
 }
 
-/* The track – we use the vendor pseudo‑elements */
 .settings-slider::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 4px;
@@ -354,7 +338,6 @@ ion-content::part(scroll) {
   background: var(--color-gold-subtle);
 }
 
-/* The thumb */
 .settings-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -365,8 +348,7 @@ ion-content::part(scroll) {
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   border: none;
-  margin-top: -7px; /* pull the thumb up by half the difference between
-                          thumb height (18) and track height (4) to centre it */
+  margin-top: -7px;
 }
 
 .settings-slider::-moz-range-thumb {
@@ -379,7 +361,6 @@ ion-content::part(scroll) {
   border: none;
 }
 
-/* Fixed-width value pill so the slider doesn't reflow as digits change. */
 .settings-slider-val {
   font-family: var(--font-latin);
   font-size: 0.75rem;
