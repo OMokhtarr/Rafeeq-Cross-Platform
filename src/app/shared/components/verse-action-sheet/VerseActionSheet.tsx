@@ -2,23 +2,16 @@
  * VERSE ACTION SHEET
  *
  * A bottom-sheet popup that appears when the user long-presses a verse on
- * the Mushaf page. Replaces the always-on inline rail of audio buttons +
- * translations under the page text.
- *
- * Provides three actions for one verse:
- *   - Play / pause its recitation (using the shared useAudioPlayer hook).
- *   - Show its translation (uses the active translation edition from
- *     settings; renders a hint if none is selected).
- *   - Show its tafsir (stubbed — fetchTafsirForAyah returns empty until
- *     the user wires a real source. The UI handles the empty state).
+ * the Mushaf page. Provides audio playback, translation, and tafsir for a
+ * single verse.
  */
 
 import React, { useEffect, useState } from "react";
 import {
   fetchAudioForAyah,
   fetchTafsirForAyah,
-  fetchTranslationsByPage,
-} from "../../../core/services/api/quran-api.client";
+  getPageTranslations,
+} from "../../../core/services/data/quran.service";
 import type { AudioPlayer } from "../../../core/hooks/useAudioPlayer";
 import { useLang } from "../../../core/context/LanguageContext";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
@@ -64,8 +57,7 @@ const VerseActionSheet: React.FC<Props> = ({
   const [tafsirLoading, setTafsirLoading] = useState(false);
   const [tafsirError, setTafsirError] = useState<string | null>(null);
 
-  // Reset all per-verse state when the sheet opens for a different verse,
-  // and clear errors on close so reopening starts fresh.
+  // Reset per-verse state when the sheet opens for a different verse.
   useEffect(() => {
     if (!open) {
       setAudioError(null);
@@ -88,7 +80,7 @@ const VerseActionSheet: React.FC<Props> = ({
     let cancelled = false;
     setTranslationLoading(true);
     setTranslationError(null);
-    fetchTranslationsByPage(page, translationId)
+    getPageTranslations(page, translationId)
       .then((rows) => {
         if (cancelled) return;
         const hit = rows.find((r) => r.verseKey === verseKey);
@@ -158,11 +150,7 @@ const VerseActionSheet: React.FC<Props> = ({
 
   return (
     <>
-      <div
-        className="vas-backdrop"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="vas-backdrop" onClick={onClose} aria-hidden="true" />
       <aside
         className="vas-sheet"
         role="dialog"

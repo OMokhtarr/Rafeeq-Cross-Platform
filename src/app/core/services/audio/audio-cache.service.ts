@@ -9,7 +9,7 @@
  */
 
 import { idb } from "../storage/idb.service";
-import { fetchAudioForAyah } from "../api/quran-api.client";
+import { fetchAudioForAyah } from "../data/quran.service";
 
 const STORE = "audio";
 

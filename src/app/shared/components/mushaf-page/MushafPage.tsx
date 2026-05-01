@@ -35,7 +35,7 @@ import {
   fontFamilyForPage,
   BISMILLAH_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
-import { surahNamesArabic } from "../../../core/services/data/quran.service";
+import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import "./MushafPage.css";
 
 interface Props {
@@ -242,7 +242,7 @@ const MushafPage: React.FC<Props> = ({
   const surahStartVerse =
     verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
   const surahHeaderName = surahStartVerse
-    ? surahNamesArabic[surahStartVerse.sura] ?? `سورة ${surahStartVerse.sura}`
+    ? getSurahNameArabic(surahStartVerse.sura)
     : null;
 
   return (

@@ -5,7 +5,7 @@
  * by <MushafPage>; this component owns:
  *   - page navigation (arrows, surah picker, swipe)
  *   - the hamburger side drawer (surah list, search, settings, selection ops)
- *   - server-side search via the Foundation API
+ *   - server-side search via the Foundation API (now through SDK)
  *   - per-verse recitation playback
  *   - optional translation panel under each verse
  */
@@ -13,28 +13,27 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
-import { pageData } from "../../../data/quranData";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import MushafPage from "../../shared/components/mushaf-page/MushafPage";
 import {
   getPage,
   prefetchPage,
-  getKnownPageCeiling,
-  surahNamesArabic,
-  getSurahName,
+  searchQuran,
 } from "../../core/services/data/quran.service";
 import {
-  searchQuran,
-  type SearchResult,
-} from "../../core/services/api/quran-api.client";
+  getSuraForPage,
+  getSurahNameArabic,
+  getChapters,
+  estimatePageForVerse,
+  getSurahStartPage,
+} from "../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
-import "./PageViewer.css";
-
 import type { Verse } from "../../shared/models/verse.model";
+import "./PageViewer.css";
 
 // ─── Settings helpers ─────────────────────────────────────────────────────────
 const SETTINGS_KEY = "rafiq_settings_v1";
@@ -67,20 +66,6 @@ function readSettings(): ReadSettings {
   };
 }
 
-// pageData has 606 entries (index 0 unused, 1..604 real pages, 605 is the
-// exclusive end-marker). Resolve the page that contains sura:aya by walking
-// pageData and returning the last index whose start is <= the verse.
-function resolvePage(sura: number, aya: number): number {
-  for (let p = 1; p < pageData.length - 1; p++) {
-    const [s1, a1] = pageData[p];
-    const [s2, a2] = pageData[p + 1];
-    const startsBefore = s1 < sura || (s1 === sura && a1 <= aya);
-    const endsAfter = s2 > sura || (s2 === sura && a2 > aya);
-    if (startsBefore && endsAfter) return p;
-  }
-  return 1;
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const PageViewer: React.FC = () => {
@@ -111,24 +96,21 @@ const PageViewer: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSurah, setSelectedSurah] = useState(1);
 
-  // Drawer + nested panels (search/settings live INSIDE the drawer now)
+  // Drawer + nested panels
   const [drawerOpen, setDrawerOpen] = useState(false);
   type DrawerView = "menu" | "search" | "settings";
   const [drawerView, setDrawerView] = useState<DrawerView>("menu");
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]); // Use SearchResult from quran.service
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
-  // The verse last revealed by the "next verse" toolbar button — rendered
-  // in green by <MushafPage>. Cleared on page change.
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState("متوسط");
   const [fontType, setFontType] = useState("أميري");
 
-  // Settings (reciter + translation choice — read from localStorage).
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
   // Audio — owned here so opening/closing the action sheet shares one player.
@@ -137,25 +119,23 @@ const PageViewer: React.FC = () => {
   // Verse action sheet (long-press → audio / translation / tafsir).
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
 
-  // ── Refs ──────────────────────────────────────────────────────────────────
+  // ── Refs ──
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  // When the next-verse button rolls over to a new page, this holds the
-  // target page so the load effect can mark its first verse green.
   const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
 
-  // ── Re-read settings whenever the drawer closes (user may have visited /settings) ──
+  // Re-read settings whenever the drawer closes
   useEffect(() => {
     if (!drawerOpen) {
       setSettings(readSettings());
     }
   }, [drawerOpen]);
 
-  // ── Sync currentPage with ?page= query param on navigation ───────────────
+  // Sync currentPage with ?page= query param on navigation
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
@@ -173,17 +153,13 @@ const PageViewer: React.FC = () => {
     getPage(currentPage).then((pageVerses) => {
       if (cancelled) return;
       if (!pageVerses.length) {
-        const ceiling = getKnownPageCeiling();
-        if (ceiling !== null && currentPage > ceiling) {
-          setCurrentPage(ceiling);
-          return;
-        }
+        // If page not found, just show empty (or handle gracefully)
+        setLoading(false);
+        return;
       }
       setVerses(pageVerses);
       setLoading(false);
       setHighlightedVerse(null);
-      // If the next-verse button drove this page change, unhide and mark
-      // the page's first verse green; otherwise just clear any prior green.
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -203,7 +179,7 @@ const PageViewer: React.FC = () => {
     };
   }, [currentPage]);
 
-  // Auto-focus the search input when the drawer flips to the search view.
+  // Auto-focus search input when drawer flips to search
   useEffect(() => {
     if (drawerOpen && drawerView === "search" && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -222,14 +198,6 @@ const PageViewer: React.FC = () => {
   }, [drawerOpen]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const getSurahStartPage = (surahIndex: number): number => {
-    for (let page = 1; page < pageData.length; page++) {
-      const [sura, aya] = pageData[page];
-      if (sura === surahIndex && aya === 1) return page;
-    }
-    return 1;
-  };
-
   const handleSurahChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const surah = parseInt(e.target.value);
     setSelectedSurah(surah);
@@ -245,11 +213,11 @@ const PageViewer: React.FC = () => {
 
   const getPageInfo = () => {
     if (currentPage < 1 || currentPage > totalPages) return null;
-    const [suraIndex] = pageData[currentPage];
+    const suraIndex = getSuraForPage(currentPage) ?? 1;
     return {
       sura: suraIndex,
-      suraName: getSurahName(suraIndex, "english"),
-      suraNameAr: surahNamesArabic[suraIndex] ?? `سورة ${suraIndex}`,
+      suraName: getSurahNameArabic(suraIndex),
+      suraNameAr: getSurahNameArabic(suraIndex),
       juz: Math.ceil(currentPage / 20),
       hizb: Math.ceil(currentPage / 4),
     };
@@ -269,7 +237,7 @@ const PageViewer: React.FC = () => {
     clearSearch();
   };
 
-  // ── Search (server-side) ─────────────────────────────────────────────────
+  // ── Search (server-side via SDK) ─────────────────────────────────────────
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
@@ -280,13 +248,8 @@ const PageViewer: React.FC = () => {
     setSearching(true);
     setSearchError(null);
     try {
-      const rows = await searchQuran(q, { language: "ar", perPage: 20 });
-      // Resolve page from sura/aya since the API may not include it.
-      const enriched = rows.map((r) => ({
-        ...r,
-        page: r.page > 0 ? r.page : resolvePage(r.sura, r.aya),
-      }));
-      setSearchResults(enriched);
+      const results = await searchQuran(q);
+      setSearchResults(results);
     } catch (err) {
       console.error("[PageViewer] search failed", err);
       setSearchError(t.mushaf.searchError);
@@ -296,10 +259,10 @@ const PageViewer: React.FC = () => {
     }
   };
 
-  const handleResultClick = (result: SearchResult) => {
+  const handleResultClick = (result: any) => {
     setCurrentPage(result.page);
     closeDrawer();
-    setHighlightedVerse(`${result.sura}:${result.aya}`);
+    setHighlightedVerse(result.verseKey);
     setTimeout(() => setHighlightedVerse(null), 3000);
   };
 
@@ -317,7 +280,7 @@ const PageViewer: React.FC = () => {
     [toggleSelected],
   );
 
-  // ── Long-press → open verse action sheet ─────────────────────────────────
+  // Long-press → open verse action sheet
   const handleVerseLongPress = useCallback((key: string) => {
     setSheetVerseKey(key);
   }, []);
@@ -326,14 +289,9 @@ const PageViewer: React.FC = () => {
     audio.stop();
   }, [audio]);
 
-  // ── Hide-toggle (for the toolbar button) ─────────────────────────────────
-  // Page-wide: toggles every verse currently rendered on the page.
-  // If at least one verse on the page is hidden, the press shows all;
-  // otherwise it hides all.
+  // Hide-toggle (page-wide)
   const pageVerseKeys = verses.map((v) => `${v.sura}:${v.aya}`);
   const anyPageHidden = pageVerseKeys.some((k) => hidden.has(k));
-  const allPageHidden =
-    pageVerseKeys.length > 0 && pageVerseKeys.every((k) => hidden.has(k));
   const togglePageHidden = useCallback(() => {
     if (pageVerseKeys.length === 0) return;
     if (anyPageHidden) {
@@ -343,10 +301,7 @@ const PageViewer: React.FC = () => {
     }
   }, [anyPageHidden, hideMany, pageVerseKeys, showVerse]);
 
-  // ── Next-verse reveal ────────────────────────────────────────────────────
-  // Reveal the first hidden verse on the page in green. If every verse on
-  // the page is already shown, navigate to the next page and mark its first
-  // verse green (the load effect picks up `pendingGreenForPage`).
+  // Next-verse reveal
   const handleNextVerse = useCallback(() => {
     if (verses.length === 0) return;
     const firstHiddenKey = pageVerseKeys.find((k) => hidden.has(k));
@@ -368,7 +323,7 @@ const PageViewer: React.FC = () => {
     verses.length,
   ]);
 
-  // ── Swipe ─────────────────────────────────────────────────────────────────
+  // Swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -384,6 +339,15 @@ const PageViewer: React.FC = () => {
     touchStartX.current = null;
     touchStartY.current = null;
   };
+
+  // Surah quick-select options from chapters
+  const surahOptions = useRef<{ id: number; name: string }[]>();
+  if (!surahOptions.current) {
+    surahOptions.current = getChapters().map((ch) => ({
+      id: ch.id,
+      name: ch.nameArabic,
+    }));
+  }
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
@@ -437,9 +401,7 @@ const PageViewer: React.FC = () => {
                   {isRTL ? "→" : "←"}
                 </button>
               </div>
-              {/* Hide-toggle: page-wide blanket show/hide of every verse on
-                  the current page. Pressing while any verse on the page is
-                  hidden restores all; otherwise it hides all. */}
+              {/* Hide-toggle */}
               <button
                 type="button"
                 className={`toolbar-button hide-toggle-button ${anyPageHidden ? "active" : ""}`}
@@ -458,7 +420,6 @@ const PageViewer: React.FC = () => {
                 aria-pressed={anyPageHidden}
               >
                 {anyPageHidden ? (
-                  // eye-off
                   <svg
                     viewBox="0 0 24 24"
                     width="20"
@@ -476,7 +437,6 @@ const PageViewer: React.FC = () => {
                     <path d="M6.61 6.61C4.13 8.13 2.4 10.62 2 12c1 3 5 7.5 10 7.5a10.94 10.94 0 005.39-1.39" />
                   </svg>
                 ) : (
-                  // eye
                   <svg
                     viewBox="0 0 24 24"
                     width="20"
@@ -493,9 +453,7 @@ const PageViewer: React.FC = () => {
                   </svg>
                 )}
               </button>
-              {/* Next-verse reveal: shows the next hidden verse on the page in
-                  green; rolls over to the first verse of the next page when
-                  every verse on the current page is already shown. */}
+              {/* Next-verse reveal */}
               <button
                 type="button"
                 className="toolbar-button next-verse-button"
@@ -544,7 +502,7 @@ const PageViewer: React.FC = () => {
                   <span className="metadata-value">
                     {lang === "ar"
                       ? toHindiNumbers(pageInfo?.juz ?? 0)
-                      : pageInfo?.juz ?? 0}
+                      : (pageInfo?.juz ?? 0)}
                   </span>
                 </span>
                 <span className="metadata-separator">|</span>
@@ -553,7 +511,7 @@ const PageViewer: React.FC = () => {
                   <span className="metadata-value">
                     {lang === "ar"
                       ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                      : pageInfo?.hizb ?? 0}
+                      : (pageInfo?.hizb ?? 0)}
                   </span>
                 </span>
               </div>
@@ -562,12 +520,12 @@ const PageViewer: React.FC = () => {
             <div className="toolbar-right">
               <select
                 className="surah-quick-select"
-                value={selectedSurah}
+                value={getSuraForPage(currentPage) ?? 1}
                 onChange={handleSurahChange}
               >
-                {surahNamesArabic.slice(1, 115).map((name, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}. {name}
+                {surahOptions.current.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id}. {s.name}
                   </option>
                 ))}
               </select>
@@ -685,7 +643,9 @@ const PageViewer: React.FC = () => {
                         <span className="drawer-item-icon" aria-hidden>
                           🔍
                         </span>
-                        <span className="drawer-item-label">{t.mushaf.search}</span>
+                        <span className="drawer-item-label">
+                          {t.mushaf.search}
+                        </span>
                       </button>
 
                       <button
@@ -710,7 +670,9 @@ const PageViewer: React.FC = () => {
                         <span className="drawer-item-icon" aria-hidden>
                           ⚙
                         </span>
-                        <span className="drawer-item-label">{t.mushaf.settings}</span>
+                        <span className="drawer-item-label">
+                          {t.mushaf.settings}
+                        </span>
                       </button>
 
                       <div className="drawer-divider" />
@@ -787,7 +749,9 @@ const PageViewer: React.FC = () => {
                         </div>
                       </form>
                       {searching && (
-                        <div className="search-status">{t.mushaf.searching}</div>
+                        <div className="search-status">
+                          {t.mushaf.searching}
+                        </div>
                       )}
                       {searchError && (
                         <div className="search-status search-error">
@@ -807,24 +771,27 @@ const PageViewer: React.FC = () => {
                           <div className="results-list">
                             {searchResults.map((r, i) => (
                               <div
-                                key={`${r.sura}-${r.aya}-${i}`}
+                                key={`${r.verseKey}-${i}`}
                                 className="result-item"
                                 onClick={() => handleResultClick(r)}
                               >
                                 <div className="result-main">
                                   <span className="result-surah">
-                                    {surahNamesArabic[r.sura] ??
-                                      `${r.sura}`}
+                                    {getSurahNameArabic(r.sura)}
                                   </span>
                                   <span className="result-verse">
                                     {t.mushaf.verseLabel}{" "}
-                                    {lang === "ar" ? toHindiNumbers(r.aya) : r.aya}
+                                    {lang === "ar"
+                                      ? toHindiNumbers(r.aya)
+                                      : r.aya}
                                   </span>
                                 </div>
                                 <div className="result-meta">
                                   <span className="result-page">
                                     {t.mushaf.pageLabelInResult}{" "}
-                                    {lang === "ar" ? toHindiNumbers(r.page) : r.page}
+                                    {lang === "ar"
+                                      ? toHindiNumbers(r.page)
+                                      : r.page}
                                   </span>
                                   <span className="result-preview" dir="rtl">
                                     {r.text?.length > 60
@@ -842,7 +809,9 @@ const PageViewer: React.FC = () => {
                         searchQuery &&
                         searchResults.length === 0 && (
                           <div className="no-results">
-                            <p>{t.mushaf.noResults}: "{searchQuery}"</p>
+                            <p>
+                              {t.mushaf.noResults}: "{searchQuery}"
+                            </p>
                           </div>
                         )}
                     </div>
@@ -858,7 +827,9 @@ const PageViewer: React.FC = () => {
                           onChange={(e) => setFontSize(e.target.value)}
                         >
                           {t.mushaf.fontSizeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -870,7 +841,9 @@ const PageViewer: React.FC = () => {
                           onChange={(e) => setFontType(e.target.value)}
                         >
                           {t.mushaf.fontTypeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
                           ))}
                         </select>
                       </div>

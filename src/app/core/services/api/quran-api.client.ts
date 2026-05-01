@@ -16,8 +16,7 @@
 
 import type { VerseWord } from "../../../shared/models/verse.model";
 
-const TOKEN_BROKER_URL =
-  process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
+const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CONTENT_API_BASE =
   process.env.REACT_APP_CONTENT_API_BASE ??
   "https://apis.quran.foundation/content/api/v4";
@@ -42,11 +41,7 @@ let tokenInflight: Promise<string> | null = null;
 
 async function getAccessToken(forceRefresh = false): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000);
-  if (
-    !forceRefresh &&
-    tokenState &&
-    tokenState.expiresAt - 60 > nowSec
-  ) {
+  if (!forceRefresh && tokenState && tokenState.expiresAt - 60 > nowSec) {
     return tokenState.accessToken;
   }
   if (tokenInflight) return tokenInflight;
@@ -314,6 +309,17 @@ function stripHighlight(s: string): string {
   return s.replace(/<\/?em>/g, "");
 }
 
+// ─── Chapters / Juzs ─────────────────────────────────────────────────────────
+export async function fetchChapters(): Promise<any[]> {
+  const data = await apiFetch<{ chapters: any[] }>("/chapters?language=en", {});
+  return data.chapters;
+}
+
+export async function fetchJuzs(): Promise<any[]> {
+  const data = await apiFetch<{ juzs: any[] }>("/juzs", {});
+  return data.juzs;
+}
+
 // ─── Audio ────────────────────────────────────────────────────────────────────
 
 interface AudioApiResponse {
@@ -382,7 +388,8 @@ export async function fetchAudioForAyah(
 }
 
 function pickAudioUrl(d: AudioApiResponse): string | null {
-  const direct = d.audio_url ?? d.url ?? d.audio_file?.audio_url ?? d.audio_file?.url;
+  const direct =
+    d.audio_url ?? d.url ?? d.audio_file?.audio_url ?? d.audio_file?.url;
   if (direct) return absoluteAudioUrl(direct);
   const first = d.audio_files?.[0];
   if (first?.audio_url) return absoluteAudioUrl(first.audio_url);
@@ -446,7 +453,8 @@ export async function fetchTranslationEditions(
 }
 
 function toEdition(e: ApiEdition): TranslationEdition {
-  const identifier = e.identifier ?? e.slug ?? (e.id != null ? String(e.id) : "");
+  const identifier =
+    e.identifier ?? e.slug ?? (e.id != null ? String(e.id) : "");
   return {
     identifier,
     numericId: typeof e.id === "number" ? e.id : undefined,

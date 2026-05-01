@@ -18,10 +18,6 @@ import {
   DEFAULT_MUSHAF,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
-import {
-  fetchTranslationEditions,
-  type TranslationEdition,
-} from "../../core/services/api/quran-api.client";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -342,27 +338,6 @@ const Settings: React.FC = () => {
   const { lang, setLang, t, isRTL } = useLang();
   const [s, setS] = useState<AppSettings>(loadSettings);
   const [saved, setSaved] = useState(false);
-  const [translations, setTranslations] = useState<TranslationEdition[]>([]);
-  const [translationsLoading, setTranslationsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setTranslationsLoading(true);
-    fetchTranslationEditions("en")
-      .then((rows) => {
-        if (!cancelled) setTranslations(rows);
-      })
-      .catch((err) => {
-        console.error("[Settings] failed to load translation editions", err);
-        if (!cancelled) setTranslations([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTranslationsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -478,41 +453,6 @@ const Settings: React.FC = () => {
                     label: lang === "ar" ? m.labelAr : m.labelEn,
                   }))}
                   onChange={(v) => set("mushaf", v as MushafKind)}
-                />
-                <SelectRow
-                  icon={ICONS.globe}
-                  label={lang === "ar" ? "الترجمة" : "Translation"}
-                  desc={
-                    translationsLoading
-                      ? lang === "ar"
-                        ? "جاري التحميل..."
-                        : "Loading editions..."
-                      : lang === "ar"
-                        ? "اختر ترجمة لعرضها أسفل كل آية"
-                        : "Pick a translation to show under each verse"
-                  }
-                  value={s.translation}
-                  options={[
-                    { value: "", label: lang === "ar" ? "بدون ترجمة" : "None" },
-                    ...translations.map((tr) => ({
-                      value: tr.identifier,
-                      label: tr.authorName
-                        ? `${tr.name} — ${tr.authorName}`
-                        : tr.name,
-                    })),
-                  ]}
-                  onChange={(v) => set("translation", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.book}
-                  label={lang === "ar" ? "إظهار الترجمة" : "Show translation"}
-                  desc={
-                    lang === "ar"
-                      ? "عرض نص الترجمة تحت كل آية في القارئ"
-                      : "Render the translation under each verse in the reader"
-                  }
-                  checked={s.showTranslation}
-                  onChange={(v) => set("showTranslation", v)}
                 />
                 <ToggleRow
                   icon={ICONS.palette}

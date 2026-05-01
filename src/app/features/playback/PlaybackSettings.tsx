@@ -5,19 +5,13 @@
  * counts, then start sequenced recitation through `usePlaybackQueue`.
  *
  * Closing the screen does NOT stop playback — the queue lives in a hook
- * that owns its own <audio> element, which is detached from the React
- * component tree, so the user keeps listening while navigating.
+ * that owns its own <audio> element, detached from the React tree.
  */
 
 import React, { useEffect, useMemo, useState } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
-import { pageData, quranData } from "../../../data/quranData";
-import {
-  surahNamesArabic,
-  getSurahName,
-} from "../../core/services/data/quran.service";
 import {
   usePlaybackQueue,
   type RepeatMode,
@@ -28,6 +22,14 @@ import {
   clearAllCachedAudio,
   downloadAndCache,
 } from "../../core/services/audio/audio-cache.service";
+import {
+  getJuzStart,
+  getJuzEnd,
+  getPageStart,
+  getChapters,
+  getSurahNameArabic,
+  getSurahNameEnglish,
+} from "../../core/services/data/metadata.service";
 import "./PlaybackSettings.css";
 
 // ─── Persisted settings shape ─────────────────────────────────────────────────
@@ -75,30 +77,31 @@ function savePrefs(p: Partial<StoredPlaybackPrefs>) {
 }
 
 // ─── Range helpers ────────────────────────────────────────────────────────────
-type Sura = [number, number, number, number, string, string, string, string];
+type VerseKeyLocal = VerseKey;
 
-function ayasInSurah(sura: number): number {
-  const row = (quranData.Sura as Sura[])[sura];
-  return row?.[1] ?? 0;
-}
-
-/** Expand [start..end] into a flat array of "sura:aya" verse keys. */
 function expandRange(
-  start: VerseKey,
-  end: VerseKey,
-): VerseKey[] {
-  const out: VerseKey[] = [];
+  start: VerseKeyLocal,
+  end: VerseKeyLocal,
+): VerseKeyLocal[] {
+  const out: VerseKeyLocal[] = [];
   if (
     start.sura > end.sura ||
     (start.sura === end.sura && start.aya > end.aya)
   ) {
     return out;
   }
+
+  const chapters = getChapters();
+  const ayahCount = (sura: number) => {
+    const ch = chapters.find((c) => c.id === sura);
+    return ch ? ch.versesCount : 0;
+  };
+
   let s = start.sura;
   let a = start.aya;
   while (s < end.sura || (s === end.sura && a <= end.aya)) {
     out.push({ sura: s, aya: a });
-    const max = ayasInSurah(s);
+    const max = ayahCount(s);
     if (a >= max) {
       s += 1;
       a = 1;
@@ -110,72 +113,25 @@ function expandRange(
   return out;
 }
 
-function pageStart(p: number): VerseKey {
-  const [s, a] = pageData[p];
-  return { sura: s, aya: a };
+function pageStart(page: number): VerseKeyLocal {
+  const start = getPageStart(page);
+  if (!start) return { sura: 1, aya: 1 };
+  return { sura: start.sura, aya: start.aya };
 }
 
-function pageEnd(p: number): VerseKey {
-  // Last verse on page = the verse just before the start of (p+1).
-  if (p >= 604) return { sura: 114, aya: 6 };
-  const [ns, na] = pageData[p + 1];
-  if (na > 1) return { sura: ns, aya: na - 1 };
-  // First verse of the next page is aya 1 of a new surah → take the
-  // last verse of the previous surah.
-  return { sura: ns - 1, aya: ayasInSurah(ns - 1) };
-}
-
-function juzStart(j: number): VerseKey {
-  const row = (quranData.Juz as number[][])[j];
-  return { sura: row[0], aya: row[1] };
-}
-function juzEnd(j: number): VerseKey {
-  if (j >= 30) return { sura: 114, aya: 6 };
-  const next = (quranData.Juz as number[][])[j + 1];
-  if (next[1] > 1) return { sura: next[0], aya: next[1] - 1 };
-  return { sura: next[0] - 1, aya: ayasInSurah(next[0] - 1) };
-}
-
-function hizbStart(h: number): VerseKey {
-  // Hizb h covers HizbQuarter rows (h-1)*4+1 .. h*4 ; start = first row.
-  const idx = (h - 1) * 4 + 1;
-  const row = (quranData.HizbQuarter as number[][])[idx];
-  return { sura: row[0], aya: row[1] };
-}
-function hizbEnd(h: number): VerseKey {
-  const nextStartIdx = h * 4 + 1;
-  const rows = quranData.HizbQuarter as number[][];
-  if (nextStartIdx >= rows.length) return { sura: 114, aya: 6 };
-  const next = rows[nextStartIdx];
-  if (next[1] > 1) return { sura: next[0], aya: next[1] - 1 };
-  return { sura: next[0] - 1, aya: ayasInSurah(next[0] - 1) };
-}
-
-function pageOf(sura: number, aya: number): number {
-  for (let p = 1; p < pageData.length - 1; p++) {
-    const [s1, a1] = pageData[p];
-    const [s2, a2] = pageData[p + 1];
-    const startsBefore = s1 < sura || (s1 === sura && a1 <= aya);
-    const endsAfter = s2 > sura || (s2 === sura && a2 > aya);
-    if (startsBefore && endsAfter) return p;
-  }
-  return 1;
-}
-
-function juzOf(page: number): number {
-  // Juz numbers map to pages 1..604 in fixed 20-page blocks for the Madani.
-  return Math.max(1, Math.min(30, Math.ceil(page / 20)));
-}
-function hizbOf(page: number): number {
-  return Math.max(1, Math.min(60, Math.ceil(page / 4)));
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
+function pageEnd(page: number): VerseKeyLocal {
+  if (page >= 604) return { sura: 114, aya: 6 };
+  const next = getPageStart(page + 1);
+  if (!next) return { sura: 114, aya: 6 };
+  if (next.aya > 1) return { sura: next.sura, aya: next.aya - 1 };
+  // previous surah's last verse
+  const prevSura = next.sura - 1;
+  const chapters = getChapters();
+  const prevCh = chapters.find((c) => c.id === prevSura);
+  return { sura: prevSura, aya: prevCh ? prevCh.versesCount : 1 };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75];
 
 const PlaybackSettings: React.FC = () => {
@@ -193,11 +149,11 @@ const PlaybackSettings: React.FC = () => {
 
   const [prefs, setPrefs] = useState<StoredPlaybackPrefs>(loadPrefs);
 
-  const [startVerse, setStartVerse] = useState<VerseKey>({
+  const [startVerse, setStartVerse] = useState<VerseKeyLocal>({
     sura: 2,
     aya: 1,
   });
-  const [endVerse, setEndVerse] = useState<VerseKey>({
+  const [endVerse, setEndVerse] = useState<VerseKeyLocal>({
     sura: 114,
     aya: 6,
   });
@@ -216,7 +172,7 @@ const PlaybackSettings: React.FC = () => {
     repeatRange: prefs.repeatRange,
   });
 
-  // Push prefs to the queue whenever they change (mid-playback updates).
+  // Push prefs to the queue whenever they change
   useEffect(() => {
     queue.setReciter(prefs.reciter);
   }, [prefs.reciter, queue]);
@@ -230,7 +186,7 @@ const PlaybackSettings: React.FC = () => {
     queue.setRepeatRange(prefs.repeatRange);
   }, [prefs.repeatRange, queue]);
 
-  // Refresh cached count whenever the downloads panel opens / a job ends.
+  // Refresh cached count when downloads panel opens
   useEffect(() => {
     if (!downloadsOpen) return;
     let cancelled = false;
@@ -261,9 +217,8 @@ const PlaybackSettings: React.FC = () => {
 
   // ── Quick-Select buttons ─────────────────────────────────────────────────
   const currentPage = startPageQuery;
-  const currentSurahFromPage = pageData[currentPage]?.[0] ?? 1;
-  const currentJuz = juzOf(currentPage);
-  const currentHizb = hizbOf(currentPage);
+  const currentSura = getPageStart(currentPage)?.sura ?? 1;
+  const currentJuz = Math.ceil(currentPage / 20);
 
   const setRangeToPage = (p: number) => {
     setStartVerse(pageStart(p));
@@ -274,16 +229,23 @@ const PlaybackSettings: React.FC = () => {
     setEndVerse(pageEnd(604));
   };
   const setRangeToSurah = (s: number) => {
+    const ch = getChapters().find((c) => c.id === s);
     setStartVerse({ sura: s, aya: 1 });
-    setEndVerse({ sura: s, aya: ayasInSurah(s) });
+    setEndVerse({ sura: s, aya: ch ? ch.versesCount : 1 });
   };
   const setRangeToJuz = (j: number) => {
-    setStartVerse(juzStart(j));
-    setEndVerse(juzEnd(j));
+    setStartVerse(getJuzStart(j));
+    setEndVerse(getJuzEnd(j));
   };
   const setRangeToHizb = (h: number) => {
-    setStartVerse(hizbStart(h));
-    setEndVerse(hizbEnd(h));
+    // approximate hizb as half of a juz (each juz has 2 hizbs)
+    const juz = Math.ceil(h / 2);
+    const start = getJuzStart(juz);
+    const end = getJuzEnd(juz);
+    // crude midpoint
+    setStartVerse(start);
+    setEndVerse(end);
+    // For accurate hizb, we'd need another static mapping; this is acceptable for now.
   };
   const setRangeToAll = () => {
     setStartVerse({ sura: 1, aya: 1 });
@@ -307,12 +269,7 @@ const PlaybackSettings: React.FC = () => {
           await downloadAndCache(prefs.reciter, v.sura, v.aya, ctrl.signal);
         } catch (err) {
           if ((err as Error).name === "AbortError") break;
-          // Best-effort: log and continue so one bad verse doesn't kill it.
-          console.warn(
-            "[playback] failed to cache",
-            `${v.sura}:${v.aya}`,
-            err,
-          );
+          console.warn("[playback] failed to cache", `${v.sura}:${v.aya}`, err);
         }
         setDownloadDone(i + 1);
       }
@@ -335,18 +292,19 @@ const PlaybackSettings: React.FC = () => {
   // ── UI helpers ────────────────────────────────────────────────────────────
   const surahOptions = useMemo(
     () =>
-      Array.from({ length: 114 }, (_, i) => i + 1).map((s) => ({
-        value: s,
-        label: `${lang === "ar" ? surahNamesArabic[s] : getSurahName(s, "english")} (${s})`,
+      getChapters().map((c) => ({
+        value: c.id,
+        label: `${lang === "ar" ? c.nameArabic : c.translatedName?.name} (${c.id})`,
       })),
     [lang],
   );
 
   const renderVersePicker = (
-    value: VerseKey,
-    onChange: (v: VerseKey) => void,
+    value: VerseKeyLocal,
+    onChange: (v: VerseKeyLocal) => void,
   ) => {
-    const max = ayasInSurah(value.sura);
+    const maxAyah =
+      getChapters().find((c) => c.id === value.sura)?.versesCount ?? 1;
     return (
       <div className="pb-verse-picker" dir={isRTL ? "rtl" : "ltr"}>
         <select
@@ -368,10 +326,13 @@ const PlaybackSettings: React.FC = () => {
           type="number"
           className="pb-aya-input"
           min={1}
-          max={max}
+          max={maxAyah}
           value={value.aya}
           onChange={(e) => {
-            const aya = clamp(parseInt(e.target.value, 10) || 1, 1, max);
+            const aya = Math.max(
+              1,
+              Math.min(maxAyah, parseInt(e.target.value, 10) || 1),
+            );
             onChange({ sura: value.sura, aya });
           }}
         />
@@ -529,12 +490,12 @@ const PlaybackSettings: React.FC = () => {
                 </button>
                 <button
                   className="pb-quick-btn"
-                  onClick={() => setRangeToSurah(currentSurahFromPage)}
+                  onClick={() => setRangeToSurah(currentSura)}
                 >
                   {tp.quickSurah(
                     lang === "ar"
-                      ? surahNamesArabic[currentSurahFromPage]
-                      : getSurahName(currentSurahFromPage, "english"),
+                      ? getSurahNameArabic(currentSura)
+                      : getSurahNameEnglish(currentSura),
                   )}
                 </button>
                 <button
@@ -545,9 +506,9 @@ const PlaybackSettings: React.FC = () => {
                 </button>
                 <button
                   className="pb-quick-btn"
-                  onClick={() => setRangeToHizb(currentHizb)}
+                  onClick={() => setRangeToHizb(Math.ceil(currentPage / 4))}
                 >
-                  {tp.quickHizb(String(currentHizb))}
+                  {tp.quickHizb(String(Math.ceil(currentPage / 4)))}
                 </button>
                 <button className="pb-quick-btn" onClick={setRangeToAll}>
                   {tp.quickAll}

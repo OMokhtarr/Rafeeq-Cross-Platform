@@ -27,7 +27,7 @@ import {
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import {
   ensureSeeded,
-  getAllVersesAsMap,
+  getAllVerses,
 } from "../../../../../../core/services/data/quran.service";
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
@@ -91,9 +91,8 @@ const MutashabihatTest: React.FC = () => {
 
         // Build full verse map by walking pages 1..604 via the API/IDB path.
         // First run downloads all pages (slow); subsequent runs hit IDB.
-        const verseMap = await getAllVersesAsMap();
-        const allGroups = getAllMutashabihatGroups(verseMap);
-
+        const allVerses = await getAllVerses();
+        const allGroups = getAllMutashabihatGroups(allVerses);
         let filtered =
           config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
@@ -241,7 +240,9 @@ const MutashabihatTest: React.FC = () => {
                 <button onClick={() => history.push("/mutashabihat-setup")}>
                   {tt.newQuiz}
                 </button>
-                <button onClick={() => history.push("/quiz-list")}>{tt.quizListLink}</button>
+                <button onClick={() => history.push("/quiz-list")}>
+                  {tt.quizListLink}
+                </button>
               </div>
             </div>
           </div>
@@ -257,216 +258,269 @@ const MutashabihatTest: React.FC = () => {
   // Build the full list of verses shown in the toolbar:
   // index 0 = target verse (the question), 1..n = sibling verses
   const toolbarVerses = [
-    { sura: q.sura, aya: q.aya, text: q.fullText, page: q.page, suraName: q.suraName, suraNameAr: q.suraNameAr, isTarget: true },
+    {
+      sura: q.sura,
+      aya: q.aya,
+      text: q.fullText,
+      page: q.page,
+      suraName: q.suraName,
+      suraNameAr: q.suraNameAr,
+      isTarget: true,
+    },
     ...siblings.map((sv: any) => ({ ...sv, isTarget: false })),
   ];
   // The verse currently shown in the viewer
   const activeViewerVerseIdx = contextVerseIdx < 0 ? 0 : contextVerseIdx;
-  const activeViewerVerse = toolbarVerses[activeViewerVerseIdx] ?? toolbarVerses[0];
+  const activeViewerVerse =
+    toolbarVerses[activeViewerVerseIdx] ?? toolbarVerses[0];
 
   // ── Main quiz render (JSX preserved from MutashabihatTest.js) ─────────────
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="mst-test-page-wrapper">
-        <div className={`mst-container ${showContext ? "with-sidebar" : ""}`}>
-          {/* Context Viewer — no toolbar here, chips are in info-strip */}
-          {showContext && (
-            <div className="mst-sidebar-wrapper">
-              <div className="mst-page-viewer">
-                <MushafContextViewer
-                  verse={{
-                    sura: activeViewerVerse.sura,
-                    aya: activeViewerVerse.aya,
-                    text: activeViewerVerse.text ?? "",
-                    page: activeViewerVerse.page,
-                    suraName: activeViewerVerse.suraName,
-                    suraNameAr: activeViewerVerse.suraNameAr,
-                  }}
-                  snippet={q?.displayedPortion}
-                  hiddenPortion={q?.hiddenPortion}
-                  hintLevel={hintLevel}
-                  showAnswer={answered}
-                  isOpen={showContext}
-                  onClose={() => setShowContext(false)}
-                  mode="sidebar"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Main quiz panel */}
-          <div className="mst-main">
-            {/* Header */}
-            <div className="mst-header">
-              <div className="mst-progress">
-                <span className="mst-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} / {toHindi(questions.length)}
-                </span>
-                <div className="mst-bar">
-                  <div
-                    className="mst-bar-fill"
-                    style={{
-                      width: `${((idx + 1) / questions.length) * 100}%`,
+          <div className={`mst-container ${showContext ? "with-sidebar" : ""}`}>
+            {/* Context Viewer — no toolbar here, chips are in info-strip */}
+            {showContext && (
+              <div className="mst-sidebar-wrapper">
+                <div className="mst-page-viewer">
+                  <MushafContextViewer
+                    verse={{
+                      sura: activeViewerVerse.sura,
+                      aya: activeViewerVerse.aya,
+                      text: activeViewerVerse.text ?? "",
+                      page: activeViewerVerse.page,
+                      suraName: activeViewerVerse.suraName,
+                      suraNameAr: activeViewerVerse.suraNameAr,
                     }}
+                    snippet={q?.displayedPortion}
+                    hiddenPortion={q?.hiddenPortion}
+                    hintLevel={hintLevel}
+                    showAnswer={answered}
+                    isOpen={showContext}
+                    onClose={() => setShowContext(false)}
+                    mode="sidebar"
                   />
                 </div>
               </div>
-              <div className="mst-score-pill">{tt.score}: {score}</div>
-              <button className="mst-exit-btn" onClick={handleExit}>
-                {tt.exit}
-              </button>
-            </div>
+            )}
 
-            {/* Question card */}
-            <div className="mst-card">
-              {/* Info strip — surah/page/hizb top row + inline chips below */}
-              <div className="mst-info-strip">
-                {/* Row 1: surah + meta pills */}
-                <div className="mst-info-top-row">
-                  <span className="mst-surah-badge" lang="ar" dir="rtl">{q.suraNameAr}</span>
-                  <span className="mst-meta">{tt.ayahLabel} {toHindi(q.aya)}</span>
-                  <span className="mst-meta">{tt.pageLabel} {toHindi(q.page)}</span>
-                  <span className="mst-meta">{tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}</span>
-                  {siblings.length > 0 && (
-                    <span className="mst-similar-badge">🔗 {siblings.length}</span>
-                  )}
-                </div>
-
-                {/* Row 2: verse chips — target + siblings (always visible, tap to open context) */}
-                {toolbarVerses.length > 0 && (
-                  <div className="mst-inline-chips">
-                    {toolbarVerses.map((tv, ti) => (
-                      <button
-                        key={ti}
-                        className={`mst-inline-chip ${activeViewerVerseIdx === ti && showContext ? "active" : ""} ${tv.isTarget ? "target" : "sibling"}`}
-                        onClick={() => { setContextVerseIdx(ti); setShowContext(true); }}
-                        title={`${tv.suraNameAr} — ${tt.ayahLabel} ${tv.aya}`}
-                      >
-                        <span className="mst-chip-surah" lang="ar" dir="rtl">{tv.suraNameAr}</span>
-                        <span className="mst-chip-meta">{tt.ayahLabel} {toHindi(tv.aya)} · {tt.pageLabel} {toHindi(tv.page)}</span>
-                        <span className="mst-chip-preview" lang="ar" dir="rtl">{(tv.text ?? "").slice(0, 18)}…</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Card body: [actions column (left)] + [main content (right)] */}
-              <div className="mst-card-body">
-
-                {/* Left column: action buttons */}
-                <div className="mst-actions">
-                  <button
-                    className="mst-btn mst-hint"
-                    onClick={handleHint}
-                    disabled={hintLevel >= maxHints || answered}
-                  >
-                    {tt.hint}
-                    {hintLevel > 0 && (
-                      <span className="mst-btn-en">
-                        ({hintLevel}/{maxHints})
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    className={`mst-btn mst-context ${showContext ? "active" : ""}`}
-                    onClick={() => setShowContext((v) => !v)}
-                  >
-                    {showContext ? tt.hide : tt.context}
-                  </button>
-
-                  <button
-                    className="mst-btn mst-submit"
-                    onClick={handleSubmit}
-                    disabled={!userAnswer.trim() || answered}
-                  >
-                    {tt.submit}
-                  </button>
-
-                  <button
-                    className="mst-btn mst-skip"
-                    onClick={handleSkip}
-                    disabled={answered}
-                  >
-                    {tt.skip}
-                  </button>
-                </div>
-
-                {/* Right: verse + input + result + next */}
-                <div className="mst-card-main">
-                  <div className="mst-verse-box">
-                    <p className="mst-verse-shared" lang="ar" dir="rtl">{q.displayedPortion}</p>
-                    {hintLevel > 0 && (
-                      <span className="mst-hint-inline" lang="ar" dir="rtl"> {getHintText()}</span>
-                    )}
-                    <p className="mst-prompt">{tt.promptComplete}</p>
-                  </div>
-
-                  <div className="mst-answer-row">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      dir="rtl"
-                      inputMode="text"
-                      enterKeyHint={answered ? "done" : "send"}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && !answered && handleSubmit()
-                      }
-                      onFocus={(e) => {
-                        const el = e.currentTarget;
-                        setTimeout(
-                          () =>
-                            el.scrollIntoView({
-                              block: "center",
-                              behavior: "smooth",
-                            }),
-                          250,
-                        );
+            {/* Main quiz panel */}
+            <div className="mst-main">
+              {/* Header */}
+              <div className="mst-header">
+                <div className="mst-progress">
+                  <span className="mst-progress-text">
+                    {tt.questionOf} {toHindi(idx + 1)} /{" "}
+                    {toHindi(questions.length)}
+                  </span>
+                  <div className="mst-bar">
+                    <div
+                      className="mst-bar-fill"
+                      style={{
+                        width: `${((idx + 1) / questions.length) * 100}%`,
                       }}
-                      readOnly={answered}
-                      placeholder={tt.inputPlaceholder}
-                      className={`mst-input ${answered ? "answered" : ""}`}
                     />
                   </div>
+                </div>
+                <div className="mst-score-pill">
+                  {tt.score}: {score}
+                </div>
+                <button className="mst-exit-btn" onClick={handleExit}>
+                  {tt.exit}
+                </button>
+              </div>
 
-                  {/* Result feedback */}
-                  {answered && (
-                    <div
-                      className={`mst-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
-                    >
-                      <span className="mst-result-icon">
-                        {correct ? "✅" : skipped ? "⏭" : "❌"}
+              {/* Question card */}
+              <div className="mst-card">
+                {/* Info strip — surah/page/hizb top row + inline chips below */}
+                <div className="mst-info-strip">
+                  {/* Row 1: surah + meta pills */}
+                  <div className="mst-info-top-row">
+                    <span className="mst-surah-badge" lang="ar" dir="rtl">
+                      {q.suraNameAr}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.ayahLabel} {toHindi(q.aya)}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.pageLabel} {toHindi(q.page)}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}
+                    </span>
+                    {siblings.length > 0 && (
+                      <span className="mst-similar-badge">
+                        🔗 {siblings.length}
                       </span>
-                      <span className="mst-result-text">
-                        {correct ? tt.correctMsg : skipped ? tt.skippedMsg : tt.wrongMsg}
-                      </span>
-                      {!correct && (
-                        <div className="mst-correct-answer">
-                          <span className="mst-correct-label">{tt.completionVerse} </span>
-                          <span className="mst-correct-text" lang="ar" dir="rtl">{q.hiddenPortion}</span>
-                        </div>
-                      )}
+                    )}
+                  </div>
+
+                  {/* Row 2: verse chips — target + siblings (always visible, tap to open context) */}
+                  {toolbarVerses.length > 0 && (
+                    <div className="mst-inline-chips">
+                      {toolbarVerses.map((tv, ti) => (
+                        <button
+                          key={ti}
+                          className={`mst-inline-chip ${activeViewerVerseIdx === ti && showContext ? "active" : ""} ${tv.isTarget ? "target" : "sibling"}`}
+                          onClick={() => {
+                            setContextVerseIdx(ti);
+                            setShowContext(true);
+                          }}
+                          title={`${tv.suraNameAr} — ${tt.ayahLabel} ${tv.aya}`}
+                        >
+                          <span className="mst-chip-surah" lang="ar" dir="rtl">
+                            {tv.suraNameAr}
+                          </span>
+                          <span className="mst-chip-meta">
+                            {tt.ayahLabel} {toHindi(tv.aya)} · {tt.pageLabel}{" "}
+                            {toHindi(tv.page)}
+                          </span>
+                          <span
+                            className="mst-chip-preview"
+                            lang="ar"
+                            dir="rtl"
+                          >
+                            {(tv.text ?? "").slice(0, 18)}…
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  )}
-
-                  {answered && (
-                    <button className="mst-next-btn" onClick={handleNext}>
-                      {idx + 1 < questions.length ? tt.nextQuestion : tt.finishQuiz}
-                    </button>
                   )}
                 </div>
 
+                {/* Card body: [actions column (left)] + [main content (right)] */}
+                <div className="mst-card-body">
+                  {/* Left column: action buttons */}
+                  <div className="mst-actions">
+                    <button
+                      className="mst-btn mst-hint"
+                      onClick={handleHint}
+                      disabled={hintLevel >= maxHints || answered}
+                    >
+                      {tt.hint}
+                      {hintLevel > 0 && (
+                        <span className="mst-btn-en">
+                          ({hintLevel}/{maxHints})
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      className={`mst-btn mst-context ${showContext ? "active" : ""}`}
+                      onClick={() => setShowContext((v) => !v)}
+                    >
+                      {showContext ? tt.hide : tt.context}
+                    </button>
+
+                    <button
+                      className="mst-btn mst-submit"
+                      onClick={handleSubmit}
+                      disabled={!userAnswer.trim() || answered}
+                    >
+                      {tt.submit}
+                    </button>
+
+                    <button
+                      className="mst-btn mst-skip"
+                      onClick={handleSkip}
+                      disabled={answered}
+                    >
+                      {tt.skip}
+                    </button>
+                  </div>
+
+                  {/* Right: verse + input + result + next */}
+                  <div className="mst-card-main">
+                    <div className="mst-verse-box">
+                      <p className="mst-verse-shared" lang="ar" dir="rtl">
+                        {q.displayedPortion}
+                      </p>
+                      {hintLevel > 0 && (
+                        <span className="mst-hint-inline" lang="ar" dir="rtl">
+                          {" "}
+                          {getHintText()}
+                        </span>
+                      )}
+                      <p className="mst-prompt">{tt.promptComplete}</p>
+                    </div>
+
+                    <div className="mst-answer-row">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        dir="rtl"
+                        inputMode="text"
+                        enterKeyHint={answered ? "done" : "send"}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        value={userAnswer}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && !answered && handleSubmit()
+                        }
+                        onFocus={(e) => {
+                          const el = e.currentTarget;
+                          setTimeout(
+                            () =>
+                              el.scrollIntoView({
+                                block: "center",
+                                behavior: "smooth",
+                              }),
+                            250,
+                          );
+                        }}
+                        readOnly={answered}
+                        placeholder={tt.inputPlaceholder}
+                        className={`mst-input ${answered ? "answered" : ""}`}
+                      />
+                    </div>
+
+                    {/* Result feedback */}
+                    {answered && (
+                      <div
+                        className={`mst-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
+                      >
+                        <span className="mst-result-icon">
+                          {correct ? "✅" : skipped ? "⏭" : "❌"}
+                        </span>
+                        <span className="mst-result-text">
+                          {correct
+                            ? tt.correctMsg
+                            : skipped
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
+                        </span>
+                        {!correct && (
+                          <div className="mst-correct-answer">
+                            <span className="mst-correct-label">
+                              {tt.completionVerse}{" "}
+                            </span>
+                            <span
+                              className="mst-correct-text"
+                              lang="ar"
+                              dir="rtl"
+                            >
+                              {q.hiddenPortion}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {answered && (
+                      <button className="mst-next-btn" onClick={handleNext}>
+                        {idx + 1 < questions.length
+                          ? tt.nextQuestion
+                          : tt.finishQuiz}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
         <BottomNavBar active="quiz" fixed />
       </IonContent>

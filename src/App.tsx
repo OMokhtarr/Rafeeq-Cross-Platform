@@ -1,24 +1,8 @@
-/**
- * APP.TSX
- *
- * Routes:
- *   /                     → Home (Basmalah-centric entry, replaces splash)
- *   /viewer               → Mushaf page viewer
- *   /surah-juz            → Surah / Juz quick navigation (from viewer hamburger)
- *   /azkar                → Azkar
- *   /quiz-list            → Quiz catalogue
- *   /akmel-alayah-setup   → Akmel Al-Ayah setup
- *   /akmel-alayah         → Akmel Al-Ayah test runner
- *   /mutashabihat-setup   → Mutashabihat setup
- *   /mutashabihat-test    → Mutashabihat test runner
- *   /settings             → App settings
- *   /playback             → Playback Settings (range/reciter/speed/repeat + queue)
- */
-
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
+import { initMetadata } from "./app/core/services/data/metadata.service";
 
 // Core Ionic CSS
 import "@ionic/react/css/core.css";
@@ -41,9 +25,6 @@ import MutashabihatTest from "./app/features/quiz/quizzes/mutashabihat/pages/tes
 import Settings from "app/features/settings/Settings";
 import PlaybackSettings from "./app/features/playback/PlaybackSettings";
 
-// Data seeding
-import { ensureSeeded } from "./app/core/services/data/quran.service";
-
 // App-wide context
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -52,11 +33,50 @@ import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityConte
 setupIonicReact({ mode: "md" });
 
 const App: React.FC = () => {
+  const [metaReady, setMetaReady] = useState(false);
+
   useEffect(() => {
-    ensureSeeded().catch((err) =>
-      console.error("[App] IDB seeding failed:", err),
-    );
+    initMetadata()
+      .then(() => setMetaReady(true))
+      .catch((err) => {
+        console.error("Metadata init failed:", err);
+        // Still set ready so the app can load (with fallbacks)
+        setMetaReady(true);
+      });
   }, []);
+
+  if (!metaReady) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--color-bg-app, #0d1f14)",
+          color: "var(--color-text-primary, #e8e8e8)",
+          fontFamily: "var(--font-arabic, 'Scheherazade New', serif)",
+          fontSize: "1.2rem",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: "3px solid rgba(212,180,140,0.3)",
+              borderTopColor: "#d4b48c",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              margin: "0 auto 12px",
+            }}
+          />
+          <span>جاري التحميل…</span>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <ThemeProvider>
@@ -64,32 +84,32 @@ const App: React.FC = () => {
         <VerseVisibilityProvider>
           <IonApp>
             <IonReactRouter>
-            <IonRouterOutlet id="main">
-              <Route exact path="/" component={Home} />
-              <Route exact path="/viewer" component={PageViewer} />
-              <Route exact path="/surah-juz" component={SurahJuzSelection} />
-              <Route exact path="/azkar" component={Azkar} />
-              <Route exact path="/quiz-list" component={QuizList} />
-              <Route
-                exact
-                path="/akmel-alayah-setup"
-                component={AkmelAlAyahSetup}
-              />
-              <Route exact path="/akmel-alayah" component={AkmelAlAyah} />
-              <Route
-                exact
-                path="/mutashabihat-setup"
-                component={MutashabihatSetup}
-              />
-              <Route
-                exact
-                path="/mutashabihat-test"
-                component={MutashabihatTest}
-              />
-              <Route exact path="/settings" component={Settings} />
-              <Route exact path="/playback" component={PlaybackSettings} />
-              <Redirect exact from="/home" to="/" />
-            </IonRouterOutlet>
+              <IonRouterOutlet id="main">
+                <Route exact path="/" component={Home} />
+                <Route exact path="/viewer" component={PageViewer} />
+                <Route exact path="/surah-juz" component={SurahJuzSelection} />
+                <Route exact path="/azkar" component={Azkar} />
+                <Route exact path="/quiz-list" component={QuizList} />
+                <Route
+                  exact
+                  path="/akmel-alayah-setup"
+                  component={AkmelAlAyahSetup}
+                />
+                <Route exact path="/akmel-alayah" component={AkmelAlAyah} />
+                <Route
+                  exact
+                  path="/mutashabihat-setup"
+                  component={MutashabihatSetup}
+                />
+                <Route
+                  exact
+                  path="/mutashabihat-test"
+                  component={MutashabihatTest}
+                />
+                <Route exact path="/settings" component={Settings} />
+                <Route exact path="/playback" component={PlaybackSettings} />
+                <Redirect exact from="/home" to="/" />
+              </IonRouterOutlet>
             </IonReactRouter>
           </IonApp>
         </VerseVisibilityProvider>
