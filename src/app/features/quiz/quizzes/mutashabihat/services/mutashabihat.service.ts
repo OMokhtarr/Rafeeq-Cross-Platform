@@ -121,7 +121,6 @@ export function filterGroupsByJuzs(
 }
 
 // ─── Question builder ─────────────────────────────────────────────────────────
-// Identical to mutashabihatUtils.js → buildMutashabihatQuestion()
 
 export function buildMutashabihatQuestion(group: MutashabihatGroup) {
   const idx = Math.floor(Math.random() * group.verses.length);
@@ -154,7 +153,6 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
 }
 
 // ─── Answer checker ───────────────────────────────────────────────────────────
-// Identical to mutashabihatUtils.js → checkMutashabihatAnswer()
 
 export function checkMutashabihatAnswer(
   userAnswer: string,

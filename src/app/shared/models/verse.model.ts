@@ -1,11 +1,6 @@
 /**
  * VERSE / AYAH MODEL
  * Canonical type definitions for Quran verse data used across the app.
- * Extracted and consolidated from the implicit shapes in:
- *   - quranLoader.js  (getVersesForPage return type)
- *   - verseSplitter.js (verse parameter shape)
- *   - mutashabihatUtils.js (richVerses shape)
- *   - QuizTest.js / MutashabihatTest.js (question object shapes)
  */
 
 // ─── Core verse ───────────────────────────────────────────────────────────────
@@ -52,7 +47,6 @@ export interface VerseWord {
 
 /**
  * A standard verse-completion quiz question.
- * Produced by quiz-engine.service.ts (was: verseSplitter.createQuizQuestion).
  */
 export interface QuizQuestion {
   id: string; // "sura:aya" e.g. "2:255"
@@ -79,7 +73,6 @@ export interface QuizQuestion {
 
 /**
  * A mutashabihat quiz question.
- * Produced by mutashabihatUtils.buildMutashabihatQuestion.
  */
 export interface MutashabihatQuestion {
   groupId: string;
