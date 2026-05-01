@@ -3,6 +3,7 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
 import { initMetadata } from "./app/core/services/data/metadata.service";
+import { preloadAllPages } from "./app/core/services/data/quran.service";
 
 // Core Ionic CSS
 import "@ionic/react/css/core.css";
@@ -35,13 +36,22 @@ setupIonicReact({ mode: "md" });
 const App: React.FC = () => {
   const [metaReady, setMetaReady] = useState(false);
 
+  // inside the component
   useEffect(() => {
     initMetadata()
-      .then(() => setMetaReady(true))
+      .then(() => {
+        setMetaReady(true);
+        // Fire background preload (non‑blocking)
+        preloadAllPages((done, total) => {
+          // Optional: update a global progress state if you want to show a tiny loader
+          console.debug(`Preloaded page ${done}/${total}`);
+        });
+      })
       .catch((err) => {
         console.error("Metadata init failed:", err);
-        // Still set ready so the app can load (with fallbacks)
         setMetaReady(true);
+        // Still try to preload (will use cache if available)
+        preloadAllPages();
       });
   }, []);
 

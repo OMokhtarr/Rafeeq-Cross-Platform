@@ -167,6 +167,34 @@ export async function getPageRangeVerses(
   return out;
 }
 
+// ─── Background page preload ─────────────────────────────────────────────────
+let preloadPromise: Promise<void> | null = null;
+
+/**
+ * Start preloading all 604 pages in the background.
+ * Safe to call multiple times – only one preload runs at a time.
+ * Returns a promise that resolves when every page is cached.
+ */
+export function preloadAllPages(
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  if (preloadPromise) return preloadPromise;
+
+  preloadPromise = (async () => {
+    const total = TOTAL_PAGES;
+    for (let p = 1; p <= total; p++) {
+      try {
+        await getPage(p); // this automatically caches in IDB
+      } catch {
+        // skip pages that fail (e.g., not yet available on the API)
+      }
+      onProgress?.(p, total);
+    }
+  })();
+
+  return preloadPromise;
+}
+
 // ─── Tafsir (stub) ──────────────────────────────────────────────────────────
 export async function fetchTafsirForAyah(
   sura: number,
