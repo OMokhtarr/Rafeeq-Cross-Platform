@@ -30,10 +30,10 @@ const SurahJuzSelection: React.FC = () => {
     const chapters = getChapters();
     return chapters.map((ch) => ({
       num: ch.id,
-      ar: ch.nameArabic,
-      en: ch.translatedName?.name ?? "",
-      ayahs: ch.versesCount,
-      revelation: ch.revelationPlace === "makkah" ? "meccan" : "medinan",
+      ar: ch.name_arabic,
+      en: ch.translated_name?.name ?? "",
+      ayahs: ch.verses_count,
+      revelation: ch.revelation_place === "makkah" ? "meccan" : "medinan",
       startPage: ch.pages[0],
     }));
   }, []);
