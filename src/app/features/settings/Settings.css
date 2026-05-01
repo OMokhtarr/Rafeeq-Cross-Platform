@@ -26,7 +26,6 @@ ion-content::part(scroll) {
     color var(--transition-theme);
 }
 
-
 .settings-container {
   width: 100%;
   max-width: 600px;
@@ -262,7 +261,7 @@ ion-content::part(scroll) {
   top: 3px;
   inset-inline-start: 3px;
   transition: transform var(--transition-slow);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 .settings-toggle input:checked + .settings-toggle-slider {
@@ -290,6 +289,23 @@ ion-content::part(scroll) {
   transition: border-color var(--transition-base);
   max-width: 140px;
   min-height: 40px;
+  color-scheme: light; /* day theme uses light dropdown */
+}
+
+/* Night theme → dark dropdown */
+[data-theme="night"] .settings-select {
+  color-scheme: dark;
+}
+
+/* Also style the options for a consistent look */
+.settings-select option {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+[data-theme="night"] .settings-select option {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
 }
 
 .settings-select:focus {
@@ -308,19 +324,37 @@ ion-content::part(scroll) {
   -webkit-appearance: none;
   appearance: none;
   width: 90px;
-  height: 4px;
+
+  /* Give the input the same height as the thumb so the track sits
+     nicely centered, eliminating the visual gap above the thumb. */
+  height: 18px;
   border-radius: 4px;
-  background: var(--color-gold-subtle);
+  background: transparent; /* we'll draw the track on a pseudo or via the
+                                        built‑in track, but the background stays
+                                        transparent so the actual track colour
+                                        shows through */
   outline: none;
   cursor: pointer;
   accent-color: var(--color-quran);
-  /* Some Android browsers stutter the thumb if margin is unset */
   margin: 0;
   padding: 0;
-  /* Larger touch target without growing the visual track */
   touch-action: pan-y;
 }
 
+/* The track – we use the vendor pseudo‑elements */
+.settings-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--color-gold-subtle);
+}
+
+.settings-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--color-gold-subtle);
+}
+
+/* The thumb */
 .settings-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -329,8 +363,10 @@ ion-content::part(scroll) {
   border-radius: 50%;
   background: var(--color-quran);
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   border: none;
+  margin-top: -7px; /* pull the thumb up by half the difference between
+                          thumb height (18) and track height (4) to centre it */
 }
 
 .settings-slider::-moz-range-thumb {
@@ -339,7 +375,7 @@ ion-content::part(scroll) {
   border-radius: 50%;
   background: var(--color-quran);
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   border: none;
 }
 

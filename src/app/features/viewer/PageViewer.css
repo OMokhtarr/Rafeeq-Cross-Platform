@@ -333,14 +333,6 @@ body {
   stroke: currentColor;
 }
 
-/* The inline surah quick-select duplicates the hamburger → /surah-juz route
-   and isn't part of the design's toolbar reference. Hide it visually but
-   keep it in the DOM so any code referencing #surah-quick-select still
-   works. The hamburger button is the canonical surah picker. */
-.surah-quick-select {
-  display: none;
-}
-
 /* Search Panel */
 .search-panel {
   background-color: white;

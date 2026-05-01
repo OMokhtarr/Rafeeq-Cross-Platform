@@ -14,8 +14,8 @@
 }
 
 [data-theme="night"] .mcv-container {
-  background: #1c1c1c;
-  color: #f4ecd8;
+  background: var(--color-mushaf-bg, #1c1c1c);
+  color: var(--color-mushaf-text, #f4ecd8);
 }
 
 .mcv-header {
@@ -23,8 +23,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  border-bottom: 2px solid #d4b48c;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-header, #1c1c1c) 0%,
+    var(--color-bg-header, #1c1c1c) 100%
+  );
+  border-bottom: 2px solid var(--color-gold, #d4b48c);
   flex-shrink: 0;
   direction: rtl;
   gap: 6px;
@@ -44,7 +48,7 @@
 .mcv-surah-name {
   font-size: 0.9rem;
   font-weight: bold;
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -76,7 +80,7 @@
 .mcv-nav-btn {
   background: none;
   border: none;
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   width: 26px;
   height: 26px;
   cursor: pointer;
@@ -123,7 +127,7 @@
   padding: 2px 8px;
   background: rgba(212, 180, 140, 0.18);
   border: 1.5px solid rgba(212, 180, 140, 0.45);
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   border-radius: 20px;
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -156,8 +160,7 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* Hint button — sits next to jump/close in the header. Reveals one more
-   word of the masked target verse on each press. */
+/* Hint button — sits next to jump/close in the header. */
 .mcv-hint-btn {
   background: rgba(255, 215, 0, 0.18);
   border: 1.5px solid rgba(255, 215, 0, 0.5);
@@ -170,7 +173,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
   flex-shrink: 0;
 }
 .mcv-hint-btn:hover {
@@ -198,14 +203,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #8b7355;
+  color: var(--color-text-secondary, #8b7355);
 }
 
 .mcv-spinner {
   width: 26px;
   height: 26px;
-  border: 3px solid #e8dfcc;
-  border-top-color: #8b4513;
+  border: 3px solid var(--color-parchment-mid, #e8dfcc);
+  border-top-color: var(--color-gold, #8b4513);
   border-radius: 50%;
   animation: mcv-spin 0.9s linear infinite;
 }

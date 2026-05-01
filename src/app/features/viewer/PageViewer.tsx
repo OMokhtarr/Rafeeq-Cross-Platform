@@ -94,7 +94,6 @@ const PageViewer: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSurah, setSelectedSurah] = useState(1);
 
   // Drawer + nested panels
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -198,11 +197,6 @@ const PageViewer: React.FC = () => {
   }, [drawerOpen]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const handleSurahChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const surah = parseInt(e.target.value);
-    setSelectedSurah(surah);
-    setCurrentPage(getSurahStartPage(surah));
-  };
 
   const goToPrevious = useCallback(() => {
     setCurrentPage((p) => (p > 1 ? p - 1 : p));
@@ -339,15 +333,6 @@ const PageViewer: React.FC = () => {
     touchStartX.current = null;
     touchStartY.current = null;
   };
-
-  // Surah quick-select options from chapters
-  const surahOptions = useRef<{ id: number; name: string }[]>();
-  if (!surahOptions.current) {
-    surahOptions.current = getChapters().map((ch) => ({
-      id: ch.id,
-      name: ch.name_arabic,
-    }));
-  }
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
@@ -515,20 +500,6 @@ const PageViewer: React.FC = () => {
                   </span>
                 </span>
               </div>
-            </div>
-
-            <div className="toolbar-right">
-              <select
-                className="surah-quick-select"
-                value={getSuraForPage(currentPage) ?? 1}
-                onChange={handleSurahChange}
-              >
-                {surahOptions.current.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.id}. {s.name}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 

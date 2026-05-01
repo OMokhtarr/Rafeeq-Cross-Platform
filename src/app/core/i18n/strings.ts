@@ -152,6 +152,12 @@ export interface AppStrings {
     hideSelected: string;
     clearSelection: string;
     showAllHidden: string;
+    contextLoading: string;
+    contextClose: string;
+    contextHint: string;
+    contextNextPage: string;
+    contextPrevPage: string;
+    contextJumpBack: string;
     selectionCount: (n: string) => string;
     hide: string;
     cancelSelection: string;
@@ -289,7 +295,8 @@ const ar: AppStrings = {
     resetTitle: "إعادة العداد",
     zikr: "ذِكر",
     allDone: "✅ اكتملت الأذكار",
-    quote: "«مَنْ سَبَّحَ اللَّهَ فِي دُبُرِ كُلِّ صَلَاةٍ ثَلَاثًا وَثَلَاثِينَ»",
+    quote:
+      "«مَنْ سَبَّحَ اللَّهَ فِي دُبُرِ كُلِّ صَلَاةٍ ثَلَاثًا وَثَلَاثِينَ»",
   },
   quiz: {
     title: "الاختبارات",
@@ -311,10 +318,12 @@ const ar: AppStrings = {
   quizSetup: {
     akmelTitle: "أكمل الآية",
     akmelSubtitle: "Quran Quiz — Complete the Verse",
-    akmelInfo: "ستُعرض عليك بداية آية وعليك إكمالها. اختر نطاق الاختبار وعدد الأسئلة.",
+    akmelInfo:
+      "ستُعرض عليك بداية آية وعليك إكمالها. اختر نطاق الاختبار وعدد الأسئلة.",
     mutashabihatTitle: "المتشابهات",
     mutashabihatSubtitle: "Mutashabihat Quiz — Complete the Similar Verse",
-    mutashabihatInfo: "ستُعرض عليك بداية آية مشتركة بين عدة آيات متشابهة، عليك إكمال الآية الصحيحة.",
+    mutashabihatInfo:
+      "ستُعرض عليك بداية آية مشتركة بين عدة آيات متشابهة، عليك إكمال الآية الصحيحة.",
     scope: "النطاق",
     scopeSurah: "سورة",
     scopePages: "صفحة",
@@ -365,7 +374,8 @@ const ar: AppStrings = {
     errorLoadingAkmel: "حدث خطأ أثناء تحميل الأسئلة",
     errorLoadingMutashabihat: "حدث خطأ أثناء تحميل الأسئلة",
     errorNoVerses: "لم يُعثر على آيات في النطاق المحدد.\nجرّب نطاقاً أوسع.",
-    errorNoMutashabihat: "لم يُعثر على آيات متشابهة في النطاق المحدد.\nجرّب نطاقاً أوسع.",
+    errorNoMutashabihat:
+      "لم يُعثر على آيات متشابهة في النطاق المحدد.\nجرّب نطاقاً أوسع.",
     backToSetup: "← العودة للإعداد",
     ayahLabel: "الآية",
     pageLabel: "صفحة",
@@ -404,6 +414,12 @@ const ar: AppStrings = {
     cancelSelection: "إلغاء التحديد",
     backLabel: "رجوع",
     closeLabel: "إغلاق",
+    contextLoading: "جاري تحميل الصفحة…",
+    contextClose: "إغلاق",
+    contextHint: "تلميح",
+    contextNextPage: "الصفحة التالية",
+    contextPrevPage: "الصفحة السابقة",
+    contextJumpBack: "العودة إلى آية السؤال",
     fontSizeOptions: [
       { value: "small", label: "صغير" },
       { value: "medium", label: "متوسط" },
@@ -547,7 +563,8 @@ const en: AppStrings = {
   },
   azkar: {
     title: "Azkar",
-    subtitle: "From Sahih al-Adhkar al-Jami' by Sheikh al-Albani, may Allah have mercy on him",
+    subtitle:
+      "From Sahih al-Adhkar al-Jami' by Sheikh al-Albani, may Allah have mercy on him",
     back: "← Back",
     backToCategories: "← Back to Categories",
     backHome: "← Home",
@@ -557,7 +574,7 @@ const en: AppStrings = {
     resetTitle: "Reset counter",
     zikr: "dhikr",
     allDone: "✅ All complete",
-    quote: "\"Glorify Allah after every prayer thirty-three times\"",
+    quote: '"Glorify Allah after every prayer thirty-three times"',
   },
   quiz: {
     title: "Quizzes",
@@ -579,10 +596,12 @@ const en: AppStrings = {
   quizSetup: {
     akmelTitle: "Complete the Verse",
     akmelSubtitle: "اختبار القرآن — أكمل الآية",
-    akmelInfo: "You will be shown the start of a verse and asked to complete it. Choose your scope and number of questions.",
+    akmelInfo:
+      "You will be shown the start of a verse and asked to complete it. Choose your scope and number of questions.",
     mutashabihatTitle: "Mutashabihat",
     mutashabihatSubtitle: "اختبار المتشابهات — أكمل الآية المتشابهة",
-    mutashabihatInfo: "You'll be shown an opening shared by several similar verses — complete the correct one.",
+    mutashabihatInfo:
+      "You'll be shown an opening shared by several similar verses — complete the correct one.",
     scope: "Scope",
     scopeSurah: "Surah",
     scopePages: "Pages",
@@ -633,7 +652,8 @@ const en: AppStrings = {
     errorLoadingAkmel: "Error loading questions",
     errorLoadingMutashabihat: "Error loading questions",
     errorNoVerses: "No verses found in the selected range.\nTry a wider scope.",
-    errorNoMutashabihat: "No similar verses found in the selected range.\nTry a wider scope.",
+    errorNoMutashabihat:
+      "No similar verses found in the selected range.\nTry a wider scope.",
     backToSetup: "← Back to Setup",
     ayahLabel: "Ayah",
     pageLabel: "Page",
@@ -667,6 +687,12 @@ const en: AppStrings = {
     hideSelected: "Hide selected verses",
     clearSelection: "Clear selection",
     showAllHidden: "Show all hidden verses",
+    contextLoading: "Loading page…",
+    contextClose: "Close",
+    contextHint: "Hint",
+    contextNextPage: "Next page",
+    contextPrevPage: "Previous page",
+    contextJumpBack: "Go back to the target verse",
     selectionCount: (n: string) => `${n} verse${n === "1" ? "" : "s"} selected`,
     hide: "Hide",
     cancelSelection: "Cancel selection",
@@ -787,7 +813,10 @@ const en: AppStrings = {
       { value: "hard", label: "Hard" },
     ],
     reciters: [
-      { value: "minshawi-murattal", label: "Muhammad Siddiq Al Minshawy (Murattal)" },
+      {
+        value: "minshawi-murattal",
+        label: "Muhammad Siddiq Al Minshawy (Murattal)",
+      },
       { value: "husary", label: "Al-Husary" },
       { value: "minshawi", label: "Al-Minshawi" },
       { value: "sudais", label: "Al-Sudais" },

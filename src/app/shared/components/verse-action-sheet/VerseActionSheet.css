@@ -10,8 +10,12 @@
 }
 
 @keyframes vas-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .vas-sheet {
@@ -33,12 +37,20 @@
 }
 
 @keyframes vas-slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 [data-theme="night"] .vas-sheet {
-  background: linear-gradient(180deg, #1c1c1c 0%, #243248 100%);
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-card, #1c1c1c) 0%,
+    #243248 100%
+  );
   color: #f4ecd8;
 }
 
@@ -67,8 +79,8 @@
 }
 
 .vas-close {
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(212, 180, 140, 0.4);
+  background: var(--color-bg-card-alt, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--color-gold-subtle, rgba(212, 180, 140, 0.4));
   color: inherit;
   width: 32px;
   height: 32px;
@@ -124,11 +136,13 @@
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1rem;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 }
 
 .vas-audio-btn:hover:not(:disabled) {
-  background: rgba(212, 180, 140, 0.18);
+  background: var(--color-gold-faint, rgba(212, 180, 140, 0.18));
 }
 
 .vas-audio-btn:active:not(:disabled) {
@@ -141,15 +155,15 @@
 }
 
 .vas-audio-btn.playing {
-  background: #8b4513;
+  background: var(--color-gold, #8b4513);
   color: #fff;
-  border-color: #8b4513;
+  border-color: var(--color-gold);
 }
 
 [data-theme="night"] .vas-audio-btn.playing {
   background: var(--color-gold, #d4b48c);
   color: #1a2336;
-  border-color: var(--color-gold, #d4b48c);
+  border-color: var(--color-gold);
 }
 
 .vas-translation {
@@ -195,7 +209,9 @@
 }
 
 @keyframes vas-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .vas-error {

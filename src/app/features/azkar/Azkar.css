@@ -29,7 +29,11 @@ ion-content::part(scroll) {
 /* In day mode keep the warm parchment gradient as a subtle nod to the
    original design — only night mode gets pure flat dark. */
 [data-theme="day"] .azkar-page-wrapper {
-  background: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
+  background: linear-gradient(
+    160deg,
+    var(--color-parchment-light, #faf7f0) 0%,
+    var(--color-parchment-mid, #f0ead6) 100%
+  );
 }
 
 /* ── Container ────────────────────────────────────────────── */
@@ -50,16 +54,16 @@ ion-content::part(scroll) {
   width: 8px;
 }
 .azkar-container::-webkit-scrollbar-track {
-  background: #f0ead6;
+  background: var(--color-parchment-mid, #f0ead6);
   border-radius: 4px;
 }
 .azkar-container::-webkit-scrollbar-thumb {
-  background: #d4b48c;
+  background: var(--color-gold, #d4b48c);
   border-radius: 4px;
-  border: 2px solid #f0ead6;
+  border: 2px solid var(--color-parchment-mid, #f0ead6);
 }
 .azkar-container::-webkit-scrollbar-thumb:hover {
-  background: #b8936a;
+  background: var(--color-gold-deep, #b8936a);
 }
 
 /* ── Home Header ──────────────────────────────────────────── */
@@ -67,19 +71,23 @@ ion-content::part(scroll) {
 .azkar-home-header {
   text-align: center;
   padding: 2.5rem 1rem 1.5rem;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  border-bottom: 3px solid #d4b48c;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-header, #1c1c1c) 0%,
+    var(--color-bg-header, #1c1c1c) 100%
+  );
+  border-bottom: 3px solid var(--color-gold, #d4b48c);
 }
 
 .azkar-home-header h1 {
   font-size: 2.8rem;
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   margin-bottom: 0.4rem;
 }
 
 .azkar-home-header p {
   font-size: 0.95rem;
-  color: #c8d6e5;
+  color: var(--color-steel-blue, #c8d6e5);
   opacity: 0.85;
   font-family: "Georgia", serif;
 }
@@ -101,9 +109,9 @@ ion-content::part(scroll) {
   align-items: center;
   gap: 1rem;
   padding: 1.2rem 1.4rem;
-  background: white;
+  background: var(--color-bg-card, #ffffff);
   border: none;
-  border-right: 5px solid var(--cat-color, #1a6b3c);
+  border-right: 5px solid var(--cat-color, var(--color-quran));
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
@@ -130,27 +138,27 @@ ion-content::part(scroll) {
 .azkar-cat-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1c1c1c;
+  color: var(--color-text-primary, #1c1c1c);
   margin: 0;
 }
 
 .azkar-cat-subtitle {
   font-family: "Georgia", serif;
   font-size: 0.8rem;
-  color: #8a7a6a;
+  color: var(--color-text-muted, #8a7a6a);
   letter-spacing: 0.4px;
   margin: 0;
 }
 
 .azkar-cat-count {
   font-size: 0.9rem;
-  color: var(--cat-color, #1a6b3c);
+  color: var(--cat-color, var(--color-quran));
   font-weight: 600;
 }
 
 .azkar-cat-arrow {
   font-size: 1.4rem;
-  color: var(--cat-color, #1a6b3c);
+  color: var(--cat-color, var(--color-quran));
   flex-shrink: 0;
   transition: transform 0.15s;
 }
@@ -163,7 +171,7 @@ ion-content::part(scroll) {
 .azkar-header {
   background: linear-gradient(
     135deg,
-    var(--cat-color, #1a6b3c) 0%,
+    var(--cat-color, var(--color-quran)) 0%,
     rgba(0, 0, 0, 0.3) 100%
   );
   padding: 1.2rem 1.4rem;
@@ -234,17 +242,17 @@ ion-content::part(scroll) {
 
 /* Individual zikr item — Electron style */
 .azkar-item {
-  background: white;
+  background: var(--color-bg-card, #ffffff);
   border-radius: 14px;
   padding: 1.2rem 1.4rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
-  border-right: 4px solid var(--cat-color, #1a6b3c);
+  border-right: 4px solid var(--cat-color, var(--color-quran));
   transition: opacity 0.3s;
 }
 
 .azkar-item.completed {
   opacity: 0.6;
-  background: #f5f9f5;
+  background: var(--color-bg-card-alt, #f5f9f5);
 }
 
 /* Item top row: number badge + source */
@@ -258,7 +266,7 @@ ion-content::part(scroll) {
 .azkar-item-num {
   width: 26px;
   height: 26px;
-  background: var(--cat-color, #1a6b3c);
+  background: var(--cat-color, var(--color-quran));
   color: white;
   border-radius: 50%;
   display: flex;
@@ -273,15 +281,15 @@ ion-content::part(scroll) {
 .azkar-item-source {
   font-family: "Georgia", serif;
   font-size: 0.72rem;
-  color: #8a7a6a;
-  background: #f7f3ec;
+  color: var(--color-text-muted, #8a7a6a);
+  background: var(--color-gold-faint, #f7f3ec);
   padding: 0.2rem 0.7rem;
   border-radius: 12px;
 }
 
 /* Optional note */
 .azkar-note {
-  background: #fef9ec;
+  background: var(--color-parchment-note, #fef9ec);
   border-right: 3px solid #f0c040;
   padding: 0.45rem 0.75rem;
   margin-bottom: 0.75rem;
@@ -295,7 +303,7 @@ ion-content::part(scroll) {
 .azkar-item-text {
   font-size: 1.35rem;
   line-height: 2.1;
-  color: #1a2a3a;
+  color: var(--color-text-primary, #1a2a3a);
   text-align: right;
   direction: rtl;
   margin: 0 0 0.6rem;
@@ -305,11 +313,11 @@ ion-content::part(scroll) {
 .azkar-item-translation {
   font-family: "Georgia", serif;
   font-size: 0.85rem;
-  color: #5a6a7a;
+  color: var(--color-text-secondary, #5a6a7a);
   line-height: 1.7;
   margin: 0 0 0.7rem;
   padding: 0.5rem 0.8rem;
-  background: #f0f4f8;
+  background: var(--color-bg-card-alt, #f0f4f8);
   border-radius: 8px;
   border-right: 3px solid #a0b8cc;
   text-align: right;
@@ -319,7 +327,7 @@ ion-content::part(scroll) {
 /* Progress bar */
 .azkar-progress-bar {
   height: 5px;
-  background: #e8e0d0;
+  background: var(--color-progress-track, #e8e0d0);
   border-radius: 3px;
   margin-bottom: 0.75rem;
   overflow: hidden;
@@ -327,7 +335,7 @@ ion-content::part(scroll) {
 
 .azkar-progress-fill {
   height: 100%;
-  background: var(--cat-color, #1a6b3c);
+  background: var(--cat-color, var(--color-quran));
   border-radius: 3px;
   transition: width 0.2s ease;
 }
@@ -342,7 +350,7 @@ ion-content::part(scroll) {
 
 .azkar-repeat-label {
   font-size: 0.88rem;
-  color: #5a4a3a;
+  color: var(--color-text-secondary, #5a4a3a);
   font-family: "Georgia", serif;
 }
 
@@ -354,7 +362,7 @@ ion-content::part(scroll) {
 
 /* Count button */
 .azkar-count-btn {
-  background: var(--cat-color, #1a6b3c);
+  background: var(--cat-color, var(--color-quran));
   color: white;
   border: none;
   border-radius: 10px;
@@ -426,8 +434,8 @@ ion-content::part(scroll) {
 /* Reset button */
 .azkar-reset-btn {
   background: none;
-  border: 1px solid #ccc;
-  color: #888;
+  border: 1px solid var(--color-border-subtle, #ccc);
+  color: var(--color-text-muted, #888);
   padding: 0.3rem 0.65rem;
   border-radius: 8px;
   cursor: pointer;
@@ -443,8 +451,8 @@ ion-content::part(scroll) {
   justify-content: center;
 }
 .azkar-reset-btn:hover {
-  border-color: #888;
-  color: #555;
+  border-color: var(--color-text-muted, #888);
+  color: var(--color-text-secondary, #555);
 }
 
 /* ── Footer nav ───────────────────────────────────────────── */
@@ -458,7 +466,7 @@ ion-content::part(scroll) {
 }
 
 .azkar-back-bottom {
-  background: #1c1c1c;
+  background: var(--color-bg-header, #1c1c1c);
   color: white;
   border: none;
   padding: 0.8rem 2rem;
@@ -469,7 +477,7 @@ ion-content::part(scroll) {
   transition: background 0.15s;
 }
 .azkar-back-bottom:hover {
-  background: #3d5166;
+  background: var(--color-navy-light, #3d5166);
 }
 
 /* ── Home footer ──────────────────────────────────────────── */
@@ -481,7 +489,7 @@ ion-content::part(scroll) {
 
 .azkar-home-footer p {
   font-size: 1.2rem;
-  color: #8a7a6a;
+  color: var(--color-text-muted, #8a7a6a);
   opacity: 0.7;
 }
 

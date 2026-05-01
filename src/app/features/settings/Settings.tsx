@@ -415,30 +415,6 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Display ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionDisplay}</p>
-              <div className="settings-card">
-                <SliderRow
-                  icon={ICONS.fontSize}
-                  label={ts.fontSize}
-                  desc={ts.fontSizeDesc}
-                  value={s.arabicFontSize}
-                  min={14}
-                  max={32}
-                  unit="px"
-                  onChange={(v) => set("arabicFontSize", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.type}
-                  label={ts.transliteration}
-                  desc={ts.transliterationDesc}
-                  checked={s.showTransliteration}
-                  onChange={(v) => set("showTransliteration", v)}
-                />
-              </div>
-            </div>
-
             {/* ── Quran ── */}
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionQuran}</p>
@@ -467,38 +443,6 @@ const Settings: React.FC = () => {
                   desc={ts.autoNextPageDesc}
                   checked={s.autoNextPage}
                   onChange={(v) => set("autoNextPage", v)}
-                />
-              </div>
-            </div>
-
-            {/* ── Quiz ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionQuiz}</p>
-              <div className="settings-card">
-                <SelectRow
-                  icon={ICONS.trophy}
-                  label={ts.quizDifficulty}
-                  desc={ts.quizDifficultyDesc}
-                  value={s.quizDifficulty}
-                  options={ts.difficulties.map((d) => ({
-                    value: d.value,
-                    label: d.label,
-                  }))}
-                  onChange={(v) => set("quizDifficulty", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.bulb}
-                  label={ts.showHints}
-                  desc={ts.showHintsDesc}
-                  checked={s.showHintsDefault}
-                  onChange={(v) => set("showHintsDefault", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.speaker}
-                  label={ts.soundEffects}
-                  desc={ts.soundEffectsDesc}
-                  checked={s.soundEffects}
-                  onChange={(v) => set("soundEffects", v)}
                 />
               </div>
             </div>

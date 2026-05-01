@@ -1,11 +1,3 @@
-/**
- * MUSHAF CONTEXT VIEWER
- *
- * Renders the Mushaf page that contains a target verse using the QPC V1
- * page-perfect renderer (same component PageViewer uses), with the target
- * verse highlighted. Used by quizzes as the side-panel context viewer.
- */
-
 import React, { useEffect, useMemo, useState } from "react";
 import { getPage } from "../../../core/services/data/quran.service";
 import {
@@ -13,6 +5,7 @@ import {
   getSuraForPage,
 } from "../../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
+import { useLang } from "../../../core/context/LanguageContext";
 import MushafPage from "../mushaf-page/MushafPage";
 import type { Verse } from "../../models/verse.model";
 import { useVerseVisibility } from "../../../core/context/VerseVisibilityContext";
@@ -46,6 +39,7 @@ const MushafContextViewer: React.FC<Props> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useLang();
   const [currentPage, setCurrentPage] = useState(verse.page);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +144,7 @@ const MushafContextViewer: React.FC<Props> = ({
             className="mcv-nav-btn"
             onClick={() => jumpToPage(currentPage - 1)}
             disabled={loading || currentPage <= 1}
-            title="الصفحة السابقة"
+            title={t.mushaf.contextPrevPage}
           >
             ►
           </button>
@@ -159,7 +153,7 @@ const MushafContextViewer: React.FC<Props> = ({
             className="mcv-nav-btn"
             onClick={() => jumpToPage(currentPage + 1)}
             disabled={loading || currentPage >= totalPages}
-            title="الصفحة التالية"
+            title={t.mushaf.contextNextPage}
           >
             ◄
           </button>
@@ -170,8 +164,8 @@ const MushafContextViewer: React.FC<Props> = ({
             <button
               className="mcv-hint-btn"
               onClick={() => setInternalHint((n) => n + 1)}
-              title="إظهار كلمة"
-              aria-label="إظهار كلمة من الآية"
+              title={t.mushaf.contextHint}
+              aria-label={t.mushaf.contextHint}
             >
               💡
             </button>
@@ -180,12 +174,16 @@ const MushafContextViewer: React.FC<Props> = ({
             <button
               className="mcv-jump-btn"
               onClick={() => jumpToPage(verse.page)}
-              title="العودة إلى آية السؤال"
+              title={t.mushaf.contextJumpBack}
             >
               ⤴ {toHindiNumbers(verse.page)}
             </button>
           )}
-          <button className="mcv-close-btn" onClick={onClose} title="إغلاق">
+          <button
+            className="mcv-close-btn"
+            onClick={onClose}
+            title={t.mushaf.contextClose}
+          >
             ✕
           </button>
         </div>
@@ -195,7 +193,7 @@ const MushafContextViewer: React.FC<Props> = ({
         {loading ? (
           <div className="mcv-loading">
             <div className="mcv-spinner" />
-            <p>جاري تحميل الصفحة…</p>
+            <p>{t.mushaf.contextLoading}</p>
           </div>
         ) : (
           <MushafPage
