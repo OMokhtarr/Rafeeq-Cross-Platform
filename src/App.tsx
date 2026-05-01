@@ -35,22 +35,23 @@ setupIonicReact({ mode: "md" });
 
 const App: React.FC = () => {
   const [metaReady, setMetaReady] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState({
+    done: 0,
+    total: 604,
+  });
 
-  // inside the component
   useEffect(() => {
     initMetadata()
       .then(() => {
         setMetaReady(true);
-        // Fire background preload (non‑blocking)
         preloadAllPages((done, total) => {
-          // Optional: update a global progress state if you want to show a tiny loader
+          setPreloadProgress({ done, total });
           console.debug(`Preloaded page ${done}/${total}`);
         });
       })
       .catch((err) => {
         console.error("Metadata init failed:", err);
         setMetaReady(true);
-        // Still try to preload (will use cache if available)
         preloadAllPages();
       });
   }, []);
@@ -93,6 +94,16 @@ const App: React.FC = () => {
       <LanguageProvider>
         <VerseVisibilityProvider>
           <IonApp>
+            {preloadProgress.done < preloadProgress.total && (
+              <div className="global-preload-bar">
+                <div
+                  className="global-preload-fill"
+                  style={{
+                    width: `${(preloadProgress.done / preloadProgress.total) * 100}%`,
+                  }}
+                />
+              </div>
+            )}
             <IonReactRouter>
               <IonRouterOutlet id="main">
                 <Route exact path="/" component={Home} />
