@@ -640,7 +640,10 @@ export async function initMetadata(): Promise<void> {
   if (initPromise) return initPromise;
   initPromise = (async () => {
     // 1. Chapters
-    const chaptersRecord = await idb.get<{ key: string; value: any[] }>("meta", "chapters");
+    const chaptersRecord = await idb.get<{ key: string; value: any[] }>(
+      "meta",
+      "chapters",
+    );
     let chapters = Array.isArray(chaptersRecord?.value)
       ? chaptersRecord.value
       : [];
@@ -654,7 +657,10 @@ export async function initMetadata(): Promise<void> {
     chaptersCache = chapters; // now always an array
 
     // 2. Juzs
-    const juzsRecord = await idb.get<{ key: string; value: any[] }>("meta", "juzs");
+    const juzsRecord = await idb.get<{ key: string; value: any[] }>(
+      "meta",
+      "juzs",
+    );
     let juzs = Array.isArray(juzsRecord?.value) ? juzsRecord.value : [];
     if (juzs.length === 0) {
       const raw = await fetchJuzs();
