@@ -196,7 +196,7 @@ const MutashabihatTest: React.FC = () => {
             <div className="mst-spinner"></div>
             <p>{tt.loadingMutashabihat}</p>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -213,7 +213,7 @@ const MutashabihatTest: React.FC = () => {
               </button>
             </div>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -246,7 +246,7 @@ const MutashabihatTest: React.FC = () => {
               </div>
             </div>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -521,8 +521,8 @@ const MutashabihatTest: React.FC = () => {
               </div>
             </div>
           </div>
+          <BottomNavBar active="quiz" />
         </div>
-        <BottomNavBar active="quiz" fixed />
       </IonContent>
     </IonPage>
   );

@@ -521,8 +521,8 @@ const Settings: React.FC = () => {
               <p>{ts.quote}</p>
             </div>
           </div>
+          <BottomNavBar active="settings" />
         </div>
-        <BottomNavBar active="settings" fixed />
       </IonContent>
     </IonPage>
   );

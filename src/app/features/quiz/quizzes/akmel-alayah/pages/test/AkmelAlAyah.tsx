@@ -215,8 +215,7 @@ const AkmelAlAyah: React.FC = () => {
   };
 
   const handleExit = () => {
-    if (window.confirm(tt.confirmExit))
-      history.push("/akmel-alayah-setup");
+    if (window.confirm(tt.confirmExit)) history.push("/akmel-alayah-setup");
   };
 
   const getHintText = () => {
@@ -238,7 +237,7 @@ const AkmelAlAyah: React.FC = () => {
             <div className="aa-spinner"></div>
             <p>{tt.loadingAkmel}</p>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -256,7 +255,7 @@ const AkmelAlAyah: React.FC = () => {
               </button>
             </div>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -284,11 +283,13 @@ const AkmelAlAyah: React.FC = () => {
                 <button onClick={() => history.push("/akmel-alayah-setup")}>
                   {tt.newQuiz}
                 </button>
-                <button onClick={() => history.push("/quiz-list")}>{tt.quizListLink}</button>
+                <button onClick={() => history.push("/quiz-list")}>
+                  {tt.quizListLink}
+                </button>
               </div>
             </div>
           </div>
-          <BottomNavBar active="quiz" fixed />
+          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -304,190 +305,214 @@ const AkmelAlAyah: React.FC = () => {
     <IonPage>
       <IonContent fullscreen>
         <div className="aa-test-page-wrapper">
-        <div className={`aa-container ${showContext ? "with-sidebar" : ""}`}>
-          {/* Context Sidebar */}
-          {showContext && (
-            <div className="aa-sidebar-wrapper">
-              <div className="aa-page-viewer">
-                <MushafContextViewer
-                  verse={{
-                    sura: q.sura,
-                    aya: q.aya,
-                    text: q.fullText,
-                    page: q.page,
-                    suraName: q.suraName,
-                    suraNameAr: q.suraNameAr,
-                  }}
-                  snippet={q.versePart ?? q.displayedPortion}
-                  hiddenPortion={q.hiddenPortion}
-                  hintLevel={hintLevel}
-                  showAnswer={answered}
-                  isOpen={showContext}
-                  onClose={() => setShowContext(false)}
-                  mode="sidebar"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Main quiz panel */}
-          <div className="aa-main">
-            {/* Header */}
-            <div className="aa-header">
-              <div className="aa-progress">
-                <span className="aa-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} / {toHindi(questions.length)}
-                </span>
-                <div className="aa-bar">
-                  <div
-                    className="aa-bar-fill"
-                    style={{
-                      width: `${((idx + 1) / questions.length) * 100}%`,
+          <div className={`aa-container ${showContext ? "with-sidebar" : ""}`}>
+            {/* Context Sidebar */}
+            {showContext && (
+              <div className="aa-sidebar-wrapper">
+                <div className="aa-page-viewer">
+                  <MushafContextViewer
+                    verse={{
+                      sura: q.sura,
+                      aya: q.aya,
+                      text: q.fullText,
+                      page: q.page,
+                      suraName: q.suraName,
+                      suraNameAr: q.suraNameAr,
                     }}
+                    snippet={q.versePart ?? q.displayedPortion}
+                    hiddenPortion={q.hiddenPortion}
+                    hintLevel={hintLevel}
+                    showAnswer={answered}
+                    isOpen={showContext}
+                    onClose={() => setShowContext(false)}
+                    mode="sidebar"
                   />
                 </div>
               </div>
-              <div className="aa-score-pill">{tt.score}: {score}</div>
-              <button className="aa-exit-btn" onClick={handleExit}>
-                {tt.exit}
-              </button>
-            </div>
+            )}
 
-            {/* Question card */}
-            <div className="aa-card">
-              <div className="aa-info-strip">
-                <span className="aa-surah-badge" lang="ar" dir="rtl">{q.suraNameAr}</span>
-                <span className="aa-meta">{tt.ayahLabel} {toHindi(q.aya)}</span>
-                <span className="aa-meta">{tt.pageLabel} {toHindi(q.page)}</span>
-                <span className="aa-meta">{tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}</span>
-              </div>
-
-              {/* Card body: [actions column left] + [main content right] */}
-              <div className="aa-card-body">
-
-                {/* Left column: action buttons */}
-                <div className="aa-actions">
-                  <button
-                    className="aa-btn aa-hint"
-                    onClick={handleHint}
-                    disabled={hintLevel >= maxHints || answered}
-                  >
-                    {tt.hint}
-                    {hintLevel > 0 && (
-                      <span className="aa-btn-en">
-                        ({hintLevel}/{maxHints})
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    className={`aa-btn aa-context ${showContext ? "active" : ""}`}
-                    onClick={() => setShowContext((v) => !v)}
-                  >
-                    {showContext ? tt.hide : tt.context}
-                  </button>
-
-                  <button
-                    className="aa-btn aa-submit"
-                    onClick={handleSubmit}
-                    disabled={!userAnswer.trim() || answered}
-                  >
-                    {tt.submit}
-                  </button>
-
-                  <button
-                    className="aa-btn aa-skip"
-                    onClick={handleSkip}
-                    disabled={answered}
-                  >
-                    {tt.skip}
-                  </button>
-                </div>
-
-                {/* Right: verse + input + result + next */}
-                <div className="aa-card-main">
-                  <div className="aa-verse-box">
-                    <p className="aa-verse-shared" lang="ar" dir="rtl">
-                      {q.versePart ?? q.displayedPortion}
-                    </p>
-                    {hintLevel > 0 && (
-                      <span className="aa-hint-inline" lang="ar" dir="rtl"> {getHintText()}</span>
-                    )}
-                    <p className="aa-prompt">{tt.promptComplete}</p>
-                  </div>
-
-                  <div className="aa-answer-row">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      dir="rtl"
-                      inputMode="text"
-                      enterKeyHint={answered ? "done" : "send"}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      value={userAnswer}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setUserAnswer(e.target.value)
-                      }
-                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                        e.key === "Enter" && !answered && handleSubmit()
-                      }
-                      onFocus={(e) => {
-                        // When the soft keyboard opens, scroll the input into
-                        // view so the submit button (rendered just below)
-                        // stays above the keyboard on short phones.
-                        const el = e.currentTarget;
-                        setTimeout(
-                          () =>
-                            el.scrollIntoView({
-                              block: "center",
-                              behavior: "smooth",
-                            }),
-                          250,
-                        );
+            {/* Main quiz panel */}
+            <div className="aa-main">
+              {/* Header */}
+              <div className="aa-header">
+                <div className="aa-progress">
+                  <span className="aa-progress-text">
+                    {tt.questionOf} {toHindi(idx + 1)} /{" "}
+                    {toHindi(questions.length)}
+                  </span>
+                  <div className="aa-bar">
+                    <div
+                      className="aa-bar-fill"
+                      style={{
+                        width: `${((idx + 1) / questions.length) * 100}%`,
                       }}
-                      readOnly={answered}
-                      placeholder={tt.inputPlaceholder}
-                      className={`aa-input ${answered ? "answered" : ""}`}
                     />
                   </div>
+                </div>
+                <div className="aa-score-pill">
+                  {tt.score}: {score}
+                </div>
+                <button className="aa-exit-btn" onClick={handleExit}>
+                  {tt.exit}
+                </button>
+              </div>
 
-                  {/* Result feedback */}
-                  {answered && (
-                    <div
-                      className={`aa-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
-                    >
-                      <span className="aa-result-icon">
-                        {correct ? "✅" : skipped ? "⏭" : "❌"}
-                      </span>
-                      <span className="aa-result-text">
-                        {correct ? tt.correctMsg : skipped ? tt.skippedMsg : tt.wrongMsg}
-                      </span>
-                      {!correct && (
-                        <div className="aa-correct-answer">
-                          <span className="aa-correct-label">{tt.correctAnswer} </span>
-                          <span className="aa-correct-text" lang="ar" dir="rtl">
-                            {q.hiddenPortion ?? q.correctAnswer}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {answered && (
-                    <button className="aa-next-btn" onClick={handleNext}>
-                      {idx + 1 < questions.length ? tt.nextQuestion : tt.finishQuiz}
-                    </button>
-                  )}
+              {/* Question card */}
+              <div className="aa-card">
+                <div className="aa-info-strip">
+                  <span className="aa-surah-badge" lang="ar" dir="rtl">
+                    {q.suraNameAr}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.ayahLabel} {toHindi(q.aya)}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.pageLabel} {toHindi(q.page)}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}
+                  </span>
                 </div>
 
+                {/* Card body: [actions column left] + [main content right] */}
+                <div className="aa-card-body">
+                  {/* Left column: action buttons */}
+                  <div className="aa-actions">
+                    <button
+                      className="aa-btn aa-hint"
+                      onClick={handleHint}
+                      disabled={hintLevel >= maxHints || answered}
+                    >
+                      {tt.hint}
+                      {hintLevel > 0 && (
+                        <span className="aa-btn-en">
+                          ({hintLevel}/{maxHints})
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      className={`aa-btn aa-context ${showContext ? "active" : ""}`}
+                      onClick={() => setShowContext((v) => !v)}
+                    >
+                      {showContext ? tt.hide : tt.context}
+                    </button>
+
+                    <button
+                      className="aa-btn aa-submit"
+                      onClick={handleSubmit}
+                      disabled={!userAnswer.trim() || answered}
+                    >
+                      {tt.submit}
+                    </button>
+
+                    <button
+                      className="aa-btn aa-skip"
+                      onClick={handleSkip}
+                      disabled={answered}
+                    >
+                      {tt.skip}
+                    </button>
+                  </div>
+
+                  {/* Right: verse + input + result + next */}
+                  <div className="aa-card-main">
+                    <div className="aa-verse-box">
+                      <p className="aa-verse-shared" lang="ar" dir="rtl">
+                        {q.versePart ?? q.displayedPortion}
+                      </p>
+                      {hintLevel > 0 && (
+                        <span className="aa-hint-inline" lang="ar" dir="rtl">
+                          {" "}
+                          {getHintText()}
+                        </span>
+                      )}
+                      <p className="aa-prompt">{tt.promptComplete}</p>
+                    </div>
+
+                    <div className="aa-answer-row">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        dir="rtl"
+                        inputMode="text"
+                        enterKeyHint={answered ? "done" : "send"}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        value={userAnswer}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setUserAnswer(e.target.value)
+                        }
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                          e.key === "Enter" && !answered && handleSubmit()
+                        }
+                        onFocus={(e) => {
+                          // When the soft keyboard opens, scroll the input into
+                          // view so the submit button (rendered just below)
+                          // stays above the keyboard on short phones.
+                          const el = e.currentTarget;
+                          setTimeout(
+                            () =>
+                              el.scrollIntoView({
+                                block: "center",
+                                behavior: "smooth",
+                              }),
+                            250,
+                          );
+                        }}
+                        readOnly={answered}
+                        placeholder={tt.inputPlaceholder}
+                        className={`aa-input ${answered ? "answered" : ""}`}
+                      />
+                    </div>
+
+                    {/* Result feedback */}
+                    {answered && (
+                      <div
+                        className={`aa-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
+                      >
+                        <span className="aa-result-icon">
+                          {correct ? "✅" : skipped ? "⏭" : "❌"}
+                        </span>
+                        <span className="aa-result-text">
+                          {correct
+                            ? tt.correctMsg
+                            : skipped
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
+                        </span>
+                        {!correct && (
+                          <div className="aa-correct-answer">
+                            <span className="aa-correct-label">
+                              {tt.correctAnswer}{" "}
+                            </span>
+                            <span
+                              className="aa-correct-text"
+                              lang="ar"
+                              dir="rtl"
+                            >
+                              {q.hiddenPortion ?? q.correctAnswer}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {answered && (
+                      <button className="aa-next-btn" onClick={handleNext}>
+                        {idx + 1 < questions.length
+                          ? tt.nextQuestion
+                          : tt.finishQuiz}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+          <BottomNavBar active="quiz" />
         </div>
-        </div>
-        <BottomNavBar active="quiz" fixed />
       </IonContent>
     </IonPage>
   );

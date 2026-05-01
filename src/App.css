@@ -1,3 +1,93 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    "Traditional Arabic",
+    "Amiri",
+    "Scheherazade New",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--transition-theme),
+    color var(--transition-theme);
+}
+
+.App {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Global centering for all pages ──────────────────────── */
+.mobile-page {
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Ionic's scroll part also gets centered for pages that use native scrolling */
+ion-content::part(scroll) {
+  max-width: var(--max-width-mobile, 600px);
+  margin-inline: auto;
+}
+
+/* Safe area insets for edge-to-edge display on Android 15+ */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+}
+
+ion-content {
+  --padding-top: var(--safe-area-inset-top);
+  --padding-bottom: var(--safe-area-inset-bottom);
+  --padding-start: var(--safe-area-inset-left);
+  --padding-end: var(--safe-area-inset-right);
+}
+
+ion-page {
+  background: var(--color-bg-app);
+}
+
+ion-header {
+  padding-top: var(--safe-area-inset-top);
+}
+
+ion-footer {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-area-padding {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Preload progress bar */
 .global-preload-bar {
   position: fixed;
   top: 0;

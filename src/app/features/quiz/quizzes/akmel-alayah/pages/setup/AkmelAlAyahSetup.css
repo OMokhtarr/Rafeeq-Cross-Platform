@@ -16,20 +16,11 @@ ion-content::part(scroll) {
 
 .aa-setup-page-wrapper {
   width: 100%;
-  /* Bound to the dynamic viewport, NOT 100% of the IonContent — the IonContent
-     ignores the absolute-positioned BottomNavBar in its layout, so a `100%`
-     here would still leak under the bar. `100dvh` reflects the visible
-     viewport (post-soft-keyboard, post-URL-bar collapse) on mobile.       */
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  /* Reserve space for the fixed BottomNavBar (~70px) + its safe-area inset
-     so the card never extends under the nav. */
-  padding: 10px 10px calc(14px + 70px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
   transition:
@@ -42,8 +33,9 @@ ion-content::part(scroll) {
   align-items: stretch;
   justify-content: center;
   width: 100%;
-  /* No explicit height — flex stretch from the wrapper carries the bound. */
+  flex: 1;
   min-height: 0;
+  padding: 10px;
   box-sizing: border-box;
 }
 

@@ -14,22 +14,12 @@ ion-content::part(scroll) {
 
 .ms-setup-page-wrapper {
   width: 100%;
-  /* Bound to dynamic viewport — IonContent ignores absolute-positioned
-     BottomNavBar in layout, so `100%` here would still leak under it. */
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  /* Reserve space for the fixed BottomNavBar (~70px) + safe-area inset. */
-  padding: 10px 10px calc(14px + 70px + env(safe-area-inset-bottom, 0px));
-  box-sizing: border-box;
+  flex-direction: column;
   overflow: hidden;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
 }
 
 .ms-setup-container {
@@ -37,7 +27,9 @@ ion-content::part(scroll) {
   align-items: stretch;
   justify-content: center;
   width: 100%;
+  flex: 1;
   min-height: 0;
+  padding: 10px 10px 10px; /* small all‑around padding, no giant bottom */
   box-sizing: border-box;
 }
 
@@ -48,7 +40,6 @@ ion-content::part(scroll) {
   max-width: 600px;
   width: 100%;
   height: 100%;
-  /* Card fills the wrapper exactly — wrapper already accounts for BottomNavBar. */
   max-height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -377,7 +368,11 @@ ion-content::part(scroll) {
 .ms-start-btn {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary) 0%,
+    var(--color-text-primary) 100%
+  );
   color: white;
   border: none;
   border-radius: 40px;
@@ -437,4 +432,3 @@ ion-content::part(scroll) {
     flex-wrap: wrap;
   }
 }
-
