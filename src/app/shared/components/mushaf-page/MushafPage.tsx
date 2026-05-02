@@ -140,15 +140,15 @@ const MushafPage: React.FC<Props> = ({
     const node = containerRef.current;
     if (!node) return;
 
-    const LINE_HEIGHT_RATIO = 1.7; // mirrors .mushaf-page-glyph CSS
+    const LINE_HEIGHT_RATIO = 1.4; // mirrors .mushaf-page-glyph CSS
     const LINE_GAP_RATIO = 0.25; // mirrors .mushaf-page-glyph `gap: 0.25em`
     const BISMILLAH_LINES = 1.6; // strip is ~1.3em font + 0.4em margin
     const FONT_MIN = 8;
     // const FONT_MAX = 40;
     // const SURAH_HEADER_LINES = 2.6; // banner with padding ≈ 2.6 line-heights
 
-    const FONT_MAX = 46; // was 40
-    const SURAH_HEADER_LINES = 2.2; // was 2.6 – a bit tighter
+    const FONT_MAX = 64;
+    const SURAH_HEADER_LINES = 2.2;
 
     const computeFit = () => {
       const el = containerRef.current;
@@ -160,26 +160,49 @@ const MushafPage: React.FC<Props> = ({
       const parentStyle = window.getComputedStyle(parent);
       const padT = parseFloat(parentStyle.paddingTop) || 0;
       const padB = parseFloat(parentStyle.paddingBottom) || 0;
+      const padL = parseFloat(parentStyle.paddingLeft) || 0;
+      const padR = parseFloat(parentStyle.paddingRight) || 0;
       const availH = parent.clientHeight - padT - padB;
-      if (availH <= 0) return;
+      const availW = parent.clientWidth - padL - padR;
+      if (availH <= 0 || availW <= 0) return;
 
       const lineCount = Math.max(1, groupByLine(verses).length);
       const chromeLines =
         (showBismillah ? BISMILLAH_LINES : 0) +
         (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0);
 
-      // Total height in "em units" =
-      //   chromeLines * LINE_HEIGHT_RATIO
-      // + lineCount * LINE_HEIGHT_RATIO
-      // + (lineCount - 1) * LINE_GAP_RATIO
+      // Height-derived font: (chrome + lines) × line-height + gaps.
       const emPerPx =
         (chromeLines + lineCount) * LINE_HEIGHT_RATIO +
         Math.max(0, lineCount - 1) * LINE_GAP_RATIO;
+      const heightFit = Math.floor((availH * 0.99) / emPerPx);
 
-      // 0.96 leaves ~4% safety margin so sub-pixel rounding never clips.
-      const targetPx = Math.floor((availH * 0.96) / emPerPx);
-      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, targetPx));
-      setFittedFontPx(clamped);
+      // Width-derived font: sum each word/ornament's natural width per line
+      // (justify-content: space-between makes the flex row's own width equal
+      // to the container, so we can't read it directly — we sum children).
+      // Then pick the widest line and scale so it just fills availW. Without
+      // this, height-fit leaves wide containers under-filled and the
+      // space-between justification opens big gaps between words.
+      const lineNodes = el.querySelectorAll<HTMLElement>(".mushaf-line");
+      let widthFit = FONT_MAX;
+      if (lineNodes.length > 0 && fittedFontPx) {
+        let maxNatural = 0;
+        for (const ln of lineNodes) {
+          let sum = 0;
+          for (const child of Array.from(ln.children) as HTMLElement[]) {
+            sum += child.getBoundingClientRect().width;
+          }
+          if (sum > maxNatural) maxNatural = sum;
+        }
+        if (maxNatural > 0) {
+          // 0.97 leaves a hair of breathing room so words don't touch.
+          widthFit = Math.floor((availW * 0.97 * fittedFontPx) / maxNatural);
+        }
+      }
+
+      const target = Math.min(heightFit, widthFit);
+      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, target));
+      if (clamped !== fittedFontPx) setFittedFontPx(clamped);
     };
 
     computeFit();
@@ -190,7 +213,7 @@ const MushafPage: React.FC<Props> = ({
       ro.disconnect();
       window.removeEventListener("orientationchange", computeFit);
     };
-  }, [fontReady, verses, showBismillah]);
+  }, [fontReady, verses, showBismillah, fittedFontPx]);
 
   if (!fontReady) {
     return (
