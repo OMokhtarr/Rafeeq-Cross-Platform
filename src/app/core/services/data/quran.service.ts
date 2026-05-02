@@ -34,7 +34,7 @@ function mapApiWord(w: any): VerseWord {
   return {
     position: w.position,
     charType: w.char_type_name === "word" ? "word" : "end",
-    textUthmani: w.text_uthmani ?? w.text ?? "",
+    text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV1: w.code_v1 ?? w.codeV1 ?? "",
     lineNumber: w.line_number ?? w.lineNumber ?? 0,
     pageNumber: w.page_number ?? w.pageNumber ?? 0,
@@ -114,6 +114,24 @@ export async function prefetchPage(page: number): Promise<void> {
 }
 
 export async function getAllVerses(): Promise<Verse[]> {
+  // Check if the cached data is incomplete (first verse of page 1 has empty text)
+  let needsRepair = false;
+  try {
+    const firstPage = await getPage(1);
+    if (firstPage.length > 0 && !firstPage[0].text) {
+      needsRepair = true;
+    }
+  } catch {
+    needsRepair = true;
+  }
+
+  if (needsRepair) {
+    console.warn(
+      "[Quran] Detected incomplete verse data. Running cache repair...",
+    );
+    await repairPagesCache();
+  }
+
   const result: Verse[] = [];
   for (let p = 1; p <= TOTAL_PAGES; p++) {
     result.push(...(await getPage(p)));
@@ -165,6 +183,30 @@ export async function getPageRangeVerses(
     out.push(...(await getPage(p)));
   }
   return out;
+}
+
+export async function repairPagesCache(): Promise<void> {
+  console.log(
+    "[Quran] Repairing pages cache - refetching all pages with full word data...",
+  );
+  // Clear existing pages store to ensure we fetch fresh data
+  await idb.clear("pages");
+  const wordFields = MUSHAFS[DEFAULT_MUSHAF].wordFields;
+  for (let page = 1; page <= TOTAL_PAGES; page++) {
+    const apiVerses = (await fetchVersesByPage(page, wordFields)) as any[];
+    if (!apiVerses || apiVerses.length === 0) {
+      console.warn(`[Quran] No verses returned for page ${page}`);
+      continue;
+    }
+    const verses = apiVerses.map(mapApiVerseToVerse);
+    await idb.put("pages", { page, verses });
+    if (page % 50 === 0) {
+      console.log(`[Quran] Repaired page ${page}/${TOTAL_PAGES}`);
+    }
+  }
+  // Also clear the in‑memory cache so subsequent reads pick up the new data
+  pageCache.clear();
+  console.log("[Quran] Cache repair complete");
 }
 
 // ─── Background page preload ─────────────────────────────────────────────────

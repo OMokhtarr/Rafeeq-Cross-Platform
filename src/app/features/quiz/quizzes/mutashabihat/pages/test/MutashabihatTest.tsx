@@ -92,7 +92,11 @@ const MutashabihatTest: React.FC = () => {
         // Build full verse map by walking pages 1..604 via the API/IDB path.
         // First run downloads all pages (slow); subsequent runs hit IDB.
         const allVerses = await getAllVerses();
+        // console.log("Total verses loaded:", allVerses.length);
+
         const allGroups = getAllMutashabihatGroups(allVerses);
+        // console.log("Initial groups count:", allGroups.length);
+
         let filtered =
           config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
@@ -100,6 +104,11 @@ const MutashabihatTest: React.FC = () => {
               ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
               : filterGroupsByJuzs(allGroups, config.selectedJuzs);
 
+        // console.log("Filtered groups count:", filtered.length);
+        if (filtered.length === 0) {
+          console.log("Groups before filter:", allGroups.length);
+          console.log("Config:", config);
+        }
         if (filtered.length === 0) {
           setError(tt.errorNoMutashabihat);
           setLoading(false);
@@ -195,8 +204,8 @@ const MutashabihatTest: React.FC = () => {
           <div className="mst-loading">
             <div className="mst-spinner"></div>
             <p>{tt.loadingMutashabihat}</p>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -212,8 +221,8 @@ const MutashabihatTest: React.FC = () => {
                 {tt.backToSetup}
               </button>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -245,8 +254,8 @@ const MutashabihatTest: React.FC = () => {
                 </button>
               </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -280,31 +289,6 @@ const MutashabihatTest: React.FC = () => {
       <IonContent fullscreen>
         <div className="mst-test-page-wrapper">
           <div className={`mst-container ${showContext ? "with-sidebar" : ""}`}>
-            {/* Context Viewer — no toolbar here, chips are in info-strip */}
-            {showContext && (
-              <div className="mst-sidebar-wrapper">
-                <div className="mst-page-viewer">
-                  <MushafContextViewer
-                    verse={{
-                      sura: activeViewerVerse.sura,
-                      aya: activeViewerVerse.aya,
-                      text: activeViewerVerse.text ?? "",
-                      page: activeViewerVerse.page,
-                      suraName: activeViewerVerse.suraName,
-                      suraNameAr: activeViewerVerse.suraNameAr,
-                    }}
-                    snippet={q?.displayedPortion}
-                    hiddenPortion={q?.hiddenPortion}
-                    hintLevel={hintLevel}
-                    showAnswer={answered}
-                    isOpen={showContext}
-                    onClose={() => setShowContext(false)}
-                    mode="sidebar"
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Main quiz panel */}
             <div className="mst-main">
               {/* Header */}
@@ -391,47 +375,46 @@ const MutashabihatTest: React.FC = () => {
 
                 {/* Card body: [actions column (left)] + [main content (right)] */}
                 <div className="mst-card-body">
-                  {/* Left column: action buttons */}
-                  <div className="mst-actions">
-                    <button
-                      className="mst-btn mst-hint"
-                      onClick={handleHint}
-                      disabled={hintLevel >= maxHints || answered}
-                    >
-                      {tt.hint}
-                      {hintLevel > 0 && (
-                        <span className="mst-btn-en">
-                          ({hintLevel}/{maxHints})
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      className={`mst-btn mst-context ${showContext ? "active" : ""}`}
-                      onClick={() => setShowContext((v) => !v)}
-                    >
-                      {showContext ? tt.hide : tt.context}
-                    </button>
-
-                    <button
-                      className="mst-btn mst-submit"
-                      onClick={handleSubmit}
-                      disabled={!userAnswer.trim() || answered}
-                    >
-                      {tt.submit}
-                    </button>
-
-                    <button
-                      className="mst-btn mst-skip"
-                      onClick={handleSkip}
-                      disabled={answered}
-                    >
-                      {tt.skip}
-                    </button>
-                  </div>
-
-                  {/* Right: verse + input + result + next */}
+                  {/* Single column with all content */}
                   <div className="mst-card-main">
+                    {/* Action buttons - horizontal row */}
+                    <div className="mst-actions">
+                      <button
+                        className="mst-btn mst-hint"
+                        onClick={handleHint}
+                        disabled={hintLevel >= maxHints || answered}
+                      >
+                        {tt.hint}
+                        {hintLevel > 0 && (
+                          <span className="mst-btn-en">
+                            ({hintLevel}/{maxHints})
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        className={`mst-btn mst-context ${showContext ? "active" : ""}`}
+                        onClick={() => setShowContext((v) => !v)}
+                      >
+                        {showContext ? tt.hide : tt.context}
+                      </button>
+
+                      <button
+                        className="mst-btn mst-submit"
+                        onClick={handleSubmit}
+                        disabled={!userAnswer.trim() || answered}
+                      >
+                        {tt.submit}
+                      </button>
+
+                      <button
+                        className="mst-btn mst-skip"
+                        onClick={handleSkip}
+                        disabled={answered}
+                      >
+                        {tt.skip}
+                      </button>
+                    </div>
                     <div className="mst-verse-box">
                       <p className="mst-verse-shared" lang="ar" dir="rtl">
                         {q.displayedPortion}
@@ -442,7 +425,6 @@ const MutashabihatTest: React.FC = () => {
                           {getHintText()}
                         </span>
                       )}
-                      <p className="mst-prompt">{tt.promptComplete}</p>
                     </div>
 
                     <div className="mst-answer-row">
@@ -483,14 +465,10 @@ const MutashabihatTest: React.FC = () => {
                         className={`mst-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
                       >
                         <span className="mst-result-icon">
-                          {correct ? "✅" : skipped ? "⏭" : "❌"}
+                          {correct ? "✅" : skipped ? "" : "❌"}
                         </span>
                         <span className="mst-result-text">
-                          {correct
-                            ? tt.correctMsg
-                            : skipped
-                              ? tt.skippedMsg
-                              : tt.wrongMsg}
+                          {correct ? tt.correctMsg : skipped ? "" : tt.wrongMsg}
                         </span>
                         {!correct && (
                           <div className="mst-correct-answer">
@@ -519,6 +497,29 @@ const MutashabihatTest: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Context Viewer (appears below the card when toggled) */}
+              {showContext && (
+                <div className="aa-context-viewer">
+                  <MushafContextViewer
+                    verse={{
+                      sura: q.sura,
+                      aya: q.aya,
+                      text: q.fullText,
+                      page: q.page,
+                      suraName: q.suraName,
+                      suraNameAr: q.suraNameAr,
+                    }}
+                    snippet={q.versePart ?? q.displayedPortion}
+                    hiddenPortion={q.hiddenPortion}
+                    hintLevel={hintLevel}
+                    showAnswer={answered}
+                    isOpen={showContext}
+                    onClose={() => setShowContext(false)}
+                    mode="sidebar"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <BottomNavBar active="quiz" />

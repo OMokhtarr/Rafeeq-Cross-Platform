@@ -26,6 +26,7 @@ import {
   getChapters,
   estimatePageForVerse,
   getSurahStartPage,
+  getSurahNameEnglish,
 } from "../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
@@ -210,7 +211,7 @@ const PageViewer: React.FC = () => {
     const suraIndex = getSuraForPage(currentPage) ?? 1;
     return {
       sura: suraIndex,
-      suraName: getSurahNameArabic(suraIndex),
+      suraName: getSurahNameEnglish(suraIndex),
       suraNameAr: getSurahNameArabic(suraIndex),
       juz: Math.ceil(currentPage / 20),
       hizb: Math.ceil(currentPage / 4),
@@ -472,7 +473,7 @@ const PageViewer: React.FC = () => {
                 <span className="surah-name-arabic">
                   {pageInfo?.suraNameAr}
                 </span>
-                <span className="surah-name-latin">{pageInfo?.suraName}</span>
+                <span className="surah-name-latin">{pageInfo?.sura}</span>
               </div>
               <div className="page-metadata">
                 <span className="metadata-item">
@@ -535,13 +536,6 @@ const PageViewer: React.FC = () => {
                       : undefined
                   }
                 />
-
-                <div className="page-footer">
-                  {t.mushaf.hizb}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(Math.ceil(currentPage / 4))
-                    : Math.ceil(currentPage / 4)}
-                </div>
               </div>
             )}
           </div>

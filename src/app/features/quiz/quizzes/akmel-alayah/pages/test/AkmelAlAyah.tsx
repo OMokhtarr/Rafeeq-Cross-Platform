@@ -306,31 +306,6 @@ const AkmelAlAyah: React.FC = () => {
       <IonContent fullscreen>
         <div className="aa-test-page-wrapper">
           <div className={`aa-container ${showContext ? "with-sidebar" : ""}`}>
-            {/* Context Sidebar */}
-            {showContext && (
-              <div className="aa-sidebar-wrapper">
-                <div className="aa-page-viewer">
-                  <MushafContextViewer
-                    verse={{
-                      sura: q.sura,
-                      aya: q.aya,
-                      text: q.fullText,
-                      page: q.page,
-                      suraName: q.suraName,
-                      suraNameAr: q.suraNameAr,
-                    }}
-                    snippet={q.versePart ?? q.displayedPortion}
-                    hiddenPortion={q.hiddenPortion}
-                    hintLevel={hintLevel}
-                    showAnswer={answered}
-                    isOpen={showContext}
-                    onClose={() => setShowContext(false)}
-                    mode="sidebar"
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Main quiz panel */}
             <div className="aa-main">
               {/* Header */}
@@ -376,47 +351,48 @@ const AkmelAlAyah: React.FC = () => {
 
                 {/* Card body: [actions column left] + [main content right] */}
                 <div className="aa-card-body">
-                  {/* Left column: action buttons */}
-                  <div className="aa-actions">
-                    <button
-                      className="aa-btn aa-hint"
-                      onClick={handleHint}
-                      disabled={hintLevel >= maxHints || answered}
-                    >
-                      {tt.hint}
-                      {hintLevel > 0 && (
-                        <span className="aa-btn-en">
-                          ({hintLevel}/{maxHints})
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      className={`aa-btn aa-context ${showContext ? "active" : ""}`}
-                      onClick={() => setShowContext((v) => !v)}
-                    >
-                      {showContext ? tt.hide : tt.context}
-                    </button>
-
-                    <button
-                      className="aa-btn aa-submit"
-                      onClick={handleSubmit}
-                      disabled={!userAnswer.trim() || answered}
-                    >
-                      {tt.submit}
-                    </button>
-
-                    <button
-                      className="aa-btn aa-skip"
-                      onClick={handleSkip}
-                      disabled={answered}
-                    >
-                      {tt.skip}
-                    </button>
-                  </div>
-
-                  {/* Right: verse + input + result + next */}
+                  {/* Single column with all content */}
                   <div className="aa-card-main">
+                    {/* Action buttons - horizontal row */}
+                    <div className="aa-actions">
+                      <button
+                        className="aa-btn aa-hint"
+                        onClick={handleHint}
+                        disabled={hintLevel >= maxHints || answered}
+                      >
+                        {tt.hint}
+                        {hintLevel > 0 && (
+                          <span className="aa-btn-en">
+                            ({hintLevel}/{maxHints})
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        className={`aa-btn aa-context ${showContext ? "active" : ""}`}
+                        onClick={() => setShowContext((v) => !v)}
+                      >
+                        {showContext ? tt.hide : tt.context}
+                      </button>
+
+                      <button
+                        className="aa-btn aa-submit"
+                        onClick={handleSubmit}
+                        disabled={!userAnswer.trim() || answered}
+                      >
+                        {tt.submit}
+                      </button>
+
+                      <button
+                        className="aa-btn aa-skip"
+                        onClick={handleSkip}
+                        disabled={answered}
+                      >
+                        {tt.skip}
+                      </button>
+                    </div>
+
+                    {/* Verse box */}
                     <div className="aa-verse-box">
                       <p className="aa-verse-shared" lang="ar" dir="rtl">
                         {q.versePart ?? q.displayedPortion}
@@ -427,9 +403,9 @@ const AkmelAlAyah: React.FC = () => {
                           {getHintText()}
                         </span>
                       )}
-                      <p className="aa-prompt">{tt.promptComplete}</p>
                     </div>
 
+                    {/* Answer input */}
                     <div className="aa-answer-row">
                       <input
                         ref={inputRef}
@@ -441,16 +417,11 @@ const AkmelAlAyah: React.FC = () => {
                         autoCorrect="off"
                         spellCheck={false}
                         value={userAnswer}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          setUserAnswer(e.target.value)
-                        }
-                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        onKeyDown={(e) =>
                           e.key === "Enter" && !answered && handleSubmit()
                         }
                         onFocus={(e) => {
-                          // When the soft keyboard opens, scroll the input into
-                          // view so the submit button (rendered just below)
-                          // stays above the keyboard on short phones.
                           const el = e.currentTarget;
                           setTimeout(
                             () =>
@@ -473,14 +444,10 @@ const AkmelAlAyah: React.FC = () => {
                         className={`aa-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
                       >
                         <span className="aa-result-icon">
-                          {correct ? "✅" : skipped ? "⏭" : "❌"}
+                          {correct ? "✅" : skipped ? "" : "❌"}
                         </span>
                         <span className="aa-result-text">
-                          {correct
-                            ? tt.correctMsg
-                            : skipped
-                              ? tt.skippedMsg
-                              : tt.wrongMsg}
+                          {correct ? tt.correctMsg : skipped ? "" : tt.wrongMsg}
                         </span>
                         {!correct && (
                           <div className="aa-correct-answer">
@@ -499,6 +466,7 @@ const AkmelAlAyah: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Next button */}
                     {answered && (
                       <button className="aa-next-btn" onClick={handleNext}>
                         {idx + 1 < questions.length
@@ -509,6 +477,29 @@ const AkmelAlAyah: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Context Viewer (appears below the card when toggled) */}
+              {showContext && (
+                <div className="aa-context-viewer">
+                  <MushafContextViewer
+                    verse={{
+                      sura: q.sura,
+                      aya: q.aya,
+                      text: q.fullText,
+                      page: q.page,
+                      suraName: q.suraName,
+                      suraNameAr: q.suraNameAr,
+                    }}
+                    snippet={q.versePart ?? q.displayedPortion}
+                    hiddenPortion={q.hiddenPortion}
+                    hintLevel={hintLevel}
+                    showAnswer={answered}
+                    isOpen={showContext}
+                    onClose={() => setShowContext(false)}
+                    mode="sidebar"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <BottomNavBar active="quiz" />

@@ -347,7 +347,7 @@ const ar: AppStrings = {
   quizTest: {
     questionOf: "سؤال",
     score: "النتيجة",
-    exit: "✕ خروج",
+    exit: "✕",
     confirmExit: "هل تريد الخروج من الاختبار؟",
     hint: "💡 تلميح",
     context: "📖 سياق",
@@ -355,7 +355,7 @@ const ar: AppStrings = {
     submit: "➤ إرسال",
     skip: "⏭ تخطي",
     promptComplete: "✽ أكمل الآية ✽",
-    inputPlaceholder: "اكتب إكمال الآية هنا…",
+    inputPlaceholder: "أكمل الآية هنا…",
     correctMsg: "أحسنت! إجابة صحيحة",
     skippedMsg: "تم التخطي",
     wrongMsg: "إجابة خاطئة",
@@ -625,7 +625,7 @@ const en: AppStrings = {
   quizTest: {
     questionOf: "Question",
     score: "Score",
-    exit: "✕ Exit",
+    exit: "✕",
     confirmExit: "Exit the quiz?",
     hint: "💡 Hint",
     context: "📖 Context",

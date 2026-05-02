@@ -29,18 +29,14 @@ export interface Verse {
 }
 
 export interface VerseWord {
-  /** 1-based position within the verse, including the end-of-ayah marker. */
   position: number;
-  /** "word" for actual words, "end" for the ayah-number ornament. */
   charType: "word" | "end";
-  /** Plain Uthmani Unicode for this word (also available as the ornament). */
-  textUthmani: string;
-  /** QPC V1 glyph code — pair with font p{NNN}.ttf for true Madani layout. */
+  text_uthmani: string;
   codeV1: string;
-  /** Mushaf line number 1–15 on the page this word lives on. */
   lineNumber: number;
-  /** Mushaf page number 1–604. */
   pageNumber: number;
+  translation?: string; // optional
+  transliteration?: string; // optional
 }
 
 // ─── Quiz question shapes ─────────────────────────────────────────────────────
