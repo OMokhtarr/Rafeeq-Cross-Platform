@@ -9,7 +9,7 @@
   gap: 0.25em;
   box-sizing: border-box;
   font-size: clamp(20px, 4.6vw, 34px);
-  line-height: 1.7;
+  line-height: 1.4;
   color: var(--color-mushaf-text, #1a1a1a);
   overflow: hidden;
   transition: color var(--transition-theme, 0.25s ease);
