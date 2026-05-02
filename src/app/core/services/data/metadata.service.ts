@@ -738,12 +738,26 @@ export function getPageStart(page: number): PageStart | null {
 }
 
 export function estimatePageForVerse(sura: number, aya: number): number {
-  const ch = chaptersCache?.find((c: any) => c.id === sura);
-  if (!ch) return 1;
-  const start = ch.pages?.[0] ?? 1;
-  const end = ch.pages?.[1] ?? start;
-  const totalPages = end - start + 1;
-  if (totalPages <= 1) return start;
-  const ratio = (aya - 1) / Math.max(ch.verses_count - 1, 1);
-  return Math.min(end, start + Math.floor(ratio * totalPages));
+  // PAGE_STARTS[0] is dummy, indices 1..604
+  let lo = 1,
+    hi = 604,
+    answer = 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const start = PAGE_STARTS[mid];
+    if (verseLessThanOrEqual(start, { sura, aya })) {
+      answer = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return answer;
+}
+
+function verseLessThanOrEqual(
+  v1: { sura: number; aya: number },
+  v2: { sura: number; aya: number },
+): boolean {
+  return v1.sura < v2.sura || (v1.sura === v2.sura && v1.aya <= v2.aya);
 }

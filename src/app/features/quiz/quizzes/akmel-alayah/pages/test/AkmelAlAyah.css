@@ -9,7 +9,7 @@ ion-content::part(scroll) {
 }
 
 /* ═══════════════════════════════════════════════
-   AKMEL AL-AYAH TEST  –  matches QuizTest visual style
+   AKMEL AL-AYAH TEST  –  theme‑aware (day/night)
    ═══════════════════════════════════════════════ */
 
 .aa-test-page-wrapper {
@@ -20,150 +20,41 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
 }
 
-/* Then adjust .aa-container so it takes all remaining space */
+/* Container: strict column — no scroll; content must fit within viewport */
 .aa-container {
   display: flex;
+  flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
   flex: 1;
   min-height: 0;
-  padding: 10px 10px 10px; /* small uniform padding, no extra bottom */
+  padding: 10px;
   box-sizing: border-box;
+  gap: 8px;
+  overflow: hidden; /* never scroll — context viewer takes remaining space */
 }
 
-.aa-container.with-sidebar {
-  gap: 4px;
-}
-
-/* ── Sidebar (viewer) — top 75% ─────────────── */
-.aa-sidebar-wrapper {
-  width: 100%;
-  box-sizing: border-box;
-  flex: 2;
-  order: 2;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-  min-height: 0;
-}
-
-/* Sibling navigator inside sidebar */
-.aa-sibling-nav {
-  background: var(--color-gold-faint);
-  border-bottom: 2px solid var(--color-gold);
-  padding: 10px 12px;
-  flex-shrink: 0;
-}
-
-.aa-sibling-title {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.95rem;
-  font-weight: bold;
-  color: var(--color-text-primary);
-  margin: 0 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  direction: rtl;
-}
-
-.aa-sibling-count {
-  background: var(--color-quiz);
-  color: white;
-  border-radius: 20px;
-  padding: 1px 8px;
-  font-size: 0.75rem;
-}
-
-.aa-sibling-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 8px;
-}
-
-.aa-sibling-tab {
-  padding: 4px 10px;
-  border: 2px solid var(--color-gold);
-  border-radius: 20px;
-  background: white;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  direction: rtl;
-}
-.aa-sibling-tab.active {
-  background: var(--color-text-primary);
-  color: white;
-  border-color: var(--color-gold);
-}
-
-.aa-sibling-verse {
-  background: white;
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-gold);
-}
-.aa-sibling-verse-text {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1rem;
-  direction: rtl;
-  color: var(--color-text-primary);
-  line-height: 1.8;
-  margin: 0 0 4px;
-}
-.aa-sibling-meta {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  font-family: "Traditional Arabic", "Amiri", serif;
-  direction: rtl;
-  margin: 0;
-}
-
-.aa-page-viewer {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* ── Main quiz panel — bottom 25% ──────────── */
+/* Main quiz panel — fills container, context viewer gets leftover height */
 .aa-main {
-  width: 100%;
-  box-sizing: border-box;
-  flex: 1;
-  order: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  flex: 1;
   min-height: 0;
-  min-width: 0;
+  gap: 8px;
+  overflow: hidden;
 }
 
-/* When the context viewer is open, guarantee the main panel keeps enough
-   vertical space for the header + 4 stacked action buttons + input.
-   Otherwise the actions column (Hint/Context/Submit/Skip) gets clipped
-   by the card's overflow:hidden. */
-.aa-container.with-sidebar .aa-main {
-  flex: 0 0 auto;
-  min-height: 320px;
-}
-.aa-container.with-sidebar .aa-sidebar-wrapper {
-  flex: 1 1 auto;
-}
-
-/* ── Header ─────────────────────────────────── */
+/* Header */
 .aa-header {
   width: 100%;
-  box-sizing: border-box;
   background: var(--color-bg-card);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 4px 10px;
   margin-bottom: 4px;
   display: flex;
@@ -182,13 +73,13 @@ ion-content::part(scroll) {
   display: block;
   margin-bottom: 3px;
   color: var(--color-text-primary);
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.9rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
 }
 .aa-bar {
   height: 5px;
   background: var(--color-progress-track);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .aa-bar-fill {
@@ -200,8 +91,8 @@ ion-content::part(scroll) {
 .aa-score-pill {
   flex: 1;
   text-align: center;
-  font-size: 1.1rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: var(--text-lg);
+  font-family: var(--font-arabic);
   font-weight: bold;
   color: var(--color-text-primary);
 }
@@ -211,9 +102,9 @@ ion-content::part(scroll) {
   border: 2px solid #e74c3c;
   color: #e74c3c;
   padding: 10px 16px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   transition: all 0.25s;
   white-space: nowrap;
   min-height: 44px;
@@ -223,56 +114,36 @@ ion-content::part(scroll) {
   color: white;
 }
 
-/* ── Card ───────────────────────────────────── */
+/* Card shrinks to its content — never grows into context viewer's space */
 .aa-card {
+  flex: 0 0 auto;
   width: 100%;
-  box-sizing: border-box;
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 5px 10px;
   border: 2px solid var(--color-gold);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  height: auto;
 }
 
-/* Card body: buttons column left, content right */
 .aa-card-body {
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  align-items: stretch;
-  direction: ltr; /* keep actions on physical left regardless of RTL context */
+  display: block;
+  width: 100%;
 }
 
-/* restore RTL inside the main content area */
 .aa-card-main {
+  width: 100%;
   direction: rtl;
 }
 
-/* Right: verse + input + result — scrollable */
-.aa-card-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
-}
 .aa-card-main::-webkit-scrollbar {
   display: none;
 }
 
-/* ── Info strip ─────────────────────────────── */
+/* Info strip */
 .aa-info-strip {
   display: flex;
   flex-direction: row;
@@ -281,50 +152,57 @@ ion-content::part(scroll) {
   gap: 4px;
   padding: 4px 8px;
   background: linear-gradient(to bottom, #e8dccc, #dac09a);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   margin-bottom: 3px;
   direction: rtl;
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
+[data-theme="night"] .aa-info-strip {
+  background: rgba(212, 180, 140, 0.15);
+}
 .aa-info-strip::-webkit-scrollbar {
   display: none;
 }
 
 .aa-surah-badge {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.88rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   font-weight: bold;
   color: var(--color-text-primary);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .aa-meta {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.75rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-quiz);
   background: rgba(255, 255, 255, 0.3);
   padding: 1px 7px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
   flex-shrink: 0;
 }
+[data-theme="night"] .aa-meta {
+  background: rgba(0, 0, 0, 0.2);
+}
 .aa-similar-badge {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.8rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   background: var(--color-quiz);
   color: var(--color-gold-faint);
-  padding: 2px 10px;
-  border-radius: 20px;
-  margin-right: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-/* ── Verse box ──────────────────────────────── */
+/* Verse box */
 .aa-verse-box {
   background: var(--color-gold-faint);
   border: 2px solid var(--color-gold);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 5px 8px;
   text-align: center;
   margin-bottom: 2px;
@@ -332,7 +210,7 @@ ion-content::part(scroll) {
 }
 
 .aa-verse-shared {
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   line-height: 1.7;
   color: var(--color-text-primary);
@@ -341,7 +219,7 @@ ion-content::part(scroll) {
 }
 
 .aa-hint-inline {
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   color: #b8860b;
   font-weight: 600;
@@ -350,34 +228,14 @@ ion-content::part(scroll) {
 
 .aa-prompt {
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-style: italic;
   border-top: 1px dotted var(--color-gold);
   padding-top: 3px;
   margin: 3px 0 0;
 }
 
-/* ── Siblings teaser ────────────────────────── */
-.aa-siblings-teaser {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: #fff3cd;
-  border: 2px solid #f39c12;
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.9rem;
-  color: #856404;
-  direction: rtl;
-}
-.aa-tease-icon {
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-/* ── Input ──────────────────────────────────── */
+/* Input */
 .aa-answer-row {
   margin-bottom: 2px;
   flex-shrink: 0;
@@ -385,58 +243,57 @@ ion-content::part(scroll) {
 
 .aa-input {
   width: 100%;
-  padding: 12px 12px;
-  font-size: 0.95rem;
+  padding: 12px;
+  font-size: var(--text-md);
   border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  border-radius: var(--radius-md);
+  font-family: var(--font-arabic);
   direction: rtl;
   transition: all 0.3s;
-  background: white;
+  background: var(--color-bg-card);
   box-sizing: border-box;
   min-height: 44px;
+  color: var(--color-text-primary);
 }
 .aa-input:focus {
   border-color: var(--color-text-primary);
   outline: none;
-  box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.1);
+  box-shadow: 0 0 0 4px var(--color-gold-faint);
 }
 .aa-input.answered {
-  background: #f5f0e8;
-  color: #888;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-muted);
   cursor: default;
 }
 
-/* ── Action buttons ─────────────────────────── */
+/* Action buttons - horizontal row */
 .aa-actions {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  width: 58px;
-  justify-content: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 8px;
 }
 
 .aa-btn {
   flex: 0 0 auto;
-  padding: 10px 2px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  border-radius: 30px;
+  font-size: var(--text-sm);
+  font-family: var(--font-arabic);
   cursor: pointer;
   transition: all 0.25s;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  min-width: 0;
-  width: 100%;
-  min-height: 44px;
+  gap: 4px;
+  min-width: 70px;
+  min-height: 40px;
 }
 .aa-btn-en {
-  font-size: 0.67rem;
+  font-size: 0.65rem;
   opacity: 0.8;
 }
 .aa-btn:disabled {
@@ -472,11 +329,11 @@ ion-content::part(scroll) {
     var(--color-text-primary),
     var(--color-text-primary)
   );
-  color: white;
+  color: var(--color-text-on-dark);
 }
 .aa-submit:hover:not(:disabled) {
   transform: scale(1.02);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .aa-skip {
@@ -488,9 +345,9 @@ ion-content::part(scroll) {
   transform: scale(1.02);
 }
 
-/* ── Result box ─────────────────────────────── */
+/* Result box */
 .aa-result {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 6px 10px;
   margin-bottom: 4px;
   display: flex;
@@ -512,13 +369,25 @@ ion-content::part(scroll) {
   background: #e8f4fd;
   border: 2px solid #95a5a6;
 }
+[data-theme="night"] .aa-result.correct {
+  background: rgba(76, 175, 125, 0.15);
+  color: #6cd699;
+}
+[data-theme="night"] .aa-result.wrong {
+  background: rgba(231, 76, 60, 0.15);
+  color: #f37b6f;
+}
+[data-theme="night"] .aa-result.skipped {
+  background: rgba(241, 196, 15, 0.12);
+  color: #f0d068;
+}
 
 .aa-result-icon {
   font-size: 1rem;
 }
 .aa-result-text {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.82rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-text-primary);
   direction: rtl;
@@ -530,34 +399,34 @@ ion-content::part(scroll) {
   margin-top: 4px;
 }
 .aa-correct-label {
-  font-size: 0.72rem;
-  color: #666;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
 }
 .aa-correct-text {
-  font-size: 0.82rem;
+  font-size: var(--text-md);
   color: var(--color-text-primary);
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-weight: bold;
   direction: rtl;
 }
 
-/* Sibling reveal section after answering */
+/* Siblings reveal */
 .aa-siblings-reveal {
   width: 100%;
   margin-top: 10px;
   direction: rtl;
 }
 .aa-siblings-reveal-title {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.85rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
   font-weight: bold;
   margin: 0 0 6px;
 }
 .aa-sibling-item {
-  background: white;
-  border-radius: 8px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
   margin-bottom: 6px;
   border: 1px solid var(--color-gold);
@@ -569,35 +438,35 @@ ion-content::part(scroll) {
   margin-bottom: 4px;
 }
 .aa-sibling-surah {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.85rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-quiz);
 }
 .aa-sibling-ref {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.8rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 .aa-sibling-text {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   color: var(--color-text-primary);
   line-height: 1.7;
   margin: 0;
   direction: rtl;
 }
 
-/* ── Next button ────────────────────────────── */
+/* Next button */
 .aa-next-btn {
   width: 100%;
   padding: 12px;
   background: #27ae60;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
@@ -613,7 +482,28 @@ ion-content::part(scroll) {
   transform: scale(1.02);
 }
 
-/* ── Loading / Error / Complete ─────────────── */
+/* Context viewer fills ALL remaining height after the card */
+.aa-context-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gold);
+  overflow: hidden;
+}
+
+/* Ensure internal viewer fills the container completely */
+.aa-context-viewer > div,
+.aa-context-viewer .mcv-container {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Loading / Error / Complete */
 .aa-loading,
 .aa-error,
 .aa-complete {
@@ -622,16 +512,11 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary) 0%,
-    var(--color-text-primary) 100%
-  );
-  color: white;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
 }
-
 .aa-spinner {
-  border: 5px solid rgba(255, 255, 255, 0.3);
+  border: 5px solid var(--color-progress-track);
   border-top: 5px solid var(--color-gold);
   border-radius: 50%;
   width: 50px;
@@ -644,10 +529,9 @@ ion-content::part(scroll) {
     transform: rotate(360deg);
   }
 }
-
 .aa-error-box {
   background: var(--color-bg-card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 30px;
   text-align: center;
   max-width: 400px;
@@ -657,7 +541,7 @@ ion-content::part(scroll) {
 }
 .aa-error-box p {
   margin: 0 0 16px;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic);
 }
 .aa-error-box button {
   padding: 10px 24px;
@@ -666,17 +550,15 @@ ion-content::part(scroll) {
     var(--color-text-primary),
     var(--color-text-primary)
   );
-  color: white;
+  color: var(--color-text-on-dark);
   border: none;
-  border-radius: 30px;
-  font-size: 1rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-md);
   cursor: pointer;
 }
-
-/* Complete screen */
 .aa-complete-card {
   background: var(--color-bg-card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 30px 35px;
   text-align: center;
   max-width: 380px;
@@ -688,17 +570,16 @@ ion-content::part(scroll) {
   margin-bottom: 8px;
 }
 .aa-complete-card h2 {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1.7rem;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-3xl);
   margin: 0 0 4px;
 }
 .aa-complete-sub {
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   margin: 0 0 18px;
   font-style: italic;
 }
-
 .aa-score-ring {
   display: flex;
   align-items: baseline;
@@ -724,7 +605,6 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
   margin: 0 0 20px;
 }
-
 .aa-complete-actions {
   display: flex;
   gap: 10px;
@@ -733,9 +613,9 @@ ion-content::part(scroll) {
 .aa-complete-actions button {
   padding: 10px 20px;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
   transition: all 0.25s;
 }
@@ -745,7 +625,7 @@ ion-content::part(scroll) {
     var(--color-text-primary),
     var(--color-text-primary)
   );
-  color: white;
+  color: var(--color-text-on-dark);
 }
 .aa-complete-actions button:last-child {
   background: var(--color-progress-track);
@@ -755,7 +635,6 @@ ion-content::part(scroll) {
   transform: scale(1.05);
 }
 
-/* ── Animations ─────────────────────────────── */
 @keyframes aaSlide {
   from {
     opacity: 0;
@@ -767,15 +646,8 @@ ion-content::part(scroll) {
   }
 }
 
-/* ── Responsive ─────────────────────────────── */
+/* Responsive */
 @media (max-width: 768px) {
-  .aa-sidebar-wrapper {
-    flex: 3;
-  }
-  .aa-main {
-    flex: 1;
-    min-height: 0;
-  }
   .aa-actions {
     flex-direction: column;
   }
@@ -787,30 +659,7 @@ ion-content::part(scroll) {
     flex-wrap: wrap;
     height: auto;
   }
-  .aa-juz-grid {
-    grid-template-columns: repeat(5, 1fr);
+  .aa-context-viewer {
+    min-height: 300px;
   }
-
-  /* Keep the action column visible when context is open on small screens */
-  .aa-container.with-sidebar .aa-main {
-    flex: 0 0 auto;
-    min-height: 320px;
-  }
-  .aa-container.with-sidebar .aa-sidebar-wrapper {
-    flex: 1 1 auto;
-  }
-}
-
-/* Night-mode tweaks: lift result-state colors so they read on a dark surface. */
-[data-theme="night"] .aa-result.correct {
-  background: rgba(76, 175, 125, 0.15);
-  color: #6cd699;
-}
-[data-theme="night"] .aa-result.wrong {
-  background: rgba(231, 76, 60, 0.15);
-  color: #f37b6f;
-}
-[data-theme="night"] .aa-result.skipped {
-  background: rgba(241, 196, 15, 0.12);
-  color: #f0d068;
 }

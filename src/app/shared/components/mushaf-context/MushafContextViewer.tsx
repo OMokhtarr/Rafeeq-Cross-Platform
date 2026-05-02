@@ -29,6 +29,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   mode?: "sidebar";
+  grey?: Set<string>; // verses to grey out
+  hideAfterTarget?: boolean; // auto-hide verses after target
 }
 
 const MushafContextViewer: React.FC<Props> = ({

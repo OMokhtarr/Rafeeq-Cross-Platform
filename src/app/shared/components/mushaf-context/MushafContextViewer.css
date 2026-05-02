@@ -11,6 +11,9 @@
   transition:
     background-color var(--transition-theme, 0.2s),
     color var(--transition-theme, 0.2s);
+  /* Ensure it always participates in flex layout from parent */
+  flex: 1;
+  min-height: 0;
 }
 
 [data-theme="night"] .mcv-container {
@@ -190,10 +193,26 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 4px 8px 6px;
+  /* Horizontal padding matches PageViewer's .mushaf-page (16px 30px).
+     MushafPage's computeFit reads parentElement padding to derive availW —
+     without enough horizontal inset the font comes out too large for the
+     number of words per line, leaving huge space-between gaps. */
+  padding: 8px 16px 8px;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* MushafPage inside the body must also stretch to fill */
+.mcv-body > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* In the compact context viewer, override the page-level space-between so
+   lines stack from the top without forced vertical gaps between them. */
+.mcv-body .mushaf-page-glyph {
+  justify-content: flex-start;
 }
 
 .mcv-loading {

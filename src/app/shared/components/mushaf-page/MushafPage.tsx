@@ -143,9 +143,12 @@ const MushafPage: React.FC<Props> = ({
     const LINE_HEIGHT_RATIO = 1.7; // mirrors .mushaf-page-glyph CSS
     const LINE_GAP_RATIO = 0.25; // mirrors .mushaf-page-glyph `gap: 0.25em`
     const BISMILLAH_LINES = 1.6; // strip is ~1.3em font + 0.4em margin
-    const SURAH_HEADER_LINES = 2.6; // banner with padding ≈ 2.6 line-heights
     const FONT_MIN = 8;
-    const FONT_MAX = 40;
+    // const FONT_MAX = 40;
+    // const SURAH_HEADER_LINES = 2.6; // banner with padding ≈ 2.6 line-heights
+
+    const FONT_MAX = 46; // was 40
+    const SURAH_HEADER_LINES = 2.2; // was 2.6 – a bit tighter
 
     const computeFit = () => {
       const el = containerRef.current;
@@ -295,8 +298,17 @@ const MushafPage: React.FC<Props> = ({
               tw.word.charType === "word" &&
               tw.word.position > partialTarget!.revealedWordCount;
 
-            const base =
-              tw.word.charType === "end" ? "mushaf-ayah-end" : "mushaf-word";
+            const isEndMarker =
+              tw.word.charType === "end" &&
+              tw.word.position ===
+                Math.max(
+                  ...verses
+                    .find((v) => v.sura === tw.sura && v.aya === tw.aya)!
+                    .words.map((w) => w.position),
+                );
+
+            const base = isEndMarker ? "mushaf-ayah-end" : "mushaf-word";
+
             const cls = [
               base,
               isTarget ? `${base}-target` : "",
@@ -305,14 +317,10 @@ const MushafPage: React.FC<Props> = ({
               isGreen ? "mushaf-verse-green" : "",
               isGrey ? "mushaf-verse-grey" : "",
               isWordPastReveal ? "mushaf-verse-hidden" : "",
-              tw.word.charType === "end" ? "mushaf-verse-end-marker" : "",
+              isEndMarker ? "mushaf-verse-end-marker" : "",
             ]
               .filter(Boolean)
               .join(" ");
-
-            // Show the "آية مخفية" badge once per verse — pinned to the
-            // verse-end ornament so it doesn't disturb word-level layout.
-            const showHiddenBadge = isHidden && tw.word.charType === "end";
 
             return (
               <span
@@ -343,16 +351,7 @@ const MushafPage: React.FC<Props> = ({
                     : undefined
                 }
               >
-                {tw.word.codeV1 || tw.word.textUthmani}
-                {showHiddenBadge && (
-                  <span
-                    className="mushaf-hidden-badge"
-                    aria-label="آية مخفية"
-                    title="آية مخفية — انقر للإظهار"
-                  >
-                    ✦
-                  </span>
-                )}
+                {tw.word.codeV1 || tw.word.text_uthmani}
               </span>
             );
           })}

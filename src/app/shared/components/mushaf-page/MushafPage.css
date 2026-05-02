@@ -1,25 +1,18 @@
 .mushaf-page-glyph {
   direction: rtl;
   width: 100%;
-  /* Fill the available page area between the bismillah (if shown) and
-     the page-footer below. Must NOT have a min-height in viewport units
-     — the parent is overflow:hidden, so a vh-based floor would push the
-     hizb footer below the BottomNavBar. min-height:0 lets the flex
-     parent shrink this to whatever space is left. */
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 0.25em;
-  padding: 0 16px;
   box-sizing: border-box;
   font-size: clamp(20px, 4.6vw, 34px);
   line-height: 1.7;
   color: var(--color-mushaf-text, #1a1a1a);
   overflow: hidden;
-  transition:
-    color var(--transition-theme, 0.25s ease);
+  transition: color var(--transition-theme, 0.25s ease);
 }
 
 .mushaf-bismillah {
@@ -53,12 +46,11 @@
   padding: 0.55em 3.4em;
   border: 2px solid var(--color-mushaf-text, #1a1a1a);
   border-radius: 2px;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      transparent 0 6px,
-      rgba(212, 180, 140, 0.18) 6px 7px
-    );
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 6px,
+    rgba(212, 180, 140, 0.18) 6px 7px
+  );
   box-shadow:
     inset 0 0 0 1px var(--color-mushaf-text, #1a1a1a),
     inset 0 0 0 4px transparent,
@@ -228,71 +220,6 @@
   box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55);
 }
 
-/* ── Hidden ─────────────────────────────────────────────────────────────
-   We don't strip the glyphs (that would break Madani justification).
-   Instead, fade them and pin a small placeholder badge on the ayah-end
-   ornament so the user can clearly see *that* a verse is hidden and
-   tap to bring it back.
-   ──────────────────────────────────────────────────────────────────── */
-.mushaf-verse-hidden {
-  color: transparent !important;
-  text-shadow: none !important;
-  background: linear-gradient(
-    to bottom,
-    transparent 45%,
-    rgba(139, 69, 19, 0.35) 45%,
-    rgba(139, 69, 19, 0.35) 55%,
-    transparent 55%
-  );
-  cursor: pointer;
-  user-select: none;
-}
-
-[data-theme="night"] .mushaf-verse-hidden {
-  background: linear-gradient(
-    to bottom,
-    transparent 45%,
-    rgba(212, 180, 140, 0.35) 45%,
-    rgba(212, 180, 140, 0.35) 55%,
-    transparent 55%
-  );
-}
-
-/* The end-of-ayah glyph keeps its silhouette so the verse boundary stays
-   readable; we just fade it. */
-.mushaf-verse-hidden.mushaf-ayah-end {
-  background: none;
-  opacity: 0.35;
-  color: var(--color-mushaf-text, #1a1a1a) !important;
-}
-
-[data-theme="night"] .mushaf-verse-hidden.mushaf-ayah-end {
-  color: var(--color-mushaf-text, #f4ecd8) !important;
-}
-
-/* Small placeholder badge — pinned to the ayah-end ornament once per verse */
-.mushaf-hidden-badge {
-  position: absolute;
-  top: -0.45em;
-  inset-inline-end: -0.55em;
-  font-size: 0.45em;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  background: #8b4513;
-  color: #fff9e6;
-  border-radius: 999px;
-  padding: 0.05em 0.45em;
-  line-height: 1.4;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-  user-select: none;
-}
-
-[data-theme="night"] .mushaf-hidden-badge {
-  background: var(--color-gold, #d4b48c);
-  color: #1a2336;
-}
-
 .mushaf-page-loading {
   display: flex;
   align-items: center;
@@ -315,4 +242,46 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ── Hidden words (preserve layout, hide glyphs) ───────────────────────── */
+.mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mushaf-verse-hidden:not(.mushaf-verse-end-marker)::after {
+  display: none !important;
+}
+
+/* Keep the ayah number ornament fully visible */
+.mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #1a1a1a) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #1a1a1a) !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+[data-theme="night"] .mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+[data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #f4ecd8) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #f4ecd8) !important;
 }
