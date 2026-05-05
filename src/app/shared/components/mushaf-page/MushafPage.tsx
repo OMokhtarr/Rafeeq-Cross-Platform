@@ -56,13 +56,20 @@ interface Props {
    *  before the target verse are de-emphasized). */
   grey?: Set<string>;
   /**
-   * For quiz context: keep only the first `revealedWordCount` *words* of the
-   * named verse visible; later words are hidden. The verse-end ornament
-   * (and ornaments for any later verses) stays visible. As the user presses
-   * the hint button, the caller increments `revealedWordCount` to reveal
-   * the verse one word at a time.
+   * For quiz context: hide selected words of the named verse. The caller
+   * passes the explicit set of word `position` values to hide via
+   * `hiddenPositions`; this avoids any assumption that API positions are 1..N
+   * contiguous. The verse-end ornament always stays visible so the boundary
+   * remains legible. `revealedWordCount` is kept for backwards compatibility:
+   * if `hiddenPositions` is omitted, words whose 1-based position exceeds
+   * `revealedWordCount` are hidden.
    */
-  partialTarget?: { sura: number; aya: number; revealedWordCount: number };
+  partialTarget?: {
+    sura: number;
+    aya: number;
+    revealedWordCount: number;
+    hiddenPositions?: Set<number>;
+  };
   /** Tap/long-press a word → toggle selection. Receives "sura:aya". */
   onVerseTap?: (verseKey: string) => void;
   /**
@@ -308,10 +315,10 @@ const MushafPage: React.FC<Props> = ({
             const isGreen = !!green?.has(key);
             const isGrey = !!grey?.has(key);
 
-            // Partial-target hiding: for the named verse, hide any "word"
-            // whose 1-based position is past the revealed count. The end-of-
-            // ayah ornament is always shown so the verse boundary stays
-            // legible even when the target is fully masked.
+            // Partial-target hiding: for the named verse, hide every word
+            // whose `position` appears in `hiddenPositions` (preferred) or,
+            // for legacy callers, whose 1-based position is past
+            // `revealedWordCount`. The end-of-ayah ornament is always shown.
             const isPartialTargetVerse =
               !!partialTarget &&
               tw.sura === partialTarget.sura &&
@@ -319,7 +326,9 @@ const MushafPage: React.FC<Props> = ({
             const isWordPastReveal =
               isPartialTargetVerse &&
               tw.word.charType === "word" &&
-              tw.word.position > partialTarget!.revealedWordCount;
+              (partialTarget!.hiddenPositions
+                ? partialTarget!.hiddenPositions.has(tw.word.position)
+                : tw.word.position > partialTarget!.revealedWordCount);
 
             const isEndMarker =
               tw.word.charType === "end" &&

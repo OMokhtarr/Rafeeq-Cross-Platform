@@ -188,6 +188,30 @@
   transform: scale(0.94);
 }
 
+.mcv-next-verse-btn {
+  background: rgba(76, 175, 125, 0.18);
+  border: 1.5px solid rgba(76, 175, 125, 0.5);
+  color: #6cd699;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+  flex-shrink: 0;
+}
+.mcv-next-verse-btn:hover {
+  background: rgba(76, 175, 125, 0.32);
+}
+.mcv-next-verse-btn:active {
+  transform: scale(0.94);
+}
+
 .mcv-body {
   flex: 1;
   display: flex;

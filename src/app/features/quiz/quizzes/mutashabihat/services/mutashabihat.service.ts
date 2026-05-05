@@ -96,7 +96,9 @@ export function getAllMutashabihatGroups(verses: Verse[]): MutashabihatGroup[] {
   return groups;
 }
 
-// Filtering functions (unchanged but ensure they copy groups)
+// Filtering functions – each ensures at least MIN_GROUP_SIZE verses remain
+const MIN_GROUP_SIZE = 2;
+
 export function filterGroupsBySurahs(
   groups: MutashabihatGroup[],
   surahs: number[],
@@ -105,7 +107,7 @@ export function filterGroupsBySurahs(
   const filtered: MutashabihatGroup[] = [];
   for (const g of groups) {
     const matching = g.verses.filter((v) => set.has(v.sura));
-    if (matching.length > 0) {
+    if (matching.length >= MIN_GROUP_SIZE) {
       filtered.push({ ...g, verses: matching });
     }
   }
@@ -122,7 +124,7 @@ export function filterGroupsByPages(
     const matching = g.verses.filter(
       (v) => v.page >= pageFrom && v.page <= pageTo,
     );
-    if (matching.length > 0) {
+    if (matching.length >= MIN_GROUP_SIZE) {
       filtered.push({ ...g, verses: matching });
     }
   }
@@ -137,7 +139,7 @@ export function filterGroupsByJuzs(
   const filtered: MutashabihatGroup[] = [];
   for (const g of groups) {
     const matching = g.verses.filter((v) => set.has(v.juz));
-    if (matching.length > 0) {
+    if (matching.length >= MIN_GROUP_SIZE) {
       filtered.push({ ...g, verses: matching });
     }
   }
@@ -145,6 +147,11 @@ export function filterGroupsByJuzs(
 }
 
 export function buildMutashabihatQuestion(group: MutashabihatGroup) {
+  // Safety guard: group must have at least 2 verses to have a meaningful sibling
+  if (group.verses.length < 2) {
+    throw new Error("Mutashabihat group must contain at least 2 verses");
+  }
+
   const idx = Math.floor(Math.random() * group.verses.length);
   const target = group.verses[idx];
   const siblings = group.verses.filter((_, i) => i !== idx);
@@ -159,6 +166,7 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
     targetVerse: target,
     siblingVerses: siblings,
     sharedPhrase: displayedPortion,
+    sharedPhraseRaw: group.sharedPhraseRaw, // raw Arabic phrase (with diacritics)
     displayedPortion,
     hiddenPortion,
     hints: hiddenWords,
