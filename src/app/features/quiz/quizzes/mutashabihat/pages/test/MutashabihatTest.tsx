@@ -3,6 +3,8 @@
  * Immersive mode: when context viewer is open, the question card collapses
  * to show only the compact row of action buttons (Hint, Context, Submit, Skip).
  * The Mushaf viewer fills the rest of the screen.
+ *
+ * CHIP UPDATES: Click any info‑strip chip to switch the context viewer to that verse.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -58,6 +60,7 @@ const MutashabihatTest: React.FC = () => {
   const [showContext, setShowContext] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
+  const [selectedVerseIdx, setSelectedVerseIdx] = useState(0); // 0 = target verse
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
@@ -105,7 +108,10 @@ const MutashabihatTest: React.FC = () => {
         }
 
         const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-        const chosen = shuffled.slice(0, config.questionCount);
+        // Ensure every selected group has at least 2 verses (safety)
+        const chosen = shuffled
+          .filter((g) => g.verses.length >= 2)
+          .slice(0, config.questionCount);
 
         if (!cancelled) {
           setQuestions(chosen.map((g) => buildMutashabihatQuestion(g)));
@@ -153,7 +159,8 @@ const MutashabihatTest: React.FC = () => {
     setAnswered(true);
     setCorrect(false);
     if (isSoundOn()) beep("wrong");
-    setShowContext(false); // Close immersive mode on skip
+    setShowContext(false);
+    setSelectedVerseIdx(0); // reset to target
   };
 
   const handleNext = () => {
@@ -164,7 +171,8 @@ const MutashabihatTest: React.FC = () => {
       setCorrect(false);
       setSkipped(false);
       setHintLevel(0);
-      setShowContext(false); // Close immersive mode on next
+      setShowContext(false);
+      setSelectedVerseIdx(0);
     } else {
       setQuizComplete(true);
     }
@@ -258,18 +266,28 @@ const MutashabihatTest: React.FC = () => {
   const immersiveMode = showContext;
   const siblings = q.siblingVerses ?? [];
 
-  // Build toolbar verses for inline chips (unchanged)
+  // Build toolbar verses with full data for the context viewer
   const toolbarVerses = [
     {
       sura: q.sura,
       aya: q.aya,
       text: q.fullText,
       page: q.page,
-      suraName: q.suraName,
+      suraName: q.suraNameAr,
       suraNameAr: q.suraNameAr,
       isTarget: true,
+      hiddenPortion: q.hiddenPortion,
     },
-    ...siblings.map((sv: any) => ({ ...sv, isTarget: false })),
+    ...siblings.map((sv: any) => ({
+      sura: sv.sura,
+      aya: sv.aya,
+      text: sv.text,
+      page: sv.page,
+      suraName: sv.suraNameAr,
+      suraNameAr: sv.suraNameAr,
+      isTarget: false,
+      hiddenPortion: sv.hiddenStart,
+    })),
   ];
 
   // ── Main quiz render ───────────────────────────────────────────────────────
@@ -342,9 +360,12 @@ const MutashabihatTest: React.FC = () => {
                       {toolbarVerses.map((tv, ti) => (
                         <button
                           key={ti}
-                          className="mst-inline-chip"
+                          className={`mst-inline-chip ${selectedVerseIdx === ti ? "active-chip" : ""}`}
                           onClick={() => {
-                            // Not needed for immersive mode; kept for compatibility
+                            console.log("Chip clicked:", ti, toolbarVerses[ti]);
+
+                            setSelectedVerseIdx(ti);
+                            if (!showContext) setShowContext(true);
                           }}
                         >
                           <span className="mst-chip-surah" lang="ar" dir="rtl">
@@ -497,18 +518,12 @@ const MutashabihatTest: React.FC = () => {
             {showContext && (
               <div className="mst-context-viewer">
                 <MushafContextViewer
-                  verse={{
-                    sura: q.sura,
-                    aya: q.aya,
-                    text: q.fullText,
-                    page: q.page,
-                    suraName: q.suraName,
-                    suraNameAr: q.suraNameAr,
-                  }}
-                  snippet={q.displayedPortion}
-                  hiddenPortion={q.hiddenPortion}
+                  key={selectedVerseIdx} // ← forces re‑mount when selected verse changes
+                  verse={toolbarVerses[selectedVerseIdx]}
+                  snippet={q.sharedPhraseRaw}
+                  hiddenPortion={toolbarVerses[selectedVerseIdx].hiddenPortion}
                   hintLevel={hintLevel}
-                  showAnswer={answered}
+                  showAnswer={answered && selectedVerseIdx === 0}
                   isOpen={showContext}
                   onClose={() => setShowContext(false)}
                   mode="sidebar"

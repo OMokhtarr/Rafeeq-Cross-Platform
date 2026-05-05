@@ -954,3 +954,13 @@ ion-content::part(scroll) {
   gap: 8px;
   overflow: hidden;
 }
+
+.mst-inline-chip.active-chip {
+  background: var(--ion-color-primary-tint, #4c8dff);
+  border-color: var(--ion-color-primary, #3880ff);
+  color: white;
+}
+.mst-inline-chip.active-chip .mst-chip-surah,
+.mst-inline-chip.active-chip .mst-chip-meta {
+  color: white;
+}
