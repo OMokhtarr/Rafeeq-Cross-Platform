@@ -17,8 +17,12 @@
 
 .mushaf-bismillah {
   text-align: center;
-  font-size: 1.3em;
-  margin-bottom: 0.4em;
+  /* Reduced from 1.3em → 0.95em so the bismillah strip doesn't dominate
+     the page header. The probe in MushafPage.tsx accounts for this via
+     BISMILLAH_LINES; lowering visual weight here matches the printed
+     Madani layout where the bismillah sits roughly at line height. */
+  font-size: 0.95em;
+  margin-bottom: 0.2em;
 }
 
 /* ── Decorative Surah-name header ──────────────────────────────────────────
@@ -30,7 +34,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0.15em auto 0.45em;
+  /* Tightened vertical breathing room so the header takes less of the
+     page's vertical budget — leaves more room for the verses themselves. */
+  margin: 0.05em auto 0.2em;
   padding: 0;
   width: 100%;
   flex-shrink: 0;
@@ -41,10 +47,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 60%;
-  max-width: 92%;
-  padding: 0.55em 3.4em;
-  border: 2px solid var(--color-mushaf-text, #1a1a1a);
+  /* Slimmer cartouche: narrower min-width, less side padding. */
+  min-width: 45%;
+  max-width: 78%;
+  padding: 0.3em 2.4em;
+  border: 1.5px solid var(--color-mushaf-text, #1a1a1a);
   border-radius: 2px;
   background: repeating-linear-gradient(
     45deg,
@@ -63,10 +70,11 @@
   content: "";
   position: absolute;
   top: 50%;
-  width: 1.6em;
-  height: 1.6em;
+  /* Smaller rosettes to match the slimmer frame. */
+  width: 1.1em;
+  height: 1.1em;
   transform: translateY(-50%);
-  border: 1.5px solid var(--color-mushaf-text, #1a1a1a);
+  border: 1.2px solid var(--color-mushaf-text, #1a1a1a);
   border-radius: 50%;
   background:
     radial-gradient(
@@ -92,16 +100,18 @@
 }
 
 .mushaf-surah-header-frame::before {
-  inset-inline-start: 0.55em;
+  inset-inline-start: 0.4em;
 }
 
 .mushaf-surah-header-frame::after {
-  inset-inline-end: 0.55em;
+  inset-inline-end: 0.4em;
 }
 
 .mushaf-surah-header-name {
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: 1.05em;
+  /* Reduced from 0.5em → 0.4em — the surah name was visually larger
+     than the verses below it; this brings it closer to a single line. */
+  font-size: 0.4em;
   font-weight: 700;
   color: var(--color-mushaf-text, #1a1a1a);
   letter-spacing: 0.04em;
@@ -153,6 +163,7 @@
   justify-content: center;
   align-items: baseline;
   white-space: nowrap;
+  width: 100%;
 }
 
 .mushaf-word {

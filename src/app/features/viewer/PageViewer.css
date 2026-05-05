@@ -301,19 +301,103 @@
   flex-shrink: 0;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Center pill — rounded chip showing surah (line 1) + page/juz/hizb (line 2).
+   Acts as a tap target that opens the surah/juz selector, matching the
+   reference design. Replaces the loose .toolbar-center stack we had before.
+   ───────────────────────────────────────────────────────────────────── */
+.toolbar-center-pill {
+  flex: 1;
+  margin: 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 180, 140, 0.25);
+  color: inherit;
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  min-height: 44px;
+  min-width: 0;
+  transition:
+    background 0.18s ease,
+    transform 0.12s ease,
+    border-color 0.18s ease;
+}
+
+.toolbar-center-pill:hover {
+  background: rgba(212, 180, 140, 0.18);
+  border-color: rgba(212, 180, 140, 0.45);
+}
+
+.toolbar-center-pill:active {
+  transform: scale(0.98);
+}
+
+[data-theme="day"] .toolbar-center-pill {
+  background: rgba(212, 180, 140, 0.12);
+  border-color: rgba(212, 180, 140, 0.35);
+}
+
+.pill-surah {
+  font-size: 1rem;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+.pill-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.pill-sep {
+  opacity: 0.5;
+}
+
+[data-theme="night"] .pill-meta {
+  color: rgba(244, 236, 216, 0.65);
+}
+
 /* Mushaf content
-   No scrolling here — the page text must fit between the toolbar (top)
-   and the page-footer / BottomNavBar (bottom). MushafPage runs a JS probe
-   that sizes the font so all 15 lines fit the available box; clipping
-   keeps any sub-pixel overflow from spilling past the hizb footer. */
+   The mushaf surface fills the viewport edge-to-edge at all times. The
+   top toolbar and bottom nav are rendered as ABSOLUTE overlays (see the
+   immersive-mode block below) so toggling their visibility doesn't
+   reflow the page — the layout is locked, only the chrome opacity flips.
+
+   Inside this surface live two thin strips (.page-edge-top / -bottom)
+   that always show the surah name, juz/hizb, and page number — that's
+   the metadata the user needs even when the toolbar is hidden. */
 .mushaf-content {
   flex: 1;
   background-color: var(--color-mushaf-bg);
-  border: 2px solid var(--color-mushaf-border);
-  border-radius: 20px;
-  margin: 15px;
-  padding: 20px;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  /* Reserve a top + bottom band for the running header/footer.
+     - When the chrome (toolbar / bottom nav) is visible, it sits inside
+       these bands at a higher z-index and covers the page-edge strips.
+     - When the chrome slides off (immersive mode), the strips show in
+       the same bands.
+     Either way, the verse text never extends into these bands — so the
+     mushaf text stays fully visible in BOTH states. The padding is
+     intentionally constant across states so the font-fit probe sees the
+     same available height; only the chrome's transform animates. */
+  padding: 55px 0 60px;
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -324,9 +408,137 @@
     border-color var(--transition-theme);
 }
 
-/* Trim the bottom margin so the page never sits behind the nav bar. */
-.mushaf-content.mushaf-content-with-nav {
-  margin-bottom: 8px;
+/* ─────────────────────────────────────────────────────────────────────────
+   Page edge strips — running header / footer (surah, juz/hizb, page
+   number) drawn over the mushaf surface in the same band the chrome
+   occupies. When the toolbar / bottom nav are visible, the chrome (which
+   has a higher z-index) covers the strips; tapping to enter immersive
+   mode slides the chrome off and reveals these strips underneath.
+   They are absolute overlays so the mushaf surface itself stays full-
+   bleed and the font-fit probe never sees a changing height.
+   ───────────────────────────────────────────────────────────────────── */
+.page-edge-top,
+.page-edge-bottom {
+  position: absolute;
+  inset-inline: 0;
+  pointer-events: none;
+  z-index: 50;
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  color: var(--color-text-muted, #8a8170);
+  background: transparent;
+  user-select: none;
+}
+
+.page-edge-top {
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px 6px;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
+
+.page-edge-surah {
+  font-weight: 600;
+  color: var(--color-text-primary, #2c1810);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-edge-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.page-edge-dot {
+  opacity: 0.5;
+}
+
+.page-edge-bottom {
+  bottom: 0;
+  /* Default centered; .align-start / .align-end override per page parity. */
+  text-align: center;
+  padding: 6px 20px max(12px, env(safe-area-inset-bottom, 0px));
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #8a8170);
+  letter-spacing: 0.5px;
+}
+
+/* Odd pages → page number on the LEFT; even pages → on the RIGHT.
+   Using physical left/right (not logical start/end) so the rule means
+   the same thing regardless of the document direction. */
+.page-edge-bottom.align-start {
+  text-align: left;
+}
+
+.page-edge-bottom.align-end {
+  text-align: right;
+}
+
+[data-theme="night"] .page-edge-surah {
+  color: #f4ecd8;
+}
+
+[data-theme="night"] .page-edge-top,
+[data-theme="night"] .page-edge-bottom {
+  color: rgba(244, 236, 216, 0.7);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Immersive mode — chrome is OVERLAID on the mushaf, never inline.
+   Default state (chrome visible): toolbar pinned to the top edge, bottom
+   nav pinned to the bottom edge, both above the mushaf surface.
+   Immersive state: same overlays slide off-screen, opacity → 0,
+   pointer-events disabled. The mushaf surface itself never moves.
+   ───────────────────────────────────────────────────────────────────── */
+.mushaf-container {
+  position: relative;
+}
+
+.mushaf-container .top-toolbar {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  z-index: 100;
+  transition:
+    transform 0.28s ease,
+    opacity 0.22s ease,
+    background var(--transition-theme),
+    color var(--transition-theme),
+    border-color var(--transition-theme);
+  will-change: transform, opacity;
+}
+
+.mushaf-container .rfq-tab-bar {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  z-index: 100;
+  transition:
+    transform 0.28s ease,
+    opacity 0.22s ease,
+    background var(--transition-theme, 0.25s ease),
+    border-color var(--transition-theme, 0.25s ease);
+  will-change: transform, opacity;
+}
+
+.mushaf-container.immersive .top-toolbar {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mushaf-container.immersive .rfq-tab-bar {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .mushaf-page {
@@ -344,7 +556,7 @@
   z-index: 1;
   background-color: var(--color-mushaf-bg);
   color: var(--color-mushaf-text);
-  padding: 16px 30px;
+  padding: 16px 6px;
   max-width: 750px;
   margin: 0 auto;
   width: 100%;
@@ -1256,6 +1468,6 @@
     padding: 10px;
   }
   .mushaf-page {
-    padding: 10px 12px;
+    padding: 10px 4px;
   }
 }
