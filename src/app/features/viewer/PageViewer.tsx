@@ -311,39 +311,22 @@ const PageViewer: React.FC = () => {
     audio.stop();
   }, [audio]);
 
-  // Hide-toggle (page-wide)
+  // Hide-toggle (whole Mushaf). When pressed with nothing hidden, every verse
+  // across all 604 pages goes hidden. When pressed with any hidden, show all.
   const pageVerseKeys = verses.map((v) => `${v.sura}:${v.aya}`);
   const anyPageHidden = pageVerseKeys.some((k) => hidden.has(k));
   const togglePageHidden = useCallback(() => {
-    if (pageVerseKeys.length === 0) return;
-    if (anyPageHidden) {
-      for (const k of pageVerseKeys) showVerse(k);
-    } else {
-      hideMany(pageVerseKeys);
-    }
-  }, [anyPageHidden, hideMany, pageVerseKeys, showVerse]);
-
-  // Next-verse reveal
-  const handleNextVerse = useCallback(() => {
-    if (verses.length === 0) return;
-    const firstHiddenKey = pageVerseKeys.find((k) => hidden.has(k));
-    if (firstHiddenKey) {
-      showVerse(firstHiddenKey);
-      setGreenVerse(firstHiddenKey);
+    if (anyPageHidden || hiddenCount > 0) {
+      showAll();
       return;
     }
-    if (currentPage < totalPages) {
-      pendingGreenForPage.current = currentPage + 1;
-      setCurrentPage(currentPage + 1);
+    const keys: string[] = [];
+    for (const ch of getChapters()) {
+      const count: number = ch.verses_count ?? 0;
+      for (let a = 1; a <= count; a++) keys.push(`${ch.id}:${a}`);
     }
-  }, [
-    currentPage,
-    hidden,
-    pageVerseKeys,
-    showVerse,
-    totalPages,
-    verses.length,
-  ]);
+    if (keys.length > 0) hideMany(keys);
+  }, [anyPageHidden, hiddenCount, hideMany, showAll]);
 
   // Swipe (page turn) + tap (immersive toggle). The two share an origin
   // point: the swipe path runs first; if the gesture wasn't a horizontal
@@ -489,33 +472,6 @@ const PageViewer: React.FC = () => {
                     <circle cx="12" cy="12" r="3" />
                   </svg>
                 )}
-              </button>
-              {/* Next-verse reveal */}
-              <button
-                type="button"
-                className="toolbar-button next-verse-button"
-                onClick={handleNextVerse}
-                disabled={
-                  verses.length === 0 ||
-                  (!pageVerseKeys.some((k) => hidden.has(k)) &&
-                    currentPage >= totalPages)
-                }
-                title={t.mushaf.nextVerseTitle}
-                aria-label={t.mushaf.nextVerseTitle}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
               </button>
             </div>
 

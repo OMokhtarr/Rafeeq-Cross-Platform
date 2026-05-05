@@ -888,3 +888,69 @@ ion-content::part(scroll) {
     height: auto;
   }
 }
+
+/* ── Immersive mode support ────────────────────────────────────────────── */
+
+/* Minimal header (same size, less padding) */
+.mst-header-minimal {
+  padding: 4px 12px;
+  min-height: 44px;
+}
+.mst-header-minimal .mst-progress-text,
+.mst-header-minimal .mst-score-pill {
+  font-size: inherit;
+}
+
+/* Buttons-only card */
+.mst-card-buttons-only {
+  padding: 4px 8px;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+.mst-card-buttons-only .mst-info-strip {
+  display: none; /* hide info strip, surah/aya/page are in Mushaf top edge */
+}
+
+/* Context viewer – takes remaining space */
+.mst-context-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gold);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.mst-context-viewer > div,
+.mst-context-viewer .mcv-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Header actions container */
+.mst-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Ensure container uses column layout with flex */
+.mst-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  box-sizing: border-box;
+  gap: 8px;
+  overflow: hidden;
+}
