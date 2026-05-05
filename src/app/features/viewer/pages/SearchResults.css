@@ -1,0 +1,292 @@
+/* ═══════════════════════════════════════════════
+   SEARCH RESULTS — /search/results?q=...
+   ═══════════════════════════════════════════════ */
+
+.results-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-content, #0a0a0a);
+  color: var(--color-text-primary, #f4ecd8);
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  position: relative;
+}
+
+/* ── Header ── */
+.results-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px max(env(safe-area-inset-top, 0px), 14px);
+  flex-shrink: 0;
+}
+
+.results-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.results-back-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.results-back-btn:active {
+  transform: scale(0.94);
+}
+
+.results-title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.results-settings-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+
+.results-settings-btn:hover {
+  opacity: 1;
+}
+.results-settings-btn:active {
+  transform: scale(0.94);
+}
+
+/* Echo of the user's query, right-aligned in RTL pages. */
+.results-query {
+  padding: 6px 20px 16px;
+  font-size: 1rem;
+  text-align: end;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+/* ── Body ── */
+.results-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 80px; /* leaves room for the floating count pill */
+}
+
+.results-status {
+  padding: 30px 24px;
+  text-align: center;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.55));
+}
+
+.results-status.results-error {
+  color: #ef6f6c;
+}
+
+/* ── Result cards ── */
+.result-card {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.result-card:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.result-card.expanded {
+  cursor: default;
+  background: transparent;
+}
+
+.result-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-badge {
+  font-family: var(--font-latin, ui-monospace, monospace);
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
+  flex-shrink: 0;
+}
+
+.result-surah-name {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: inherit;
+  font-family: var(--font-latin, system-ui, sans-serif);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.result-surah-name-ar {
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  font-size: 1.05rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.65));
+}
+
+.result-collapse-chev {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.result-collapse-chev:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Expanded body ── */
+.result-card-body {
+  padding-top: 14px;
+}
+
+.result-arabic {
+  margin: 0 0 14px;
+  font-size: 1.45rem;
+  line-height: 2;
+  text-align: center;
+  color: var(--color-text-primary, #f4ecd8);
+  word-spacing: 0.1em;
+  letter-spacing: 0.02em;
+}
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.result-actions-spacer {
+  flex: 1;
+}
+
+.result-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.result-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary, #f4ecd8);
+}
+
+.result-action:active {
+  transform: scale(0.94);
+}
+
+.result-continue {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary, #f4ecd8);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.result-continue:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Floating total-count pill ── */
+.results-count-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-start;
+  pointer-events: none;
+}
+
+.results-count-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-primary, #f4ecd8);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-family: var(--font-latin, system-ui, sans-serif);
+  pointer-events: auto;
+}
+
+/* ── Day theme ── */
+[data-theme="day"] .results-page {
+  background: #fdfaf3;
+  color: #2c1810;
+}
+
+[data-theme="day"] .results-back-btn {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="day"] .result-card,
+[data-theme="day"] .results-query {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="day"] .result-actions {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="day"] .result-badge {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+[data-theme="day"] .results-count-pill {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.1);
+}

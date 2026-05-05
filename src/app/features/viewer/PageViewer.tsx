@@ -32,6 +32,7 @@ import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
+import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
@@ -119,6 +120,9 @@ const PageViewer: React.FC = () => {
   // Verse action sheet (long-press → audio / translation / tafsir).
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
 
+  // Immersive mode — tap the page to toggle toolbar + bottom nav.
+  const immersive = useImmersiveMode();
+
   // ── Refs ──
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -135,12 +139,21 @@ const PageViewer: React.FC = () => {
     }
   }, [drawerOpen]);
 
-  // Sync currentPage with ?page= query param on navigation
+  // Sync currentPage with ?page= query param on navigation. Also honor a
+  // `?v=sura:aya` param so deep-links from the search-results screen
+  // ("Continue Reading") land with the verse briefly highlighted, the
+  // same way a tap on an in-drawer search result behaves.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
     if (Number.isFinite(raw) && raw >= 1 && raw !== currentPage) {
       setCurrentPage(raw);
+    }
+    const v = params.get("v");
+    if (v && /^\d+:\d+$/.test(v)) {
+      setHighlightedVerse(v);
+      const tid = setTimeout(() => setHighlightedVerse(null), 3000);
+      return () => clearTimeout(tid);
     }
   }, [location.search]);
 
@@ -186,6 +199,12 @@ const PageViewer: React.FC = () => {
     }
   }, [drawerOpen, drawerView]);
 
+  // Whenever a modal surface (drawer, verse action sheet) opens, force the
+  // chrome back so the user isn't operating a dialog over a hidden toolbar.
+  useEffect(() => {
+    if (drawerOpen || sheetVerseKey) immersive.showChrome();
+  }, [drawerOpen, sheetVerseKey, immersive]);
+
   // Lock body scroll while the drawer is open.
   useEffect(() => {
     if (drawerOpen) {
@@ -219,8 +238,16 @@ const PageViewer: React.FC = () => {
   };
 
   const pageInfo = getPageInfo();
+  // Bismillah strip rules:
+  //   - shown when the first verse on the page is aya 1 of a surah, EXCEPT
+  //   - At-Tawbah (sura 9) — has no bismillah by tradition, AND
+  //   - page 1 (Al-Fatihah) — its first verse already IS the bismillah, so
+  //     rendering the strip on top would duplicate it.
   const isSurahStart =
-    verses.length > 0 && verses[0].aya === 1 && verses[0].sura !== 9;
+    verses.length > 0 &&
+    verses[0].aya === 1 &&
+    verses[0].sura !== 9 &&
+    currentPage !== 1;
 
   const openDrawer = (view: DrawerView = "menu") => {
     setDrawerView(view);
@@ -318,28 +345,52 @@ const PageViewer: React.FC = () => {
     verses.length,
   ]);
 
-  // Swipe
+  // Swipe (page turn) + tap (immersive toggle). The two share an origin
+  // point: the swipe path runs first; if the gesture wasn't a horizontal
+  // swipe past 50px we hand the coordinates to the immersive hook, which
+  // applies its own 10px tap threshold and interactive-target check.
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    touchStartX.current = x;
+    touchStartY.current = y;
+    immersive.registerTouchStart(x, y, e.target);
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-    if (Math.abs(dx) > 50 && Math.abs(dx) > dy * 1.5) {
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - touchStartX.current;
+    const dy = Math.abs(endY - touchStartY.current);
+    const isSwipe = Math.abs(dx) > 50 && Math.abs(dx) > dy * 1.5;
+    if (isSwipe) {
       if (dx > 0) goToNext();
       else goToPrevious();
+    } else {
+      // Not a swipe — let the hook decide if it was a tap worth toggling.
+      immersive.maybeToggleOnTap(endX, endY);
     }
     touchStartX.current = null;
     touchStartY.current = null;
+  };
+
+  // Desktop: mouse equivalents. Mobile browsers also synthesise a click
+  // ~300 ms after touchend, but because we already handled the gesture in
+  // touchend (and reset the hook's start point), the click no-ops there.
+  const handleMouseDown = (e: React.MouseEvent) => {
+    immersive.registerTouchStart(e.clientX, e.clientY, e.target);
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    immersive.maybeToggleOnTap(e.clientX, e.clientY);
   };
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <IonPage>
       <IonContent fullscreen scrollY={false}>
-        <div className="mushaf-container">
+        <div
+          className={`mushaf-container ${immersive.chromeVisible ? "" : "immersive"}`}
+        >
           {/* ── Toolbar ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
@@ -468,49 +519,108 @@ const PageViewer: React.FC = () => {
               </button>
             </div>
 
-            <div className="toolbar-center">
-              <div className="surah-info">
-                <span className="surah-name-arabic">
-                  {pageInfo?.suraNameAr}
+            {/* Center pill — surah name (line 1) + Page/Juz/Hizb (line 2).
+                Mirrors the reference design (rounded chip, two stacked
+                lines). The same data is also rendered inside the page
+                edges so it stays visible while in immersive mode. */}
+            <button
+              type="button"
+              className="toolbar-center-pill"
+              onClick={() => history.push("/surah-juz")}
+              aria-label={t.mushaf.surahsAndJuz}
+            >
+              <span className="pill-surah">{pageInfo?.suraNameAr}</span>
+              <span className="pill-meta">
+                <span>
+                  {t.mushaf.page}{" "}
+                  {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
                 </span>
-                <span className="surah-name-latin">{pageInfo?.sura}</span>
-              </div>
-              <div className="page-metadata">
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.page}</span>
-                  <span className="metadata-value">
-                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
-                  </span>
+                <span className="pill-sep" aria-hidden>
+                  |
                 </span>
-                <span className="metadata-separator">|</span>
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.juz}</span>
-                  <span className="metadata-value">
-                    {lang === "ar"
-                      ? toHindiNumbers(pageInfo?.juz ?? 0)
-                      : (pageInfo?.juz ?? 0)}
-                  </span>
+                <span>
+                  {t.mushaf.juz}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.juz ?? 0)
+                    : (pageInfo?.juz ?? 0)}
                 </span>
-                <span className="metadata-separator">|</span>
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.hizb}</span>
-                  <span className="metadata-value">
-                    {lang === "ar"
-                      ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                      : (pageInfo?.hizb ?? 0)}
-                  </span>
+                <span className="pill-sep" aria-hidden>
+                  |
                 </span>
-              </div>
+                <span>
+                  {t.mushaf.hizb}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.hizb ?? 0)
+                    : (pageInfo?.hizb ?? 0)}
+                </span>
+              </span>
+            </button>
+
+            {/* Right side — search icon. Opens the dedicated /search page
+                (recent searches + input). Settings was intentionally
+                removed; it lives in the side drawer instead. */}
+            <div className="toolbar-right">
+              <button
+                type="button"
+                className="toolbar-button search-button"
+                onClick={() => history.push("/search")}
+                title={t.mushaf.search}
+                aria-label={t.mushaf.search}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
             </div>
           </div>
 
-          {/* ── Mushaf Content ── */}
+          {/* ── Mushaf Content ──
+              Fills the whole viewport. The toolbar and bottom-nav now
+              float over this surface, so toggling them never reflows the
+              page. Two thin strips (page-edge-top / page-edge-bottom)
+              live inside this container and stay visible at all times —
+              they carry the metadata (surah, juz/hizb, page number) that
+              the user still needs once the chrome is hidden. */}
           <div
-            className="mushaf-content mushaf-content-with-nav"
+            className="mushaf-content"
             ref={contentRef}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onClick={handleClick}
           >
+            <div className="page-edge-top" data-no-immersive>
+              <span className="page-edge-surah">{pageInfo?.suraNameAr}</span>
+              <span className="page-edge-meta">
+                <span>
+                  {t.mushaf.juz}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.juz ?? 0)
+                    : (pageInfo?.juz ?? 0)}
+                </span>
+                <span className="page-edge-dot" aria-hidden>
+                  •
+                </span>
+                <span>
+                  {t.mushaf.hizb}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.hizb ?? 0)
+                    : (pageInfo?.hizb ?? 0)}
+                </span>
+              </span>
+            </div>
+
             {loading ? (
               <div className="mushaf-loading">
                 <div className="loading-spinner" />
@@ -538,6 +648,15 @@ const PageViewer: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Page number alignment mirrors a printed Mushaf spread:
+                odd pages anchor to the start side, even pages to the end. */}
+            <div
+              className={`page-edge-bottom ${currentPage % 2 === 1 ? "align-end" : "align-start"}`}
+              data-no-immersive
+            >
+              {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
+            </div>
           </div>
 
           <BottomNavBar active="quran" />

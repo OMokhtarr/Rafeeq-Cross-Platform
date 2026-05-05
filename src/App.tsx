@@ -18,6 +18,8 @@ import Home from "./app/features/home/pages/Home";
 import Azkar from "./app/features/azkar/Azkar";
 import PageViewer from "./app/features/viewer/PageViewer";
 import SurahJuzSelection from "./app/features/viewer/pages/SurahJuzSelection";
+import Search from "./app/features/viewer/pages/Search";
+import SearchResults from "./app/features/viewer/pages/SearchResults";
 import QuizList from "./app/features/quiz/pages/quiz-list/QuizList";
 import AkmelAlAyahSetup from "./app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup";
 import AkmelAlAyah from "./app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah";
@@ -109,6 +111,8 @@ const App: React.FC = () => {
                 <Route exact path="/" component={Home} />
                 <Route exact path="/viewer" component={PageViewer} />
                 <Route exact path="/surah-juz" component={SurahJuzSelection} />
+                <Route exact path="/search" component={Search} />
+                <Route exact path="/search/results" component={SearchResults} />
                 <Route exact path="/azkar" component={Azkar} />
                 <Route exact path="/quiz-list" component={QuizList} />
                 <Route

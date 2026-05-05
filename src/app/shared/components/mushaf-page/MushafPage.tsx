@@ -142,13 +142,13 @@ const MushafPage: React.FC<Props> = ({
 
     const LINE_HEIGHT_RATIO = 1.4; // mirrors .mushaf-page-glyph CSS
     const LINE_GAP_RATIO = 0.25; // mirrors .mushaf-page-glyph `gap: 0.25em`
-    const BISMILLAH_LINES = 1.6; // strip is ~1.3em font + 0.4em margin
+    // Bismillah strip: 0.95em font + 0.2em margin — see MushafPage.css.
+    const BISMILLAH_LINES = 1.15;
     const FONT_MIN = 8;
-    // const FONT_MAX = 40;
-    // const SURAH_HEADER_LINES = 2.6; // banner with padding ≈ 2.6 line-heights
-
     const FONT_MAX = 64;
-    const SURAH_HEADER_LINES = 2.2;
+    // Surah-name banner is now slim (0.4em name + 0.3em padding × 2 + small
+    // top/bottom margins). Roughly 1.4 line-heights of vertical space.
+    const SURAH_HEADER_LINES = 1.4;
 
     const computeFit = () => {
       const el = containerRef.current;
