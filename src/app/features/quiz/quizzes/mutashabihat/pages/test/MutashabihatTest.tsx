@@ -98,8 +98,8 @@ const MutashabihatTest: React.FC = () => {
           config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
             : config.scopeType === "page"
-              ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
-              : filterGroupsByJuzs(allGroups, config.selectedJuzs);
+            ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
+            : filterGroupsByJuzs(allGroups, config.selectedJuzs);
 
         if (filtered.length === 0) {
           setError(tt.errorNoMutashabihat);
@@ -300,7 +300,9 @@ const MutashabihatTest: React.FC = () => {
           <div className="mst-container">
             {/* Header – minimal when immersive */}
             <div
-              className={`mst-header ${immersiveMode ? "mst-header-minimal" : ""}`}
+              className={`mst-header ${
+                immersiveMode ? "mst-header-minimal" : ""
+              }`}
             >
               <div className="mst-progress">
                 <span className="mst-progress-text">
@@ -332,7 +334,9 @@ const MutashabihatTest: React.FC = () => {
 
             {/* Question card – full or minimized (buttons only) */}
             <div
-              className={`mst-card ${immersiveMode ? "mst-card-buttons-only" : ""}`}
+              className={`mst-card ${
+                immersiveMode ? "mst-card-buttons-only" : ""
+              }`}
             >
               {/* Info strip – hidden in immersive mode */}
               {!immersiveMode && (
@@ -362,7 +366,9 @@ const MutashabihatTest: React.FC = () => {
                       {toolbarVerses.map((tv, ti) => (
                         <button
                           key={ti}
-                          className={`mst-inline-chip ${selectedVerseIdx === ti ? "active-chip" : ""}`}
+                          className={`mst-inline-chip ${
+                            selectedVerseIdx === ti ? "active-chip" : ""
+                          }`}
                           onClick={() => {
                             console.log("Chip clicked:", ti, toolbarVerses[ti]);
 
@@ -474,7 +480,9 @@ const MutashabihatTest: React.FC = () => {
 
                       {answered && (
                         <div
-                          className={`mst-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
+                          className={`mst-result ${
+                            correct ? "correct" : skipped ? "skipped" : "wrong"
+                          }`}
                         >
                           <span className="mst-result-icon">
                             {correct ? "✅" : skipped ? "⏭" : "❌"}
@@ -483,8 +491,8 @@ const MutashabihatTest: React.FC = () => {
                             {correct
                               ? tt.correctMsg
                               : skipped
-                                ? tt.skippedMsg
-                                : tt.wrongMsg}
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
                           </span>
                           {!correct && (
                             <div className="mst-correct-answer">

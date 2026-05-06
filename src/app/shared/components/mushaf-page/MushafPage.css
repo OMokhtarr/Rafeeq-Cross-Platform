@@ -25,6 +25,154 @@
   margin-bottom: 0.2em;
 }
 
+.mushaf-line {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: baseline;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.mushaf-word {
+  display: inline-block;
+  margin: 0 0.01em;
+}
+
+.mushaf-ayah-end {
+  display: inline-block;
+  margin: 0 0.01em;
+  position: relative;
+}
+
+.mushaf-word-target,
+.mushaf-ayah-end-target {
+  background: rgba(255, 215, 0, 0.32);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(212, 180, 140, 0.5);
+}
+
+/* ── Selection ──────────────────────────────────────────────────────────
+   Day: warm amber tint with a parchment ring.
+   Night: navy-friendly gold tint that doesn't blow out the glyphs.
+   ──────────────────────────────────────────────────────────────────── */
+.mushaf-verse-selected {
+  background: rgba(212, 180, 140, 0.32);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(139, 69, 19, 0.45);
+  cursor: pointer;
+}
+
+/* ── Grey (quiz context: previous verses) ─────────────────────────────
+   Verses preceding the question's target are de-emphasized so the user's
+   eye lands on the partially-masked target. Glyphs stay readable but lose
+   their saturation — the verse-end ornament gets the same treatment. */
+.mushaf-verse-grey,
+.mushaf-verse-grey.mushaf-ayah-end {
+  color: #9a9a9a !important;
+  opacity: 0.85;
+}
+
+[data-theme="night"] .mushaf-verse-grey,
+[data-theme="night"] .mushaf-verse-grey.mushaf-ayah-end {
+  color: #8a8a8a !important;
+}
+
+/* ── Green (next-verse reveal) ─────────────────────────────────────────
+   Used by the "show next verse" toolbar button: when pressed, the next
+   hidden verse is unhidden AND marked green so the user can spot the
+   newly revealed verse at a glance. Overrides the hidden styles since a
+   verse is never green and hidden at the same time. */
+.mushaf-verse-green,
+.mushaf-verse-green.mushaf-ayah-end {
+  color: #2e7d32 !important;
+  background: none;
+  text-shadow: none;
+}
+
+[data-theme="night"] .mushaf-verse-green,
+[data-theme="night"] .mushaf-verse-green.mushaf-ayah-end {
+  color: #6ee7a3 !important;
+}
+
+[data-theme="night"] .mushaf-verse-selected {
+  background: rgba(255, 215, 0, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55);
+}
+
+.mushaf-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 60vh;
+}
+
+.mushaf-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-top-color: var(--ion-color-primary, #2c7a4b);
+  border-radius: 50%;
+  animation: mushaf-spin 0.9s linear infinite;
+}
+
+@keyframes mushaf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Hidden words (preserve layout, hide glyphs) ───────────────────────── */
+.mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mushaf-verse-hidden:not(.mushaf-verse-end-marker)::after {
+  display: none !important;
+}
+
+/* Keep the ayah number ornament fully visible */
+.mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #1a1a1a) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #1a1a1a) !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+[data-theme="night"] .mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+[data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #f4ecd8) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #f4ecd8) !important;
+}
+
+.mushaf-word-hinted {
+  color: #2e7d32 !important;
+}
+
+[data-theme="night"] .mushaf-word-hinted {
+  color: #6ee7a3 !important;
+}
 /* ── Decorative Surah-name header ──────────────────────────────────────────
    A horizontal banner with:
      • Double-line frame (outer + inner hairline) framing the whole bar
@@ -185,145 +333,4 @@
     <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
   </g>\
 </svg>");
-}
-
-.mushaf-line {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: baseline;
-  white-space: nowrap;
-  width: 100%;
-}
-
-.mushaf-word {
-  display: inline-block;
-  margin: 0 0.01em;
-}
-
-.mushaf-ayah-end {
-  display: inline-block;
-  margin: 0 0.01em;
-  position: relative;
-}
-
-.mushaf-word-target,
-.mushaf-ayah-end-target {
-  background: rgba(255, 215, 0, 0.32);
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(212, 180, 140, 0.5);
-}
-
-/* ── Selection ──────────────────────────────────────────────────────────
-   Day: warm amber tint with a parchment ring.
-   Night: navy-friendly gold tint that doesn't blow out the glyphs.
-   ──────────────────────────────────────────────────────────────────── */
-.mushaf-verse-selected {
-  background: rgba(212, 180, 140, 0.32);
-  border-radius: 4px;
-  box-shadow: 0 0 0 1px rgba(139, 69, 19, 0.45);
-  cursor: pointer;
-}
-
-/* ── Grey (quiz context: previous verses) ─────────────────────────────
-   Verses preceding the question's target are de-emphasized so the user's
-   eye lands on the partially-masked target. Glyphs stay readable but lose
-   their saturation — the verse-end ornament gets the same treatment. */
-.mushaf-verse-grey,
-.mushaf-verse-grey.mushaf-ayah-end {
-  color: #9a9a9a !important;
-  opacity: 0.85;
-}
-
-[data-theme="night"] .mushaf-verse-grey,
-[data-theme="night"] .mushaf-verse-grey.mushaf-ayah-end {
-  color: #8a8a8a !important;
-}
-
-/* ── Green (next-verse reveal) ─────────────────────────────────────────
-   Used by the "show next verse" toolbar button: when pressed, the next
-   hidden verse is unhidden AND marked green so the user can spot the
-   newly revealed verse at a glance. Overrides the hidden styles since a
-   verse is never green and hidden at the same time. */
-.mushaf-verse-green,
-.mushaf-verse-green.mushaf-ayah-end {
-  color: #2e7d32 !important;
-  background: none;
-  text-shadow: none;
-}
-
-[data-theme="night"] .mushaf-verse-green,
-[data-theme="night"] .mushaf-verse-green.mushaf-ayah-end {
-  color: #6ee7a3 !important;
-}
-
-[data-theme="night"] .mushaf-verse-selected {
-  background: rgba(255, 215, 0, 0.18);
-  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55);
-}
-
-.mushaf-page-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-height: 60vh;
-}
-
-.mushaf-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(0, 0, 0, 0.12);
-  border-top-color: var(--ion-color-primary, #2c7a4b);
-  border-radius: 50%;
-  animation: mushaf-spin 0.9s linear infinite;
-}
-
-@keyframes mushaf-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ── Hidden words (preserve layout, hide glyphs) ───────────────────────── */
-.mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
-  visibility: hidden !important;
-  opacity: 0 !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  text-shadow: none !important;
-  background: none !important;
-  box-shadow: none !important;
-  cursor: pointer;
-  user-select: none;
-}
-
-.mushaf-verse-hidden:not(.mushaf-verse-end-marker)::after {
-  display: none !important;
-}
-
-/* Keep the ayah number ornament fully visible */
-.mushaf-verse-hidden.mushaf-verse-end-marker {
-  visibility: visible !important;
-  opacity: 1 !important;
-  color: var(--color-mushaf-text, #1a1a1a) !important;
-  -webkit-text-fill-color: var(--color-mushaf-text, #1a1a1a) !important;
-  background: none !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-}
-
-[data-theme="night"] .mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
-  visibility: hidden !important;
-  opacity: 0 !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
-[data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
-  visibility: visible !important;
-  opacity: 1 !important;
-  color: var(--color-mushaf-text, #f4ecd8) !important;
-  -webkit-text-fill-color: var(--color-mushaf-text, #f4ecd8) !important;
 }

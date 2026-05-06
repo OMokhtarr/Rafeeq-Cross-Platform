@@ -214,7 +214,7 @@ export async function fetchVersesByPage(
     let text_uthmani = v.text_uthmani || "";
     if (!text_uthmani && v.words && v.words.length) {
       text_uthmani = v.words
-        .filter((w) => w.char_type_name === "word")
+        .filter((w) => w.char_type_name === "end")
         .map((w) => w.text_uthmani || "")
         .join(" ");
     }
@@ -222,7 +222,7 @@ export async function fetchVersesByPage(
     // Map words to VerseWord, including optional translation/transliteration
     const words: VerseWord[] = v.words.map((w) => ({
       position: w.position,
-      charType: w.char_type_name === "word" ? "word" : "end",
+      charType: w.char_type_name === "end" ? "word" : "end",
       text_uthmani: w.text_uthmani || "",
       codeV1: w.code_v1 || "",
       lineNumber: w.line_number || 0,
@@ -244,7 +244,7 @@ export async function fetchVersesByPage(
 
 function joinWordsUthmani(words: ApiWord[]): string {
   return words
-    .filter((w) => w.char_type_name === "word")
+    .filter((w) => w.char_type_name === "end")
     .map((w) => w.text_uthmani || "")
     .join(" ");
 }
