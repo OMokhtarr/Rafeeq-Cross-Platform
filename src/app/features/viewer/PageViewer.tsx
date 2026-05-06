@@ -77,7 +77,6 @@ const PageViewer: React.FC = () => {
 
   const {
     selected,
-    toggleSelected,
     clearSelection,
     selectionCount,
     hidden,
@@ -295,13 +294,6 @@ const PageViewer: React.FC = () => {
   };
 
   // ── Selection / hide ─────────────────────────────────────────────────────
-  const handleVerseTap = useCallback(
-    (key: string) => {
-      toggleSelected(key);
-    },
-    [toggleSelected],
-  );
-
   // Long-press → open verse action sheet
   const handleVerseLongPress = useCallback((key: string) => {
     setSheetVerseKey(key);
@@ -397,30 +389,6 @@ const PageViewer: React.FC = () => {
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
-              <div className="page-navigation-compact">
-                <button
-                  onClick={goToPrevious}
-                  disabled={currentPage === 1}
-                  className="nav-arrow prev"
-                  aria-label={t.mushaf.page}
-                >
-                  {isRTL ? "←" : "→"}
-                </button>
-                <span className="page-indicator">
-                  <span className="page-label">{t.mushaf.page}</span>
-                  <span className="page-number">
-                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
-                  </span>
-                </span>
-                <button
-                  onClick={goToNext}
-                  disabled={currentPage === totalPages}
-                  className="nav-arrow next"
-                  aria-label={t.mushaf.page}
-                >
-                  {isRTL ? "→" : "←"}
-                </button>
-              </div>
               {/* Hide-toggle */}
               <button
                 type="button"
@@ -591,7 +559,6 @@ const PageViewer: React.FC = () => {
                   selected={selected}
                   hidden={hidden}
                   green={greenVerse ? new Set([greenVerse]) : undefined}
-                  onVerseTap={handleVerseTap}
                   onVerseLongPress={handleVerseLongPress}
                   target={
                     highlightedVerse

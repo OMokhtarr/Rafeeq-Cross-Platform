@@ -20,9 +20,7 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
 /* Container: column, no scroll; relies on inner flex */
@@ -605,9 +603,6 @@ ion-content::part(scroll) {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .aa-actions {
-    flex-direction: column;
-  }
   .aa-verse-shared {
     font-size: 1.2rem;
     line-height: 1.9rem;

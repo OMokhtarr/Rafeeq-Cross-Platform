@@ -22,9 +22,7 @@ ion-content::part(scroll) {
   align-items: center;
   box-sizing: border-box;
   overflow: hidden;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
 .mst-container {
@@ -36,14 +34,15 @@ ion-content::part(scroll) {
   padding: 4px;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   overflow: hidden;
   gap: 8px;
+  padding: 10px;
 }
 .mst-container.with-sidebar {
   gap: 8px;
 }
-
-/* Sidebar — removed; context viewer now lives inside mst-main */
 
 .mst-main {
   width: 100%;
@@ -149,23 +148,26 @@ ion-content::part(scroll) {
   width: 100%;
 }
 
-/* Header */
+/* ── Header — matches aa-header exactly ───────────────────────────────── */
 .mst-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   padding: 4px 10px;
   margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   border: 2px solid var(--color-gold);
   flex-shrink: 0;
-  min-height: 40px;
+  min-height: 32px;
 }
+
 .mst-progress {
-  flex: 2;
-  margin-right: 10px;
+  flex: 0 0 auto;
+  width: 160px;
+  max-width: 100%;
 }
 .mst-progress-text {
   display: block;
@@ -189,23 +191,41 @@ ion-content::part(scroll) {
 .mst-score-pill {
   flex: 1;
   text-align: center;
-  font-size: var(--text-lg);
+  font-size: inherit;
   font-family: var(--font-arabic);
   font-weight: bold;
   color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
+.mst-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Immersive header */
+.mst-header-minimal .mst-progress-text,
+.mst-header-minimal .mst-score-pill {
+  font-size: inherit;
+}
+
+/* ── Exit button — matches aa-exit-btn (small circle) ─────────────────── */
 .mst-exit-btn {
   background: none;
   border: 2px solid #e74c3c;
   color: #e74c3c;
-  padding: 10px 16px;
-  border-radius: var(--radius-pill);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
   cursor: pointer;
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   transition: all 0.25s;
-  white-space: nowrap;
-  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .mst-exit-btn:hover {
   background: #e74c3c;
@@ -214,16 +234,30 @@ ion-content::part(scroll) {
 
 /* Card shrinks to its content — context viewer fills the remaining height */
 .mst-card {
+  flex: 0 0 auto;
   width: 100%;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 5px 10px;
   border: 2px solid var(--color-gold);
   box-shadow: var(--shadow-card);
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  height: auto;
+  overflow-y: auto;
+  transition: all 0.2s ease;
+}
+
+/* Immersive card – buttons only, minimal height */
+.mst-card.mst-card-buttons-only {
+  padding: 4px 8px;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+.mst-card-buttons-only .mst-info-strip {
+  display: none;
 }
 
 .mst-card-body {
@@ -237,13 +271,19 @@ ion-content::part(scroll) {
   direction: ltr;
 }
 
+/* ── Action buttons — matches aa-actions exactly ──────────────────────── */
 .mst-actions {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-top: 4px;
+  margin-bottom: 7px;
+}
+.mst-card-buttons-only .mst-actions {
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
 .mst-card-main {
@@ -256,6 +296,7 @@ ion-content::part(scroll) {
   overflow-x: hidden;
   scrollbar-width: none;
   direction: rtl;
+  width: 100%;
 }
 .mst-card-main::-webkit-scrollbar {
   display: none;
@@ -368,6 +409,15 @@ ion-content::part(scroll) {
 .mst-inline-chip.sibling {
   border-color: rgba(74, 144, 226, 0.5);
 }
+.mst-inline-chip.active-chip {
+  background: var(--ion-color-primary-tint, #4c8dff);
+  border-color: var(--ion-color-primary, #3880ff);
+  color: white;
+}
+.mst-inline-chip.active-chip .mst-chip-surah,
+.mst-inline-chip.active-chip .mst-chip-meta {
+  color: white;
+}
 
 /* Verse box */
 .mst-verse-box {
@@ -414,7 +464,7 @@ ion-content::part(scroll) {
 
 .mst-input {
   width: 100%;
-  padding: 12px 12px;
+  padding: 12px;
   font-size: var(--text-md);
   border: 2px solid var(--color-gold);
   border-radius: var(--radius-md);
@@ -437,10 +487,10 @@ ion-content::part(scroll) {
   cursor: default;
 }
 
-/* Action buttons */
+/* ── Buttons — match aa-btn sizing exactly ────────────────────────────── */
 .mst-btn {
   flex: 0 0 auto;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border: none;
   border-radius: 30px;
   font-size: var(--text-sm);
@@ -452,11 +502,11 @@ ion-content::part(scroll) {
   justify-content: center;
   gap: 4px;
   min-width: 70px;
-  min-height: 40px;
+  min-height: 24px;
 }
 .mst-btn-en {
-  font-size: 0.58rem;
-  opacity: 0.75;
+  font-size: 0.65rem;
+  opacity: 0.8;
 }
 .mst-btn:disabled {
   opacity: 0.4;
@@ -875,23 +925,7 @@ ion-content::part(scroll) {
   background: rgba(74, 144, 226, 0.18);
 }
 
-@media (max-width: 768px) {
-  .mst-actions {
-    flex-direction: column;
-  }
-  .mst-verse-shared {
-    font-size: 1.2rem;
-    line-height: 1.9rem;
-  }
-  .mst-header {
-    flex-wrap: wrap;
-    height: auto;
-  }
-}
-
-/* ── Immersive mode support ────────────────────────────────────────────── */
-
-/* Minimal header (same size, less padding) */
+/* ── Immersive mode support ───────────────────────────────────────────── */
 .mst-header-minimal {
   padding: 4px 12px;
   min-height: 44px;
@@ -899,17 +933,6 @@ ion-content::part(scroll) {
 .mst-header-minimal .mst-progress-text,
 .mst-header-minimal .mst-score-pill {
   font-size: inherit;
-}
-
-/* Buttons-only card */
-.mst-card-buttons-only {
-  padding: 4px 8px;
-  flex: 0 0 auto;
-  height: auto;
-  min-height: 0;
-}
-.mst-card-buttons-only .mst-info-strip {
-  display: none; /* hide info strip, surah/aya/page are in Mushaf top edge */
 }
 
 /* Context viewer – takes remaining space */
@@ -932,35 +955,18 @@ ion-content::part(scroll) {
   width: 100%;
 }
 
-/* Header actions container */
-.mst-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* Ensure container uses column layout with flex */
-.mst-container {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  padding: 10px;
-  box-sizing: border-box;
-  gap: 8px;
-  overflow: hidden;
-}
-
-.mst-inline-chip.active-chip {
-  background: var(--ion-color-primary-tint, #4c8dff);
-  border-color: var(--ion-color-primary, #3880ff);
-  color: white;
-}
-.mst-inline-chip.active-chip .mst-chip-surah,
-.mst-inline-chip.active-chip .mst-chip-meta {
-  color: white;
+/* Responsive */
+@media (max-width: 768px) {
+  .mst-verse-shared {
+    font-size: 1.2rem;
+    line-height: 1.9rem;
+  }
+  .mst-header {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 8px;
+  }
+  .mst-header-actions {
+    margin-left: auto;
+  }
 }

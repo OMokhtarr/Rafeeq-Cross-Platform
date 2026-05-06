@@ -69,6 +69,7 @@ interface Props {
     aya: number;
     revealedWordCount: number;
     hiddenPositions?: Set<number>;
+    hintedPositions?: Set<number>;
   };
   /** Tap/long-press a word → toggle selection. Receives "sura:aya". */
   onVerseTap?: (verseKey: string) => void;
@@ -325,10 +326,15 @@ const MushafPage: React.FC<Props> = ({
               tw.aya === partialTarget.aya;
             const isWordPastReveal =
               isPartialTargetVerse &&
-              tw.word.charType === "word" &&
+              tw.word.charType === "end" &&
               (partialTarget!.hiddenPositions
                 ? partialTarget!.hiddenPositions.has(tw.word.position)
                 : tw.word.position > partialTarget!.revealedWordCount);
+
+            const isWordHinted =
+              isPartialTargetVerse &&
+              tw.word.charType !== "end" &&
+              !!partialTarget!.hintedPositions?.has(tw.word.position);
 
             const isEndMarker =
               tw.word.charType === "end" &&
@@ -349,6 +355,7 @@ const MushafPage: React.FC<Props> = ({
               isGreen ? "mushaf-verse-green" : "",
               isGrey ? "mushaf-verse-grey" : "",
               isWordPastReveal ? "mushaf-verse-hidden" : "",
+              isWordHinted ? "mushaf-word-hinted" : "",
               isEndMarker ? "mushaf-verse-end-marker" : "",
             ]
               .filter(Boolean)

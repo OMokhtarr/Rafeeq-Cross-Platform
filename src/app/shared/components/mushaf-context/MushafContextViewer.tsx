@@ -59,20 +59,21 @@ const MushafContextViewer: React.FC<Props> = ({
     [verses, verse.sura, verse.aya],
   );
   const targetWordCount =
-    targetVerse?.words?.filter((w) => w.charType === "word").length ?? 0;
+    targetVerse?.words?.filter((w) => w.charType === "end").length ?? 0;
 
   // Number of API words covered by the snippet text. Walks the API words
   // accumulating their diacritic-stripped text_uthmani until it matches the
-  // snippet's stripped form. Falls back to space-token count if the verse
-  // hasn't loaded yet or the match doesn't line up cleanly.
+  // snippet's stripped form. Returns 0 if the verse hasn't loaded yet so that
+  // we never accidentally reveal words before the API word list is available —
+  // the raw space-token count is unreliable and can equal targetWordCount,
+  // causing the entire verse to appear unhidden.
   const snippetWordCount = useMemo(() => {
     if (!snippet) return 0;
-    const tokenCount = snippet.trim().split(/\s+/).filter(Boolean).length;
     const apiWords =
-      targetVerse?.words?.filter((w) => w.charType === "word") ?? [];
-    if (apiWords.length === 0) return tokenCount;
+      targetVerse?.words?.filter((w) => w.charType === "end") ?? [];
+    if (apiWords.length === 0) return 0;
     const target = removeDiacritics(snippet).replace(/\s+/g, "");
-    if (!target) return tokenCount;
+    if (!target) return 0;
     let acc = "";
     for (let i = 0; i < apiWords.length; i++) {
       acc += removeDiacritics(apiWords[i].text_uthmani || "").replace(
@@ -81,7 +82,7 @@ const MushafContextViewer: React.FC<Props> = ({
       );
       if (acc.length >= target.length) return i + 1;
     }
-    return tokenCount;
+    return 0;
   }, [snippet, targetVerse]);
 
   // Reset hint count when the target verse changes. Intentionally excludes
@@ -239,7 +240,7 @@ const MushafContextViewer: React.FC<Props> = ({
   const partialTarget = useMemo(() => {
     if (!targetOnPage || !targetVerse) return undefined;
     const wordEntries = (targetVerse.words ?? []).filter(
-      (w) => w.charType === "word",
+      (w) => w.charType === "end",
     );
     const hiddenPositions = new Set<number>();
     for (let i = 0; i < wordEntries.length; i++) {

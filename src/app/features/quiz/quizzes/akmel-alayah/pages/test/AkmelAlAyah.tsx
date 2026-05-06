@@ -245,11 +245,13 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-loading">
-            <div className="aa-spinner"></div>
-            <p>{tt.loadingAkmel}</p>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-loading">
+              <div className="aa-spinner"></div>
+              <p>{tt.loadingAkmel}</p>
+            </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -266,8 +268,8 @@ const AkmelAlAyah: React.FC = () => {
                 {tt.backToSetup}
               </button>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -300,8 +302,8 @@ const AkmelAlAyah: React.FC = () => {
                 </button>
               </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -321,7 +323,9 @@ const AkmelAlAyah: React.FC = () => {
           <div className="aa-container">
             {/* Header – becomes minimal when immersive */}
             <div
-              className={`aa-header ${immersiveMode ? "aa-header-minimal" : ""}`}
+              className={`aa-header ${
+                immersiveMode ? "aa-header-minimal" : ""
+              }`}
             >
               <div className="aa-progress">
                 <span className="aa-progress-text">
@@ -353,7 +357,9 @@ const AkmelAlAyah: React.FC = () => {
 
             {/* Question card – full or minimized (buttons only) */}
             <div
-              className={`aa-card ${immersiveMode ? "aa-card-buttons-only" : ""}`}
+              className={`aa-card ${
+                immersiveMode ? "aa-card-buttons-only" : ""
+              }`}
             >
               {/* Info strip – hidden in immersive mode (already in page-edge-top) */}
               {!immersiveMode && (
@@ -461,7 +467,9 @@ const AkmelAlAyah: React.FC = () => {
 
                       {answered && (
                         <div
-                          className={`aa-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
+                          className={`aa-result ${
+                            correct ? "correct" : skipped ? "skipped" : "wrong"
+                          }`}
                         >
                           <span className="aa-result-icon">
                             {correct ? "✅" : skipped ? "⏭" : "❌"}
@@ -470,8 +478,8 @@ const AkmelAlAyah: React.FC = () => {
                             {correct
                               ? tt.correctMsg
                               : skipped
-                                ? tt.skippedMsg
-                                : tt.wrongMsg}
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
                           </span>
                           {!correct && (
                             <div className="aa-correct-answer">

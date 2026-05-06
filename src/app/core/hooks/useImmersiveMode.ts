@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Movement under this many pixels (Manhattan distance) counts as a tap. */
-const TAP_MOVEMENT_THRESHOLD = 10;
+const TAP_MOVEMENT_THRESHOLD = 40;
 
 export interface ImmersiveMode {
   /** True when toolbar + bottom nav are visible (the default). */
@@ -36,7 +36,11 @@ export interface ImmersiveMode {
    * point and the event target so the matching END handler can decide
    * whether the gesture was a tap and whether the target was interactive.
    */
-  registerTouchStart: (x: number, y: number, target: EventTarget | null) => void;
+  registerTouchStart: (
+    x: number,
+    y: number,
+    target: EventTarget | null,
+  ) => void;
   /**
    * Call from the consumer's touch/click END handler. If the gesture was
    * a short tap on a non-interactive element, toggles the chrome visibility.
@@ -113,28 +117,25 @@ export function useImmersiveMode(): ImmersiveMode {
     [],
   );
 
-  const maybeToggleOnTap = useCallback(
-    (x: number, y: number) => {
-      const sx = startX.current;
-      const sy = startY.current;
-      const target = startTarget.current;
-      // Always reset bookkeeping, even if we bail out.
-      startX.current = null;
-      startY.current = null;
-      startTarget.current = null;
+  const maybeToggleOnTap = useCallback((x: number, y: number) => {
+    const sx = startX.current;
+    const sy = startY.current;
+    const target = startTarget.current;
+    // Always reset bookkeeping, even if we bail out.
+    startX.current = null;
+    startY.current = null;
+    startTarget.current = null;
 
-      if (sx === null || sy === null) return;
-      if (inputFocused.current) return;
-      if (isInteractiveTarget(target)) return;
+    if (sx === null || sy === null) return;
+    if (inputFocused.current) return;
+    if (isInteractiveTarget(target)) return;
 
-      const dx = Math.abs(x - sx);
-      const dy = Math.abs(y - sy);
-      if (dx > TAP_MOVEMENT_THRESHOLD || dy > TAP_MOVEMENT_THRESHOLD) return;
+    const dx = Math.abs(x - sx);
+    const dy = Math.abs(y - sy);
+    if (dx > TAP_MOVEMENT_THRESHOLD || dy > TAP_MOVEMENT_THRESHOLD) return;
 
-      setChromeVisible((prev) => !prev);
-    },
-    [],
-  );
+    setChromeVisible((prev) => !prev);
+  }, []);
 
   return {
     chromeVisible,

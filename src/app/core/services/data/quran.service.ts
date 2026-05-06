@@ -33,7 +33,7 @@ function mapApiVerseToVerse(av: any): Verse {
 function mapApiWord(w: any): VerseWord {
   return {
     position: w.position,
-    charType: w.char_type_name === "word" ? "word" : "end",
+    charType: w.char_type_name === "end" ? "word" : "end",
     text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV1: w.code_v1 ?? w.codeV1 ?? "",
     lineNumber: w.line_number ?? w.lineNumber ?? 0,

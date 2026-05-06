@@ -25,142 +25,10 @@
   margin-bottom: 0.2em;
 }
 
-/* ── Decorative Surah-name header ──────────────────────────────────────────
-   Renders above the Bismillah at the top of any page that starts a new
-   surah. Visually a wide horizontal banner with an inner cartouche holding
-   the surah name, flanked by arabesque rosettes — built entirely from CSS
-   so it scales with the page font and adapts to day/night themes. */
-.mushaf-surah-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Tightened vertical breathing room so the header takes less of the
-     page's vertical budget — leaves more room for the verses themselves. */
-  margin: 0.05em auto 0.2em;
-  padding: 0;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.mushaf-surah-header-frame {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* Slimmer cartouche: narrower min-width, less side padding. */
-  min-width: 45%;
-  max-width: 78%;
-  padding: 0.3em 2.4em;
-  border: 1.5px solid var(--color-mushaf-text, #1a1a1a);
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent 0 6px,
-    rgba(212, 180, 140, 0.18) 6px 7px
-  );
-  box-shadow:
-    inset 0 0 0 1px var(--color-mushaf-text, #1a1a1a),
-    inset 0 0 0 4px transparent,
-    inset 0 0 0 5px var(--color-mushaf-text, #1a1a1a);
-}
-
-/* Side rosettes — small ornamental medallions using radial-gradient flowers. */
-.mushaf-surah-header-frame::before,
-.mushaf-surah-header-frame::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  /* Smaller rosettes to match the slimmer frame. */
-  width: 1.1em;
-  height: 1.1em;
-  transform: translateY(-50%);
-  border: 1.2px solid var(--color-mushaf-text, #1a1a1a);
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at center,
-      var(--color-mushaf-text, #1a1a1a) 0 0.18em,
-      transparent 0.22em
-    ),
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 30deg,
-      rgba(212, 180, 140, 0.45) 30deg 60deg,
-      transparent 60deg 90deg,
-      rgba(212, 180, 140, 0.45) 90deg 120deg,
-      transparent 120deg 150deg,
-      rgba(212, 180, 140, 0.45) 150deg 180deg,
-      transparent 180deg 210deg,
-      rgba(212, 180, 140, 0.45) 210deg 240deg,
-      transparent 240deg 270deg,
-      rgba(212, 180, 140, 0.45) 270deg 300deg,
-      transparent 300deg 330deg,
-      rgba(212, 180, 140, 0.45) 330deg 360deg
-    );
-}
-
-.mushaf-surah-header-frame::before {
-  inset-inline-start: 0.4em;
-}
-
-.mushaf-surah-header-frame::after {
-  inset-inline-end: 0.4em;
-}
-
-.mushaf-surah-header-name {
-  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  /* Reduced from 0.5em → 0.4em — the surah name was visually larger
-     than the verses below it; this brings it closer to a single line. */
-  font-size: 0.4em;
-  font-weight: 700;
-  color: var(--color-mushaf-text, #1a1a1a);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  text-shadow: 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="night"] .mushaf-surah-header-frame {
-  border-color: var(--color-mushaf-text, #f4ecd8);
-  box-shadow:
-    inset 0 0 0 1px var(--color-mushaf-text, #f4ecd8),
-    inset 0 0 0 4px transparent,
-    inset 0 0 0 5px var(--color-mushaf-text, #f4ecd8);
-}
-
-[data-theme="night"] .mushaf-surah-header-frame::before,
-[data-theme="night"] .mushaf-surah-header-frame::after {
-  border-color: var(--color-mushaf-text, #f4ecd8);
-  background:
-    radial-gradient(
-      circle at center,
-      var(--color-mushaf-text, #f4ecd8) 0 0.18em,
-      transparent 0.22em
-    ),
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 30deg,
-      rgba(212, 180, 140, 0.55) 30deg 60deg,
-      transparent 60deg 90deg,
-      rgba(212, 180, 140, 0.55) 90deg 120deg,
-      transparent 120deg 150deg,
-      rgba(212, 180, 140, 0.55) 150deg 180deg,
-      transparent 180deg 210deg,
-      rgba(212, 180, 140, 0.55) 210deg 240deg,
-      transparent 240deg 270deg,
-      rgba(212, 180, 140, 0.55) 270deg 300deg,
-      transparent 300deg 330deg,
-      rgba(212, 180, 140, 0.55) 330deg 360deg
-    );
-}
-
-[data-theme="night"] .mushaf-surah-header-name {
-  color: var(--color-mushaf-text, #f4ecd8);
-}
-
 .mushaf-line {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: space-evenly;
   align-items: baseline;
   white-space: nowrap;
   width: 100%;
@@ -168,11 +36,12 @@
 
 .mushaf-word {
   display: inline-block;
+  margin: 0 0.01em;
 }
 
 .mushaf-ayah-end {
   display: inline-block;
-  margin: 0 0.15em;
+  margin: 0 0.01em;
   position: relative;
 }
 
@@ -295,4 +164,173 @@
   opacity: 1 !important;
   color: var(--color-mushaf-text, #f4ecd8) !important;
   -webkit-text-fill-color: var(--color-mushaf-text, #f4ecd8) !important;
+}
+
+.mushaf-word-hinted {
+  color: #2e7d32 !important;
+}
+
+[data-theme="night"] .mushaf-word-hinted {
+  color: #6ee7a3 !important;
+}
+/* ── Decorative Surah-name header ──────────────────────────────────────────
+   A horizontal banner with:
+     • Double-line frame (outer + inner hairline) framing the whole bar
+     • Two ornate arabesque rosettes (SVG) anchored at each end
+     • A central lobed cartouche containing the surah name
+   Inks are driven by --color-mushaf-text / --color-mushaf-bg so the banner
+   inverts automatically between day (dark ink on cream) and night
+   (cream ink on dark) themes. */
+.mushaf-surah-header {
+  --sh-ink: var(--color-mushaf-text, #1a1a1a);
+  --sh-bg: var(--color-mushaf-bg, #fffef5);
+
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.4em;
+  width: 100%;
+  /* Banner sits above bismillah; height tied to em so it scales with font. */
+  height: 1.5em;
+  padding: 0.16em 0.2em;
+  margin: 0.05em auto 0.2em;
+  background: var(--sh-bg);
+  border: 1px solid var(--sh-ink);
+  /* outer second hairline for the double-border effect */
+  outline: 1px solid var(--sh-ink);
+  outline-offset: 2px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* ── Side medallions (start + end of banner) ─────────────────────────────
+   The mushaf-surah-header element only has one child (.frame) in the JSX,
+   so we draw both rosettes as ::before / ::after pseudo-elements on the
+   outer banner. SVG fill is set to the day ink; night theme overrides
+   the data-URI. */
+.mushaf-surah-header::before,
+.mushaf-surah-header::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 1.2em;
+  align-self: stretch;
+  border: 1px solid var(--sh-ink);
+  background: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
+  <g fill='none' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+    <circle cx='50' cy='50' r='34'/>\
+    <circle cx='50' cy='50' r='22'/>\
+    <circle cx='50' cy='50' r='6' fill='%231a1a1a'/>\
+    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
+    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
+    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
+    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
+  </g>\
+</svg>")
+    center / 88% 88% no-repeat;
+  box-sizing: border-box;
+}
+
+/* ── Central cartouche (the .frame element) ──────────────────────────────
+   Lobed shape with a triple-band edge: outer ink → bg → inner ink hairline
+   → bg interior where the surah name sits. Implemented with stacked
+   pseudo-elements all clipped to the same lobed polygon. */
+.mushaf-surah-header-frame {
+  --lobe: polygon(
+    0% 50%,
+    4% 12%,
+    10% 0%,
+    90% 0%,
+    96% 12%,
+    100% 50%,
+    96% 88%,
+    90% 100%,
+    10% 100%,
+    4% 88%
+  );
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--lobe);
+  background: var(--sh-ink); /* outer ink edge */
+  box-shadow: none;
+}
+
+.mushaf-surah-header-frame::before,
+.mushaf-surah-header-frame::after {
+  content: "";
+  position: absolute;
+  clip-path: var(--lobe);
+  pointer-events: none;
+  border: 0;
+  border-radius: 0;
+  /* Override the rosette positioning rules from earlier — these pseudos
+     are now the cartouche's interior bands, not medallions. */
+  top: auto;
+  width: auto;
+  height: auto;
+  transform: none;
+}
+
+.mushaf-surah-header-frame::before {
+  /* mid band: bg-colored ring sitting 2px inside the outer ink edge */
+  inset: 2px;
+  background: var(--sh-bg);
+}
+
+.mushaf-surah-header-frame::after {
+  /* inner ink hairline, 1px inside the mid band */
+  inset: 3px;
+  background: var(--sh-ink);
+}
+
+.mushaf-surah-header-name {
+  /* Sit above the cartouche bands and clip to a fourth (innermost) lobed
+     bg fill so the name reads against page color, not against the ink. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  clip-path: var(--lobe);
+  background: var(--sh-bg);
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  font-size: 0.4em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--sh-ink);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding: 0 0.6em;
+  text-shadow: none;
+}
+
+/* ── Night theme override ────────────────────────────────────────────────
+   Tokens already flip --color-mushaf-text / --color-mushaf-bg, so the
+   banner inverts automatically. The only thing we have to swap by hand is
+   the SVG stroke/fill color baked into the medallion data URI. */
+[data-theme="night"] .mushaf-surah-header::before,
+[data-theme="night"] .mushaf-surah-header::after {
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
+  <g fill='none' stroke='%23e8e0d0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+    <circle cx='50' cy='50' r='34'/>\
+    <circle cx='50' cy='50' r='22'/>\
+    <circle cx='50' cy='50' r='6' fill='%23e8e0d0'/>\
+    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
+    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
+    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
+    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
+  </g>\
+</svg>");
 }
