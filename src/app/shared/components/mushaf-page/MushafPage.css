@@ -162,8 +162,8 @@
 [data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
   visibility: visible !important;
   opacity: 1 !important;
-  color: var(--color-mushaf-text, #f4ecd8) !important;
-  -webkit-text-fill-color: var(--color-mushaf-text, #f4ecd8) !important;
+  color: var(--color-mushaf-text, #ffffff) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #ffffff) !important;
 }
 
 .mushaf-word-hinted {
@@ -305,7 +305,7 @@
   clip-path: var(--lobe);
   background: var(--sh-bg);
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: 0.4em;
+  font-size: 0.65em;
   font-weight: 700;
   line-height: 1;
   color: var(--sh-ink);

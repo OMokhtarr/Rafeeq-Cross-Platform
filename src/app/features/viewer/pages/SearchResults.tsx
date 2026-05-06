@@ -25,6 +25,7 @@ import {
   getSurahNameEnglish,
 } from "../../../core/services/data/metadata.service";
 import { pushRecent } from "./Search";
+import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
 import "./SearchResults.css";
 
 const SearchResults: React.FC = () => {
@@ -113,8 +114,8 @@ const SearchResults: React.FC = () => {
         ? "نتيجة واحدة"
         : `${fmt(n)} نتائج`
       : n === 1
-        ? "1 Result"
-        : `${fmt(n)} Results`;
+      ? "1 Result"
+      : `${fmt(n)} Results`;
 
   return (
     <IonPage>
@@ -145,27 +146,6 @@ const SearchResults: React.FC = () => {
             <h1 className="results-title">
               {lang === "ar" ? "نتائج البحث" : "Search Results"}
             </h1>
-            <button
-              type="button"
-              className="results-settings-btn"
-              onClick={() => history.push("/settings")}
-              aria-label={t.mushaf.settings}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="22"
-                height="22"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" />
-              </svg>
-            </button>
           </header>
 
           {/* Query echo (Arabic-aware via dir="auto") */}
@@ -288,13 +268,7 @@ const SearchResults: React.FC = () => {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             >
-                              <rect
-                                x="9"
-                                y="9"
-                                width="13"
-                                height="13"
-                                rx="2"
-                              />
+                              <rect x="9" y="9" width="13" height="13" rx="2" />
                               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                             </svg>
                           )}
@@ -310,7 +284,9 @@ const SearchResults: React.FC = () => {
                             goToVerse(r);
                           }}
                         >
-                          {lang === "ar" ? "متابعة القراءة" : "Continue Reading"}
+                          {lang === "ar"
+                            ? "متابعة القراءة"
+                            : "Continue Reading"}
                         </button>
                         <button
                           type="button"
@@ -353,6 +329,7 @@ const SearchResults: React.FC = () => {
               </span>
             </div>
           )}
+          <BottomNavBar active="quran" />
         </div>
       </IonContent>
     </IonPage>

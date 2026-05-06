@@ -51,7 +51,7 @@
     var(--color-bg-card, #1c1c1c) 0%,
     #243248 100%
   );
-  color: #f4ecd8;
+  color: #ffffff;
 }
 
 .vas-handle {
@@ -136,9 +136,7 @@
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 1rem;
-  transition:
-    background 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .vas-audio-btn:hover:not(:disabled) {

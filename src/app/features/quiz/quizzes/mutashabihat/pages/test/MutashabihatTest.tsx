@@ -217,12 +217,14 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-error">
-            <div className="mst-error-box">
-              <p>{error}</p>
-              <button onClick={() => history.push("/mutashabihat-setup")}>
-                {tt.backToSetup}
-              </button>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-error">
+              <div className="mst-error-box">
+                <p>{error}</p>
+                <button onClick={() => history.push("/mutashabihat-setup")}>
+                  {tt.backToSetup}
+                </button>
+              </div>
             </div>
             <BottomNavBar active="quiz" />
           </div>
@@ -237,24 +239,26 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-complete">
-            <div className="mst-complete-card">
-              <div className="mst-complete-badge">🎯</div>
-              <h2>{tt.completeTitle}</h2>
-              <p className="mst-complete-sub">{tt.completeMutashabihatSub}</p>
-              <div className="mst-score-ring">
-                <span className="mst-score-num">{score}</span>
-                <span className="mst-score-sep">/</span>
-                <span className="mst-score-total">{questions.length}</span>
-              </div>
-              <p className="mst-score-pct">{pct}%</p>
-              <div className="mst-complete-actions">
-                <button onClick={() => history.push("/mutashabihat-setup")}>
-                  {tt.newQuiz}
-                </button>
-                <button onClick={() => history.push("/quiz-list")}>
-                  {tt.quizListLink}
-                </button>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-complete">
+              <div className="mst-complete-card">
+                <div className="mst-complete-badge">🎯</div>
+                <h2>{tt.completeTitle}</h2>
+                <p className="mst-complete-sub">{tt.completeMutashabihatSub}</p>
+                <div className="mst-score-ring">
+                  <span className="mst-score-num">{score}</span>
+                  <span className="mst-score-sep">/</span>
+                  <span className="mst-score-total">{questions.length}</span>
+                </div>
+                <p className="mst-score-pct">{pct}%</p>
+                <div className="mst-complete-actions">
+                  <button onClick={() => history.push("/mutashabihat-setup")}>
+                    {tt.newQuiz}
+                  </button>
+                  <button onClick={() => history.push("/quiz-list")}>
+                    {tt.quizListLink}
+                  </button>
+                </div>
               </div>
             </div>
             <BottomNavBar active="quiz" />

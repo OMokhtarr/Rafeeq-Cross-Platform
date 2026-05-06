@@ -3,7 +3,10 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
 import { initMetadata } from "./app/core/services/data/metadata.service";
-import { preloadAllPages } from "./app/core/services/data/quran.service";
+import {
+  preloadAllPages,
+  seedTextCorpus,
+} from "./app/core/services/data/quran.service";
 
 // Core Ionic CSS
 import "@ionic/react/css/core.css";
@@ -43,6 +46,13 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    // Kick off the offline corpus seed in parallel with metadata init —
+    // this is what unlocks search before the API preload finishes (and
+    // even on a brand-new install with no network).
+    seedTextCorpus().catch(() => {
+      /* logged in service; safe to ignore here */
+    });
+
     initMetadata()
       .then(() => {
         setMetaReady(true);

@@ -25,6 +25,7 @@ import {
   getSurahNameArabic,
   getSurahNameEnglish,
 } from "../../../core/services/data/metadata.service";
+import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
 import "./Search.css";
 
 /** Debounce window for live search-as-you-type (ms). */
@@ -60,7 +61,10 @@ export function readRecents(): RecentSearch[] {
 
 export function writeRecents(list: RecentSearch[]): void {
   try {
-    localStorage.setItem(RECENTS_KEY, JSON.stringify(list.slice(0, RECENTS_MAX)));
+    localStorage.setItem(
+      RECENTS_KEY,
+      JSON.stringify(list.slice(0, RECENTS_MAX)),
+    );
   } catch {}
 }
 
@@ -151,9 +155,7 @@ const Search: React.FC = () => {
   // result list).
   const handleResultTap = (r: SearchResult) => {
     pushRecent(query, liveResults.length);
-    history.push(
-      `/viewer?page=${r.page}&v=${encodeURIComponent(r.verseKey)}`,
-    );
+    history.push(`/viewer?page=${r.page}&v=${encodeURIComponent(r.verseKey)}`);
   };
 
   const clearAll = () => {
@@ -168,13 +170,16 @@ const Search: React.FC = () => {
         ? "نتيجة واحدة"
         : `${fmt(count)} نتائج`
       : count === 1
-        ? "1 result"
-        : `${fmt(count)} results`;
+      ? "1 result"
+      : `${fmt(count)} results`;
 
   return (
     <IonPage>
       <IonContent fullscreen>
-        <div className="search-page" dir={isRTL ? "rtl" : "ltr"}>
+        <div
+          className="search-page search-page-with-nav"
+          dir={isRTL ? "rtl" : "ltr"}
+        >
           {/* ── Header ── */}
           <header className="search-page-header">
             <button
@@ -221,12 +226,12 @@ const Search: React.FC = () => {
                 {liveLoading
                   ? t.mushaf.searching
                   : liveError
-                    ? liveError
-                    : liveResults.length === 0
-                      ? lang === "ar"
-                        ? "لا توجد نتائج"
-                        : "No results"
-                      : resultsLabel(liveResults.length)}
+                  ? liveError
+                  : liveResults.length === 0
+                  ? lang === "ar"
+                    ? "لا توجد نتائج"
+                    : "No results"
+                  : resultsLabel(liveResults.length)}
               </h2>
               <ul className="recents-list">
                 {liveResults.map((r, i) => (
@@ -260,55 +265,55 @@ const Search: React.FC = () => {
               </ul>
             </section>
           ) : (
-          <section className="recents-section">
-            <h2 className="recents-title">
-              {lang === "ar" ? "عمليات البحث الأخيرة" : "Recent Searches"}
-            </h2>
-            {recents.length === 0 ? (
-              <p className="recents-empty">
-                {lang === "ar"
-                  ? "ابدأ بالبحث لرؤية تاريخ بحثك هنا."
-                  : "Start searching to see your history here."}
-              </p>
-            ) : (
-              <ul className="recents-list">
-                {recents.map((r) => (
-                  <li
-                    key={r.query}
-                    className="recent-row"
-                    onClick={() => handleRecentTap(r.query)}
-                  >
-                    <span className="recent-icon" aria-hidden>
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="18"
-                        height="18"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="11" cy="11" r="7" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                      </svg>
-                    </span>
-                    <span className="recent-text">
-                      <span className="recent-query" dir="auto">
-                        {r.query}
+            <section className="recents-section">
+              <h2 className="recents-title">
+                {lang === "ar" ? "عمليات البحث الأخيرة" : "Recent Searches"}
+              </h2>
+              {recents.length === 0 ? (
+                <p className="recents-empty">
+                  {lang === "ar"
+                    ? "ابدأ بالبحث لرؤية تاريخ بحثك هنا."
+                    : "Start searching to see your history here."}
+                </p>
+              ) : (
+                <ul className="recents-list">
+                  {recents.map((r) => (
+                    <li
+                      key={r.query}
+                      className="recent-row"
+                      onClick={() => handleRecentTap(r.query)}
+                    >
+                      <span className="recent-icon" aria-hidden>
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="18"
+                          height="18"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="11" cy="11" r="7" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
                       </span>
-                      <span className="recent-count">
-                        {resultsLabel(r.count)}
+                      <span className="recent-text">
+                        <span className="recent-query" dir="auto">
+                          {r.query}
+                        </span>
+                        <span className="recent-count">
+                          {resultsLabel(r.count)}
+                        </span>
                       </span>
-                    </span>
-                    <span className="recent-chev" aria-hidden>
-                      {isRTL ? "‹" : "›"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                      <span className="recent-chev" aria-hidden>
+                        {isRTL ? "‹" : "›"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
 
           {/* ── Bottom search input ── */}
@@ -347,9 +352,7 @@ const Search: React.FC = () => {
             <button
               type="submit"
               className="search-bottom-mic"
-              aria-label={
-                lang === "ar" ? "بحث صوتي" : "Voice search (submit)"
-              }
+              aria-label={lang === "ar" ? "بحث صوتي" : "Voice search (submit)"}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -369,6 +372,7 @@ const Search: React.FC = () => {
               </svg>
             </button>
           </form>
+          <BottomNavBar active="quran" />
         </div>
       </IonContent>
     </IonPage>

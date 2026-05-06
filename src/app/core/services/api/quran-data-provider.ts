@@ -35,12 +35,8 @@ export async function fetchVersesByPage(page: number, wordFields: string) {
   return trySdkOrFallback("fetchVersesByPage", page, wordFields);
 }
 
-export async function fetchVersesByJuz(juz: number) {
-  return trySdkOrFallback("fetchVersesByJuz", juz);
-}
-
-export async function searchQuran(query: string) {
-  return trySdkOrFallback("searchQuran", query);
+export async function fetchVersesByJuz(juz: number, wordFields?: string) {
+  return trySdkOrFallback("fetchVersesByJuz", juz, wordFields);
 }
 
 export async function fetchAudioForAyah(

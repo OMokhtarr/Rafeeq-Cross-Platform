@@ -6,7 +6,7 @@
  * Uthmani text is always fetched too, because quizzes / search read it.
  */
 
-export type MushafKind = "qpc_v1" | "uthmani" | "indopak" | "imlaei";
+export type MushafKind = "qpc_v4_tajweed" | "uthmani" | "indopak" | "imlaei";
 
 export interface MushafSpec {
   kind: MushafKind;
@@ -17,17 +17,19 @@ export interface MushafSpec {
   /**
    * Comma-separated value passed to the API as `word_fields`. Always includes
    * `text_uthmani` so we have a stable Arabic string for quizzes and search,
-   * regardless of which mushaf is selected.
+   * regardless of which mushaf is selected. Selecting `code_v2` here is
+   * sufficient to get the V4 Tajweed glyph codes — the QF Content API does
+   * not expose a separate mushaf selector.
    */
   wordFields: string;
 }
 
 export const MUSHAFS: Record<MushafKind, MushafSpec> = {
-  qpc_v1: {
-    kind: "qpc_v1",
-    labelAr: "مصحف المدينة (KFGQPC V1)",
-    labelEn: "Madani Mushaf (KFGQPC V1)",
-    wordFields: "code_v1,text_uthmani,line_number,page_number",
+  qpc_v4_tajweed: {
+    kind: "qpc_v4_tajweed",
+    labelAr: "مصحف التجويد (KFGQPC V4)",
+    labelEn: "Tajweed Mushaf (KFGQPC V4)",
+    wordFields: "code_v2,text_uthmani,line_number,page_number",
   },
   uthmani: {
     kind: "uthmani",
@@ -49,4 +51,4 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
   },
 };
 
-export const DEFAULT_MUSHAF: MushafKind = "qpc_v1";
+export const DEFAULT_MUSHAF: MushafKind = "qpc_v4_tajweed";

@@ -11,7 +11,11 @@ const DB_NAME = "rafeeq-quran";
 //     (QPC V1 .ttf blobs from jsDelivr, key=pageNumber).
 // v3: added `translations` (cached translation pages, key=`${editionId}:${page}`).
 // v4: added `audio` (cached per-ayah audio blobs, key=`${reciter}:${sura}:${aya}`).
-const DB_VERSION = 4;
+// v5: switched renderer from QPC V1 to QPC V4 Tajweed. The `pages` records
+//     cached pre-v5 carry `codeV1` strings that will not render in V4 fonts,
+//     and the `fonts` records hold V1 TTF blobs. Both stores are wiped on
+//     upgrade so the next read repopulates them with V4 data.
+const DB_VERSION = 5;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -25,6 +29,8 @@ export class IDBService {
 
       req.onupgradeneeded = (e) => {
         const db = (e.target as IDBOpenDBRequest).result;
+        const tx = (e.target as IDBOpenDBRequest).transaction;
+        const oldVersion = e.oldVersion;
 
         // verses store: keyed by "sura:aya" string e.g. "2:255"
         if (!db.objectStoreNames.contains("verses")) {
@@ -58,6 +64,19 @@ export class IDBService {
         // record shape: { id: `${reciter}:${sura}:${aya}`, blob: Blob, mime: string }
         if (!db.objectStoreNames.contains("audio")) {
           db.createObjectStore("audio", { keyPath: "id" });
+        }
+
+        // v5: switching from QPC V1 to V4 invalidates `pages` (verses now
+        // carry codeV2 instead of codeV1) and `fonts` (V1 TTFs → V4 woff2).
+        // Wipe both so the next read repopulates with V4 data. Only triggers
+        // for existing installs; fresh installs (oldVersion === 0) skip.
+        if (oldVersion > 0 && oldVersion < 5 && tx) {
+          if (db.objectStoreNames.contains("pages")) {
+            tx.objectStore("pages").clear();
+          }
+          if (db.objectStoreNames.contains("fonts")) {
+            tx.objectStore("fonts").clear();
+          }
         }
       };
 

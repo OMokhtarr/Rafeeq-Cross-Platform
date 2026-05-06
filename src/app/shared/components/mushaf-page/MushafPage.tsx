@@ -1,9 +1,9 @@
 /**
  * MUSHAF PAGE
  *
- * Renders a single Madani Mushaf page using QPC V1 glyphs. The data shape
- * is whatever quran.service.getPage(n) returns — each verse carries a
- * `words` array with `codeV1` strings and `lineNumber` 1..15.
+ * Renders a single Madani Mushaf page using QPC V4 Tajweed glyphs. The data
+ * shape is whatever quran.service.getPage(n) returns — each verse carries a
+ * `words` array with `codeV2` strings and `lineNumber` 1..15.
  *
  * Render strategy:
  *   - Group words by lineNumber (1..15).
@@ -33,9 +33,12 @@ import {
   ensurePageFont,
   ensureBismillahFont,
   fontFamilyForPage,
+  paletteNameForPage,
+  setMonoPaletteColor,
   BISMILLAH_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
+import { useTheme } from "../../../core/context/ThemeContext";
 import "./MushafPage.css";
 
 interface Props {
@@ -97,6 +100,29 @@ const MushafPage: React.FC<Props> = ({
   onVerseLongPress,
 }) => {
   const [fontReady, setFontReady] = useState(false);
+  const { theme } = useTheme();
+  const [tajweedOn, setTajweedOn] = useState(readTajweedSetting);
+
+  // Live reaction to the "Tajweed colors" toggle in Settings. The native
+  // `storage` event only fires across tabs, so Settings also dispatches a
+  // same-tab `rafiq-settings-changed` CustomEvent whenever it persists.
+  useEffect(() => {
+    const refresh = () => setTajweedOn(readTajweedSetting());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("rafiq-settings-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("rafiq-settings-changed", refresh);
+    };
+  }, []);
+
+  // Push the active text color into the V4 mono palette whenever theme
+  // changes. The mono palette overrides every color slot to a literal
+  // color (instead of `currentColor`, which has spotty support inside
+  // `override-colors`), so it has to be rebuilt on theme flip.
+  useEffect(() => {
+    setMonoPaletteColor(theme === "night" ? "#ffffff" : "#000000");
+  }, [theme]);
 
   // Refs for tap-vs-longpress detection. We treat both gestures the same
   // (toggle selection) but suppress synthetic clicks fired after a long
@@ -113,12 +139,34 @@ const MushafPage: React.FC<Props> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
+  // Mid-page surah starts: any aya-1 verse that isn't the first verse on
+  // the page. These render an inline surah-name banner + (for non-Tawbah)
+  // bismillah row positioned right before the line where the new surah's
+  // first word lives. The page-start surah (verses[0].aya === 1) stays
+  // handled by the top-of-page banner so existing layouts don't shift.
+  const midPageSurahStarts = React.useMemo(() => {
+    if (verses.length === 0) return [];
+    return verses
+      .filter((v, idx) => idx > 0 && v.aya === 1 && v.words?.length)
+      .map((v) => ({
+        sura: v.sura,
+        lineNumber: v.words[0].lineNumber,
+        // Tawbah (9) has no bismillah by tradition.
+        showBismillah: v.sura !== 9,
+      }));
+  }, [verses]);
+
+  // Bismillah font is needed if the top strip is shown OR any mid-page
+  // surah start renders its own inline bismillah.
+  const needsBismillahFont =
+    !!showBismillah || midPageSurahStarts.some((s) => s.showBismillah);
+
   useEffect(() => {
     let cancelled = false;
     setFontReady(false);
     Promise.all([
       ensurePageFont(page),
-      showBismillah ? ensureBismillahFont() : Promise.resolve(),
+      needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
     ])
       .then(() => {
         if (!cancelled) setFontReady(true);
@@ -130,7 +178,7 @@ const MushafPage: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [page, showBismillah]);
+  }, [page, needsBismillahFont]);
 
   // Container-aware font sizing.
   //
@@ -175,9 +223,14 @@ const MushafPage: React.FC<Props> = ({
       if (availH <= 0 || availW <= 0) return;
 
       const lineCount = Math.max(1, groupByLine(verses).length);
+      const midBismillahCount = midPageSurahStarts.filter(
+        (s) => s.showBismillah,
+      ).length;
       const chromeLines =
         (showBismillah ? BISMILLAH_LINES : 0) +
-        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0);
+        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0) +
+        midPageSurahStarts.length * SURAH_HEADER_LINES +
+        midBismillahCount * BISMILLAH_LINES;
 
       // Height-derived font: (chrome + lines) × line-height + gaps.
       const emPerPx =
@@ -221,7 +274,7 @@ const MushafPage: React.FC<Props> = ({
       ro.disconnect();
       window.removeEventListener("orientationchange", computeFit);
     };
-  }, [fontReady, verses, showBismillah, fittedFontPx]);
+  }, [fontReady, verses, showBismillah, midPageSurahStarts, fittedFontPx]);
 
   if (!fontReady) {
     return (
@@ -279,6 +332,36 @@ const MushafPage: React.FC<Props> = ({
     ? getSurahNameArabic(surahStartVerse.sura)
     : null;
 
+  const renderSurahHeader = (sura: number, key: string) => {
+    const name = getSurahNameArabic(sura);
+    if (!name) return null;
+    return (
+      <div className="mushaf-surah-header" aria-label={name} key={key}>
+        <span className="mushaf-surah-header-frame">
+          <span className="mushaf-surah-header-name">سُورَةُ {name}</span>
+        </span>
+      </div>
+    );
+  };
+
+  const renderBismillah = (key: string) => (
+    <div
+      className="mushaf-bismillah"
+      style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
+      key={key}
+    >
+      ﭑ ﭒ ﭓ
+    </div>
+  );
+
+  // Group mid-page surah starts by the line they should appear *before*.
+  const midStartsByLine = new Map<number, typeof midPageSurahStarts>();
+  for (const s of midPageSurahStarts) {
+    const arr = midStartsByLine.get(s.lineNumber) ?? [];
+    arr.push(s);
+    midStartsByLine.set(s.lineNumber, arr);
+  }
+
   return (
     <div
       className="mushaf-page-glyph"
@@ -286,27 +369,30 @@ const MushafPage: React.FC<Props> = ({
       style={{
         fontFamily: family,
         ...(fittedFontPx !== null ? { fontSize: `${fittedFontPx}px` } : null),
+        // Always set font-palette explicitly. Omitting it would fall back to
+        // the font's default colored palette — which is the *opposite* of
+        // what users expect when they switch tajweed coloring off.
+        fontPalette: tajweedOn
+          ? paletteNameForPage(page, theme)
+          : paletteNameForPage(page, "mono"),
       }}
     >
-      {surahHeaderName && (
-        <div className="mushaf-surah-header" aria-label={surahHeaderName}>
-          <span className="mushaf-surah-header-frame">
-            <span className="mushaf-surah-header-name">
-              سُورَةُ {surahHeaderName}
-            </span>
-          </span>
-        </div>
-      )}
-      {showBismillah && (
-        <div
-          className="mushaf-bismillah"
-          style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
-        >
-          ﭑ ﭒ ﭓ
-        </div>
-      )}
-      {lines.map((line) => (
-        <div className="mushaf-line" key={line.lineNumber}>
+      {surahHeaderName &&
+        surahStartVerse &&
+        renderSurahHeader(surahStartVerse.sura, "top-header")}
+      {showBismillah && renderBismillah("top-bismillah")}
+      {lines.map((line) => {
+        const midStarts = midStartsByLine.get(line.lineNumber) ?? [];
+        return (
+          <React.Fragment key={line.lineNumber}>
+            {midStarts.map((s) => (
+              <React.Fragment key={`mid-${s.sura}`}>
+                {renderSurahHeader(s.sura, `mid-header-${s.sura}`)}
+                {s.showBismillah &&
+                  renderBismillah(`mid-bismillah-${s.sura}`)}
+              </React.Fragment>
+            ))}
+            <div className="mushaf-line">
           {line.words.map((tw, i) => {
             const key = `${tw.sura}:${tw.aya}`;
             const isTarget =
@@ -390,12 +476,14 @@ const MushafPage: React.FC<Props> = ({
                     : undefined
                 }
               >
-                {tw.word.codeV1 || tw.word.text_uthmani}
+                {tw.word.codeV2 || tw.word.text_uthmani}
               </span>
             );
           })}
-        </div>
-      ))}
+            </div>
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
@@ -409,6 +497,17 @@ interface TaggedWord {
 interface Line {
   lineNumber: number;
   words: TaggedWord[];
+}
+
+function readTajweedSetting(): boolean {
+  try {
+    const raw = localStorage.getItem("rafiq_settings_v1");
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (typeof s.showTajweedColors === "boolean") return s.showTajweedColors;
+    }
+  } catch {}
+  return true;
 }
 
 function groupByLine(verses: Verse[]): Line[] {

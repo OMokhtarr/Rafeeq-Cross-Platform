@@ -159,7 +159,7 @@ interface ApiWord {
   position: number;
   char_type_name: "word" | "end";
   text_uthmani?: string;
-  code_v1?: string;
+  code_v2?: string;
   line_number?: number;
   page_number?: number;
   translation?: { text?: string; language_name?: string };
@@ -192,7 +192,10 @@ export interface PageVerseDTO {
 
 /**
  * Fetch every verse on a Madani Mushaf page.
- * `wordFields` comes from MUSHAFS[kind].wordFields.
+ * `wordFields` comes from MUSHAFS[kind].wordFields and is the only knob the
+ * QF Content API exposes for selecting glyph code variants (V1/V2/V4). The
+ * V4 Tajweed mushaf is requested by including `code_v2` in word_fields —
+ * there is no separate `mushaf` query parameter on this host.
  */
 export async function fetchVersesByPage(
   page: number,
@@ -224,7 +227,7 @@ export async function fetchVersesByPage(
       position: w.position,
       charType: w.char_type_name === "end" ? "word" : "end",
       text_uthmani: w.text_uthmani || "",
-      codeV1: w.code_v1 || "",
+      codeV2: w.code_v2 || "",
       lineNumber: w.line_number || 0,
       pageNumber: w.page_number || page,
       translation: w.translation?.text,
@@ -242,78 +245,60 @@ export async function fetchVersesByPage(
   });
 }
 
-function joinWordsUthmani(words: ApiWord[]): string {
-  return words
-    .filter((w) => w.char_type_name === "end")
-    .map((w) => w.text_uthmani || "")
-    .join(" ");
-}
-
-// ─── Search ───────────────────────────────────────────────────────────────────
-
-interface ApiSearchVerse {
-  verse_id?: number;
-  verse_key: string;
-  text: string;
-  highlighted?: string;
-  words?: Array<{ text?: string; text_uthmani?: string }>;
-}
-
-interface SearchApiResponse {
-  search?: {
-    query?: string;
-    total_results?: number;
-    current_page?: number;
-    total_pages?: number;
-    results?: ApiSearchVerse[];
-  };
-  results?: ApiSearchVerse[];
-}
-
-export interface SearchResult {
-  verseKey: string;
-  sura: number;
-  aya: number;
-  text: string;
-  page: number;
-}
-
-export async function searchQuran(
-  query: string,
-  opts: { language?: string; page?: number; perPage?: number } = {},
-): Promise<SearchResult[]> {
-  const q = query.trim();
-  if (!q) return [];
-  const data = await apiFetch<SearchApiResponse>("/search", {
-    q,
-    language: opts.language ?? "ar",
-    page: opts.page ?? 1,
-    size: opts.perPage ?? 20,
+/**
+ * Fetch every verse in a Juz (1–30). Mirrors the shape returned by
+ * `fetchVersesByPage` so the rest of the pipeline can consume both uniformly.
+ */
+export async function fetchVersesByJuz(
+  juz: number,
+  wordFields?: string,
+): Promise<PageVerseDTO[]> {
+  const data = await apiFetch<VersesByPageResponse>(`/verses/by_juz/${juz}`, {
+    words: "true",
+    word_fields: wordFields,
+    fields: "text_uthmani,page_number,juz_number",
+    per_page: 300,
   });
-  const rows = data.search?.results ?? data.results ?? [];
-  return rows.map((r) => {
-    const [suraStr, ayaStr] = (r.verse_key ?? "").split(":");
+
+  return data.verses.map((v) => {
+    const [suraStr, ayaStr] = v.verse_key.split(":");
     const sura = parseInt(suraStr, 10);
     const aya = parseInt(ayaStr, 10);
-    const text =
-      r.text ??
-      (r.words ?? [])
-        .map((w) => w.text_uthmani ?? w.text ?? "")
-        .join(" ")
-        .trim();
+
+    let text_uthmani = v.text_uthmani || "";
+    if (!text_uthmani && v.words && v.words.length) {
+      text_uthmani = v.words
+        .filter((w) => w.char_type_name === "end")
+        .map((w) => w.text_uthmani || "")
+        .join(" ");
+    }
+
+    const words: VerseWord[] = (v.words ?? []).map((w) => ({
+      position: w.position,
+      charType: w.char_type_name === "end" ? "word" : "end",
+      text_uthmani: w.text_uthmani || "",
+      codeV2: w.code_v2 || "",
+      lineNumber: w.line_number || 0,
+      pageNumber: w.page_number || 0,
+      translation: w.translation?.text,
+      transliteration: w.transliteration?.text,
+    }));
+
     return {
-      verseKey: r.verse_key,
       sura,
       aya,
-      text: stripHighlight(text),
-      page: 0,
+      text_uthmani,
+      page: v.page_number,
+      juz: v.juz_number,
+      words,
     };
   });
 }
 
-function stripHighlight(s: string): string {
-  return s.replace(/<\/?em>/g, "");
-}
+// Search lives in quran.service.ts as a local in-memory pass over the
+// IDB-cached pages — the Quran Foundation /search endpoint requires a
+// scope our token broker doesn't carry, and public hosts return mojibake
+// for Arabic queries. See `searchQuran` in `services/data/quran.service.ts`.
 
 // ─── Chapters / Juzs ─────────────────────────────────────────────────────────
 export async function fetchChapters(): Promise<any[]> {
