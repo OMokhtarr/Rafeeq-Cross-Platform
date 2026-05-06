@@ -32,7 +32,7 @@ export interface VerseWord {
   position: number;
   charType: "word" | "end";
   text_uthmani: string;
-  codeV1: string;
+  codeV2: string;
   lineNumber: number;
   pageNumber: number;
   translation?: string; // optional

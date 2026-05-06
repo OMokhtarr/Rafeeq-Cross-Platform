@@ -1,9 +1,9 @@
 /**
  * MUSHAF PAGE
  *
- * Renders a single Madani Mushaf page using QPC V1 glyphs. The data shape
- * is whatever quran.service.getPage(n) returns — each verse carries a
- * `words` array with `codeV1` strings and `lineNumber` 1..15.
+ * Renders a single Madani Mushaf page using QPC V4 Tajweed glyphs. The data
+ * shape is whatever quran.service.getPage(n) returns — each verse carries a
+ * `words` array with `codeV2` strings and `lineNumber` 1..15.
  *
  * Render strategy:
  *   - Group words by lineNumber (1..15).
@@ -33,9 +33,12 @@ import {
   ensurePageFont,
   ensureBismillahFont,
   fontFamilyForPage,
+  paletteNameForPage,
+  setMonoPaletteColor,
   BISMILLAH_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
+import { useTheme } from "../../../core/context/ThemeContext";
 import "./MushafPage.css";
 
 interface Props {
@@ -97,6 +100,29 @@ const MushafPage: React.FC<Props> = ({
   onVerseLongPress,
 }) => {
   const [fontReady, setFontReady] = useState(false);
+  const { theme } = useTheme();
+  const [tajweedOn, setTajweedOn] = useState(readTajweedSetting);
+
+  // Live reaction to the "Tajweed colors" toggle in Settings. The native
+  // `storage` event only fires across tabs, so Settings also dispatches a
+  // same-tab `rafiq-settings-changed` CustomEvent whenever it persists.
+  useEffect(() => {
+    const refresh = () => setTajweedOn(readTajweedSetting());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("rafiq-settings-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("rafiq-settings-changed", refresh);
+    };
+  }, []);
+
+  // Push the active text color into the V4 mono palette whenever theme
+  // changes. The mono palette overrides every color slot to a literal
+  // color (instead of `currentColor`, which has spotty support inside
+  // `override-colors`), so it has to be rebuilt on theme flip.
+  useEffect(() => {
+    setMonoPaletteColor(theme === "night" ? "#ffffff" : "#000000");
+  }, [theme]);
 
   // Refs for tap-vs-longpress detection. We treat both gestures the same
   // (toggle selection) but suppress synthetic clicks fired after a long
@@ -343,6 +369,12 @@ const MushafPage: React.FC<Props> = ({
       style={{
         fontFamily: family,
         ...(fittedFontPx !== null ? { fontSize: `${fittedFontPx}px` } : null),
+        // Always set font-palette explicitly. Omitting it would fall back to
+        // the font's default colored palette — which is the *opposite* of
+        // what users expect when they switch tajweed coloring off.
+        fontPalette: tajweedOn
+          ? paletteNameForPage(page, theme)
+          : paletteNameForPage(page, "mono"),
       }}
     >
       {surahHeaderName &&
@@ -444,7 +476,7 @@ const MushafPage: React.FC<Props> = ({
                     : undefined
                 }
               >
-                {tw.word.codeV1 || tw.word.text_uthmani}
+                {tw.word.codeV2 || tw.word.text_uthmani}
               </span>
             );
           })}
@@ -465,6 +497,17 @@ interface TaggedWord {
 interface Line {
   lineNumber: number;
   words: TaggedWord[];
+}
+
+function readTajweedSetting(): boolean {
+  try {
+    const raw = localStorage.getItem("rafiq_settings_v1");
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (typeof s.showTajweedColors === "boolean") return s.showTajweedColors;
+    }
+  } catch {}
+  return true;
 }
 
 function groupByLine(verses: Verse[]): Line[] {

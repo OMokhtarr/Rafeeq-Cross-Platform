@@ -69,7 +69,12 @@ const STORAGE_KEY = "rafiq_settings_v1";
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    if (raw) {
+      const merged = { ...DEFAULTS, ...JSON.parse(raw) } as AppSettings;
+      // Migrate retired mushaf kinds (e.g. "qpc_v1") to the current default.
+      if (!(merged.mushaf in MUSHAFS)) merged.mushaf = DEFAULT_MUSHAF;
+      return merged;
+    }
   } catch (_) {}
   return { ...DEFAULTS };
 }
@@ -77,6 +82,10 @@ function loadSettings(): AppSettings {
 function saveSettings(s: AppSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    // Notify same-tab listeners (the `storage` event only fires cross-tab).
+    // MushafPage subscribes to this so toggles like "Tajweed colors" take
+    // effect without leaving the Settings screen.
+    window.dispatchEvent(new CustomEvent("rafiq-settings-changed"));
   } catch (_) {}
 }
 

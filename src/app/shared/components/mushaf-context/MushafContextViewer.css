@@ -8,8 +8,7 @@
   overflow: hidden;
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
   box-sizing: border-box;
-  transition:
-    background-color var(--transition-theme, 0.2s),
+  transition: background-color var(--transition-theme, 0.2s),
     color var(--transition-theme, 0.2s);
   /* Ensure it always participates in flex layout from parent */
   flex: 1;
@@ -18,7 +17,7 @@
 
 [data-theme="night"] .mcv-container {
   background: var(--color-mushaf-bg, #1c1c1c);
-  color: var(--color-mushaf-text, #f4ecd8);
+  color: var(--color-mushaf-text, #ffffff);
 }
 
 .mcv-header {
@@ -176,9 +175,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
   flex-shrink: 0;
 }
 .mcv-hint-btn:hover {
@@ -200,9 +197,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
   flex-shrink: 0;
 }
 .mcv-next-verse-btn:hover {
@@ -236,7 +231,7 @@
 /* In the compact context viewer, override the page-level space-between so
    lines stack from the top without forced vertical gaps between them. */
 .mcv-body .mushaf-page-glyph {
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .mcv-loading {

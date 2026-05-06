@@ -24,7 +24,7 @@ function createClient(): QuranClient {
       clientSecret: CLIENT_SECRET!,
       defaults: {
         language: Language.ENGLISH,
-        wordFields: ["code_v1", "text_uthmani", "line_number", "page_number"],
+        wordFields: ["code_v2", "text_uthmani", "line_number", "page_number"],
       },
     });
   }
@@ -49,4 +49,11 @@ export function isSdkAvailable(): boolean {
     !!process.env.REACT_APP_QF_CLIENT_SECRET
   );
 }
+
+// NOTE on search: the SDK's `client.search.search(...)` calls
+// oauth2.quran.foundation/oauth2/token directly, which is blocked by CORS
+// from the browser. We deliberately do NOT expose a `searchQuran` method
+// on this client — the data-provider's `trySdkOrFallback` will skip past
+// the SDK and hit the fallback in quran-api.client.ts, which routes
+// through our token broker on the same v1 path the SDK uses internally.
 export const quranClient = createClient();
