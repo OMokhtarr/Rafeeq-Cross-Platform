@@ -113,12 +113,34 @@ const MushafPage: React.FC<Props> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
+  // Mid-page surah starts: any aya-1 verse that isn't the first verse on
+  // the page. These render an inline surah-name banner + (for non-Tawbah)
+  // bismillah row positioned right before the line where the new surah's
+  // first word lives. The page-start surah (verses[0].aya === 1) stays
+  // handled by the top-of-page banner so existing layouts don't shift.
+  const midPageSurahStarts = React.useMemo(() => {
+    if (verses.length === 0) return [];
+    return verses
+      .filter((v, idx) => idx > 0 && v.aya === 1 && v.words?.length)
+      .map((v) => ({
+        sura: v.sura,
+        lineNumber: v.words[0].lineNumber,
+        // Tawbah (9) has no bismillah by tradition.
+        showBismillah: v.sura !== 9,
+      }));
+  }, [verses]);
+
+  // Bismillah font is needed if the top strip is shown OR any mid-page
+  // surah start renders its own inline bismillah.
+  const needsBismillahFont =
+    !!showBismillah || midPageSurahStarts.some((s) => s.showBismillah);
+
   useEffect(() => {
     let cancelled = false;
     setFontReady(false);
     Promise.all([
       ensurePageFont(page),
-      showBismillah ? ensureBismillahFont() : Promise.resolve(),
+      needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
     ])
       .then(() => {
         if (!cancelled) setFontReady(true);
@@ -130,7 +152,7 @@ const MushafPage: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [page, showBismillah]);
+  }, [page, needsBismillahFont]);
 
   // Container-aware font sizing.
   //
@@ -175,9 +197,14 @@ const MushafPage: React.FC<Props> = ({
       if (availH <= 0 || availW <= 0) return;
 
       const lineCount = Math.max(1, groupByLine(verses).length);
+      const midBismillahCount = midPageSurahStarts.filter(
+        (s) => s.showBismillah,
+      ).length;
       const chromeLines =
         (showBismillah ? BISMILLAH_LINES : 0) +
-        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0);
+        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0) +
+        midPageSurahStarts.length * SURAH_HEADER_LINES +
+        midBismillahCount * BISMILLAH_LINES;
 
       // Height-derived font: (chrome + lines) × line-height + gaps.
       const emPerPx =
@@ -221,7 +248,7 @@ const MushafPage: React.FC<Props> = ({
       ro.disconnect();
       window.removeEventListener("orientationchange", computeFit);
     };
-  }, [fontReady, verses, showBismillah, fittedFontPx]);
+  }, [fontReady, verses, showBismillah, midPageSurahStarts, fittedFontPx]);
 
   if (!fontReady) {
     return (
@@ -279,6 +306,36 @@ const MushafPage: React.FC<Props> = ({
     ? getSurahNameArabic(surahStartVerse.sura)
     : null;
 
+  const renderSurahHeader = (sura: number, key: string) => {
+    const name = getSurahNameArabic(sura);
+    if (!name) return null;
+    return (
+      <div className="mushaf-surah-header" aria-label={name} key={key}>
+        <span className="mushaf-surah-header-frame">
+          <span className="mushaf-surah-header-name">سُورَةُ {name}</span>
+        </span>
+      </div>
+    );
+  };
+
+  const renderBismillah = (key: string) => (
+    <div
+      className="mushaf-bismillah"
+      style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
+      key={key}
+    >
+      ﭑ ﭒ ﭓ
+    </div>
+  );
+
+  // Group mid-page surah starts by the line they should appear *before*.
+  const midStartsByLine = new Map<number, typeof midPageSurahStarts>();
+  for (const s of midPageSurahStarts) {
+    const arr = midStartsByLine.get(s.lineNumber) ?? [];
+    arr.push(s);
+    midStartsByLine.set(s.lineNumber, arr);
+  }
+
   return (
     <div
       className="mushaf-page-glyph"
@@ -288,25 +345,22 @@ const MushafPage: React.FC<Props> = ({
         ...(fittedFontPx !== null ? { fontSize: `${fittedFontPx}px` } : null),
       }}
     >
-      {surahHeaderName && (
-        <div className="mushaf-surah-header" aria-label={surahHeaderName}>
-          <span className="mushaf-surah-header-frame">
-            <span className="mushaf-surah-header-name">
-              سُورَةُ {surahHeaderName}
-            </span>
-          </span>
-        </div>
-      )}
-      {showBismillah && (
-        <div
-          className="mushaf-bismillah"
-          style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
-        >
-          ﭑ ﭒ ﭓ
-        </div>
-      )}
-      {lines.map((line) => (
-        <div className="mushaf-line" key={line.lineNumber}>
+      {surahHeaderName &&
+        surahStartVerse &&
+        renderSurahHeader(surahStartVerse.sura, "top-header")}
+      {showBismillah && renderBismillah("top-bismillah")}
+      {lines.map((line) => {
+        const midStarts = midStartsByLine.get(line.lineNumber) ?? [];
+        return (
+          <React.Fragment key={line.lineNumber}>
+            {midStarts.map((s) => (
+              <React.Fragment key={`mid-${s.sura}`}>
+                {renderSurahHeader(s.sura, `mid-header-${s.sura}`)}
+                {s.showBismillah &&
+                  renderBismillah(`mid-bismillah-${s.sura}`)}
+              </React.Fragment>
+            ))}
+            <div className="mushaf-line">
           {line.words.map((tw, i) => {
             const key = `${tw.sura}:${tw.aya}`;
             const isTarget =
@@ -394,8 +448,10 @@ const MushafPage: React.FC<Props> = ({
               </span>
             );
           })}
-        </div>
-      ))}
+            </div>
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };

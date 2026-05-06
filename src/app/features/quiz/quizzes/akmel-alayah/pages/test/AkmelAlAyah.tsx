@@ -261,12 +261,14 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-error">
-            <div className="aa-error-box">
-              <p>{error}</p>
-              <button onClick={() => history.push("/akmel-alayah-setup")}>
-                {tt.backToSetup}
-              </button>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-error">
+              <div className="aa-error-box">
+                <p>{error}</p>
+                <button onClick={() => history.push("/akmel-alayah-setup")}>
+                  {tt.backToSetup}
+                </button>
+              </div>
             </div>
             <BottomNavBar active="quiz" />
           </div>
@@ -282,24 +284,26 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-complete">
-            <div className="aa-complete-card">
-              <div className="aa-complete-badge">🎉</div>
-              <h2>{tt.completeTitle}</h2>
-              <p className="aa-complete-sub">{tt.completeAkmelSub}</p>
-              <div className="aa-score-ring">
-                <span className="aa-score-num">{score}</span>
-                <span className="aa-score-sep">/</span>
-                <span className="aa-score-total">{questions.length}</span>
-              </div>
-              <p className="aa-score-pct">{pct}%</p>
-              <div className="aa-complete-actions">
-                <button onClick={() => history.push("/akmel-alayah-setup")}>
-                  {tt.newQuiz}
-                </button>
-                <button onClick={() => history.push("/quiz-list")}>
-                  {tt.quizListLink}
-                </button>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-complete">
+              <div className="aa-complete-card">
+                <div className="aa-complete-badge">🎉</div>
+                <h2>{tt.completeTitle}</h2>
+                <p className="aa-complete-sub">{tt.completeAkmelSub}</p>
+                <div className="aa-score-ring">
+                  <span className="aa-score-num">{score}</span>
+                  <span className="aa-score-sep">/</span>
+                  <span className="aa-score-total">{questions.length}</span>
+                </div>
+                <p className="aa-score-pct">{pct}%</p>
+                <div className="aa-complete-actions">
+                  <button onClick={() => history.push("/akmel-alayah-setup")}>
+                    {tt.newQuiz}
+                  </button>
+                  <button onClick={() => history.push("/quiz-list")}>
+                    {tt.quizListLink}
+                  </button>
+                </div>
               </div>
             </div>
             <BottomNavBar active="quiz" />

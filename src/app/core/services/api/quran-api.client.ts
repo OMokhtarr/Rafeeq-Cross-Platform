@@ -242,6 +242,52 @@ export async function fetchVersesByPage(
   });
 }
 
+/**
+ * Fetch every verse in a Juz (1–30). Mirrors the shape returned by
+ * `fetchVersesByPage` so the rest of the pipeline can consume both uniformly.
+ */
+export async function fetchVersesByJuz(juz: number): Promise<PageVerseDTO[]> {
+  const data = await apiFetch<VersesByPageResponse>(`/verses/by_juz/${juz}`, {
+    words: "true",
+    fields: "text_uthmani,page_number,juz_number",
+    per_page: 300,
+  });
+
+  return data.verses.map((v) => {
+    const [suraStr, ayaStr] = v.verse_key.split(":");
+    const sura = parseInt(suraStr, 10);
+    const aya = parseInt(ayaStr, 10);
+
+    let text_uthmani = v.text_uthmani || "";
+    if (!text_uthmani && v.words && v.words.length) {
+      text_uthmani = v.words
+        .filter((w) => w.char_type_name === "end")
+        .map((w) => w.text_uthmani || "")
+        .join(" ");
+    }
+
+    const words: VerseWord[] = (v.words ?? []).map((w) => ({
+      position: w.position,
+      charType: w.char_type_name === "end" ? "word" : "end",
+      text_uthmani: w.text_uthmani || "",
+      codeV1: w.code_v1 || "",
+      lineNumber: w.line_number || 0,
+      pageNumber: w.page_number || 0,
+      translation: w.translation?.text,
+      transliteration: w.transliteration?.text,
+    }));
+
+    return {
+      sura,
+      aya,
+      text_uthmani,
+      page: v.page_number,
+      juz: v.juz_number,
+      words,
+    };
+  });
+}
+
 function joinWordsUthmani(words: ApiWord[]): string {
   return words
     .filter((w) => w.char_type_name === "end")
