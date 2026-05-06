@@ -22,9 +22,7 @@ ion-content::part(scroll) {
   align-items: center;
   box-sizing: border-box;
   overflow: hidden;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
 .mst-container {
@@ -876,9 +874,6 @@ ion-content::part(scroll) {
 }
 
 @media (max-width: 768px) {
-  .mst-actions {
-    flex-direction: column;
-  }
   .mst-verse-shared {
     font-size: 1.2rem;
     line-height: 1.9rem;

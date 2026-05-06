@@ -245,11 +245,13 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-loading">
-            <div className="aa-spinner"></div>
-            <p>{tt.loadingAkmel}</p>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-loading">
+              <div className="aa-spinner"></div>
+              <p>{tt.loadingAkmel}</p>
+            </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -266,8 +268,8 @@ const AkmelAlAyah: React.FC = () => {
                 {tt.backToSetup}
               </button>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );
@@ -300,8 +302,8 @@ const AkmelAlAyah: React.FC = () => {
                 </button>
               </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" />
         </IonContent>
       </IonPage>
     );

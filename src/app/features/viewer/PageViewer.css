@@ -7,8 +7,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     color var(--transition-theme);
 }
 
@@ -27,9 +26,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 100;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme),
+  transition: background var(--transition-theme), color var(--transition-theme),
     border-color var(--transition-theme);
 }
 
@@ -54,9 +51,7 @@
   cursor: pointer;
   padding: 0;
   border-radius: 8px;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -161,9 +156,7 @@
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 6px;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease;
   min-width: 28px;
   min-height: 28px;
   display: flex;
@@ -323,9 +316,7 @@
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
   min-height: 44px;
   min-width: 0;
-  transition:
-    background 0.18s ease,
-    transform 0.12s ease,
+  transition: background 0.18s ease, transform 0.12s ease,
     border-color 0.18s ease;
 }
 
@@ -396,15 +387,14 @@
      mushaf text stays fully visible in BOTH states. The padding is
      intentionally constant across states so the font-fit probe sees the
      same available height; only the chrome's transform animates. */
-  padding: 55px 0 60px;
+  padding: 65px 0 65px;
   box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
   position: relative;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     border-color var(--transition-theme);
 }
 
@@ -507,11 +497,8 @@
   top: 0;
   inset-inline: 0;
   z-index: 100;
-  transition:
-    transform 0.28s ease,
-    opacity 0.22s ease,
-    background var(--transition-theme),
-    color var(--transition-theme),
+  transition: transform 0.28s ease, opacity 0.22s ease,
+    background var(--transition-theme), color var(--transition-theme),
     border-color var(--transition-theme);
   will-change: transform, opacity;
 }
@@ -521,9 +508,7 @@
   bottom: 0;
   inset-inline: 0;
   z-index: 100;
-  transition:
-    transform 0.28s ease,
-    opacity 0.22s ease,
+  transition: transform 0.28s ease, opacity 0.22s ease,
     background var(--transition-theme, 0.25s ease),
     border-color var(--transition-theme, 0.25s ease);
   will-change: transform, opacity;
@@ -561,8 +546,7 @@
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     color var(--transition-theme);
 }
 
@@ -734,9 +718,7 @@
 
 .verse-separator.highlighted .separator-number {
   color: #ffd700;
-  text-shadow:
-    0 0 8px #ffd700,
-    0 0 12px rgba(255, 215, 0, 0.5);
+  text-shadow: 0 0 8px #ffd700, 0 0 12px rgba(255, 215, 0, 0.5);
 }
 
 .verse-separator.highlighted .separator-symbol {
@@ -1025,9 +1007,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.15s,
-    transform 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .drawer-back:hover,
@@ -1073,10 +1053,7 @@
   font-size: 1rem;
   text-align: start;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
 .drawer-item:hover:not(:disabled) {
@@ -1268,9 +1245,7 @@
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.95rem;
-  transition:
-    background 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .sel-btn:hover {

@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@capacitor-community/electron": "^5.0.1",
+    "@capacitor/assets": "^3.0.5",
     "@playwright/test": "^1.40.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

@@ -202,9 +202,11 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-loading">
-            <div className="mst-spinner"></div>
-            <p>{tt.loadingMutashabihat}</p>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-loading">
+              <div className="mst-spinner"></div>
+              <p>{tt.loadingMutashabihat}</p>
+            </div>
             <BottomNavBar active="quiz" />
           </div>
         </IonContent>

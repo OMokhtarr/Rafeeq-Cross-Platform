@@ -237,7 +237,7 @@ const MushafContextViewer: React.FC<Props> = ({
   // assumption that API positions are 1..N contiguous — we just hide whichever
   // positions are observed past the cutoff in render order.
   const partialTarget = useMemo(() => {
-    if (!targetOnPage || !targetVerse) return undefined;
+    if (!targetVerse) return undefined;
     const wordEntries = (targetVerse.words ?? []).filter(
       (w) => w.charType === "word",
     );
@@ -253,7 +253,7 @@ const MushafContextViewer: React.FC<Props> = ({
     };
   }, [targetOnPage, targetVerse, effectiveReveal, verse.sura, verse.aya]);
 
-  const canHint = targetOnPage && effectiveReveal < targetWordCount;
+  const canHint = !!targetVerse && effectiveReveal < targetWordCount;
 
   if (!isOpen) return null;
 
