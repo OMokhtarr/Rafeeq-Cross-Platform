@@ -487,16 +487,65 @@ function stripHtml(s: string): string {
     .trim();
 }
 
-// ─── Tafsir (stub) ───────────────────────────────────────────────────────────
+// ─── Tafsir ───────────────────────────────────────────────────────────────────
+
+export interface TafsirResource {
+  id: string;
+  name: string;
+  authorName?: string;
+  languageName?: string;
+}
+
 export interface TafsirText {
   verseKey: string;
   text: string;
 }
 
+interface ApiTafsirResourceItem {
+  id?: number;
+  name?: string;
+  author_name?: string;
+  language_name?: string;
+  translated_name?: { name?: string; language_name?: string };
+}
+
+interface ApiTafsirResourcesResponse {
+  tafsirs?: ApiTafsirResourceItem[];
+}
+
+export async function fetchTafsirResources(): Promise<TafsirResource[]> {
+  const data = await apiFetch<ApiTafsirResourcesResponse>(
+    "/resources/tafsirs",
+    {},
+  );
+  return (data.tafsirs ?? []).map((r) => ({
+    id: String(r.id ?? ""),
+    name: r.translated_name?.name ?? r.name ?? String(r.id ?? ""),
+    authorName: r.author_name,
+    languageName: r.translated_name?.language_name ?? r.language_name,
+  }));
+}
+
+const DEFAULT_TAFSIR_ID = "169"; // Ibn Kathir (en) — widely available
+
+interface ApiTafsirResponse {
+  tafsir?: {
+    verse_key?: string;
+    text?: string;
+  };
+}
+
 export async function fetchTafsirForAyah(
   sura: number,
   aya: number,
-  _tafsirId?: string,
+  tafsirId?: string,
 ): Promise<TafsirText> {
-  return Promise.resolve({ verseKey: `${sura}:${aya}`, text: "" });
+  const verseKey = `${sura}:${aya}`;
+  const id = tafsirId || DEFAULT_TAFSIR_ID;
+  const data = await apiFetch<ApiTafsirResponse>(
+    `/tafsirs/${encodeURIComponent(id)}/by_ayah/${verseKey}`,
+    {},
+  );
+  const raw = data.tafsir?.text ?? "";
+  return { verseKey, text: stripHtml(raw) };
 }

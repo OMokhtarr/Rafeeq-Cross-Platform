@@ -21,6 +21,7 @@ export type NavTabKey =
   | "quiz"
   | "azkar"
   | "ahadith"
+  | "account"
   | "settings";
 
 interface TabDef {
@@ -129,6 +130,18 @@ const TABS: TabDef[] = [
     comingSoon: true,
   },
   {
+    id: "account",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+    route: "/account",
+    color: "var(--color-gold, #d4b48c)",
+    filled: false,
+  },
+  {
     id: "settings",
     icon: (
       <svg
@@ -188,6 +201,10 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
     ahadith: {
       primary: t.tabs.ahadith,
       secondary: lang === "ar" ? "Ahadith" : "أحاديث",
+    },
+    account: {
+      primary: lang === "ar" ? "حسابي" : "Account",
+      secondary: lang === "ar" ? "Account" : "حسابي",
     },
     settings: {
       primary: t.tabs.settings,

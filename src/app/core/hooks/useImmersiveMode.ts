@@ -24,6 +24,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** Movement under this many pixels (Manhattan distance) counts as a tap. */
 const TAP_MOVEMENT_THRESHOLD = 40;
 
+/** Two taps within this window (ms) count as a double-tap. */
+const DOUBLE_TAP_WINDOW = 300;
+
 export interface ImmersiveMode {
   /** True when toolbar + bottom nav are visible (the default). */
   chromeVisible: boolean;
@@ -65,6 +68,9 @@ export function useImmersiveMode(): ImmersiveMode {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const startTarget = useRef<EventTarget | null>(null);
+
+  // Double-tap detection: timestamp of the last qualifying tap.
+  const lastTapAt = useRef<number>(0);
 
   // Track whether the on-screen keyboard / a text field is currently focused.
   // While true, we suppress all toggling so typing in the search box can't
@@ -134,7 +140,14 @@ export function useImmersiveMode(): ImmersiveMode {
     const dy = Math.abs(y - sy);
     if (dx > TAP_MOVEMENT_THRESHOLD || dy > TAP_MOVEMENT_THRESHOLD) return;
 
-    setChromeVisible((prev) => !prev);
+    // Only toggle on double-tap.
+    const now = Date.now();
+    if (now - lastTapAt.current <= DOUBLE_TAP_WINDOW) {
+      setChromeVisible((prev) => !prev);
+      lastTapAt.current = 0; // reset so triple-tap doesn't fire again
+    } else {
+      lastTapAt.current = now;
+    }
   }, []);
 
   return {

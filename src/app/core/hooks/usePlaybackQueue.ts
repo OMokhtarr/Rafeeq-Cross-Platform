@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPlayableUrl } from "../services/audio/audio-cache.service";
+import { recordRecitationSession } from "../services/storage/recitation-history.service";
 
 export type RepeatMode = number | "loop";
 
@@ -83,6 +84,7 @@ export function usePlaybackQueue(
   const rangePassCountRef = useRef(0);
 
   const reciterRef = useRef(initial.reciter);
+  const currentVerseKeyRef = useRef<string | null>(null);
   const playbackRateRef = useRef(initial.playbackRate ?? 1);
   const repeatVerseRef = useRef<RepeatMode>(initial.repeatVerse ?? 1);
   const repeatRangeRef = useRef<RepeatMode>(initial.repeatRange ?? 1);
@@ -128,12 +130,18 @@ export function usePlaybackQueue(
 
   const stop = useCallback(() => {
     const el = audioRef.current;
-    if (el) {
+    if (el && currentVerseKeyRef.current) {
+      recordRecitationSession(
+        currentVerseKeyRef.current,
+        el.currentTime,
+        reciterRef.current,
+      );
       el.pause();
       el.removeAttribute("src");
       el.load();
     }
     releaseCurrentBlob();
+    currentVerseKeyRef.current = null;
     queueRef.current = [];
     indexRef.current = 0;
     verseRepeatCountRef.current = 0;
@@ -151,6 +159,7 @@ export function usePlaybackQueue(
       const { sura, aya } = queue[idx];
       const verseKey = `${sura}:${aya}`;
       indexRef.current = idx;
+      currentVerseKeyRef.current = verseKey;
 
       setState((s) => ({
         ...s,
@@ -343,7 +352,15 @@ export function usePlaybackQueue(
   );
 
   const pause = useCallback(() => {
-    audioRef.current?.pause();
+    const el = audioRef.current;
+    if (el && currentVerseKeyRef.current) {
+      recordRecitationSession(
+        currentVerseKeyRef.current,
+        el.currentTime,
+        reciterRef.current,
+      );
+    }
+    el?.pause();
   }, []);
   const resume = useCallback(async () => {
     const el = audioRef.current;

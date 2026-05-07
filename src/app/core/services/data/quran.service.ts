@@ -2,7 +2,11 @@ import {
   fetchVersesByPage,
   fetchVersesByJuz,
   fetchAudioForAyah as providerAudioForAyah,
+  fetchTranslationsByPage as apiFetchTranslationsByPage,
+  fetchTafsirForAyah as apiFetchTafsirForAyah,
+  fetchTafsirResources as apiFetchTafsirResources,
 } from "../api/quran-data-provider";
+export type { TafsirResource } from "../api/quran-api.client";
 import { idb } from "../storage/idb.service";
 import type { Verse, VerseWord } from "../../../shared/models/verse.model";
 import {
@@ -265,19 +269,25 @@ export function preloadAllPages(
   return preloadPromise;
 }
 
-// ─── Tafsir (stub) ──────────────────────────────────────────────────────────
+// ─── Tafsir ──────────────────────────────────────────────────────────────────
 export async function fetchTafsirForAyah(
   sura: number,
   aya: number,
-  _tafsirId?: string,
+  tafsirId?: string,
 ): Promise<{ verseKey: string; text: string }> {
-  return { verseKey: `${sura}:${aya}`, text: "" };
+  return apiFetchTafsirForAyah(sura, aya, tafsirId);
 }
 
-// ─── Translation ──────────────────────────────────────────────────────────
-export async function getPageTranslations(page: number, editionId: string) {
-  // Placeholder — no real implementation yet
-  return [];
+export async function getTafsirResources() {
+  return apiFetchTafsirResources();
+}
+
+// ─── Translation ──────────────────────────────────────────────────────────────
+export async function getPageTranslations(
+  page: number,
+  editionId: string,
+): Promise<{ verseKey: string; text: string }[]> {
+  return apiFetchTranslationsByPage(page, editionId);
 }
 
 // ─── Audio ──────────────────────────────────────────────────────────────────

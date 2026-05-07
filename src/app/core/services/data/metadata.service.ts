@@ -720,16 +720,27 @@ function parseVerseKey(key: string): { sura: number; aya: number } {
 
 export function getJuzStart(juzNumber: number): { sura: number; aya: number } {
   const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
-  if (!juz) throw new Error(`Juz ${juzNumber} not found`);
-  const key = juz.verse_mapping?.[1];
-  return key ? parseVerseKey(key) : { sura: 1, aya: 1 };
+  if (!juz) return { sura: 1, aya: 1 };
+  const mapping = juz.verse_mapping as Record<string, string> | undefined;
+  if (!mapping) return { sura: 1, aya: 1 };
+  const firstSuraId = Object.keys(mapping).sort((a, b) => Number(a) - Number(b))[0];
+  const firstEntry = mapping[firstSuraId];
+  // entry is either "startAya:endAya" or a full "sura:aya" key
+  const startAya = firstEntry?.split(":")[0];
+  return startAya ? { sura: Number(firstSuraId), aya: Number(startAya) } : { sura: 1, aya: 1 };
 }
 
 export function getJuzEnd(juzNumber: number): { sura: number; aya: number } {
   const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
-  if (!juz) throw new Error(`Juz ${juzNumber} not found`);
-  const key = juz.verse_mapping?.[2];
-  return key ? parseVerseKey(key) : { sura: 114, aya: 6 };
+  if (!juz) return { sura: 114, aya: 6 };
+  const mapping = juz.verse_mapping as Record<string, string> | undefined;
+  if (!mapping) return { sura: 114, aya: 6 };
+  const lastSuraId = Object.keys(mapping).sort((a, b) => Number(a) - Number(b)).at(-1)!;
+  const lastEntry = mapping[lastSuraId];
+  // entry is "startAya:endAya" — take the end aya
+  const parts = lastEntry?.split(":");
+  const endAya = parts?.[1] ?? parts?.[0];
+  return endAya ? { sura: Number(lastSuraId), aya: Number(endAya) } : { sura: 114, aya: 6 };
 }
 
 export function getPageStart(page: number): PageStart | null {

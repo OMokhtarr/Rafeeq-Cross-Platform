@@ -15,11 +15,7 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import MushafPage from "../../shared/components/mushaf-page/MushafPage";
-import {
-  getPage,
-  prefetchPage,
-  searchQuran,
-} from "../../core/services/data/quran.service";
+import { getPage, prefetchPage } from "../../core/services/data/quran.service";
 import {
   getSuraForPage,
   getSurahNameArabic,
@@ -31,9 +27,11 @@ import {
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
+import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
+import { isPageBookmarked } from "../../core/services/api/user-api.client";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
 
@@ -73,18 +71,10 @@ function readSettings(): ReadSettings {
 const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const { t, isRTL, lang } = useLang();
+  const { t, lang } = useLang();
 
-  const {
-    selected,
-    clearSelection,
-    selectionCount,
-    hidden,
-    hideMany,
-    showVerse,
-    showAll,
-    hiddenCount,
-  } = useVerseVisibility();
+  const { selected, hidden, hideMany, showVerse, showAll, hiddenCount } =
+    useVerseVisibility();
 
   const initialPage = (() => {
     const params = new URLSearchParams(location.search);
@@ -96,20 +86,35 @@ const PageViewer: React.FC = () => {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Drawer + nested panels
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  type DrawerView = "menu" | "search" | "settings";
-  const [drawerView, setDrawerView] = useState<DrawerView>("menu");
+  // Shared playback queue (lives in PlaybackContext so PlaybackSettings shares it)
+  const queue = usePlayback();
+  const isPlaying = queue.state.isPlaying || queue.state.isLoading;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]); // Use SearchResult from quran.service
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // Long-press on play button switches to recite (mic) mode
+  const [reciteMode, setReciteMode] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePlayPressStart = useCallback(() => {
+    longPressTimerRef.current = setTimeout(() => {
+      setReciteMode((m) => !m);
+      queue.stop();
+      longPressTimerRef.current = null;
+    }, 600);
+  }, [queue]);
+
+  const handlePlayPressEnd = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+      // Short tap — open playback settings (only when not already playing)
+      if (!reciteMode) {
+        history.push(`/playback?page=${currentPage}`);
+      }
+    }
+  }, [reciteMode, currentPage, history]);
 
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState("متوسط");
-  const [fontType, setFontType] = useState("أميري");
 
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
@@ -122,21 +127,32 @@ const PageViewer: React.FC = () => {
   // Immersive mode — tap the page to toggle toolbar + bottom nav.
   const immersive = useImmersiveMode();
 
+  // Bookmark state — keyed by the first verse of the current page.
+  const pageVerseKeyForBookmark =
+    verses.length > 0 ? `${verses[0].sura}:${verses[0].aya}` : null;
+  // Bookmark indicator — filled when the current page's first verse is saved.
+  const [bookmarked, setBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (pageVerseKeyForBookmark) {
+      setBookmarked(isPageBookmarked(pageVerseKeyForBookmark));
+    }
+  }, [pageVerseKeyForBookmark]);
+
   // ── Refs ──
   const contentRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
 
-  // Re-read settings whenever the drawer closes
+  // Re-read settings on focus (replaces drawer-close trigger)
   useEffect(() => {
-    if (!drawerOpen) {
-      setSettings(readSettings());
-    }
-  }, [drawerOpen]);
+    const onFocus = () => setSettings(readSettings());
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   // Sync currentPage with ?page= query param on navigation. Also honor a
   // `?v=sura:aya` param so deep-links from the search-results screen
@@ -191,29 +207,10 @@ const PageViewer: React.FC = () => {
     };
   }, [currentPage]);
 
-  // Auto-focus search input when drawer flips to search
+  // Force chrome visible when the verse action sheet opens.
   useEffect(() => {
-    if (drawerOpen && drawerView === "search" && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [drawerOpen, drawerView]);
-
-  // Whenever a modal surface (drawer, verse action sheet) opens, force the
-  // chrome back so the user isn't operating a dialog over a hidden toolbar.
-  useEffect(() => {
-    if (drawerOpen || sheetVerseKey) immersive.showChrome();
-  }, [drawerOpen, sheetVerseKey, immersive]);
-
-  // Lock body scroll while the drawer is open.
-  useEffect(() => {
-    if (drawerOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-  }, [drawerOpen]);
+    if (sheetVerseKey) immersive.showChrome();
+  }, [sheetVerseKey, immersive]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -231,8 +228,9 @@ const PageViewer: React.FC = () => {
       sura: suraIndex,
       suraName: getSurahNameEnglish(suraIndex),
       suraNameAr: getSurahNameArabic(suraIndex),
-      juz: Math.ceil(currentPage / 20),
-      hizb: Math.ceil(currentPage / 4),
+      juz: Math.ceil((currentPage * 30) / 604),
+      hizb: Math.ceil((currentPage * 60) / 604),
+      rub: Math.ceil((currentPage * 240) / 604),
     };
   };
 
@@ -247,51 +245,6 @@ const PageViewer: React.FC = () => {
     verses[0].aya === 1 &&
     verses[0].sura !== 9 &&
     currentPage !== 1;
-
-  const openDrawer = (view: DrawerView = "menu") => {
-    setDrawerView(view);
-    setDrawerOpen(true);
-  };
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setDrawerView("menu");
-    clearSearch();
-  };
-
-  // ── Search (server-side via SDK) ─────────────────────────────────────────
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    setSearchError(null);
-    try {
-      const results = await searchQuran(q);
-      setSearchResults(results);
-    } catch (err) {
-      console.error("[PageViewer] search failed", err);
-      setSearchError(t.mushaf.searchError);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleResultClick = (result: any) => {
-    setCurrentPage(result.page);
-    closeDrawer();
-    setHighlightedVerse(result.verseKey);
-    setTimeout(() => setHighlightedVerse(null), 3000);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchResults([]);
-    setSearchError(null);
-  };
 
   // ── Selection / hide ─────────────────────────────────────────────────────
   // Long-press → open verse action sheet
@@ -364,35 +317,85 @@ const PageViewer: React.FC = () => {
     <IonPage>
       <IonContent fullscreen scrollY={false}>
         <div
-          className={`mushaf-container ${immersive.chromeVisible ? "" : "immersive"}`}
+          className={`mushaf-container ${
+            immersive.chromeVisible ? "" : "immersive"
+          }`}
         >
           {/* ── Toolbar ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
+              {/* Play / Recite button — long-press toggles recite mode */}
               <button
-                className="toolbar-button menu-button"
-                onClick={() => openDrawer("menu")}
-                title={t.mushaf.menu}
-                aria-label={t.mushaf.menu}
+                className={`toolbar-button play-button${
+                  reciteMode ? " play-button--recite" : ""
+                }`}
+                onPointerDown={handlePlayPressStart}
+                onPointerUp={handlePlayPressEnd}
+                onPointerLeave={handlePlayPressEnd}
+                aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
               >
-                <svg
-                  className="menu-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
+                {reciteMode ? (
+                  /* Mic icon */
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4z" />
+                    <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                ) : (
+                  /* Play icon */
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                )}
               </button>
+
+              {/* Stop button — only visible while playback is active */}
+              {isPlaying && (
+                <button
+                  className="toolbar-button stop-button"
+                  onClick={() => queue.stop()}
+                  aria-label={t.mushaf.stopLabel}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    fill="currentColor"
+                    stroke="none"
+                    aria-hidden="true"
+                  >
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                  </svg>
+                </button>
+              )}
+
               {/* Hide-toggle */}
               <button
                 type="button"
-                className={`toolbar-button hide-toggle-button ${anyPageHidden ? "active" : ""}`}
+                className={`toolbar-button hide-toggle-button ${
+                  anyPageHidden ? "active" : ""
+                }`}
                 onClick={togglePageHidden}
                 disabled={verses.length === 0}
                 title={
@@ -466,7 +469,7 @@ const PageViewer: React.FC = () => {
                   {t.mushaf.juz}{" "}
                   {lang === "ar"
                     ? toHindiNumbers(pageInfo?.juz ?? 0)
-                    : (pageInfo?.juz ?? 0)}
+                    : pageInfo?.juz ?? 0}
                 </span>
                 <span className="pill-sep" aria-hidden>
                   |
@@ -475,15 +478,48 @@ const PageViewer: React.FC = () => {
                   {t.mushaf.hizb}{" "}
                   {lang === "ar"
                     ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                    : (pageInfo?.hizb ?? 0)}
+                    : pageInfo?.hizb ?? 0}
+                </span>
+                <span className="pill-sep" aria-hidden>
+                  |
+                </span>
+                <span>
+                  {"◆"}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.rub ?? 0)
+                    : pageInfo?.rub ?? 0}
                 </span>
               </span>
             </button>
 
-            {/* Right side — search icon. Opens the dedicated /search page
-                (recent searches + input). Settings was intentionally
-                removed; it lives in the side drawer instead. */}
+            {/* Right side — bookmark + search icons */}
             <div className="toolbar-right">
+              {/* Bookmark — opens the bookmarks page; icon fills when page is saved */}
+              <button
+                type="button"
+                className={`toolbar-button bookmark-button${
+                  bookmarked ? " bookmark-button--active" : ""
+                }`}
+                onClick={() => history.push("/bookmarks")}
+                title="Bookmarks"
+                aria-label="Bookmarks"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill={bookmarked ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+
+              {/* Search */}
               <button
                 type="button"
                 className="toolbar-button search-button"
@@ -531,7 +567,7 @@ const PageViewer: React.FC = () => {
                   {t.mushaf.juz}{" "}
                   {lang === "ar"
                     ? toHindiNumbers(pageInfo?.juz ?? 0)
-                    : (pageInfo?.juz ?? 0)}
+                    : pageInfo?.juz ?? 0}
                 </span>
                 <span className="page-edge-dot" aria-hidden>
                   •
@@ -540,7 +576,16 @@ const PageViewer: React.FC = () => {
                   {t.mushaf.hizb}{" "}
                   {lang === "ar"
                     ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                    : (pageInfo?.hizb ?? 0)}
+                    : pageInfo?.hizb ?? 0}
+                </span>
+                <span className="page-edge-dot" aria-hidden>
+                  •
+                </span>
+                <span>
+                  {"◆"}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.rub ?? 0)
+                    : pageInfo?.rub ?? 0}
                 </span>
               </span>
             </div>
@@ -575,7 +620,9 @@ const PageViewer: React.FC = () => {
             {/* Page number alignment mirrors a printed Mushaf spread:
                 odd pages anchor to the start side, even pages to the end. */}
             <div
-              className={`page-edge-bottom ${currentPage % 2 === 1 ? "align-end" : "align-start"}`}
+              className={`page-edge-bottom ${
+                currentPage % 2 === 1 ? "align-end" : "align-start"
+              }`}
               data-no-immersive
             >
               {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
@@ -584,305 +631,13 @@ const PageViewer: React.FC = () => {
 
           <BottomNavBar active="quran" />
 
-          {/* ── Side drawer ── */}
-          {drawerOpen && (
-            <>
-              <div
-                className="drawer-backdrop"
-                onClick={closeDrawer}
-                aria-hidden="true"
-              />
-              <aside
-                className={`side-drawer ${drawerView === "search" ? "drawer-search-mode" : ""}`}
-                role="dialog"
-                aria-label={t.mushaf.menu}
-                dir={isRTL ? "rtl" : "ltr"}
-              >
-                <header className="drawer-header">
-                  {drawerView !== "menu" && (
-                    <button
-                      className="drawer-back"
-                      onClick={() => {
-                        setDrawerView("menu");
-                        clearSearch();
-                      }}
-                      aria-label={t.mushaf.backLabel}
-                    >
-                      {isRTL ? "›" : "‹"}
-                    </button>
-                  )}
-                  <h3 className="drawer-title">
-                    {drawerView === "menu" && t.mushaf.menu}
-                    {drawerView === "search" && t.mushaf.searchTitle}
-                    {drawerView === "settings" && t.mushaf.settingsTitle}
-                  </h3>
-                  <button
-                    className="drawer-close"
-                    onClick={closeDrawer}
-                    aria-label={t.mushaf.closeLabel}
-                  >
-                    ✕
-                  </button>
-                </header>
-
-                <div className="drawer-body">
-                  {drawerView === "menu" && (
-                    <nav className="drawer-menu">
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push("/surah-juz");
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ☰
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.surahsAndJuz}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => setDrawerView("search")}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          🔍
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.search}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push(`/playback?page=${currentPage}`);
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ▶
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.playback.title}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => setDrawerView("settings")}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⚙
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.settings}
-                        </span>
-                      </button>
-
-                      <div className="drawer-divider" />
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          clearSelection();
-                        }}
-                        disabled={selectionCount === 0}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⊘
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.clearSelection}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item drawer-item-warn"
-                        onClick={() => {
-                          showAll();
-                        }}
-                        disabled={hiddenCount === 0}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          👁
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.showAllHidden}
-                          {hiddenCount > 0 &&
-                            ` (${lang === "ar" ? toHindiNumbers(hiddenCount) : hiddenCount})`}
-                        </span>
-                      </button>
-                    </nav>
-                  )}
-
-                  {drawerView === "search" && (
-                    <div className="drawer-search">
-                      <form onSubmit={handleSearch} className="search-form">
-                        <input
-                          ref={searchInputRef}
-                          type="text"
-                          placeholder={t.mushaf.searchPlaceholder}
-                          value={searchQuery}
-                          dir={isRTL ? "rtl" : "ltr"}
-                          onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            if (!e.target.value.trim()) {
-                              setSearchResults([]);
-                              setSearchError(null);
-                            }
-                          }}
-                          className="search-input"
-                        />
-                        <div className="search-form-actions">
-                          <button
-                            type="submit"
-                            className="search-submit"
-                            disabled={searching}
-                          >
-                            {searching ? "…" : t.mushaf.search}
-                          </button>
-                          {searchQuery && (
-                            <button
-                              type="button"
-                              className="search-clear"
-                              onClick={clearSearch}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </form>
-                      {searching && (
-                        <div className="search-status">
-                          {t.mushaf.searching}
-                        </div>
-                      )}
-                      {searchError && (
-                        <div className="search-status search-error">
-                          {searchError}
-                        </div>
-                      )}
-                      {searchResults.length > 0 && (
-                        <div className="search-results">
-                          <div className="results-header">
-                            <span>
-                              {t.mushaf.searchResults}:{" "}
-                              {lang === "ar"
-                                ? toHindiNumbers(searchResults.length)
-                                : searchResults.length}
-                            </span>
-                          </div>
-                          <div className="results-list">
-                            {searchResults.map((r, i) => (
-                              <div
-                                key={`${r.verseKey}-${i}`}
-                                className="result-item"
-                                onClick={() => handleResultClick(r)}
-                              >
-                                <div className="result-main">
-                                  <span className="result-surah">
-                                    {getSurahNameArabic(r.sura)}
-                                  </span>
-                                  <span className="result-verse">
-                                    {t.mushaf.verseLabel}{" "}
-                                    {lang === "ar"
-                                      ? toHindiNumbers(r.aya)
-                                      : r.aya}
-                                  </span>
-                                </div>
-                                <div className="result-meta">
-                                  <span className="result-page">
-                                    {t.mushaf.pageLabelInResult}{" "}
-                                    {lang === "ar"
-                                      ? toHindiNumbers(r.page)
-                                      : r.page}
-                                  </span>
-                                  <span className="result-preview" dir="rtl">
-                                    {r.text?.length > 60
-                                      ? r.text.substring(0, 60) + "…"
-                                      : r.text}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {!searching &&
-                        !searchError &&
-                        searchQuery &&
-                        searchResults.length === 0 && (
-                          <div className="no-results">
-                            <p>
-                              {t.mushaf.noResults}: "{searchQuery}"
-                            </p>
-                          </div>
-                        )}
-                    </div>
-                  )}
-
-                  {drawerView === "settings" && (
-                    <div className="drawer-settings">
-                      <div className="setting-item">
-                        <label>{t.mushaf.fontSize}</label>
-                        <select
-                          className="setting-select"
-                          value={fontSize}
-                          onChange={(e) => setFontSize(e.target.value)}
-                        >
-                          {t.mushaf.fontSizeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="setting-item">
-                        <label>{t.mushaf.fontType}</label>
-                        <select
-                          className="setting-select"
-                          value={fontType}
-                          onChange={(e) => setFontType(e.target.value)}
-                        >
-                          {t.mushaf.fontTypeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push("/settings");
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⚙
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.moreSettings}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </aside>
-            </>
-          )}
-
           {/* ── Verse action sheet (long-press) ── */}
           <VerseActionSheet
             open={!!sheetVerseKey}
             verseKey={sheetVerseKey}
+            pageVerseKeys={verses.map((v) => `${v.sura}:${v.aya}`)}
             page={currentPage}
-            reciter={settings.reciter}
             translationId={settings.translation}
-            audio={audio}
             onClose={closeSheet}
           />
         </div>

@@ -270,6 +270,52 @@
   color: var(--color-quiz, #8b4513);
 }
 
+.sjs-num-hizb {
+  background: rgba(106, 13, 173, 0.1);
+  color: #6a0dad;
+}
+
+[data-theme="night"] .sjs-num-hizb,
+[data-theme="dark"] .sjs-num-hizb {
+  background: rgba(180, 100, 255, 0.15);
+  color: #c07dff;
+}
+
+.sjs-row-hizb {
+  border-inline-end-color: #9b59b6;
+}
+
+[data-theme="night"] .sjs-row-hizb,
+[data-theme="dark"] .sjs-row-hizb {
+  border-inline-end-color: #c07dff;
+}
+
+.sjs-hizb-juz-badge {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  background: rgba(106, 13, 173, 0.1);
+  color: #6a0dad;
+  white-space: nowrap;
+}
+
+[dir="rtl"] .sjs-hizb-juz-badge {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.7rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-theme="night"] .sjs-hizb-juz-badge,
+[data-theme="dark"] .sjs-hizb-juz-badge {
+  background: rgba(180, 100, 255, 0.15);
+  color: #c07dff;
+}
+
 /* Main column — surah/juz name(s) */
 .sjs-row-main {
   flex: 1;
@@ -374,4 +420,147 @@
 [data-theme="night"] .sjs-ayahs,
 [data-theme="dark"] .sjs-ayahs {
   color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Rub' al-hizb — inline sub-rows under each hizb card ── */
+.sjs-hizb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sjs-rub-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 2.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-inline-start: 2px solid rgba(106, 13, 173, 0.2);
+  margin-inline-start: 1.2rem;
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+[data-theme="night"] .sjs-rub-list,
+[data-theme="dark"] .sjs-rub-list {
+  border-inline-start-color: rgba(192, 125, 255, 0.25);
+}
+
+.sjs-rub-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: none;
+  border: none;
+  padding: 0.45rem 0.6rem 0.45rem 0;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  color: inherit;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.12s ease;
+  border-radius: 6px;
+}
+
+.sjs-rub-row:last-child {
+  border-bottom: none;
+}
+
+.sjs-rub-row:hover {
+  background: rgba(106, 13, 173, 0.05);
+}
+
+.sjs-rub-row:active {
+  background: rgba(106, 13, 173, 0.1);
+}
+
+[data-theme="night"] .sjs-rub-row:hover,
+[data-theme="dark"] .sjs-rub-row:hover {
+  background: rgba(192, 125, 255, 0.08);
+}
+
+.sjs-rub-icon {
+  font-size: 0.45rem;
+  color: #9b59b6;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+[data-theme="night"] .sjs-rub-icon,
+[data-theme="dark"] .sjs-rub-icon {
+  color: #c07dff;
+}
+
+.sjs-rub-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.sjs-rub-label-ar {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6a0dad;
+  direction: rtl;
+}
+
+[data-theme="night"] .sjs-rub-label-ar,
+[data-theme="dark"] .sjs-rub-label-ar {
+  color: #c07dff;
+}
+
+.sjs-rub-label-en {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #9b59b6;
+  opacity: 0.8;
+}
+
+[data-theme="night"] .sjs-rub-label-en,
+[data-theme="dark"] .sjs-rub-label-en {
+  color: #c07dff;
+}
+
+.sjs-rub-verse {
+  flex: 1;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.78rem;
+  color: var(--color-text-muted, #8a7a6a);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[dir="ltr"] .sjs-rub-verse {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.72rem;
+}
+
+[data-theme="night"] .sjs-rub-verse,
+[data-theme="dark"] .sjs-rub-verse {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sjs-rub-page {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.65rem;
+  color: var(--color-text-muted, #8a7a6a);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .sjs-rub-page {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.75rem;
+}
+
+[data-theme="night"] .sjs-rub-page,
+[data-theme="dark"] .sjs-rub-page {
+  color: rgba(255, 255, 255, 0.45);
 }

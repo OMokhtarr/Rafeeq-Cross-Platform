@@ -30,11 +30,14 @@ import MutashabihatSetup from "./app/features/quiz/quizzes/mutashabihat/pages/se
 import MutashabihatTest from "./app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest";
 import Settings from "app/features/settings/Settings";
 import PlaybackSettings from "./app/features/playback/PlaybackSettings";
+import Account from "./app/features/account/Account";
+import Bookmarks from "./app/features/bookmarks/Bookmarks";
 
 // App-wide context
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
+import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 
 setupIonicReact({ mode: "md" });
 
@@ -105,6 +108,7 @@ const App: React.FC = () => {
     <ThemeProvider>
       <LanguageProvider>
         <VerseVisibilityProvider>
+          <PlaybackProvider>
           <IonApp>
             {preloadProgress.done < preloadProgress.total && (
               <div className="global-preload-bar">
@@ -141,12 +145,15 @@ const App: React.FC = () => {
                   path="/mutashabihat-test"
                   component={MutashabihatTest}
                 />
+                <Route exact path="/account" component={Account} />
+                <Route exact path="/bookmarks" component={Bookmarks} />
                 <Route exact path="/settings" component={Settings} />
                 <Route exact path="/playback" component={PlaybackSettings} />
                 <Redirect exact from="/home" to="/" />
               </IonRouterOutlet>
             </IonReactRouter>
           </IonApp>
+          </PlaybackProvider>
         </VerseVisibilityProvider>
       </LanguageProvider>
     </ThemeProvider>
