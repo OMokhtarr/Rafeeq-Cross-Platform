@@ -1,5 +1,6 @@
 import { quranClient, isSdkAvailable } from "./quran-sdk-client";
 import * as fallback from "./quran-api.client";
+import type { PageTranslation, TafsirText, TafsirResource } from "./quran-api.client";
 
 // ─── Internal helper ─────────────────────────────────────────────────────────
 async function trySdkOrFallback<Args extends any[], Return>(
@@ -53,4 +54,32 @@ export async function fetchChapters() {
 
 export async function fetchJuzs() {
   return trySdkOrFallback("fetchJuzs");
+}
+
+export async function fetchTranslationsByPage(
+  page: number,
+  translationId: string | number,
+): Promise<PageTranslation[]> {
+  return trySdkOrFallback<[number, string | number], PageTranslation[]>(
+    "fetchTranslationsByPage",
+    page,
+    translationId,
+  );
+}
+
+export async function fetchTafsirForAyah(
+  sura: number,
+  aya: number,
+  tafsirId?: string,
+): Promise<TafsirText> {
+  return trySdkOrFallback<[number, number, string | undefined], TafsirText>(
+    "fetchTafsirForAyah",
+    sura,
+    aya,
+    tafsirId,
+  );
+}
+
+export async function fetchTafsirResources(): Promise<TafsirResource[]> {
+  return trySdkOrFallback<[], TafsirResource[]>("fetchTafsirResources");
 }

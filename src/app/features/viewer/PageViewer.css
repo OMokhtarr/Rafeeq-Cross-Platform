@@ -81,13 +81,31 @@
   transform: scale(0.95);
 }
 
-.menu-icon {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
+/* Play button — gold accent; recite mode uses gold background */
+.toolbar-button.play-button {
+  color: var(--color-gold, #b8860b);
 }
-.menu-icon * {
-  stroke: currentColor;
+[data-theme="night"] .toolbar-button.play-button {
+  color: var(--color-gold, #d4b48c);
+}
+.toolbar-button.play-button--recite {
+  background: rgba(212, 180, 140, 0.2);
+  color: var(--color-gold, #b8860b);
+}
+[data-theme="night"] .toolbar-button.play-button--recite {
+  background: rgba(212, 180, 140, 0.15);
+  color: var(--color-gold, #d4b48c);
+}
+
+/* Stop button — red tint */
+.toolbar-button.stop-button {
+  color: #c0392b;
+}
+[data-theme="night"] .toolbar-button.stop-button {
+  color: #e57373;
+}
+.toolbar-button.stop-button:hover {
+  background: rgba(192, 57, 43, 0.12);
 }
 
 .page-navigation-compact {
@@ -285,6 +303,24 @@
 }
 [data-theme="night"] .metadata-value {
   color: white;
+}
+
+/* Bookmark button — gold when active (bookmarked) */
+.toolbar-button.bookmark-button {
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+.toolbar-button.bookmark-button--active {
+  color: var(--color-gold, #d4b48c);
+}
+.toolbar-button.bookmark-button--active svg {
+  filter: drop-shadow(0 0 4px rgba(212, 180, 140, 0.5));
+}
+[data-theme="day"] .toolbar-button.bookmark-button {
+  color: rgba(0, 0, 0, 0.4);
+}
+[data-theme="day"] .toolbar-button.bookmark-button--active {
+  color: var(--color-gold, #b8860b);
 }
 
 .toolbar-right {

@@ -179,6 +179,8 @@ export interface AppStrings {
     toggleHideTitle: string;
     toggleShowTitle: string;
     nextVerseTitle: string;
+    micLabel: string;
+    stopLabel: string;
   };
 
   playback: {
@@ -446,6 +448,8 @@ const ar: AppStrings = {
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
     nextVerseTitle: "إظهار الآية التالية",
+    micLabel: "المايكروفون",
+    stopLabel: "إيقاف التشغيل",
   },
   playback: {
     title: "إعدادات التشغيل",
@@ -535,12 +539,12 @@ const ar: AppStrings = {
       { value: "hard", label: "صعب" },
     ],
     reciters: [
-      { value: "minshawi-murattal", label: "محمد صديق المنشاوي (مرتل)" },
-      { value: "husary", label: "الحصري" },
-      { value: "minshawi", label: "المنشاوي" },
-      { value: "sudais", label: "السديس" },
-      { value: "afasy", label: "العفاسي" },
-      { value: "ghamdi", label: "الغامدي" },
+      { value: "minshawi-murattal", label: "محمد صديق المنشاوي — مرتل" },
+      { value: "husary", label: "محمود خليل الحصري" },
+      { value: "minshawi", label: "محمد صديق المنشاوي — مجود" },
+      { value: "sudais", label: "عبد الرحمن السديس" },
+      { value: "afasy", label: "مشاري راشد العفاسي" },
+      { value: "ghamdi", label: "سعد الغامدي" },
     ],
   },
 };
@@ -724,6 +728,8 @@ const en: AppStrings = {
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
     nextVerseTitle: "Reveal next verse",
+    micLabel: "Microphone",
+    stopLabel: "Stop playback",
   },
   playback: {
     title: "Playback Settings",
@@ -813,15 +819,12 @@ const en: AppStrings = {
       { value: "hard", label: "Hard" },
     ],
     reciters: [
-      {
-        value: "minshawi-murattal",
-        label: "Muhammad Siddiq Al Minshawy (Murattal)",
-      },
-      { value: "husary", label: "Al-Husary" },
-      { value: "minshawi", label: "Al-Minshawi" },
-      { value: "sudais", label: "Al-Sudais" },
-      { value: "afasy", label: "Al-Afasy" },
-      { value: "ghamdi", label: "Al-Ghamdi" },
+      { value: "minshawi-murattal", label: "Muhammad Siddiq Al-Minshawi — Murattal" },
+      { value: "husary", label: "Mahmoud Khalil Al-Husary" },
+      { value: "minshawi", label: "Muhammad Siddiq Al-Minshawi — Mujawwad" },
+      { value: "sudais", label: "Abdul Rahman Al-Sudais" },
+      { value: "afasy", label: "Mishary Rashid Al-Afasy" },
+      { value: "ghamdi", label: "Sa'd Al-Ghamdi" },
     ],
   },
 };
