@@ -73,18 +73,6 @@ const MutashabihatSetup: React.FC = () => {
         <div className="ms-setup-page-wrapper">
           <div className="ms-setup-container">
             <div className="ms-setup-card">
-              {/* ── Header ── */}
-              <div className="ms-header">
-                <h1 className="ms-title">{tq.mutashabihatTitle}</h1>
-                <p className="ms-subtitle">{tq.mutashabihatSubtitle}</p>
-              </div>
-
-              {/* ── Info ── */}
-              <div className="ms-info-box">
-                <span className="ms-info-icon">💡</span>
-                <p>{tq.mutashabihatInfo}</p>
-              </div>
-
               {/* ── Scope selector ── */}
               <div className="ms-section">
                 <label className="ms-label">{tq.scope}</label>
@@ -96,7 +84,9 @@ const MutashabihatSetup: React.FC = () => {
                   ].map((opt) => (
                     <button
                       key={opt.key}
-                      className={`ms-type-btn ${scopeType === opt.key ? "active" : ""}`}
+                      className={`ms-type-btn ${
+                        scopeType === opt.key ? "active" : ""
+                      }`}
                       onClick={() => setScopeType(opt.key)}
                     >
                       <span className="ms-type-icon">{opt.icon}</span>
@@ -123,7 +113,9 @@ const MutashabihatSetup: React.FC = () => {
                       return (
                         <button
                           key={num}
-                          className={`ms-surah-chip ${selectedSurahs.includes(num) ? "active" : ""}`}
+                          className={`ms-surah-chip ${
+                            selectedSurahs.includes(num) ? "active" : ""
+                          }`}
                           onClick={() => toggleSurah(num)}
                         >
                           <span className="ms-chip-name" lang="ar" dir="rtl">
@@ -193,7 +185,9 @@ const MutashabihatSetup: React.FC = () => {
                     {JUZS.map((j) => (
                       <button
                         key={j}
-                        className={`ms-juz-chip ${selectedJuzs.includes(j) ? "active" : ""}`}
+                        className={`ms-juz-chip ${
+                          selectedJuzs.includes(j) ? "active" : ""
+                        }`}
                         onClick={() => toggleJuz(j)}
                       >
                         <span className="ms-juz-label">{tq.juzWord}</span>
@@ -211,7 +205,9 @@ const MutashabihatSetup: React.FC = () => {
                   {[5, 10, 15, 20].map((n) => (
                     <button
                       key={n}
-                      className={`ms-count-btn ${questionCount === n ? "active" : ""}`}
+                      className={`ms-count-btn ${
+                        questionCount === n ? "active" : ""
+                      }`}
                       onClick={() => setQuestionCount(n)}
                     >
                       {toHindi(n)}

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import { getPage } from "../../../core/services/data/quran.service";
 import {
   getSurahNameArabic,
@@ -34,8 +40,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   mode?: "sidebar";
-  grey?: Set<string>; // verses to grey out
-  hideAfterTarget?: boolean; // auto-hide verses after target
+  grey?: Set<string>;
+  hideAfterTarget?: boolean;
 }
 
 const MushafContextViewer: React.FC<Props> = ({
@@ -52,7 +58,9 @@ const MushafContextViewer: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [internalHint, setInternalHint] = useState(externalHintLevel ?? 0);
   const [revealedNextCount, setRevealedNextCount] = useState(0);
+  const [bigTextMode, setBigTextMode] = useState(false);
   const { hidden: globalHidden, showVerse } = useVerseVisibility();
+  const mushafPageRef = useRef<HTMLDivElement>(null);
 
   const targetVerse = useMemo(
     () => verses.find((v) => v.sura === verse.sura && v.aya === verse.aya),
@@ -61,12 +69,6 @@ const MushafContextViewer: React.FC<Props> = ({
   const targetWordCount =
     targetVerse?.words?.filter((w) => w.charType === "end").length ?? 0;
 
-  // Number of API words covered by the snippet text. Walks the API words
-  // accumulating their diacritic-stripped text_uthmani until it matches the
-  // snippet's stripped form. Returns 0 if the verse hasn't loaded yet so that
-  // we never accidentally reveal words before the API word list is available —
-  // the raw space-token count is unreliable and can equal targetWordCount,
-  // causing the entire verse to appear unhidden.
   const snippetWordCount = useMemo(() => {
     if (!snippet) return 0;
     const apiWords =
@@ -85,13 +87,10 @@ const MushafContextViewer: React.FC<Props> = ({
     return 0;
   }, [snippet, targetVerse]);
 
-  // Reset hint count when the target verse changes. Intentionally excludes
-  // externalHintLevel from deps: it is only the *initial* seed, not a live
-  // controller. Including it would wipe accumulated hint presses on every
-  // parent re-render that happens to pass a new prop reference.
+  // Reset hint when verse changes
   useEffect(() => {
     setInternalHint(externalHintLevel ?? 0);
-  }, [verse.sura, verse.aya]); // eslint-disable-line -- externalHintLevel intentionally omitted
+  }, [verse.sura, verse.aya]); // eslint-disable-line
 
   useEffect(() => {
     setRevealedNextCount(0);
@@ -122,6 +121,20 @@ const MushafContextViewer: React.FC<Props> = ({
     };
   }, [isOpen, currentPage]);
 
+  // Width detection for big text mode
+  useEffect(() => {
+    const container = mushafPageRef.current;
+    if (!container) return;
+    const checkWidth = () => {
+      const width = container.clientWidth;
+      setBigTextMode(width < 250); // threshold = 250px, adjust as desired
+    };
+    checkWidth();
+    const ro = new ResizeObserver(checkWidth);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [verses, loading]); // re-run when page changes
+
   const jumpToPage = (pg: number) => {
     if (pg < 1 || pg > totalPages || loading) return;
     setCurrentPage(pg);
@@ -134,11 +147,8 @@ const MushafContextViewer: React.FC<Props> = ({
 
   const showBismillah =
     verses.length > 0 && verses[0].aya === 1 && verses[0].sura !== 9;
-
   const targetOnPage = currentPage === verse.page;
 
-  // Verses on the page strictly before the target are de-emphasized (grey).
-  // This applies on any page at-or-before the target's page.
   const greySet = useMemo(() => {
     const set = new Set<string>();
     for (const v of verses) {
@@ -149,7 +159,6 @@ const MushafContextViewer: React.FC<Props> = ({
     return set;
   }, [verses, verse.sura, verse.aya]);
 
-  // Nth verse after the target across surah boundaries. n=0 → target itself.
   const nthVerseAfterTarget = useCallback(
     (n: number): { sura: number; aya: number } | null => {
       const chapters = getChapters();
@@ -174,7 +183,6 @@ const MushafContextViewer: React.FC<Props> = ({
     [verse.sura, verse.aya],
   );
 
-  // Total verses from the target to end of the Quran (exclusive of target).
   const maxRevealable = useMemo(() => {
     const chapters = getChapters();
     if (chapters.length === 0) return 0;
@@ -188,25 +196,16 @@ const MushafContextViewer: React.FC<Props> = ({
     return total;
   }, [verse.sura, verse.aya]);
 
-  // The last revealed verse (inclusive). null when nothing past target revealed.
   const lastRevealed = useMemo(
     () =>
       revealedNextCount > 0 ? nthVerseAfterTarget(revealedNextCount) : null,
     [revealedNextCount, nthVerseAfterTarget],
   );
 
-  // Hide every verse on the current page that comes after lastRevealed (or
-  // after the target itself when nothing past target has been revealed yet).
-  // IMPORTANT: the target verse itself must never appear in this set — its
-  // visibility is controlled word-by-word via partialTarget/hiddenPositions.
-  // If globalHidden already contains the target key (e.g. from a previous
-  // quiz session), leaving it in would cause MushafPage to apply
-  // mushaf-verse-hidden to *all* words of the verse, overriding the partial
-  // reveal and making the hint button have no visible effect.
   const mergedHidden = useMemo(() => {
     const targetKey = `${verse.sura}:${verse.aya}`;
     const set = new Set<string>(globalHidden);
-    set.delete(targetKey); // always let partialTarget control the target verse
+    set.delete(targetKey);
     const cutoff = lastRevealed ?? { sura: verse.sura, aya: verse.aya };
     for (const v of verses) {
       const after =
@@ -232,11 +231,6 @@ const MushafContextViewer: React.FC<Props> = ({
     ? targetWordCount
     : Math.min(targetWordCount, snippetWordCount + internalHint);
 
-  // Build the exact set of word positions to hide for the target verse.
-  // Walk the actual API word entries (skipping the end marker) and collect the
-  // `position` of every word past the reveal cutoff. This avoids any
-  // assumption that API positions are 1..N contiguous — we just hide whichever
-  // positions are observed past the cutoff in render order.
   const partialTarget = useMemo(() => {
     if (!targetOnPage || !targetVerse) return undefined;
     const wordEntries = (targetVerse.words ?? []).filter(
@@ -316,7 +310,6 @@ const MushafContextViewer: React.FC<Props> = ({
               ⤵
             </button>
           )}
-
           <button
             className="mcv-close-btn"
             onClick={onClose}
@@ -334,15 +327,18 @@ const MushafContextViewer: React.FC<Props> = ({
             <p>{t.mushaf.contextLoading}</p>
           </div>
         ) : (
-          <MushafPage
-            page={currentPage}
-            verses={verses}
-            showBismillah={showBismillah}
-            hidden={mergedHidden}
-            grey={greySet}
-            partialTarget={partialTarget}
-            onVerseTap={handleVerseTap}
-          />
+          <div ref={mushafPageRef} className="mushaf-page-wrapper">
+            <MushafPage
+              page={currentPage}
+              verses={verses}
+              showBismillah={showBismillah}
+              hidden={mergedHidden}
+              grey={greySet}
+              partialTarget={partialTarget}
+              onVerseTap={handleVerseTap}
+              bigTextMode={bigTextMode}
+            />
+          </div>
         )}
       </div>
     </div>

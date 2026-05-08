@@ -193,7 +193,7 @@ const PlaybackSettings: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   // Sync prefs → queue
   useEffect(() => {

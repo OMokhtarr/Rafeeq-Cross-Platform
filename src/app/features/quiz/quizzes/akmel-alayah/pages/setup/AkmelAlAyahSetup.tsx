@@ -69,18 +69,6 @@ const AkmelAlAyahSetup: React.FC = () => {
         <div className="aa-setup-page-wrapper">
           <div className="aa-container">
             <div className="aa-card">
-              {/* ── Header ── */}
-              <div className="aa-header">
-                <h1 className="aa-title">{tq.akmelTitle}</h1>
-                <p className="aa-subtitle">{tq.akmelSubtitle}</p>
-              </div>
-
-              {/* ── Info ── */}
-              <div className="aa-info-box">
-                <span className="aa-info-icon">📖</span>
-                <p>{tq.akmelInfo}</p>
-              </div>
-
               {/* ── Scope selector ── */}
               <div className="aa-section">
                 <label className="aa-label">{tq.scope}</label>
@@ -92,7 +80,9 @@ const AkmelAlAyahSetup: React.FC = () => {
                   ].map((opt) => (
                     <button
                       key={opt.key}
-                      className={`aa-type-btn ${scopeType === opt.key ? "active" : ""}`}
+                      className={`aa-type-btn ${
+                        scopeType === opt.key ? "active" : ""
+                      }`}
                       onClick={() => setScopeType(opt.key)}
                     >
                       <span className="aa-type-icon">{opt.icon}</span>
@@ -119,7 +109,9 @@ const AkmelAlAyahSetup: React.FC = () => {
                       return (
                         <button
                           key={num}
-                          className={`aa-surah-chip ${selectedSurah === num ? "active" : ""}`}
+                          className={`aa-surah-chip ${
+                            selectedSurah === num ? "active" : ""
+                          }`}
                           onClick={() => setSelectedSurah(num)}
                         >
                           <span className="aa-chip-name" lang="ar" dir="rtl">
@@ -189,7 +181,9 @@ const AkmelAlAyahSetup: React.FC = () => {
                     {JUZS.map((j) => (
                       <button
                         key={j}
-                        className={`aa-juz-chip ${selectedJuzs.includes(j) ? "active" : ""}`}
+                        className={`aa-juz-chip ${
+                          selectedJuzs.includes(j) ? "active" : ""
+                        }`}
                         onClick={() => toggleJuz(j)}
                       >
                         <span className="aa-juz-label">{tq.juzWord}</span>
@@ -207,7 +201,9 @@ const AkmelAlAyahSetup: React.FC = () => {
                   {[5, 10, 15, 20].map((n) => (
                     <button
                       key={n}
-                      className={`aa-count-btn ${questionCount === n ? "active" : ""}`}
+                      className={`aa-count-btn ${
+                        questionCount === n ? "active" : ""
+                      }`}
                       onClick={() => setQuestionCount(n)}
                     >
                       {toHindi(n)}
