@@ -75,10 +75,7 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
 export class QuranApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
+  constructor(public status: number, message: string) {
     super(message);
     this.name = "QuranApiError";
   }
@@ -190,13 +187,6 @@ export interface PageVerseDTO {
   words: VerseWord[];
 }
 
-/**
- * Fetch every verse on a Madani Mushaf page.
- * `wordFields` comes from MUSHAFS[kind].wordFields and is the only knob the
- * QF Content API exposes for selecting glyph code variants (V1/V2/V4). The
- * V4 Tajweed mushaf is requested by including `code_v2` in word_fields —
- * there is no separate `mushaf` query parameter on this host.
- */
 export async function fetchVersesByPage(
   page: number,
   wordFields: string,
@@ -213,7 +203,6 @@ export async function fetchVersesByPage(
     const sura = parseInt(suraStr, 10);
     const aya = parseInt(ayaStr, 10);
 
-    // Ensure text_uthmani is populated
     let text_uthmani = v.text_uthmani || "";
     if (!text_uthmani && v.words && v.words.length) {
       text_uthmani = v.words
@@ -222,7 +211,6 @@ export async function fetchVersesByPage(
         .join(" ");
     }
 
-    // Map words to VerseWord, including optional translation/transliteration
     const words: VerseWord[] = v.words.map((w) => ({
       position: w.position,
       charType: w.char_type_name === "end" ? "word" : "end",
@@ -245,10 +233,6 @@ export async function fetchVersesByPage(
   });
 }
 
-/**
- * Fetch every verse in a Juz (1–30). Mirrors the shape returned by
- * `fetchVersesByPage` so the rest of the pipeline can consume both uniformly.
- */
 export async function fetchVersesByJuz(
   juz: number,
   wordFields?: string,
@@ -295,11 +279,6 @@ export async function fetchVersesByJuz(
   });
 }
 
-// Search lives in quran.service.ts as a local in-memory pass over the
-// IDB-cached pages — the Quran Foundation /search endpoint requires a
-// scope our token broker doesn't carry, and public hosts return mojibake
-// for Arabic queries. See `searchQuran` in `services/data/quran.service.ts`.
-
 // ─── Chapters / Juzs ─────────────────────────────────────────────────────────
 export async function fetchChapters(): Promise<any[]> {
   const data = await apiFetch<{ chapters: any[] }>("/chapters?language=en", {});
@@ -320,26 +299,13 @@ interface AudioApiResponse {
   audio_url?: string;
 }
 
-const RECITER_ID_BY_SLUG: Record<string, string> = {
-  husary: "2",
-  minshawi: "4",
-  "minshawi-murattal": "4",
-  sudais: "9",
-  afasy: "7",
-  ghamdi: "10",
-};
-
-function resolveReciterId(reciter: string): string {
-  return RECITER_ID_BY_SLUG[reciter] ?? reciter;
-}
-
 export async function fetchAudioForAyah(
   sura: number,
   aya: number,
-  reciter: string,
+  reciter: string, // now a numeric ID string
 ): Promise<string> {
   const verseKey = `${sura}:${aya}`;
-  const reciterId = resolveReciterId(reciter);
+  const reciterId = reciter; // no mapping needed, already an ID
 
   try {
     const data = await apiFetch<AudioApiResponse>(
@@ -526,7 +492,7 @@ export async function fetchTafsirResources(): Promise<TafsirResource[]> {
   }));
 }
 
-const DEFAULT_TAFSIR_ID = "169"; // Ibn Kathir (en) — widely available
+const DEFAULT_TAFSIR_ID = "169"; // Ibn Kathir (en)
 
 interface ApiTafsirResponse {
   tafsir?: {
@@ -548,4 +514,99 @@ export async function fetchTafsirForAyah(
   );
   const raw = data.tafsir?.text ?? "";
   return { verseKey, text: stripHtml(raw) };
+}
+
+// ─── Recitations (dynamic) ────────────────────────────────────────────────────
+
+export interface ApiRecitation {
+  id: number;
+  reciter_name: string;
+  style?: string;
+  translated_name?: { name?: string; language_name?: string };
+}
+
+interface RecitationsResponse {
+  recitations: ApiRecitation[];
+}
+
+let recitationsCache: ApiRecitation[] | null = null;
+let recitationsPromise: Promise<ApiRecitation[]> | null = null;
+
+export async function fetchRecitations(
+  language = "en",
+): Promise<ApiRecitation[]> {
+  if (recitationsCache) return recitationsCache;
+  if (recitationsPromise) return recitationsPromise;
+
+  recitationsPromise = (async () => {
+    const data = await apiFetch<RecitationsResponse>("/resources/recitations", {
+      language,
+    });
+    const list = data.recitations ?? [];
+    recitationsCache = list;
+    return list;
+  })();
+
+  try {
+    return await recitationsPromise;
+  } finally {
+    recitationsPromise = null;
+  }
+}
+
+// ─── Hizbs ────────────────────────────────────────────────────────────────────
+
+interface ApiHizb {
+  hizb_number: number;
+  verse_mapping: Record<string, string>;
+}
+
+interface ApiHizbsResponse {
+  hizbs: ApiHizb[];
+}
+
+export async function fetchHizbs(): Promise<ApiHizb[]> {
+  const data = await apiFetch<ApiHizbsResponse>("/hizbs", {});
+  return data.hizbs ?? [];
+}
+
+export async function fetchHizb(hizbNumber: number): Promise<ApiHizb | null> {
+  try {
+    const data = await apiFetch<{ hizb: ApiHizb }>(`/hizbs/${hizbNumber}`, {});
+    return data.hizb ?? null;
+  } catch (err) {
+    if (err instanceof QuranApiNotFound) return null;
+    throw err;
+  }
+}
+
+// ─── Rub el‑Hizbs ─────────────────────────────────────────────────────────────
+
+interface ApiRub {
+  rub_number: number;
+  verse_mapping: Record<string, string>;
+}
+
+interface ApiRubsResponse {
+  rubs: ApiRub[];
+}
+
+export async function fetchRubElHizbs(): Promise<ApiRub[]> {
+  const data = await apiFetch<ApiRubsResponse>("/rub_el_hizbs", {});
+  return data.rubs ?? [];
+}
+
+export async function fetchRubElHizb(
+  rubNumber: number,
+): Promise<ApiRub | null> {
+  try {
+    const data = await apiFetch<{ rub: ApiRub }>(
+      `/rub_el_hizbs/${rubNumber}`,
+      {},
+    );
+    return data.rub ?? null;
+  } catch (err) {
+    if (err instanceof QuranApiNotFound) return null;
+    throw err;
+  }
 }

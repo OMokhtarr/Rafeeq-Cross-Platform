@@ -1,21 +1,19 @@
-import { fetchChapters, fetchJuzs } from "../api/quran-data-provider";
+import {
+  fetchChapters,
+  fetchJuzs,
+  fetchHizbs,
+  fetchRubElHizbs,
+} from "../api/quran-data-provider";
 import { idb } from "../storage/idb.service";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 export interface PageStart {
   sura: number;
   aya: number;
 }
 
 // ─── Static fallback ─────────────────────────────────────────────────────────
-/**
- * First (sura, aya) on each Madani page 1…604.  Index 0 unused.
- * Generated from the canonical Madani page-data table; identical to
- * what the old quranData.js exported.  Kept as a tiny constant so
- * getPageStart() never blocks on the network.
- */
 const PAGE_STARTS: readonly PageStart[] = [
-  { sura: 0, aya: 0 }, // 0
+  { sura: 0, aya: 0 },
   { sura: 1, aya: 1 },
   { sura: 2, aya: 1 },
   { sura: 2, aya: 6 },
@@ -629,13 +627,13 @@ export const JUZ_START_PAGES: readonly number[] = [
 ];
 
 // ─── In‑memory caches ────────────────────────────────────────────────────────
-// Initialise as empty arrays so accessors never throw on first render.
 let chaptersCache: any[] = [];
 let juzsCache: any[] = [];
+let hizbsCache: any[] = [];
+let rubsCache: any[] = [];
 let pageToSuraMap: Map<number, number> | null = null;
 let initPromise: Promise<void> | null = null;
 
-// ─── Init ────────────────────────────────────────────────────────────────────
 export async function initMetadata(): Promise<void> {
   if (initPromise) return initPromise;
   initPromise = (async () => {
@@ -650,11 +648,10 @@ export async function initMetadata(): Promise<void> {
     if (chapters.length === 0) {
       const raw = await fetchChapters();
       chapters = Array.isArray(raw) ? raw : [];
-      if (chapters.length > 0) {
+      if (chapters.length > 0)
         await idb.put("meta", { key: "chapters", value: chapters });
-      }
     }
-    chaptersCache = chapters; // now always an array
+    chaptersCache = chapters;
 
     // 2. Juzs
     const juzsRecord = await idb.get<{ key: string; value: any[] }>(
@@ -665,82 +662,82 @@ export async function initMetadata(): Promise<void> {
     if (juzs.length === 0) {
       const raw = await fetchJuzs();
       juzs = Array.isArray(raw) ? raw : [];
-      if (juzs.length > 0) {
-        await idb.put("meta", { key: "juzs", value: juzs });
-      }
+      if (juzs.length > 0) await idb.put("meta", { key: "juzs", value: juzs });
     }
     juzsCache = juzs;
 
-    // 3. Page → surah mapping (safe even if chaptersCache is empty)
+    // 3. Hizbs (1-60)
+    const hizbsRecord = await idb.get<{ key: string; value: any[] }>(
+      "meta",
+      "hizbs",
+    );
+    let hizbs = Array.isArray(hizbsRecord?.value) ? hizbsRecord.value : [];
+    if (hizbs.length === 0) {
+      try {
+        const raw = await fetchHizbs();
+        hizbs = Array.isArray(raw) ? raw : [];
+        if (hizbs.length > 0)
+          await idb.put("meta", { key: "hizbs", value: hizbs });
+      } catch (err) {
+        console.warn(
+          "[metadata] Failed to fetch hizbs – using estimated ranges.",
+          err,
+        );
+      }
+    }
+    hizbsCache = hizbs;
+
+    // 4. Rub el‑Hizbs (1-240)
+    const rubsRecord = await idb.get<{ key: string; value: any[] }>(
+      "meta",
+      "rubs",
+    );
+    let rubs = Array.isArray(rubsRecord?.value) ? rubsRecord.value : [];
+    if (rubs.length === 0) {
+      try {
+        const raw = await fetchRubElHizbs();
+        rubs = Array.isArray(raw) ? raw : [];
+        if (rubs.length > 0)
+          await idb.put("meta", { key: "rubs", value: rubs });
+      } catch (err) {
+        console.warn(
+          "[metadata] Failed to fetch rub el‑hizbs – using estimated ranges.",
+          err,
+        );
+      }
+    }
+    rubsCache = rubs;
+
+    // 5. Page → surah mapping
     const suraMap = new Map<number, number>();
     for (const ch of chaptersCache) {
       const start = ch.pages?.[0] ?? 1;
       const end = ch.pages?.[1] ?? start;
-      for (let p = start; p <= end; p++) {
-        suraMap.set(p, ch.id);
-      }
+      for (let p = start; p <= end; p++) suraMap.set(p, ch.id);
     }
     pageToSuraMap = suraMap;
   })();
   return initPromise;
 }
 
-// ─── Accessors (always safe to call) ────────────────────────────────────────
+// ─── Public accessors ────────────────────────────────────────────────────────
 export function getChapters(): any[] {
-  return chaptersCache; // always an array (empty before init)
+  return chaptersCache;
 }
-
-export function getJuzs(): any[] {
-  return juzsCache;
-}
-
 export function getSuraForPage(page: number): number | undefined {
   return pageToSuraMap?.get(page);
 }
-
-export function getSurahStartPage(suraId: number): number {
-  const ch = chaptersCache.find((c: any) => c.id === suraId);
-  return ch ? (ch.pages?.[0] ?? 1) : 1;
-}
-
 export function getSurahNameArabic(suraId: number): string {
   const ch = chaptersCache.find((c: any) => c.id === suraId);
   return ch?.name_arabic ?? `سورة ${suraId}`;
 }
-
 export function getSurahNameEnglish(suraId: number): string {
   const ch = chaptersCache.find((c: any) => c.id === suraId);
   return ch?.translated_name?.name ?? `Surah ${suraId}`;
 }
-
-function parseVerseKey(key: string): { sura: number; aya: number } {
-  const [s, a] = key.split(":").map(Number);
-  return { sura: s, aya: a };
-}
-
-export function getJuzStart(juzNumber: number): { sura: number; aya: number } {
-  const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
-  if (!juz) return { sura: 1, aya: 1 };
-  const mapping = juz.verse_mapping as Record<string, string> | undefined;
-  if (!mapping) return { sura: 1, aya: 1 };
-  const firstSuraId = Object.keys(mapping).sort((a, b) => Number(a) - Number(b))[0];
-  const firstEntry = mapping[firstSuraId];
-  // entry is either "startAya:endAya" or a full "sura:aya" key
-  const startAya = firstEntry?.split(":")[0];
-  return startAya ? { sura: Number(firstSuraId), aya: Number(startAya) } : { sura: 1, aya: 1 };
-}
-
-export function getJuzEnd(juzNumber: number): { sura: number; aya: number } {
-  const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
-  if (!juz) return { sura: 114, aya: 6 };
-  const mapping = juz.verse_mapping as Record<string, string> | undefined;
-  if (!mapping) return { sura: 114, aya: 6 };
-  const lastSuraId = Object.keys(mapping).sort((a, b) => Number(a) - Number(b)).at(-1)!;
-  const lastEntry = mapping[lastSuraId];
-  // entry is "startAya:endAya" — take the end aya
-  const parts = lastEntry?.split(":");
-  const endAya = parts?.[1] ?? parts?.[0];
-  return endAya ? { sura: Number(lastSuraId), aya: Number(endAya) } : { sura: 114, aya: 6 };
+export function getSurahStartPage(suraId: number): number {
+  const ch = chaptersCache.find((c: any) => c.id === suraId);
+  return ch ? ch.pages?.[0] ?? 1 : 1;
 }
 
 export function getPageStart(page: number): PageStart | null {
@@ -749,7 +746,6 @@ export function getPageStart(page: number): PageStart | null {
 }
 
 export function estimatePageForVerse(sura: number, aya: number): number {
-  // PAGE_STARTS[0] is dummy, indices 1..604
   let lo = 1,
     hi = 604,
     answer = 1;
@@ -759,16 +755,112 @@ export function estimatePageForVerse(sura: number, aya: number): number {
     if (verseLessThanOrEqual(start, { sura, aya })) {
       answer = mid;
       lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
+    } else hi = mid - 1;
   }
   return answer;
 }
-
 function verseLessThanOrEqual(
   v1: { sura: number; aya: number },
   v2: { sura: number; aya: number },
 ): boolean {
   return v1.sura < v2.sura || (v1.sura === v2.sura && v1.aya <= v2.aya);
+}
+
+// ─── Juz ─────────────────────────────────────────────────────────────────────
+export function getJuzStart(juzNumber: number): { sura: number; aya: number } {
+  const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
+  if (!juz?.verse_mapping) return { sura: 1, aya: 1 };
+  const mapping = juz.verse_mapping as Record<string, string>;
+  const firstSuraId = Object.keys(mapping).sort(
+    (a, b) => Number(a) - Number(b),
+  )[0];
+  const raw = mapping[firstSuraId];
+  const dashIdx = raw?.indexOf("-");
+  const startAya = dashIdx >= 0 ? raw.substring(0, dashIdx) : raw;
+  return { sura: Number(firstSuraId), aya: Number(startAya) || 1 };
+}
+
+export function getJuzEnd(juzNumber: number): { sura: number; aya: number } {
+  const juz = juzsCache?.find((j: any) => j.juz_number === juzNumber);
+  if (!juz?.verse_mapping) return { sura: 114, aya: 6 };
+  const mapping = juz.verse_mapping as Record<string, string>;
+  const lastSuraId = Object.keys(mapping)
+    .sort((a, b) => Number(a) - Number(b))
+    .at(-1)!;
+  const raw = mapping[lastSuraId];
+  const dashIdx = raw?.indexOf("-");
+  const endAya = dashIdx >= 0 ? raw.substring(dashIdx + 1) : raw;
+  return { sura: Number(lastSuraId), aya: Number(endAya) || 6 };
+}
+
+// ─── Hizb ─────────────────────────────────────────────────────────────────────
+function getStartFromMapping(mapping: Record<string, string>): {
+  sura: number;
+  aya: number;
+} {
+  const keys = Object.keys(mapping).sort((a, b) => Number(a) - Number(b));
+  if (!keys.length) return { sura: 1, aya: 1 };
+  const firstSura = keys[0];
+  const range = mapping[firstSura];
+  const startAya = range?.split("-")[0] ?? range;
+  return { sura: Number(firstSura), aya: Number(startAya) || 1 };
+}
+
+function getEndFromMapping(mapping: Record<string, string>): {
+  sura: number;
+  aya: number;
+} {
+  const keys = Object.keys(mapping).sort((a, b) => Number(a) - Number(b));
+  if (!keys.length) return { sura: 114, aya: 6 };
+  const lastSura = keys[keys.length - 1];
+  const range = mapping[lastSura];
+  const parts = range?.split("-");
+  const endAya = parts?.length === 2 ? parts[1] : parts?.[0] ?? "1";
+  return { sura: Number(lastSura), aya: Number(endAya) || 1 };
+}
+
+export function getHizbStart(hizbNumber: number): {
+  sura: number;
+  aya: number;
+} {
+  const hizb = hizbsCache?.find((h: any) => h.hizb_number === hizbNumber);
+  if (!hizb?.verse_mapping) return getJuzStart(Math.ceil(hizbNumber / 2)); // fallback
+  return getStartFromMapping(hizb.verse_mapping);
+}
+
+export function getHizbEnd(hizbNumber: number): { sura: number; aya: number } {
+  const hizb = hizbsCache?.find((h: any) => h.hizb_number === hizbNumber);
+  if (!hizb?.verse_mapping) return getJuzEnd(Math.ceil(hizbNumber / 2));
+  return getEndFromMapping(hizb.verse_mapping);
+}
+
+// ─── Rub el‑Hizb ─────────────────────────────────────────────────────────────
+export function getRubStart(rubNumber: number): { sura: number; aya: number } {
+  const rub = rubsCache?.find((r: any) => r.rub_number === rubNumber);
+  if (!rub?.verse_mapping) return getHizbStart(Math.ceil(rubNumber / 4));
+  return getStartFromMapping(rub.verse_mapping);
+}
+
+export function getRubEnd(rubNumber: number): { sura: number; aya: number } {
+  const rub = rubsCache?.find((r: any) => r.rub_number === rubNumber);
+  if (!rub?.verse_mapping) return getHizbEnd(Math.ceil(rubNumber / 4));
+  return getEndFromMapping(rub.verse_mapping);
+}
+
+export function getRubNumberForPage(page: number): number {
+  if (rubsCache.length === 0) {
+    // Fallback: each rub ≈ 2.5 pages
+    const approx = Math.round((page / 604) * 240);
+    return Math.min(240, Math.max(1, approx));
+  }
+  const pageStarts = rubsCache.map((r) => {
+    const start = getStartFromMapping(r.verse_mapping);
+    return estimatePageForVerse(start.sura, start.aya);
+  });
+  for (let i = 0; i < rubsCache.length; i++) {
+    const rubStartPage = pageStarts[i];
+    const nextStartPage = i < rubsCache.length - 1 ? pageStarts[i + 1] : 605;
+    if (page >= rubStartPage && page < nextStartPage) return i + 1;
+  }
+  return 1;
 }

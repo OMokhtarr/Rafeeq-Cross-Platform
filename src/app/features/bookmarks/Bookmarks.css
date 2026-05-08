@@ -269,7 +269,8 @@
   justify-content: center;
   background: none;
   border: none;
-  border-inline-start: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.08));
+  border-inline-start: 1px solid
+    var(--color-row-border, rgba(212, 180, 140, 0.08));
   cursor: pointer;
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.35));
   transition: background 0.15s, color 0.15s;
@@ -289,4 +290,62 @@
 .bm-row-delete svg {
   width: 16px;
   height: 16px;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.bm-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.14));
+  flex-shrink: 0;
+}
+
+.bm-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary, #3a3a3a);
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: -1px;
+}
+
+.bm-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.bm-tab--active {
+  color: var(--color-gold, #b8860b);
+  border-bottom-color: var(--color-gold, #b8860b);
+}
+
+[data-theme="night"] .bm-tab {
+  color: var(--color-text-secondary, #b0a898);
+}
+
+[data-theme="night"] .bm-tab:hover {
+  color: var(--color-text-primary, #e8e8e8);
+}
+
+[data-theme="night"] .bm-tab--active {
+  color: var(--color-gold, #d4b48c);
+  border-bottom-color: var(--color-gold, #d4b48c);
+}
+
+.bm-tab-count {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.7rem;
+  background: color-mix(in srgb, var(--color-gold, #d4b48c) 18%, transparent);
+  color: var(--color-gold, #d4b48c);
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 600;
 }

@@ -51,7 +51,7 @@ function readSettings(): ReadSettings {
     if (raw) {
       const s = JSON.parse(raw);
       return {
-        reciter: s.reciter ?? "husary",
+        reciter: s.reciter ?? "4",
         soundEffects: s.soundEffects ?? true,
         translation: s.translation ?? "",
         showTranslation: s.showTranslation ?? false,
@@ -59,7 +59,7 @@ function readSettings(): ReadSettings {
     }
   } catch {}
   return {
-    reciter: "husary",
+    reciter: "4",
     soundEffects: true,
     translation: "",
     showTranslation: false,
@@ -86,11 +86,9 @@ const PageViewer: React.FC = () => {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Shared playback queue (lives in PlaybackContext so PlaybackSettings shares it)
   const queue = usePlayback();
-  const isPlaying = queue.state.isPlaying || queue.state.isLoading;
+  const showPlaybackBar = queue.state.currentVerse !== null; // visible even when paused
 
-  // Long-press on play button switches to recite (mic) mode
   const [reciteMode, setReciteMode] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,7 +104,6 @@ const PageViewer: React.FC = () => {
     if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
-      // Short tap — open playback settings (only when not already playing)
       if (!reciteMode) {
         history.push(`/playback?page=${currentPage}`);
       }
@@ -115,22 +112,14 @@ const PageViewer: React.FC = () => {
 
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
-
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
-  // Audio — owned here so opening/closing the action sheet shares one player.
   const audio = useAudioPlayer();
-
-  // Verse action sheet (long-press → audio / translation / tafsir).
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
-
-  // Immersive mode — tap the page to toggle toolbar + bottom nav.
   const immersive = useImmersiveMode();
 
-  // Bookmark state — keyed by the first verse of the current page.
   const pageVerseKeyForBookmark =
     verses.length > 0 ? `${verses[0].sura}:${verses[0].aya}` : null;
-  // Bookmark indicator — filled when the current page's first verse is saved.
   const [bookmarked, setBookmarked] = useState(false);
 
   useEffect(() => {
@@ -139,7 +128,6 @@ const PageViewer: React.FC = () => {
     }
   }, [pageVerseKeyForBookmark]);
 
-  // ── Refs ──
   const contentRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -147,32 +135,12 @@ const PageViewer: React.FC = () => {
 
   const totalPages = 604;
 
-  // Re-read settings on focus (replaces drawer-close trigger)
   useEffect(() => {
     const onFocus = () => setSettings(readSettings());
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Sync currentPage with ?page= query param on navigation. Also honor a
-  // `?v=sura:aya` param so deep-links from the search-results screen
-  // ("Continue Reading") land with the verse briefly highlighted, the
-  // same way a tap on an in-drawer search result behaves.
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const raw = parseInt(params.get("page") || "", 10);
-    if (Number.isFinite(raw) && raw >= 1 && raw !== currentPage) {
-      setCurrentPage(raw);
-    }
-    const v = params.get("v");
-    if (v && /^\d+:\d+$/.test(v)) {
-      setHighlightedVerse(v);
-      const tid = setTimeout(() => setHighlightedVerse(null), 3000);
-      return () => clearTimeout(tid);
-    }
-  }, [location.search]);
-
-  // ── Load page verses ──────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -181,13 +149,27 @@ const PageViewer: React.FC = () => {
     getPage(currentPage).then((pageVerses) => {
       if (cancelled) return;
       if (!pageVerses.length) {
-        // If page not found, just show empty (or handle gracefully)
         setLoading(false);
         return;
       }
       setVerses(pageVerses);
       setLoading(false);
-      setHighlightedVerse(null);
+
+      // Determine which verse to highlight from the URL, if any
+      const params = new URLSearchParams(location.search);
+      const v = params.get("v");
+      const highlightKey = v && /^\d+:\d+$/.test(v) ? v : null;
+
+      // Apply highlight if it matches a verse on this page
+      setHighlightedVerse(highlightKey);
+
+      // Auto‑clear the highlight after a few seconds
+      if (highlightKey) {
+        const tid = setTimeout(() => setHighlightedVerse(null), 1500);
+        return () => clearTimeout(tid);
+      }
+
+      // Handle green verse logic (if needed)
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -199,6 +181,7 @@ const PageViewer: React.FC = () => {
       } else {
         setGreenVerse(null);
       }
+
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
     });
@@ -206,13 +189,26 @@ const PageViewer: React.FC = () => {
       cancelled = true;
     };
   }, [currentPage]);
-
-  // Force chrome visible when the verse action sheet opens.
   useEffect(() => {
     if (sheetVerseKey) immersive.showChrome();
   }, [sheetVerseKey, immersive]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  const handlePlayPause = useCallback(() => {
+    if (queue.state.isPlaying) queue.pause();
+    else queue.resume().catch(() => {});
+  }, [queue]);
+
+  const handleStop = useCallback(() => {
+    queue.stop();
+  }, [queue]);
+
+  const handlePrev = useCallback(() => {
+    queue.prev();
+  }, [queue]);
+
+  const handleNext = useCallback(() => {
+    queue.next();
+  }, [queue]);
 
   const goToPrevious = useCallback(() => {
     setCurrentPage((p) => (p > 1 ? p - 1 : p));
@@ -235,19 +231,12 @@ const PageViewer: React.FC = () => {
   };
 
   const pageInfo = getPageInfo();
-  // Bismillah strip rules:
-  //   - shown when the first verse on the page is aya 1 of a surah, EXCEPT
-  //   - At-Tawbah (sura 9) — has no bismillah by tradition, AND
-  //   - page 1 (Al-Fatihah) — its first verse already IS the bismillah, so
-  //     rendering the strip on top would duplicate it.
   const isSurahStart =
     verses.length > 0 &&
     verses[0].aya === 1 &&
     verses[0].sura !== 9 &&
     currentPage !== 1;
 
-  // ── Selection / hide ─────────────────────────────────────────────────────
-  // Long-press → open verse action sheet
   const handleVerseLongPress = useCallback((key: string) => {
     setSheetVerseKey(key);
   }, []);
@@ -256,8 +245,6 @@ const PageViewer: React.FC = () => {
     audio.stop();
   }, [audio]);
 
-  // Hide-toggle (whole Mushaf). When pressed with nothing hidden, every verse
-  // across all 604 pages goes hidden. When pressed with any hidden, show all.
   const pageVerseKeys = verses.map((v) => `${v.sura}:${v.aya}`);
   const anyPageHidden = pageVerseKeys.some((k) => hidden.has(k));
   const togglePageHidden = useCallback(() => {
@@ -273,10 +260,6 @@ const PageViewer: React.FC = () => {
     if (keys.length > 0) hideMany(keys);
   }, [anyPageHidden, hiddenCount, hideMany, showAll]);
 
-  // Swipe (page turn) + tap (immersive toggle). The two share an origin
-  // point: the swipe path runs first; if the gesture wasn't a horizontal
-  // swipe past 50px we hand the coordinates to the immersive hook, which
-  // applies its own 10px tap threshold and interactive-target check.
   const handleTouchStart = (e: React.TouchEvent) => {
     const x = e.touches[0].clientX;
     const y = e.touches[0].clientY;
@@ -295,16 +278,12 @@ const PageViewer: React.FC = () => {
       if (dx > 0) goToNext();
       else goToPrevious();
     } else {
-      // Not a swipe — let the hook decide if it was a tap worth toggling.
       immersive.maybeToggleOnTap(endX, endY);
     }
     touchStartX.current = null;
     touchStartY.current = null;
   };
 
-  // Desktop: mouse equivalents. Mobile browsers also synthesise a click
-  // ~300 ms after touchend, but because we already handled the gesture in
-  // touchend (and reset the hook's start point), the click no-ops there.
   const handleMouseDown = (e: React.MouseEvent) => {
     immersive.registerTouchStart(e.clientX, e.clientY, e.target);
   };
@@ -312,7 +291,6 @@ const PageViewer: React.FC = () => {
     immersive.maybeToggleOnTap(e.clientX, e.clientY);
   };
 
-  // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <IonPage>
       <IonContent fullscreen scrollY={false}>
@@ -321,76 +299,52 @@ const PageViewer: React.FC = () => {
             immersive.chromeVisible ? "" : "immersive"
           }`}
         >
-          {/* ── Toolbar ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
-              {/* Play / Recite button — long-press toggles recite mode */}
-              <button
-                className={`toolbar-button play-button${
-                  reciteMode ? " play-button--recite" : ""
-                }`}
-                onPointerDown={handlePlayPressStart}
-                onPointerUp={handlePlayPressEnd}
-                onPointerLeave={handlePlayPressEnd}
-                aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
-              >
-                {reciteMode ? (
-                  /* Mic icon */
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="22"
-                    height="22"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4z" />
-                    <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
-                ) : (
-                  /* Play icon */
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="22"
-                    height="22"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                )}
-              </button>
-
-              {/* Stop button — only visible while playback is active */}
-              {isPlaying && (
+              {!showPlaybackBar && (
                 <button
-                  className="toolbar-button stop-button"
-                  onClick={() => queue.stop()}
-                  aria-label={t.mushaf.stopLabel}
+                  className={`toolbar-button play-button${
+                    reciteMode ? " play-button--recite" : ""
+                  }`}
+                  onPointerDown={handlePlayPressStart}
+                  onPointerUp={handlePlayPressEnd}
+                  onPointerLeave={handlePlayPressEnd}
+                  aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="22"
-                    height="22"
-                    fill="currentColor"
-                    stroke="none"
-                    aria-hidden="true"
-                  >
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                  </svg>
+                  {reciteMode ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  )}
                 </button>
               )}
-
-              {/* Hide-toggle */}
               <button
                 type="button"
                 className={`toolbar-button hide-toggle-button ${
@@ -446,55 +400,136 @@ const PageViewer: React.FC = () => {
               </button>
             </div>
 
-            {/* Center pill — surah name (line 1) + Page/Juz/Hizb (line 2).
-                Mirrors the reference design (rounded chip, two stacked
-                lines). The same data is also rendered inside the page
-                edges so it stays visible while in immersive mode. */}
-            <button
-              type="button"
-              className="toolbar-center-pill"
-              onClick={() => history.push("/surah-juz")}
-              aria-label={t.mushaf.surahsAndJuz}
-            >
-              <span className="pill-surah">{pageInfo?.suraNameAr}</span>
-              <span className="pill-meta">
-                <span>
-                  {t.mushaf.page}{" "}
-                  {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
+            {showPlaybackBar ? (
+              <div
+                className="toolbar-playback-bar"
+                aria-label="Playback controls"
+              >
+                <button
+                  className="toolbar-button playback-nav"
+                  onClick={handlePrev}
+                  aria-label="Previous"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <polygon points="5 19 15 12 5 5" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
+                  </svg>
+                </button>
+                <button
+                  className="toolbar-button playback-play"
+                  onClick={handlePlayPause}
+                  aria-label={
+                    queue.state.isPlaying ? t.mushaf.pause : t.mushaf.play
+                  }
+                >
+                  {queue.state.isPlaying ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      <polygon points="6 4 20 12 6 20" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  className="toolbar-button playback-nav"
+                  onClick={handleNext}
+                  aria-label="Next"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <polygon points="19 5 9 12 19 19" />
+                    <line x1="5" y1="5" x2="5" y2="19" />
+                  </svg>
+                </button>
+                <button
+                  className="toolbar-button playback-stop"
+                  onClick={handleStop}
+                  aria-label={t.mushaf.stopLabel}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="currentColor"
+                    stroke="none"
+                  >
+                    <rect x="5" y="5" width="14" height="14" rx="2" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="toolbar-center-pill"
+                onClick={() => history.push("/surah-juz")}
+                aria-label={t.mushaf.surahsAndJuz}
+              >
+                <span className="pill-surah">{pageInfo?.suraNameAr}</span>
+                <span className="pill-meta">
+                  <span>
+                    {t.mushaf.page}{" "}
+                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
+                  </span>
+                  <span className="pill-sep" aria-hidden>
+                    |
+                  </span>
+                  <span>
+                    {t.mushaf.juz}{" "}
+                    {lang === "ar"
+                      ? toHindiNumbers(pageInfo?.juz ?? 0)
+                      : pageInfo?.juz ?? 0}
+                  </span>
+                  <span className="pill-sep" aria-hidden>
+                    |
+                  </span>
+                  <span>
+                    {t.mushaf.hizb}{" "}
+                    {lang === "ar"
+                      ? toHindiNumbers(pageInfo?.hizb ?? 0)
+                      : pageInfo?.hizb ?? 0}
+                  </span>
+                  <span className="pill-sep" aria-hidden>
+                    |
+                  </span>
+                  <span>
+                    {"◆"}{" "}
+                    {lang === "ar"
+                      ? toHindiNumbers(pageInfo?.rub ?? 0)
+                      : pageInfo?.rub ?? 0}
+                  </span>
                 </span>
-                <span className="pill-sep" aria-hidden>
-                  |
-                </span>
-                <span>
-                  {t.mushaf.juz}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(pageInfo?.juz ?? 0)
-                    : pageInfo?.juz ?? 0}
-                </span>
-                <span className="pill-sep" aria-hidden>
-                  |
-                </span>
-                <span>
-                  {t.mushaf.hizb}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                    : pageInfo?.hizb ?? 0}
-                </span>
-                <span className="pill-sep" aria-hidden>
-                  |
-                </span>
-                <span>
-                  {"◆"}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(pageInfo?.rub ?? 0)
-                    : pageInfo?.rub ?? 0}
-                </span>
-              </span>
-            </button>
+              </button>
+            )}
 
-            {/* Right side — bookmark + search icons */}
             <div className="toolbar-right">
-              {/* Bookmark — opens the bookmarks page; icon fills when page is saved */}
               <button
                 type="button"
                 className={`toolbar-button bookmark-button${
@@ -518,8 +553,6 @@ const PageViewer: React.FC = () => {
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                 </svg>
               </button>
-
-              {/* Search */}
               <button
                 type="button"
                 className="toolbar-button search-button"
@@ -545,13 +578,6 @@ const PageViewer: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Mushaf Content ──
-              Fills the whole viewport. The toolbar and bottom-nav now
-              float over this surface, so toggling them never reflows the
-              page. Two thin strips (page-edge-top / page-edge-bottom)
-              live inside this container and stay visible at all times —
-              they carry the metadata (surah, juz/hizb, page number) that
-              the user still needs once the chrome is hidden. */}
           <div
             className="mushaf-content"
             ref={contentRef}
@@ -617,8 +643,6 @@ const PageViewer: React.FC = () => {
               </div>
             )}
 
-            {/* Page number alignment mirrors a printed Mushaf spread:
-                odd pages anchor to the start side, even pages to the end. */}
             <div
               className={`page-edge-bottom ${
                 currentPage % 2 === 1 ? "align-end" : "align-start"
@@ -630,8 +654,6 @@ const PageViewer: React.FC = () => {
           </div>
 
           <BottomNavBar active="quran" />
-
-          {/* ── Verse action sheet (long-press) ── */}
           <VerseActionSheet
             open={!!sheetVerseKey}
             verseKey={sheetVerseKey}

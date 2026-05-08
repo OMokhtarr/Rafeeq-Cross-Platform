@@ -1,15 +1,17 @@
 /**
- * Recitation session history — localStorage, last 5 sessions.
+ * Recitation session history – localStorage, last 5 sessions.
  *
- * A session is recorded when playback stops or pauses, capturing:
- *   - which verse was playing (sura:aya)
- *   - how many seconds had elapsed in that verse
- *   - the reciter slug
- *   - the ISO timestamp of the recording
+ * Stores the full playback queue so a session can be resumed exactly
+ * where it was left off.
  */
 
 const STORAGE_KEY = "rafiq_recitation_history_v1";
 const MAX_SESSIONS = 5;
+
+export interface VerseKey {
+  sura: number;
+  aya: number;
+}
 
 export interface RecitationSession {
   id: string;
@@ -21,6 +23,8 @@ export interface RecitationSession {
   reciter: string;
   /** ISO timestamp of when this was recorded. */
   recordedAt: string;
+  /** The full queue that was active – used to resume playback. */
+  queue?: VerseKey[];
 }
 
 function loadSessions(): RecitationSession[] {
@@ -42,16 +46,52 @@ export function recordRecitationSession(
   verseKey: string,
   elapsedSeconds: number,
   reciter: string,
+  queue?: VerseKey[],
 ): void {
   if (!verseKey) return;
+
   const session: RecitationSession = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     verseKey,
     elapsedSeconds: Math.round(elapsedSeconds),
     reciter,
     recordedAt: new Date().toISOString(),
+    queue: queue ? queue.slice() : undefined,
   };
+
   const existing = loadSessions();
+
+  // If a queue is provided, look for an existing session with the same queue
+  if (queue && queue.length > 0) {
+    const queueStr = JSON.stringify(
+      queue.map((v) => `${v.sura}:${v.aya}`).sort(),
+    );
+    const matchIdx = existing.findIndex((s) => {
+      if (!s.queue || s.queue.length !== queue.length) return false;
+      const sQueueStr = JSON.stringify(
+        s.queue.map((v) => `${v.sura}:${v.aya}`).sort(),
+      );
+      return sQueueStr === queueStr;
+    });
+
+    if (matchIdx !== -1) {
+      // Update the matched session: keep its ID but update other fields
+      const updated = {
+        ...existing[matchIdx],
+        verseKey,
+        elapsedSeconds: Math.round(elapsedSeconds),
+        reciter,
+        recordedAt: new Date().toISOString(),
+        queue: queue.slice(), // update the queue copy (might be same)
+      };
+      // Remove the old one, put updated at front
+      const filtered = existing.filter((_, i) => i !== matchIdx);
+      saveSessions([updated, ...filtered].slice(0, MAX_SESSIONS));
+      return;
+    }
+  }
+
+  // No match found → prepend new session
   const updated = [session, ...existing].slice(0, MAX_SESSIONS);
   saveSessions(updated);
 }

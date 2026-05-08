@@ -99,3 +99,32 @@ export async function deleteCached(
 ): Promise<void> {
   await idb.delete(STORE, key(reciter, sura, aya));
 }
+
+/**
+ * Returns a blob URL for the verse. If it’s already cached, returns instantly;
+ * otherwise downloads it first, caches it, then returns the blob URL.
+ * Use this in the playback queue so that uncached verses are downloaded before
+ * playback begins.
+ */
+export async function getCachedOrDownload(
+  reciter: string,
+  sura: number,
+  aya: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  const blob = await getCachedBlob(reciter, sura, aya);
+  if (blob) {
+    return URL.createObjectURL(blob);
+  }
+  // Not cached → download, then cache
+  const success = await downloadAndCache(reciter, sura, aya, signal);
+  if (!success) {
+    // Fallback: fetch the streaming URL directly if downloadAndCache fails
+    const url = await fetchAudioForAyah(sura, aya, reciter);
+    return url;
+  }
+  const newBlob = await getCachedBlob(reciter, sura, aya);
+  if (newBlob) return URL.createObjectURL(newBlob);
+  // Absolute last resort
+  return fetchAudioForAyah(sura, aya, reciter);
+}

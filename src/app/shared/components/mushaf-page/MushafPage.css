@@ -15,14 +15,12 @@
   transition: color var(--transition-theme, 0.25s ease);
 }
 
+/* ── Bismillah: theme gold ─────────────────────────────────────────── */
 .mushaf-bismillah {
   text-align: center;
-  /* Reduced from 1.3em → 0.95em so the bismillah strip doesn't dominate
-     the page header. The probe in MushafPage.tsx accounts for this via
-     BISMILLAH_LINES; lowering visual weight here matches the printed
-     Madani layout where the bismillah sits roughly at line height. */
   font-size: 0.95em;
   margin-bottom: 0.2em;
+  color: var(--color-mushaf-text);
 }
 
 .mushaf-line {
@@ -47,9 +45,19 @@
 
 .mushaf-word-target,
 .mushaf-ayah-end-target {
-  background: rgba(255, 215, 0, 0.32);
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(212, 180, 140, 0.5);
+  background: rgba(255, 215, 0, 0.45); /* stronger gold */
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(255, 200, 0, 0.6);
+  animation: target-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes target-pulse {
+  from {
+    box-shadow: 0 0 0 2px rgba(255, 200, 0, 0.6);
+  }
+  to {
+    box-shadow: 0 0 0 6px rgba(255, 200, 0, 0.3);
+  }
 }
 
 /* ── Selection ──────────────────────────────────────────────────────────
@@ -173,6 +181,7 @@
 [data-theme="night"] .mushaf-word-hinted {
   color: #6ee7a3 !important;
 }
+
 /* ── Decorative Surah-name header ──────────────────────────────────────────
    A horizontal banner with:
      • Double-line frame (outer + inner hairline) framing the whole bar
@@ -202,34 +211,6 @@
   outline-offset: 2px;
   box-sizing: border-box;
   flex-shrink: 0;
-}
-
-/* ── Side medallions (start + end of banner) ─────────────────────────────
-   The mushaf-surah-header element only has one child (.frame) in the JSX,
-   so we draw both rosettes as ::before / ::after pseudo-elements on the
-   outer banner. SVG fill is set to the day ink; night theme overrides
-   the data-URI. */
-.mushaf-surah-header::before,
-.mushaf-surah-header::after {
-  content: "";
-  flex: 0 0 auto;
-  width: 1.2em;
-  align-self: stretch;
-  border: 1px solid var(--sh-ink);
-  background: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
-  <g fill='none' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
-    <circle cx='50' cy='50' r='34'/>\
-    <circle cx='50' cy='50' r='22'/>\
-    <circle cx='50' cy='50' r='6' fill='%231a1a1a'/>\
-    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
-    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
-    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
-    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
-  </g>\
-</svg>")
-    center / 88% 88% no-repeat;
-  box-sizing: border-box;
 }
 
 /* ── Central cartouche (the .frame element) ──────────────────────────────
@@ -333,4 +314,32 @@
     <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
   </g>\
 </svg>");
+}
+
+/* ── Side medallions (start + end of banner) ─────────────────────────────
+   The mushaf-surah-header element only has one child (.frame) in the JSX,
+   so we draw both rosettes as ::before / ::after pseudo-elements on the
+   outer banner. SVG fill is set to the day ink; night theme overrides
+   the data-URI. */
+.mushaf-surah-header::before,
+.mushaf-surah-header::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 1.2em;
+  align-self: stretch;
+  border: 1px solid var(--sh-ink);
+  background: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
+  <g fill='none' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+    <circle cx='50' cy='50' r='34'/>\
+    <circle cx='50' cy='50' r='22'/>\
+    <circle cx='50' cy='50' r='6' fill='%231a1a1a'/>\
+    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
+    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
+    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
+    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
+  </g>\
+</svg>")
+    center / 88% 88% no-repeat;
+  box-sizing: border-box;
 }
