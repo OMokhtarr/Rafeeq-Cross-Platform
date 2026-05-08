@@ -1,13 +1,15 @@
 import { quranClient, isSdkAvailable } from "./quran-sdk-client";
 import * as fallback from "./quran-api.client";
-import type { PageTranslation, TafsirText, TafsirResource } from "./quran-api.client";
+import type {
+  PageTranslation,
+  TafsirText,
+  TafsirResource,
+} from "./quran-api.client";
 
-// ─── Internal helper ─────────────────────────────────────────────────────────
 async function trySdkOrFallback<Args extends any[], Return>(
   methodName: string,
   ...args: Args
 ): Promise<Return> {
-  // Try SDK first
   if (isSdkAvailable()) {
     try {
       const fn = (quranClient as any)[methodName];
@@ -22,15 +24,12 @@ async function trySdkOrFallback<Args extends any[], Return>(
     }
   }
 
-  // Fallback to custom client
   const fallbackFn = (fallback as any)[methodName];
   if (typeof fallbackFn !== "function") {
     throw new Error(`No implementation for "${methodName}".`);
   }
   return await fallbackFn(...args);
 }
-
-// ─── Public API – mirror the custom client’s exports ───────────────────────
 
 export async function fetchVersesByPage(page: number, wordFields: string) {
   return trySdkOrFallback("fetchVersesByPage", page, wordFields);
@@ -82,4 +81,24 @@ export async function fetchTafsirForAyah(
 
 export async function fetchTafsirResources(): Promise<TafsirResource[]> {
   return trySdkOrFallback<[], TafsirResource[]>("fetchTafsirResources");
+}
+
+export async function fetchRecitations(language?: string) {
+  return trySdkOrFallback("fetchRecitations", language);
+}
+
+export async function fetchHizbs() {
+  return trySdkOrFallback("fetchHizbs");
+}
+
+export async function fetchHizb(hizbNumber: number) {
+  return trySdkOrFallback("fetchHizb", hizbNumber);
+}
+
+export async function fetchRubElHizbs() {
+  return trySdkOrFallback("fetchRubElHizbs");
+}
+
+export async function fetchRubElHizb(rubNumber: number) {
+  return trySdkOrFallback("fetchRubElHizb", rubNumber);
 }

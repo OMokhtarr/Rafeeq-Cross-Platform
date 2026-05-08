@@ -49,7 +49,9 @@
   background: var(--color-bg-card, rgba(0, 0, 0, 0.1));
 }
 
-.pb-header-spacer { width: 36px; }
+.pb-header-spacer {
+  width: 36px;
+}
 
 .pb-body {
   display: flex;
@@ -63,6 +65,12 @@
   min-height: 0;
   overflow-y: auto;
   box-sizing: border-box;
+  /* ── Hide scrollbar, keep scroll ── */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / old Edge */
+}
+.pb-body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, new Edge */
 }
 
 .pb-section {
@@ -121,7 +129,9 @@
   font-family: inherit;
 }
 
-.pb-select-full { width: 100%; }
+.pb-select-full {
+  width: 100%;
+}
 
 .pb-aya-input {
   width: 70px;
@@ -135,7 +145,10 @@
   font-family: inherit;
 }
 
-.pb-verse-sep { opacity: 0.5; font-weight: 700; }
+.pb-verse-sep {
+  opacity: 0.5;
+  font-weight: 700;
+}
 
 .pb-segmented {
   display: grid;
@@ -145,6 +158,11 @@
   border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
   border-radius: 14px;
   padding: 8px;
+}
+
+/* Force a 2-column grid */
+.pb-segmented--two-col {
+  grid-template-columns: 1fr 1fr;
 }
 
 .pb-seg-btn {
@@ -183,34 +201,12 @@
   width: 100%;
   text-align: start;
 }
-.pb-link-row:hover { color: var(--color-quran, #1f8f6b); }
-.pb-link-chev { opacity: 0.7; font-size: 18px; }
-
-.pb-quick-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.pb-link-row:hover {
+  color: var(--color-quran, #1f8f6b);
 }
-
-.pb-quick-btn {
-  background: var(--color-bg-app, #efefef);
-  border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
-  color: var(--color-text-primary, #1a1a1c);
-  padding: 14px 10px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-.pb-quick-btn:hover {
-  background: var(--color-bg-content, rgba(0, 0, 0, 0.06));
-}
-.pb-quick-btn.is-active {
-  background: var(--color-quran, #1f8f6b);
-  color: #fff;
-  border-color: var(--color-quran, #1f8f6b);
+.pb-link-chev {
+  opacity: 0.7;
+  font-size: 18px;
 }
 
 .pb-cta {
@@ -227,10 +223,17 @@
   font-family: inherit;
   transition: filter 0.15s;
 }
-.pb-cta:disabled { opacity: 0.6; cursor: default; }
-.pb-cta:hover:not(:disabled) { filter: brightness(1.08); }
+.pb-cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.pb-cta:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
 
-.pb-cta-warn { background: #b85c4f; }
+.pb-cta-warn {
+  background: #b85c4f;
+}
 
 .pb-cta-ghost {
   background: transparent;
@@ -249,17 +252,6 @@
   gap: 12px;
   font-size: 14px;
   color: var(--color-text-primary, #1a1a1c);
-}
-
-.pb-mini-btn {
-  background: var(--color-quran, #1f8f6b);
-  border: none;
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
 }
 
 .pb-progress {
@@ -299,13 +291,17 @@
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
-.pb-title { color: inherit; }
+.pb-title {
+  color: inherit;
+}
 
 .pb-close.pb--night {
   background: rgba(255, 255, 255, 0.07);
   color: var(--color-text-primary, #e9e9ea);
 }
-.pb-close.pb--night:hover { background: rgba(255, 255, 255, 0.13); }
+.pb-close.pb--night:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
 
 .pb-section-title.pb--night {
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.55));
@@ -316,7 +312,9 @@
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-.pb-row-label.pb--night { color: var(--color-text-primary, #e9e9ea); }
+.pb-row-label.pb--night {
+  color: var(--color-text-primary, #e9e9ea);
+}
 
 .pb-select.pb--night,
 .pb-aya-input.pb--night {
@@ -348,13 +346,6 @@
   border-top-color: rgba(255, 255, 255, 0.06);
 }
 
-.pb-quick-btn.pb--night {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: var(--color-text-primary, #e9e9ea);
-}
-.pb-quick-btn.pb--night:hover { background: rgba(255, 255, 255, 0.08); }
-
 .pb-now-playing.pb--night {
   background: rgba(31, 143, 107, 0.1);
   border-color: rgba(31, 143, 107, 0.3);
@@ -368,4 +359,98 @@
 
 .pb-progress.pb--night {
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Surah download list ────────────────────────────────────────────────────── */
+.pb-surah-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pb-surah-list::-webkit-scrollbar {
+  width: 4px;
+}
+.pb-surah-list::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+}
+
+.pb-surah-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+[data-theme="night"] .pb-surah-row {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.pb-surah-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.pb-surah-name {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pb-surah-count {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.pb-surah-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pb-surah-progress {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+[data-theme="night"] .pb-surah-progress {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pb-surah-progress-text {
+  font-size: 0.72rem;
+  font-family: var(--font-latin, monospace);
+  color: var(--color-text-secondary);
+  min-width: 50px;
+  text-align: center;
+}
+
+.pb-mini-btn {
+  background: var(--color-quran, #1f8f6b);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.pb-mini-btn-warn {
+  background: #b85c4f;
+}
+[data-theme="night"] .pb-mini-btn-warn {
+  background: #d4726a;
 }

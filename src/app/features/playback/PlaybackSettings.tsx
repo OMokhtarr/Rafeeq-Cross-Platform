@@ -13,6 +13,9 @@ import {
   clearAllCachedAudio,
   downloadAndCache,
 } from "../../core/services/audio/audio-cache.service";
+import { fetchRecitations } from "../../core/services/api/quran-api.client";
+import { toHindiNumbers } from "../../core/utils/arabic.util";
+import "./PlaybackSettings.css";
 import {
   getJuzStart,
   getJuzEnd,
@@ -20,8 +23,13 @@ import {
   getChapters,
   getSurahNameArabic,
   getSurahNameEnglish,
+  getHizbStart,
+  getHizbEnd,
+  getRubStart,
+  getRubEnd,
+  getRubNumberForPage,
+  estimatePageForVerse,
 } from "../../core/services/data/metadata.service";
-import "./PlaybackSettings.css";
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 
@@ -33,7 +41,7 @@ interface StoredPlaybackPrefs {
 }
 
 const DEFAULT_PREFS: StoredPlaybackPrefs = {
-  reciter: "minshawi-murattal",
+  reciter: "4", // numeric ID of default reciter (Minshawi Murattal)
   playbackRate: 1,
   repeatVerse: 1,
   repeatRange: "loop",
@@ -44,6 +52,10 @@ function loadPrefs(): StoredPlaybackPrefs {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const s = JSON.parse(raw);
+      // Migration: if reciter is not a numeric ID, reset to default
+      if (typeof s.reciter === "string" && !/^\d+$/.test(s.reciter)) {
+        s.reciter = DEFAULT_PREFS.reciter;
+      }
       return {
         reciter: s.reciter ?? DEFAULT_PREFS.reciter,
         playbackRate:
@@ -68,20 +80,32 @@ function savePrefs(p: Partial<StoredPlaybackPrefs>) {
 
 type VerseKeyLocal = VerseKey;
 
-function expandRange(start: VerseKeyLocal, end: VerseKeyLocal): VerseKeyLocal[] {
+function expandRange(
+  start: VerseKeyLocal,
+  end: VerseKeyLocal,
+): VerseKeyLocal[] {
   const out: VerseKeyLocal[] = [];
-  if (start.sura > end.sura || (start.sura === end.sura && start.aya > end.aya)) {
+  if (
+    start.sura > end.sura ||
+    (start.sura === end.sura && start.aya > end.aya)
+  ) {
     return out;
   }
   const chapters = getChapters();
-  const ayahCount = (sura: number) => chapters.find((c) => c.id === sura)?.verses_count ?? 0;
+  const ayahCount = (sura: number) =>
+    chapters.find((c) => c.id === sura)?.verses_count ?? 0;
   let s = start.sura;
   let a = start.aya;
   while (s < end.sura || (s === end.sura && a <= end.aya)) {
     out.push({ sura: s, aya: a });
     const max = ayahCount(s);
-    if (a >= max) { s += 1; a = 1; if (s > 114) break; }
-    else { a += 1; }
+    if (a >= max) {
+      s += 1;
+      a = 1;
+      if (s > 114) break;
+    } else {
+      a += 1;
+    }
   }
   return out;
 }
@@ -103,6 +127,12 @@ function pageEnd(page: number): VerseKeyLocal {
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75];
 
+interface SurahDownloadState {
+  total: number;
+  done: number;
+  abortController: AbortController | null;
+}
+
 const PlaybackSettings: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
@@ -110,7 +140,6 @@ const PlaybackSettings: React.FC = () => {
   const { isNight } = useTheme();
   const queue = usePlayback();
   const tp = t.playback;
-  const ts = t.settings;
 
   const nightCls = isNight ? " pb--night" : "";
 
@@ -121,32 +150,69 @@ const PlaybackSettings: React.FC = () => {
   }, [location.search]);
 
   const [prefs, setPrefs] = useState<StoredPlaybackPrefs>(loadPrefs);
-  const [startVerse, setStartVerse] = useState<VerseKeyLocal>(() => pageStart(startPageQuery));
-  const [endVerse, setEndVerse] = useState<VerseKeyLocal>(() => pageEnd(startPageQuery));
+  const [startVerse, setStartVerse] = useState<VerseKeyLocal>(() =>
+    pageStart(startPageQuery),
+  );
+  const [endVerse, setEndVerse] = useState<VerseKeyLocal>(() =>
+    pageEnd(startPageQuery),
+  );
 
   const [activeQuick, setActiveQuick] = useState<string | null>(null);
 
   const [downloadsOpen, setDownloadsOpen] = useState(false);
-  const [cachedCount, setCachedCount] = useState(0);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadDone, setDownloadDone] = useState(0);
-  const [downloadTotal, setDownloadTotal] = useState(0);
-  const downloadAbortRef = React.useRef<AbortController | null>(null);
+  const [surahDownloads, setSurahDownloads] = useState<
+    Record<number, SurahDownloadState>
+  >({});
 
-  // Sync prefs → queue whenever they change
-  useEffect(() => { queue.setReciter(prefs.reciter); }, [prefs.reciter, queue]);
-  useEffect(() => { queue.setPlaybackRate(prefs.playbackRate); }, [prefs.playbackRate, queue]);
-  useEffect(() => { queue.setRepeatVerse(prefs.repeatVerse); }, [prefs.repeatVerse, queue]);
-  useEffect(() => { queue.setRepeatRange(prefs.repeatRange); }, [prefs.repeatRange, queue]);
+  // ── Dynamic reciters ───────────────────────────────────────────────────────
+  const [reciters, setReciters] = useState<{ value: string; label: string }[]>(
+    [],
+  );
 
   useEffect(() => {
-    if (!downloadsOpen) return;
     let cancelled = false;
-    countCachedAudio().then((n) => { if (!cancelled) setCachedCount(n); });
-    return () => { cancelled = true; };
-  }, [downloadsOpen, downloading]);
+    fetchRecitations(lang === "ar" ? "ar" : "en")
+      .then((list) => {
+        if (cancelled) return;
+        const options = list.map((r) => ({
+          value: String(r.id),
+          label: r.translated_name?.name ?? r.reciter_name,
+        }));
+        setReciters(options);
+        // If current reciter is not in the fetched list, fall back to first
+        if (
+          options.length > 0 &&
+          !options.some((o) => o.value === prefs.reciter)
+        ) {
+          setPrefs((prev) => ({ ...prev, reciter: options[0].value }));
+        }
+      })
+      .catch(() => {
+        // Offline: keep whatever is stored
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updatePref = <K extends keyof StoredPlaybackPrefs>(key: K, val: StoredPlaybackPrefs[K]) => {
+  // Sync prefs → queue
+  useEffect(() => {
+    queue.setReciter(prefs.reciter);
+  }, [prefs.reciter, queue]);
+  useEffect(() => {
+    queue.setPlaybackRate(prefs.playbackRate);
+  }, [prefs.playbackRate, queue]);
+  useEffect(() => {
+    queue.setRepeatVerse(prefs.repeatVerse);
+  }, [prefs.repeatVerse, queue]);
+  useEffect(() => {
+    queue.setRepeatRange(prefs.repeatRange);
+  }, [prefs.repeatRange, queue]);
+
+  const updatePref = <K extends keyof StoredPlaybackPrefs>(
+    key: K,
+    val: StoredPlaybackPrefs[K],
+  ) => {
     setPrefs((p) => {
       const next = { ...p, [key]: val };
       savePrefs({ [key]: val } as Partial<StoredPlaybackPrefs>);
@@ -157,77 +223,148 @@ const PlaybackSettings: React.FC = () => {
   const handlePlay = async () => {
     const verses = expandRange(startVerse, endVerse);
     if (verses.length === 0) return;
-    // Close the settings page so user can see the Mushaf while listening
-    history.goBack();
+    const first = verses[0];
+    const page = estimatePageForVerse(first.sura, first.aya);
+    const verseKey = `${first.sura}:${first.aya}`;
+    // Navigate to the viewer at the correct page with the verse highlighted
+    history.replace(`/viewer?page=${page}&v=${encodeURIComponent(verseKey)}`);
     await queue.start(verses);
   };
 
   const currentPage = startPageQuery;
   const currentSura = getPageStart(currentPage)?.sura ?? 1;
   const currentJuz = Math.ceil(currentPage / 20);
+  const currentHizb = Math.ceil(currentPage / 10);
+  const currentRub = useMemo(
+    () => getRubNumberForPage(currentPage),
+    [currentPage],
+  );
 
-  const setRangeToPage = (p: number) => { setStartVerse(pageStart(p)); setEndVerse(pageEnd(p)); setActiveQuick("page"); };
-  const setRangeFromPage = (p: number) => { setStartVerse(pageStart(p)); setEndVerse(pageEnd(604)); setActiveQuick("fromPage"); };
+  const setRangeToPage = (p: number) => {
+    setStartVerse(pageStart(p));
+    setEndVerse(pageEnd(p));
+    setActiveQuick("page");
+  };
+  const setRangeFromPage = (p: number) => {
+    setStartVerse(pageStart(p));
+    setEndVerse(pageEnd(604));
+    setActiveQuick("fromPage");
+  };
   const setRangeToSurah = (s: number) => {
     const ch = getChapters().find((c) => c.id === s);
     setStartVerse({ sura: s, aya: 1 });
     setEndVerse({ sura: s, aya: ch ? ch.verses_count : 1 });
     setActiveQuick("surah");
   };
-  const setRangeToJuz = (j: number) => { setStartVerse(getJuzStart(j)); setEndVerse(getJuzEnd(j)); setActiveQuick("juz"); };
+  const setRangeToJuz = (j: number) => {
+    setStartVerse(getJuzStart(j));
+    setEndVerse(getJuzEnd(j));
+    setActiveQuick("juz");
+  };
   const setRangeToHizb = (h: number) => {
-    const juz = Math.ceil(h / 2);
-    setStartVerse(getJuzStart(juz));
-    setEndVerse(getJuzEnd(juz));
+    if (h < 1 || h > 60) return;
+    setStartVerse(getHizbStart(h));
+    setEndVerse(getHizbEnd(h));
     setActiveQuick("hizb");
   };
-  const setRangeToAll = () => { setStartVerse({ sura: 1, aya: 1 }); setEndVerse({ sura: 114, aya: 6 }); setActiveQuick("all"); };
-
-  const handleDownloadRange = async () => {
-    const verses = expandRange(startVerse, endVerse);
-    if (verses.length === 0) return;
-    setDownloading(true);
-    setDownloadDone(0);
-    setDownloadTotal(verses.length);
-    const ctrl = new AbortController();
-    downloadAbortRef.current = ctrl;
-    try {
-      for (let i = 0; i < verses.length; i++) {
-        if (ctrl.signal.aborted) break;
-        const v = verses[i];
-        try { await downloadAndCache(prefs.reciter, v.sura, v.aya, ctrl.signal); }
-        catch (err) { if ((err as Error).name === "AbortError") break; }
-        setDownloadDone(i + 1);
-      }
-    } finally {
-      setDownloading(false);
-      downloadAbortRef.current = null;
-      setCachedCount(await countCachedAudio());
-    }
+  const setRangeToRub = (r: number) => {
+    if (r < 1 || r > 240) return;
+    setStartVerse(getRubStart(r));
+    setEndVerse(getRubEnd(r));
+    setActiveQuick("rub");
+  };
+  const setRangeToAll = () => {
+    setStartVerse({ sura: 1, aya: 1 });
+    setEndVerse({ sura: 114, aya: 6 });
+    setActiveQuick("all");
   };
 
-  const handleCancelDownload = () => { downloadAbortRef.current?.abort(); };
-  const handleClearCache = async () => { await clearAllCachedAudio(); setCachedCount(0); };
-
+  // ── Downloads ──────────────────────────────────────────────────────────────
   const surahOptions = useMemo(
-    () => getChapters().map((c) => ({
-      value: c.id,
-      label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${c.id})`,
-    })),
+    () =>
+      getChapters().map((c) => ({
+        value: c.id,
+        label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${
+          c.id
+        })`,
+        versesCount: c.verses_count as number,
+      })),
     [lang],
   );
 
-  const renderVersePicker = (value: VerseKeyLocal, onChange: (v: VerseKeyLocal) => void) => {
-    const maxAyah = getChapters().find((c) => c.id === value.sura)?.verses_count ?? 1;
+  const startSurahDownload = async (sura: number, versesCount: number) => {
+    if (surahDownloads[sura]?.abortController) return;
+    const ctrl = new AbortController();
+    setSurahDownloads((prev) => ({
+      ...prev,
+      [sura]: { total: versesCount, done: 0, abortController: ctrl },
+    }));
+    for (let aya = 1; aya <= versesCount; aya++) {
+      if (ctrl.signal.aborted) break;
+      try {
+        await downloadAndCache(prefs.reciter, sura, aya, ctrl.signal);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") break;
+      }
+      setSurahDownloads((prev) => {
+        const cur = prev[sura];
+        if (!cur) return prev;
+        return { ...prev, [sura]: { ...cur, done: aya } };
+      });
+    }
+    setSurahDownloads((prev) => {
+      const next = { ...prev };
+      delete next[sura]?.abortController;
+      return next;
+    });
+  };
+
+  const cancelSurahDownload = (sura: number) => {
+    surahDownloads[sura]?.abortController?.abort();
+    setSurahDownloads((prev) => {
+      const next = { ...prev };
+      delete next[sura];
+      return next;
+    });
+  };
+
+  const handleClearCache = async () => {
+    await clearAllCachedAudio();
+    setSurahDownloads({});
+  };
+
+  // ── Render helpers ─────────────────────────────────────────────────────────
+  const surahPickerOptions = useMemo(
+    () =>
+      getChapters().map((c) => ({
+        value: c.id,
+        label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${
+          c.id
+        })`,
+      })),
+    [lang],
+  );
+
+  const renderVersePicker = (
+    value: VerseKeyLocal,
+    onChange: (v: VerseKeyLocal) => void,
+  ) => {
+    const maxAyah =
+      getChapters().find((c) => c.id === value.sura)?.verses_count ?? 1;
     return (
       <div className={`pb-verse-picker${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
         <select
           className={`pb-select${nightCls}`}
           value={value.sura}
-          onChange={(e) => { setActiveQuick(null); onChange({ sura: parseInt(e.target.value, 10), aya: 1 }); }}
+          onChange={(e) => {
+            setActiveQuick(null);
+            onChange({ sura: parseInt(e.target.value, 10), aya: 1 });
+          }}
         >
-          {surahOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+          {surahPickerOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
         <span className="pb-verse-sep">:</span>
@@ -238,7 +375,10 @@ const PlaybackSettings: React.FC = () => {
           max={maxAyah}
           value={value.aya}
           onChange={(e) => {
-            const aya = Math.max(1, Math.min(maxAyah, parseInt(e.target.value, 10) || 1));
+            const aya = Math.max(
+              1,
+              Math.min(maxAyah, parseInt(e.target.value, 10) || 1),
+            );
             setActiveQuick(null);
             onChange({ sura: value.sura, aya });
           }}
@@ -248,12 +388,15 @@ const PlaybackSettings: React.FC = () => {
   };
 
   const renderSpeedRow = () => (
-    <div className={`pb-segmented${nightCls}`}>
+    <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
       {SPEED_OPTIONS.map((sp) => (
         <button
           key={sp}
           type="button"
-          className={`pb-seg-btn${nightCls}` + (prefs.playbackRate === sp ? " is-active" : "")}
+          className={
+            `pb-seg-btn${nightCls}` +
+            (prefs.playbackRate === sp ? " is-active" : "")
+          }
           onClick={() => updatePref("playbackRate", sp)}
         >
           {sp}x{sp === 1 ? ` (${tp.speedDefault})` : ""}
@@ -262,7 +405,10 @@ const PlaybackSettings: React.FC = () => {
     </div>
   );
 
-  const renderRepeatRow = (value: RepeatMode, onChange: (m: RepeatMode) => void) => {
+  const renderRepeatRow = (
+    value: RepeatMode,
+    onChange: (m: RepeatMode) => void,
+  ) => {
     const choices: RepeatMode[] = [1, 2, 3, "loop"];
     return (
       <div className={`pb-segmented${nightCls}`}>
@@ -270,7 +416,9 @@ const PlaybackSettings: React.FC = () => {
           <button
             key={String(c)}
             type="button"
-            className={`pb-seg-btn${nightCls}` + (value === c ? " is-active" : "")}
+            className={
+              `pb-seg-btn${nightCls}` + (value === c ? " is-active" : "")
+            }
             onClick={() => onChange(c)}
           >
             {c === "loop" ? tp.loop : tp.times(c as number)}
@@ -283,18 +431,16 @@ const PlaybackSettings: React.FC = () => {
   const playingLabel = queue.state.currentVerse
     ? `${tp.nowPlaying}: ${queue.state.currentVerse}`
     : null;
-
   const ctaLabel = queue.state.isPlaying
     ? tp.pause
     : queue.state.currentVerse
-      ? tp.resume
-      : tp.playAudio;
-
+    ? tp.resume
+    : tp.playAudio;
   const handleCta = queue.state.isPlaying
     ? () => queue.pause()
     : queue.state.currentVerse
-      ? () => queue.resume()
-      : handlePlay;
+    ? () => queue.resume()
+    : handlePlay;
 
   return (
     <IonPage>
@@ -320,7 +466,9 @@ const PlaybackSettings: React.FC = () => {
                 <button
                   type="button"
                   className="pb-mini-btn"
-                  onClick={() => queue.state.isPlaying ? queue.pause() : queue.resume()}
+                  onClick={() =>
+                    queue.state.isPlaying ? queue.pause() : queue.resume()
+                  }
                 >
                   {queue.state.isPlaying ? tp.pause : tp.resume}
                 </button>
@@ -328,14 +476,20 @@ const PlaybackSettings: React.FC = () => {
             )}
 
             <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.selectRange}</h2>
+              <h2 className={`pb-section-title${nightCls}`}>
+                {tp.selectRange}
+              </h2>
               <div className={`pb-card${nightCls}`}>
                 <div className="pb-row">
-                  <label className={`pb-row-label${nightCls}`}>{tp.startingVerse}</label>
+                  <label className={`pb-row-label${nightCls}`}>
+                    {tp.startingVerse}
+                  </label>
                   {renderVersePicker(startVerse, setStartVerse)}
                 </div>
                 <div className="pb-row">
-                  <label className={`pb-row-label${nightCls}`}>{tp.endingVerse}</label>
+                  <label className={`pb-row-label${nightCls}`}>
+                    {tp.endingVerse}
+                  </label>
                   {renderVersePicker(endVerse, setEndVerse)}
                 </div>
               </div>
@@ -349,8 +503,10 @@ const PlaybackSettings: React.FC = () => {
                   value={prefs.reciter}
                   onChange={(e) => updatePref("reciter", e.target.value)}
                 >
-                  {ts.reciters.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
+                  {reciters.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
                   ))}
                 </select>
                 <button
@@ -370,34 +526,88 @@ const PlaybackSettings: React.FC = () => {
             </section>
 
             <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.playEachVerse}</h2>
-              {renderRepeatRow(prefs.repeatVerse, (m) => updatePref("repeatVerse", m))}
+              <h2 className={`pb-section-title${nightCls}`}>
+                {tp.playEachVerse}
+              </h2>
+              {renderRepeatRow(prefs.repeatVerse, (m) =>
+                updatePref("repeatVerse", m),
+              )}
             </section>
 
             <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.playTheRange}</h2>
-              {renderRepeatRow(prefs.repeatRange, (m) => updatePref("repeatRange", m))}
+              <h2 className={`pb-section-title${nightCls}`}>
+                {tp.playTheRange}
+              </h2>
+              {renderRepeatRow(prefs.repeatRange, (m) =>
+                updatePref("repeatRange", m),
+              )}
             </section>
 
             <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.quickSelect}</h2>
-              <div className="pb-quick-grid">
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "page" ? " is-active" : ""}`} onClick={() => setRangeToPage(currentPage)}>
+              <h2 className={`pb-section-title${nightCls}`}>
+                {tp.quickSelect}
+              </h2>
+              <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "page" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeToPage(currentPage)}
+                >
                   {tp.quickPage(String(currentPage))}
                 </button>
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "fromPage" ? " is-active" : ""}`} onClick={() => setRangeFromPage(currentPage)}>
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "fromPage" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeFromPage(currentPage)}
+                >
                   {tp.quickFromPage(String(currentPage))}
                 </button>
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "surah" ? " is-active" : ""}`} onClick={() => setRangeToSurah(currentSura)}>
-                  {tp.quickSurah(lang === "ar" ? getSurahNameArabic(currentSura) : getSurahNameEnglish(currentSura))}
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "surah" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeToSurah(currentSura)}
+                >
+                  {tp.quickSurah(
+                    lang === "ar"
+                      ? getSurahNameArabic(currentSura)
+                      : getSurahNameEnglish(currentSura),
+                  )}
                 </button>
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "juz" ? " is-active" : ""}`} onClick={() => setRangeToJuz(currentJuz)}>
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "juz" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeToJuz(currentJuz)}
+                >
                   {tp.quickJuz(String(currentJuz))}
                 </button>
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "hizb" ? " is-active" : ""}`} onClick={() => setRangeToHizb(Math.ceil(currentPage / 4))}>
-                  {tp.quickHizb(String(Math.ceil(currentPage / 4)))}
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "hizb" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeToHizb(currentHizb)}
+                >
+                  {tp.quickHizb(String(currentHizb))}
                 </button>
-                <button className={`pb-quick-btn${nightCls}${activeQuick === "all" ? " is-active" : ""}`} onClick={setRangeToAll}>
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "rub" ? " is-active" : ""
+                  }`}
+                  onClick={() => setRangeToRub(currentRub)}
+                >
+                  {lang === "ar"
+                    ? `ربع ${toHindiNumbers(currentRub)}`
+                    : `Rub‛ ${currentRub}`}
+                </button>
+                <button
+                  className={`pb-seg-btn${nightCls}${
+                    activeQuick === "all" ? " is-active" : ""
+                  }`}
+                  onClick={setRangeToAll}
+                >
                   {tp.quickAll}
                 </button>
               </div>
@@ -413,9 +623,13 @@ const PlaybackSettings: React.FC = () => {
             </button>
           </div>
 
-          {/* ── Downloads sub-panel ── */}
+          {/* ── Downloads sub‑panel ── */}
           {downloadsOpen && (
-            <div className={`pb-downloads-overlay${nightCls}`} role="dialog" aria-label={tp.downloadsTitle}>
+            <div
+              className={`pb-downloads-overlay${nightCls}`}
+              role="dialog"
+              aria-label={tp.downloadsTitle}
+            >
               <header className={`pb-header${nightCls}`}>
                 <button
                   type="button"
@@ -428,44 +642,77 @@ const PlaybackSettings: React.FC = () => {
                 <h1 className="pb-title">{tp.downloadsTitle}</h1>
                 <span className="pb-header-spacer" />
               </header>
-
               <div className="pb-body">
                 <div className={`pb-card${nightCls}`}>
                   <p className={`pb-row-label${nightCls}`}>
-                    {cachedCount === 0
-                      ? tp.downloadEmpty
-                      : tp.downloadProgress(String(cachedCount), String(cachedCount))}
+                    {lang === "ar"
+                      ? "اختر السور للتحميل:"
+                      : "Select Surahs to download:"}
                   </p>
                 </div>
-
-                {downloading ? (
-                  <>
-                    <div className={`pb-card${nightCls}`}>
-                      <p className={`pb-row-label${nightCls}`}>
-                        {tp.downloadProgress(String(downloadDone), String(downloadTotal))}
-                      </p>
-                      <div className="pb-progress">
-                        <div
-                          className="pb-progress-fill"
-                          style={{ width: downloadTotal > 0 ? `${Math.round((downloadDone / downloadTotal) * 100)}%` : "0%" }}
-                        />
+                <div className={`pb-surah-list${nightCls}`}>
+                  {surahOptions.map((sura) => {
+                    const state = surahDownloads[sura.value];
+                    const isDownloading = !!state?.abortController;
+                    const progress = state
+                      ? Math.round((state.done / state.total) * 100)
+                      : 0;
+                    return (
+                      <div
+                        key={sura.value}
+                        className={`pb-surah-row${nightCls}`}
+                      >
+                        <div className="pb-surah-info">
+                          <span className="pb-surah-name">{sura.label}</span>
+                          <span className="pb-surah-count">
+                            (
+                            {lang === "ar"
+                              ? toHindiNumbers(sura.versesCount)
+                              : sura.versesCount}{" "}
+                            {lang === "ar" ? "آية" : "verses"})
+                          </span>
+                        </div>
+                        <div className="pb-surah-actions">
+                          {isDownloading ? (
+                            <>
+                              <div className="pb-progress pb-surah-progress">
+                                <div
+                                  className="pb-progress-fill"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <span className="pb-surah-progress-text">
+                                {state?.done ?? 0}/{state?.total ?? 0}
+                              </span>
+                              <button
+                                type="button"
+                                className={`pb-mini-btn pb-mini-btn-warn${nightCls}`}
+                                onClick={() => cancelSurahDownload(sura.value)}
+                              >
+                                {tp.downloadCancel}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`pb-mini-btn${nightCls}`}
+                              onClick={() =>
+                                startSurahDownload(sura.value, sura.versesCount)
+                              }
+                            >
+                              {tp.downloadStart}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <button type="button" className="pb-cta pb-cta-warn" onClick={handleCancelDownload}>
-                      {tp.downloadCancel}
-                    </button>
-                  </>
-                ) : (
-                  <button type="button" className="pb-cta" onClick={handleDownloadRange}>
-                    {tp.downloadStart}
-                  </button>
-                )}
-
+                    );
+                  })}
+                </div>
                 <button
                   type="button"
                   className={`pb-cta pb-cta-ghost${nightCls}`}
                   onClick={handleClearCache}
-                  disabled={cachedCount === 0 || downloading}
+                  disabled={Object.keys(surahDownloads).length === 0}
                 >
                   {tp.downloadClear}
                 </button>
