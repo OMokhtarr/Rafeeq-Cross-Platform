@@ -1,13 +1,8 @@
 /**
  * PAGE VIEWER
  *
- * Renders the Madani Mushaf page-by-page. Verses are rendered glyph-by-glyph
- * by <MushafPage>; this component owns:
- *   - page navigation (arrows, surah picker, swipe)
- *   - the hamburger side drawer (surah list, search, settings, selection ops)
- *   - server-side search via the Foundation API (now through SDK)
- *   - per-verse recitation playback
- *   - optional translation panel under each verse
+ * Renders the Madani Mushaf page-by-page.
+ * Automatically enables “big text mode” when the page width is below 500px.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -35,7 +30,6 @@ import { isPageBookmarked } from "../../core/services/api/user-api.client";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
 
-// ─── Settings helpers ─────────────────────────────────────────────────────────
 const SETTINGS_KEY = "rafiq_settings_v1";
 
 interface ReadSettings {
@@ -66,8 +60,6 @@ function readSettings(): ReadSettings {
   };
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
@@ -85,9 +77,10 @@ const PageViewer: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bigTextMode, setBigTextMode] = useState(false);
 
   const queue = usePlayback();
-  const showPlaybackBar = queue.state.currentVerse !== null; // visible even when paused
+  const showPlaybackBar = queue.state.currentVerse !== null;
 
   const [reciteMode, setReciteMode] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,11 +122,26 @@ const PageViewer: React.FC = () => {
   }, [pageVerseKeyForBookmark]);
 
   const contentRef = useRef<HTMLDivElement>(null);
+  const mushafPageRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
+
+  // Monitor container width to enable/disable big text mode
+  useEffect(() => {
+    const container = contentRef.current?.querySelector(".mushaf-page");
+    if (!container) return;
+    const checkWidth = () => {
+      const width = container.clientWidth;
+      setBigTextMode(width < 350); // switch to wrapped layout below 350px
+    };
+    checkWidth();
+    const ro = new ResizeObserver(checkWidth);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [verses, loading]); // re-run when verses change (page may be different)
 
   useEffect(() => {
     const onFocus = () => setSettings(readSettings());
@@ -155,21 +163,15 @@ const PageViewer: React.FC = () => {
       setVerses(pageVerses);
       setLoading(false);
 
-      // Determine which verse to highlight from the URL, if any
       const params = new URLSearchParams(location.search);
       const v = params.get("v");
       const highlightKey = v && /^\d+:\d+$/.test(v) ? v : null;
-
-      // Apply highlight if it matches a verse on this page
       setHighlightedVerse(highlightKey);
-
-      // Auto‑clear the highlight after a few seconds
       if (highlightKey) {
         const tid = setTimeout(() => setHighlightedVerse(null), 1500);
         return () => clearTimeout(tid);
       }
 
-      // Handle green verse logic (if needed)
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -189,6 +191,7 @@ const PageViewer: React.FC = () => {
       cancelled = true;
     };
   }, [currentPage]);
+
   useEffect(() => {
     if (sheetVerseKey) immersive.showChrome();
   }, [sheetVerseKey, immersive]);
@@ -489,7 +492,7 @@ const PageViewer: React.FC = () => {
               <button
                 type="button"
                 className="toolbar-center-pill"
-                onClick={() => history.push("/surah-juz")}
+                onClick={() => history.push(`/surah-juz?page=${currentPage}`)}
                 aria-label={t.mushaf.surahsAndJuz}
               >
                 <span className="pill-surah">{pageInfo?.suraNameAr}</span>
@@ -515,15 +518,6 @@ const PageViewer: React.FC = () => {
                     {lang === "ar"
                       ? toHindiNumbers(pageInfo?.hizb ?? 0)
                       : pageInfo?.hizb ?? 0}
-                  </span>
-                  <span className="pill-sep" aria-hidden>
-                    |
-                  </span>
-                  <span>
-                    {"◆"}{" "}
-                    {lang === "ar"
-                      ? toHindiNumbers(pageInfo?.rub ?? 0)
-                      : pageInfo?.rub ?? 0}
                   </span>
                 </span>
               </button>
@@ -607,12 +601,6 @@ const PageViewer: React.FC = () => {
                 <span className="page-edge-dot" aria-hidden>
                   •
                 </span>
-                <span>
-                  {"◆"}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(pageInfo?.rub ?? 0)
-                    : pageInfo?.rub ?? 0}
-                </span>
               </span>
             </div>
 
@@ -622,7 +610,7 @@ const PageViewer: React.FC = () => {
                 <p>{t.mushaf.loading}</p>
               </div>
             ) : (
-              <div className="mushaf-page">
+              <div className="mushaf-page" ref={mushafPageRef}>
                 <MushafPage
                   page={currentPage}
                   verses={verses}
@@ -639,6 +627,7 @@ const PageViewer: React.FC = () => {
                         }
                       : undefined
                   }
+                  bigTextMode={bigTextMode}
                 />
               </div>
             )}

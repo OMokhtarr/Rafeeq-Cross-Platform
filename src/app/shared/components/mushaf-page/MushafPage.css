@@ -5,9 +5,16 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* REVERTED: space-between is correct for Mushaf layout — it distributes
+     lines evenly across the full page height, matching the printed Mushaf.
+     flex-start caused all lines to cluster at the top with a large empty gap. */
   justify-content: space-between;
-  gap: 0.25em;
+  gap: 0;
   box-sizing: border-box;
+  /* REVERTED: clamp(20px, 4.6vw, 34px) is the base — computeFit overrides
+     this with a fitted px value anyway. A larger clamp only makes the
+     first-render overshoot worse, causing lines to wrap before the second
+     pass shrinks the font. */
   font-size: clamp(20px, 4.6vw, 34px);
   line-height: 1.4;
   color: var(--color-mushaf-text, #1a1a1a);
@@ -15,10 +22,31 @@
   transition: color var(--transition-theme, 0.25s ease);
 }
 
-/* ── Bismillah: theme gold ─────────────────────────────────────────── */
+/* Big text mode: no fixed line height, natural wrapping */
+.mushaf-page-glyph.mushaf-page-bigtext {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.mushaf-big-text-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end; /* right-aligned for RTL text */
+  gap: 0.25em 0.5em;
+  line-height: 1.6;
+}
+
+.mushaf-big-text-container .mushaf-word,
+.mushaf-big-text-container .mushaf-ayah-end {
+  display: inline-block;
+  margin: 0 0.02em;
+  white-space: normal;
+}
+
+/* Bismillah: keep centered */
 .mushaf-bismillah {
   text-align: center;
-  font-size: 0.95em;
+  font-size: 0.85em;
   margin-bottom: 0.2em;
   color: var(--color-mushaf-text);
 }
@@ -26,26 +54,27 @@
 .mushaf-line {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: center;
   align-items: baseline;
   white-space: nowrap;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .mushaf-word {
   display: inline-block;
-  margin: 0 0.01em;
+  position: relative;
 }
 
 .mushaf-ayah-end {
   display: inline-block;
-  margin: 0 0.01em;
   position: relative;
+  flex-shrink: 1;
 }
 
 .mushaf-word-target,
 .mushaf-ayah-end-target {
-  background: rgba(255, 215, 0, 0.45); /* stronger gold */
+  background: rgba(255, 215, 0, 0.45);
   border-radius: 4px;
   box-shadow: 0 0 0 2px rgba(255, 200, 0, 0.6);
   animation: target-pulse 1.2s ease-in-out infinite alternate;
@@ -77,8 +106,7 @@
    their saturation — the verse-end ornament gets the same treatment. */
 .mushaf-verse-grey,
 .mushaf-verse-grey.mushaf-ayah-end {
-  color: #9a9a9a !important;
-  opacity: 0.85;
+  opacity: 0.25;
 }
 
 [data-theme="night"] .mushaf-verse-grey,
@@ -182,54 +210,23 @@
   color: #6ee7a3 !important;
 }
 
-/* ── Decorative Surah-name header ──────────────────────────────────────────
-   A horizontal banner with:
-     • Double-line frame (outer + inner hairline) framing the whole bar
-     • Two ornate arabesque rosettes (SVG) anchored at each end
-     • A central lobed cartouche containing the surah name
-   Inks are driven by --color-mushaf-text / --color-mushaf-bg so the banner
-   inverts automatically between day (dark ink on cream) and night
-   (cream ink on dark) themes. */
+/* Decorative surah header */
 .mushaf-surah-header {
   --sh-ink: var(--color-mushaf-text, #1a1a1a);
-  --sh-bg: var(--color-mushaf-bg, #fffef5);
-
+  --sh-bg: var(--color-mushaf-bg);
   position: relative;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
   gap: 0.4em;
   width: 100%;
-  /* Banner sits above bismillah; height tied to em so it scales with font. */
-  height: 1.5em;
-  padding: 0.16em 0.2em;
-  margin: 0.05em auto 0.2em;
+  height: 2.2em;
   background: var(--sh-bg);
-  border: 1px solid var(--sh-ink);
-  /* outer second hairline for the double-border effect */
-  outline: 1px solid var(--sh-ink);
-  outline-offset: 2px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
 
-/* ── Central cartouche (the .frame element) ──────────────────────────────
-   Lobed shape with a triple-band edge: outer ink → bg → inner ink hairline
-   → bg interior where the surah name sits. Implemented with stacked
-   pseudo-elements all clipped to the same lobed polygon. */
 .mushaf-surah-header-frame {
-  --lobe: polygon(
-    0% 50%,
-    4% 12%,
-    10% 0%,
-    90% 0%,
-    96% 12%,
-    100% 50%,
-    96% 88%,
-    90% 100%,
-    10% 100%,
-    4% 88%
-  );
   position: relative;
   flex: 1 1 auto;
   display: flex;
@@ -240,42 +237,11 @@
   padding: 0;
   border: 0;
   border-radius: 0;
-  clip-path: var(--lobe);
-  background: var(--sh-ink); /* outer ink edge */
+  background: var(--sh-ink);
   box-shadow: none;
 }
 
-.mushaf-surah-header-frame::before,
-.mushaf-surah-header-frame::after {
-  content: "";
-  position: absolute;
-  clip-path: var(--lobe);
-  pointer-events: none;
-  border: 0;
-  border-radius: 0;
-  /* Override the rosette positioning rules from earlier — these pseudos
-     are now the cartouche's interior bands, not medallions. */
-  top: auto;
-  width: auto;
-  height: auto;
-  transform: none;
-}
-
-.mushaf-surah-header-frame::before {
-  /* mid band: bg-colored ring sitting 2px inside the outer ink edge */
-  inset: 2px;
-  background: var(--sh-bg);
-}
-
-.mushaf-surah-header-frame::after {
-  /* inner ink hairline, 1px inside the mid band */
-  inset: 3px;
-  background: var(--sh-ink);
-}
-
 .mushaf-surah-header-name {
-  /* Sit above the cartouche bands and clip to a fourth (innermost) lobed
-     bg fill so the name reads against page color, not against the ink. */
   position: relative;
   z-index: 1;
   display: flex;
@@ -286,7 +252,7 @@
   clip-path: var(--lobe);
   background: var(--sh-bg);
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: 0.65em;
+  font-size: 0.85em;
   font-weight: 700;
   line-height: 1;
   color: var(--sh-ink);
@@ -296,50 +262,9 @@
   text-shadow: none;
 }
 
-/* ── Night theme override ────────────────────────────────────────────────
-   Tokens already flip --color-mushaf-text / --color-mushaf-bg, so the
-   banner inverts automatically. The only thing we have to swap by hand is
-   the SVG stroke/fill color baked into the medallion data URI. */
-[data-theme="night"] .mushaf-surah-header::before,
-[data-theme="night"] .mushaf-surah-header::after {
-  background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
-  <g fill='none' stroke='%23e8e0d0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
-    <circle cx='50' cy='50' r='34'/>\
-    <circle cx='50' cy='50' r='22'/>\
-    <circle cx='50' cy='50' r='6' fill='%23e8e0d0'/>\
-    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
-    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
-    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
-    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
-  </g>\
-</svg>");
-}
-
-/* ── Side medallions (start + end of banner) ─────────────────────────────
-   The mushaf-surah-header element only has one child (.frame) in the JSX,
-   so we draw both rosettes as ::before / ::after pseudo-elements on the
-   outer banner. SVG fill is set to the day ink; night theme overrides
-   the data-URI. */
-.mushaf-surah-header::before,
-.mushaf-surah-header::after {
-  content: "";
-  flex: 0 0 auto;
-  width: 1.2em;
-  align-self: stretch;
-  border: 1px solid var(--sh-ink);
-  background: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
-  <g fill='none' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
-    <circle cx='50' cy='50' r='34'/>\
-    <circle cx='50' cy='50' r='22'/>\
-    <circle cx='50' cy='50' r='6' fill='%231a1a1a'/>\
-    <path d='M50 16 L57 43 L84 50 L57 57 L50 84 L43 57 L16 50 L43 43 Z'/>\
-    <path d='M26 26 L48 48 M74 26 L52 48 M26 74 L48 52 M74 74 L52 52'/>\
-    <path d='M50 8 L50 18 M50 82 L50 92 M8 50 L18 50 M82 50 L92 50'/>\
-    <path d='M14 14 L22 22 M86 14 L78 22 M14 86 L22 78 M86 86 L78 78'/>\
-  </g>\
-</svg>")
-    center / 88% 88% no-repeat;
-  box-sizing: border-box;
+/* In the compact MushafContextViewer, override space-between so lines
+   stack naturally from the top without forced vertical gaps. */
+.mcv-body .mushaf-page-glyph {
+  justify-content: flex-start;
+  gap: 0.25em;
 }

@@ -58,9 +58,7 @@
   border: 2px solid rgba(212, 180, 140, 0.4);
   color: #fff;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .sjs-back:hover {
@@ -177,6 +175,8 @@
   padding: 1rem 1rem 1.5rem;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .sjs-list-wrap-with-nav {
@@ -207,10 +207,7 @@
   text-align: start;
   border-inline-end: 5px solid var(--color-gold, #d4b48c);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease,
-    background 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.15s ease;
   font-family: inherit;
   color: inherit;
 }
@@ -563,4 +560,14 @@
 [data-theme="night"] .sjs-rub-page,
 [data-theme="dark"] .sjs-rub-page {
   color: rgba(255, 255, 255, 0.45);
+}
+
+/* Highlight for the rub row that matches the current page */
+.sjs-rub-row--highlight {
+  background: rgba(106, 13, 173, 0.15);
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+[data-theme="night"] .sjs-rub-row--highlight {
+  background: rgba(192, 125, 255, 0.2);
 }
