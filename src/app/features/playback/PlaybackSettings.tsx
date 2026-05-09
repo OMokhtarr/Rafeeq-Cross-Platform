@@ -13,9 +13,6 @@ import {
   clearAllCachedAudio,
   downloadAndCache,
 } from "../../core/services/audio/audio-cache.service";
-import { fetchRecitations } from "../../core/services/api/quran-api.client";
-import { toHindiNumbers } from "../../core/utils/arabic.util";
-import "./PlaybackSettings.css";
 import {
   getJuzStart,
   getJuzEnd,
@@ -30,6 +27,9 @@ import {
   getRubNumberForPage,
   estimatePageForVerse,
 } from "../../core/services/data/metadata.service";
+import { fetchRecitations } from "../../core/services/api/quran-api.client";
+import { toHindiNumbers } from "../../core/utils/arabic.util";
+import "./PlaybackSettings.css";
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 
@@ -41,7 +41,7 @@ interface StoredPlaybackPrefs {
 }
 
 const DEFAULT_PREFS: StoredPlaybackPrefs = {
-  reciter: "4", // numeric ID of default reciter (Minshawi Murattal)
+  reciter: "4",
   playbackRate: 1,
   repeatVerse: 1,
   repeatRange: "loop",
@@ -52,7 +52,6 @@ function loadPrefs(): StoredPlaybackPrefs {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      // Migration: if reciter is not a numeric ID, reset to default
       if (typeof s.reciter === "string" && !/^\d+$/.test(s.reciter)) {
         s.reciter = DEFAULT_PREFS.reciter;
       }
@@ -133,7 +132,11 @@ interface SurahDownloadState {
   abortController: AbortController | null;
 }
 
-const PlaybackSettings: React.FC = () => {
+interface Props {
+  onClose?: () => void;
+}
+
+const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
   const history = useHistory();
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
@@ -156,7 +159,6 @@ const PlaybackSettings: React.FC = () => {
   const [endVerse, setEndVerse] = useState<VerseKeyLocal>(() =>
     pageEnd(startPageQuery),
   );
-
   const [activeQuick, setActiveQuick] = useState<string | null>(null);
 
   const [downloadsOpen, setDownloadsOpen] = useState(false);
@@ -164,11 +166,10 @@ const PlaybackSettings: React.FC = () => {
     Record<number, SurahDownloadState>
   >({});
 
-  // ── Dynamic reciters ───────────────────────────────────────────────────────
+  // Dynamic reciters
   const [reciters, setReciters] = useState<{ value: string; label: string }[]>(
     [],
   );
-
   useEffect(() => {
     let cancelled = false;
     fetchRecitations(lang === "ar" ? "ar" : "en")
@@ -179,7 +180,6 @@ const PlaybackSettings: React.FC = () => {
           label: r.translated_name?.name ?? r.reciter_name,
         }));
         setReciters(options);
-        // If current reciter is not in the fetched list, fall back to first
         if (
           options.length > 0 &&
           !options.some((o) => o.value === prefs.reciter)
@@ -187,15 +187,12 @@ const PlaybackSettings: React.FC = () => {
           setPrefs((prev) => ({ ...prev, reciter: options[0].value }));
         }
       })
-      .catch(() => {
-        // Offline: keep whatever is stored
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [lang]);
 
-  // Sync prefs → queue
   useEffect(() => {
     queue.setReciter(prefs.reciter);
   }, [prefs.reciter, queue]);
@@ -226,9 +223,9 @@ const PlaybackSettings: React.FC = () => {
     const first = verses[0];
     const page = estimatePageForVerse(first.sura, first.aya);
     const verseKey = `${first.sura}:${first.aya}`;
-    // Navigate to the viewer at the correct page with the verse highlighted
     history.replace(`/viewer?page=${page}&v=${encodeURIComponent(verseKey)}`);
     await queue.start(verses);
+    onClose?.();
   };
 
   const currentPage = startPageQuery;
@@ -279,7 +276,7 @@ const PlaybackSettings: React.FC = () => {
     setActiveQuick("all");
   };
 
-  // ── Downloads ──────────────────────────────────────────────────────────────
+  // Downloads
   const surahOptions = useMemo(
     () =>
       getChapters().map((c) => ({
@@ -333,7 +330,6 @@ const PlaybackSettings: React.FC = () => {
     setSurahDownloads({});
   };
 
-  // ── Render helpers ─────────────────────────────────────────────────────────
   const surahPickerOptions = useMemo(
     () =>
       getChapters().map((c) => ({
@@ -351,6 +347,8 @@ const PlaybackSettings: React.FC = () => {
   ) => {
     const maxAyah =
       getChapters().find((c) => c.id === value.sura)?.verses_count ?? 1;
+    const ayaOptions = Array.from({ length: maxAyah }, (_, i) => i + 1);
+
     return (
       <div className={`pb-verse-picker${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
         <select
@@ -368,27 +366,29 @@ const PlaybackSettings: React.FC = () => {
           ))}
         </select>
         <span className="pb-verse-sep">:</span>
-        <input
-          type="number"
-          className={`pb-aya-input${nightCls}`}
-          min={1}
-          max={maxAyah}
+        <select
+          className={`pb-select pb-select-aya${nightCls}`}
           value={value.aya}
           onChange={(e) => {
-            const aya = Math.max(
-              1,
-              Math.min(maxAyah, parseInt(e.target.value, 10) || 1),
-            );
             setActiveQuick(null);
-            onChange({ sura: value.sura, aya });
+            onChange({
+              sura: value.sura,
+              aya: parseInt(e.target.value, 10) || 1,
+            });
           }}
-        />
+        >
+          {ayaOptions.map((aya) => (
+            <option key={aya} value={aya}>
+              {lang === "ar" ? toHindiNumbers(aya) : aya}
+            </option>
+          ))}
+        </select>
       </div>
     );
   };
 
   const renderSpeedRow = () => (
-    <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
+    <div className={`pb-segmented${nightCls}`}>
       {SPEED_OPTIONS.map((sp) => (
         <button
           key={sp}
@@ -442,285 +442,274 @@ const PlaybackSettings: React.FC = () => {
     ? () => queue.resume()
     : handlePlay;
 
-  return (
-    <IonPage>
-      <IonContent fullscreen>
-        <div className={`pb-page${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
-          <header className={`pb-header${nightCls}`}>
-            <button
-              type="button"
-              className={`pb-close${nightCls}`}
-              onClick={() => history.goBack()}
-              aria-label={tp.closeLabel}
-            >
-              ✕
-            </button>
-            <h1 className="pb-title">{tp.title}</h1>
-            <span className="pb-header-spacer" />
-          </header>
-
-          <div className="pb-body">
-            {playingLabel && (
-              <div className={`pb-now-playing${nightCls}`}>
-                <span>{playingLabel}</span>
-                <button
-                  type="button"
-                  className="pb-mini-btn"
-                  onClick={() =>
-                    queue.state.isPlaying ? queue.pause() : queue.resume()
-                  }
-                >
-                  {queue.state.isPlaying ? tp.pause : tp.resume}
-                </button>
-              </div>
-            )}
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>
-                {tp.selectRange}
-              </h2>
-              <div className={`pb-card${nightCls}`}>
-                <div className="pb-row">
-                  <label className={`pb-row-label${nightCls}`}>
-                    {tp.startingVerse}
-                  </label>
-                  {renderVersePicker(startVerse, setStartVerse)}
+  // Main settings or downloads overlay
+  const content = downloadsOpen ? (
+    // Downloads overlay (replaces main content)
+    <div className={`pb-page${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
+      <header className={`pb-header${nightCls}`}>
+        <button
+          type="button"
+          className={`pb-back-btn${nightCls}`}
+          onClick={() => setDownloadsOpen(false)}
+          aria-label={tp.closeLabel}
+        >
+          {isRTL ? "›" : "‹"}
+        </button>
+        <h1 className="pb-title">{tp.downloadsTitle}</h1>
+        <span className="pb-header-spacer" />
+      </header>
+      <div className="pb-body">
+        <div className={`pb-card${nightCls}`}>
+          <p className={`pb-row-label${nightCls}`}>
+            {lang === "ar"
+              ? "اختر السور للتحميل:"
+              : "Select Surahs to download:"}
+          </p>
+        </div>
+        <div className={`pb-surah-list${nightCls}`}>
+          {surahOptions.map((sura) => {
+            const state = surahDownloads[sura.value];
+            const isDownloading = !!state?.abortController;
+            const progress = state
+              ? Math.round((state.done / state.total) * 100)
+              : 0;
+            return (
+              <div key={sura.value} className={`pb-surah-row${nightCls}`}>
+                <div className="pb-surah-info">
+                  <span className="pb-surah-name">{sura.label}</span>
+                  <span className="pb-surah-count">
+                    (
+                    {lang === "ar"
+                      ? toHindiNumbers(sura.versesCount)
+                      : sura.versesCount}{" "}
+                    {lang === "ar" ? "آية" : "verses"})
+                  </span>
                 </div>
-                <div className="pb-row">
-                  <label className={`pb-row-label${nightCls}`}>
-                    {tp.endingVerse}
-                  </label>
-                  {renderVersePicker(endVerse, setEndVerse)}
-                </div>
-              </div>
-            </section>
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.reciter}</h2>
-              <div className={`pb-card${nightCls}`}>
-                <select
-                  className={`pb-select pb-select-full${nightCls}`}
-                  value={prefs.reciter}
-                  onChange={(e) => updatePref("reciter", e.target.value)}
-                >
-                  {reciters.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className={`pb-link-row${nightCls}`}
-                  onClick={() => setDownloadsOpen(true)}
-                >
-                  <span>{tp.manageDownloads}</span>
-                  <span className="pb-link-chev">{isRTL ? "‹" : "›"}</span>
-                </button>
-              </div>
-            </section>
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>{tp.playSpeed}</h2>
-              {renderSpeedRow()}
-            </section>
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>
-                {tp.playEachVerse}
-              </h2>
-              {renderRepeatRow(prefs.repeatVerse, (m) =>
-                updatePref("repeatVerse", m),
-              )}
-            </section>
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>
-                {tp.playTheRange}
-              </h2>
-              {renderRepeatRow(prefs.repeatRange, (m) =>
-                updatePref("repeatRange", m),
-              )}
-            </section>
-
-            <section className="pb-section">
-              <h2 className={`pb-section-title${nightCls}`}>
-                {tp.quickSelect}
-              </h2>
-              <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "page" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeToPage(currentPage)}
-                >
-                  {tp.quickPage(String(currentPage))}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "fromPage" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeFromPage(currentPage)}
-                >
-                  {tp.quickFromPage(String(currentPage))}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "surah" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeToSurah(currentSura)}
-                >
-                  {tp.quickSurah(
-                    lang === "ar"
-                      ? getSurahNameArabic(currentSura)
-                      : getSurahNameEnglish(currentSura),
+                <div className="pb-surah-actions">
+                  {isDownloading ? (
+                    <>
+                      <div className="pb-progress pb-surah-progress">
+                        <div
+                          className="pb-progress-fill"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <span className="pb-surah-progress-text">
+                        {state?.done ?? 0}/{state?.total ?? 0}
+                      </span>
+                      <button
+                        type="button"
+                        className={`pb-mini-btn pb-mini-btn-warn${nightCls}`}
+                        onClick={() => cancelSurahDownload(sura.value)}
+                      >
+                        {tp.downloadCancel}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`pb-mini-btn${nightCls}`}
+                      onClick={() =>
+                        startSurahDownload(sura.value, sura.versesCount)
+                      }
+                    >
+                      {tp.downloadStart}
+                    </button>
                   )}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "juz" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeToJuz(currentJuz)}
-                >
-                  {tp.quickJuz(String(currentJuz))}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "hizb" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeToHizb(currentHizb)}
-                >
-                  {tp.quickHizb(String(currentHizb))}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "rub" ? " is-active" : ""
-                  }`}
-                  onClick={() => setRangeToRub(currentRub)}
-                >
-                  {lang === "ar"
-                    ? `ربع ${toHindiNumbers(currentRub)}`
-                    : `Rub‛ ${currentRub}`}
-                </button>
-                <button
-                  className={`pb-seg-btn${nightCls}${
-                    activeQuick === "all" ? " is-active" : ""
-                  }`}
-                  onClick={setRangeToAll}
-                >
-                  {tp.quickAll}
-                </button>
+                </div>
               </div>
-            </section>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className={`pb-cta pb-cta-ghost${nightCls}`}
+          onClick={handleClearCache}
+          disabled={Object.keys(surahDownloads).length === 0}
+        >
+          {tp.downloadClear}
+        </button>
+      </div>
+    </div>
+  ) : (
+    // Main settings
+    <div className={`pb-page${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
+      <header className={`pb-header${nightCls}`}>
+        <button
+          type="button"
+          className={`pb-close${nightCls}`}
+          onClick={() => (onClose ? onClose() : history.goBack())}
+          aria-label={tp.closeLabel}
+        >
+          ✕
+        </button>
+        <h1 className="pb-title">{tp.title}</h1>
+        <span className="pb-header-spacer" />
+      </header>
 
+      <div className="pb-body">
+        {playingLabel && (
+          <div className={`pb-now-playing${nightCls}`}>
+            <span>{playingLabel}</span>
             <button
               type="button"
-              className="pb-cta"
-              onClick={handleCta}
-              disabled={queue.state.isLoading}
+              className="pb-mini-btn"
+              onClick={() =>
+                queue.state.isPlaying ? queue.pause() : queue.resume()
+              }
             >
-              {ctaLabel}
+              {queue.state.isPlaying ? tp.pause : tp.resume}
             </button>
           </div>
+        )}
 
-          {/* ── Downloads sub‑panel ── */}
-          {downloadsOpen && (
-            <div
-              className={`pb-downloads-overlay${nightCls}`}
-              role="dialog"
-              aria-label={tp.downloadsTitle}
-            >
-              <header className={`pb-header${nightCls}`}>
-                <button
-                  type="button"
-                  className={`pb-close${nightCls}`}
-                  onClick={() => setDownloadsOpen(false)}
-                  aria-label={tp.closeLabel}
-                >
-                  ✕
-                </button>
-                <h1 className="pb-title">{tp.downloadsTitle}</h1>
-                <span className="pb-header-spacer" />
-              </header>
-              <div className="pb-body">
-                <div className={`pb-card${nightCls}`}>
-                  <p className={`pb-row-label${nightCls}`}>
-                    {lang === "ar"
-                      ? "اختر السور للتحميل:"
-                      : "Select Surahs to download:"}
-                  </p>
-                </div>
-                <div className={`pb-surah-list${nightCls}`}>
-                  {surahOptions.map((sura) => {
-                    const state = surahDownloads[sura.value];
-                    const isDownloading = !!state?.abortController;
-                    const progress = state
-                      ? Math.round((state.done / state.total) * 100)
-                      : 0;
-                    return (
-                      <div
-                        key={sura.value}
-                        className={`pb-surah-row${nightCls}`}
-                      >
-                        <div className="pb-surah-info">
-                          <span className="pb-surah-name">{sura.label}</span>
-                          <span className="pb-surah-count">
-                            (
-                            {lang === "ar"
-                              ? toHindiNumbers(sura.versesCount)
-                              : sura.versesCount}{" "}
-                            {lang === "ar" ? "آية" : "verses"})
-                          </span>
-                        </div>
-                        <div className="pb-surah-actions">
-                          {isDownloading ? (
-                            <>
-                              <div className="pb-progress pb-surah-progress">
-                                <div
-                                  className="pb-progress-fill"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <span className="pb-surah-progress-text">
-                                {state?.done ?? 0}/{state?.total ?? 0}
-                              </span>
-                              <button
-                                type="button"
-                                className={`pb-mini-btn pb-mini-btn-warn${nightCls}`}
-                                onClick={() => cancelSurahDownload(sura.value)}
-                              >
-                                {tp.downloadCancel}
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`pb-mini-btn${nightCls}`}
-                              onClick={() =>
-                                startSurahDownload(sura.value, sura.versesCount)
-                              }
-                            >
-                              {tp.downloadStart}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  className={`pb-cta pb-cta-ghost${nightCls}`}
-                  onClick={handleClearCache}
-                  disabled={Object.keys(surahDownloads).length === 0}
-                >
-                  {tp.downloadClear}
-                </button>
-              </div>
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.selectRange}</h2>
+          <div className={`pb-card${nightCls}`}>
+            <div className="pb-row">
+              <label className={`pb-row-label${nightCls}`}>
+                {tp.startingVerse}
+              </label>
+              {renderVersePicker(startVerse, setStartVerse)}
             </div>
+            <div className="pb-row">
+              <label className={`pb-row-label${nightCls}`}>
+                {tp.endingVerse}
+              </label>
+              {renderVersePicker(endVerse, setEndVerse)}
+            </div>
+          </div>
+        </section>
+
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.reciter}</h2>
+          <div className={`pb-card${nightCls}`}>
+            <select
+              className={`pb-select pb-select-full${nightCls}`}
+              value={prefs.reciter}
+              onChange={(e) => updatePref("reciter", e.target.value)}
+            >
+              {reciters.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={`pb-link-row${nightCls}`}
+              onClick={() => setDownloadsOpen(true)}
+            >
+              <span>{tp.manageDownloads}</span>
+              <span className="pb-link-chev">{isRTL ? "‹" : "›"}</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.playSpeed}</h2>
+          {renderSpeedRow()}
+        </section>
+
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.playEachVerse}</h2>
+          {renderRepeatRow(prefs.repeatVerse, (m) =>
+            updatePref("repeatVerse", m),
           )}
-        </div>
-      </IonContent>
+        </section>
+
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.playTheRange}</h2>
+          {renderRepeatRow(prefs.repeatRange, (m) =>
+            updatePref("repeatRange", m),
+          )}
+        </section>
+
+        <section className="pb-section">
+          <h2 className={`pb-section-title${nightCls}`}>{tp.quickSelect}</h2>
+          <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "page" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeToPage(currentPage)}
+            >
+              {tp.quickPage(String(currentPage))}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "fromPage" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeFromPage(currentPage)}
+            >
+              {tp.quickFromPage(String(currentPage))}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "surah" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeToSurah(currentSura)}
+            >
+              {tp.quickSurah(
+                lang === "ar"
+                  ? getSurahNameArabic(currentSura)
+                  : getSurahNameEnglish(currentSura),
+              )}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "juz" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeToJuz(currentJuz)}
+            >
+              {tp.quickJuz(String(currentJuz))}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "hizb" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeToHizb(currentHizb)}
+            >
+              {tp.quickHizb(String(currentHizb))}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "rub" ? " is-active" : ""
+              }`}
+              onClick={() => setRangeToRub(currentRub)}
+            >
+              {lang === "ar"
+                ? `ربع ${toHindiNumbers(currentRub)}`
+                : `Rub‛ ${currentRub}`}
+            </button>
+            <button
+              className={`pb-seg-btn${nightCls}${
+                activeQuick === "all" ? " is-active" : ""
+              }`}
+              onClick={setRangeToAll}
+            >
+              {tp.quickAll}
+            </button>
+          </div>
+        </section>
+
+        <button
+          type="button"
+          className="pb-cta"
+          onClick={handleCta}
+          disabled={queue.state.isLoading}
+        >
+          {ctaLabel}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (onClose) return content;
+
+  return (
+    <IonPage>
+      <IonContent fullscreen>{content}</IonContent>
     </IonPage>
   );
 };

@@ -183,6 +183,16 @@ const SurahJuzSelection: React.FC = () => {
     [relevantIds],
   );
 
+  const highlightSurah = useMemo(
+    () => relevantIds?.surahNum ?? null,
+    [relevantIds],
+  );
+
+  const highlightJuz = useMemo(
+    () => relevantIds?.juzNum ?? null,
+    [relevantIds],
+  );
+
   // ── Auto-scroll to the relevant item whenever the active tab changes ───────
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -320,7 +330,9 @@ const SurahJuzSelection: React.FC = () => {
                 {surahs.map((s) => (
                   <li key={s.num} id={`surah-${s.num}`}>
                     <button
-                      className="sjs-row sjs-row-surah"
+                      className={`sjs-row sjs-row-surah${
+                        highlightSurah === s.num ? " sjs-row--highlight" : ""
+                      }`}
                       onClick={() => goToPage(s.startPage)}
                     >
                       <span
@@ -373,7 +385,9 @@ const SurahJuzSelection: React.FC = () => {
                 {juzs.map((j) => (
                   <li key={j.num} id={`juz-${j.num}`}>
                     <button
-                      className="sjs-row sjs-row-juz"
+                      className={`sjs-row sjs-row-juz${
+                        highlightJuz === j.num ? " sjs-row--highlight" : ""
+                      }`}
                       onClick={() => goToPage(j.start)}
                     >
                       <span className="sjs-num sjs-num-juz">
@@ -461,7 +475,6 @@ const SurahJuzSelection: React.FC = () => {
                                 }`}
                                 onClick={() => goToPage(r.startPage)}
                               >
-                                <span className="sjs-rub-icon">◆</span>
                                 <span className="sjs-rub-main">
                                   <span className="sjs-rub-label-ar" lang="ar">
                                     {quarterLabelsAr[r.quarterInHizb - 1]}

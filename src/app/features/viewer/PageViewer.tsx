@@ -1,8 +1,13 @@
 /**
  * PAGE VIEWER
  *
- * Renders the Madani Mushaf page-by-page.
- * Automatically enables “big text mode” when the page width is below 500px.
+ * Renders the Madani Mushaf page-by-page. Verses are rendered glyph-by-glyph
+ * by <MushafPage>; this component owns:
+ *   - page navigation (arrows, surah picker, swipe)
+ *   - the slide‑up playback sheet (instead of navigating away)
+ *   - per‑verse recitation playback
+ *   - the hamburger side drawer (surah list, search, settings, selection ops)
+ *   - optional translation panel under each verse
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -27,9 +32,11 @@ import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import { isPageBookmarked } from "../../core/services/api/user-api.client";
+import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
 
+// ─── Settings helpers ─────────────────────────────────────────────────────────
 const SETTINGS_KEY = "rafiq_settings_v1";
 
 interface ReadSettings {
@@ -60,6 +67,8 @@ function readSettings(): ReadSettings {
   };
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
@@ -77,20 +86,22 @@ const PageViewer: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bigTextMode, setBigTextMode] = useState(false);
 
+  // Shared playback queue
   const queue = usePlayback();
   const showPlaybackBar = queue.state.currentVerse !== null;
 
+  // Long‑press / short‑tap on the play button
   const [reciteMode, setReciteMode] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
 
   const handlePlayPressStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
       setReciteMode((m) => !m);
       queue.stop();
       longPressTimerRef.current = null;
-    }, 600);
+    }, 800);
   }, [queue]);
 
   const handlePlayPressEnd = useCallback(() => {
@@ -98,13 +109,14 @@ const PageViewer: React.FC = () => {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
       if (!reciteMode) {
-        history.push(`/playback?page=${currentPage}`);
+        setPlaybackSheetOpen(true); // open slide‑up sheet instead of navigating
       }
     }
-  }, [reciteMode, currentPage, history]);
+  }, [reciteMode]);
 
   const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
+
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
   const audio = useAudioPlayer();
@@ -122,26 +134,11 @@ const PageViewer: React.FC = () => {
   }, [pageVerseKeyForBookmark]);
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const mushafPageRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
-
-  // Monitor container width to enable/disable big text mode
-  useEffect(() => {
-    const container = contentRef.current?.querySelector(".mushaf-page");
-    if (!container) return;
-    const checkWidth = () => {
-      const width = container.clientWidth;
-      setBigTextMode(width < 350); // switch to wrapped layout below 350px
-    };
-    checkWidth();
-    const ro = new ResizeObserver(checkWidth);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [verses, loading]); // re-run when verses change (page may be different)
 
   useEffect(() => {
     const onFocus = () => setSettings(readSettings());
@@ -150,10 +147,23 @@ const PageViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const raw = parseInt(params.get("page") || "", 10);
+    if (Number.isFinite(raw) && raw >= 1 && raw !== currentPage) {
+      setCurrentPage(raw);
+    }
+    const v = params.get("v");
+    if (v && /^\d+:\d+$/.test(v)) {
+      setHighlightedVerse(v);
+      const tid = setTimeout(() => setHighlightedVerse(null), 3000);
+      return () => clearTimeout(tid);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setVerses([]);
-
     getPage(currentPage).then((pageVerses) => {
       if (cancelled) return;
       if (!pageVerses.length) {
@@ -162,16 +172,7 @@ const PageViewer: React.FC = () => {
       }
       setVerses(pageVerses);
       setLoading(false);
-
-      const params = new URLSearchParams(location.search);
-      const v = params.get("v");
-      const highlightKey = v && /^\d+:\d+$/.test(v) ? v : null;
-      setHighlightedVerse(highlightKey);
-      if (highlightKey) {
-        const tid = setTimeout(() => setHighlightedVerse(null), 1500);
-        return () => clearTimeout(tid);
-      }
-
+      setHighlightedVerse(null);
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -183,7 +184,6 @@ const PageViewer: React.FC = () => {
       } else {
         setGreenVerse(null);
       }
-
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
     });
@@ -196,19 +196,17 @@ const PageViewer: React.FC = () => {
     if (sheetVerseKey) immersive.showChrome();
   }, [sheetVerseKey, immersive]);
 
+  // Playback bar controls
   const handlePlayPause = useCallback(() => {
     if (queue.state.isPlaying) queue.pause();
     else queue.resume().catch(() => {});
   }, [queue]);
-
   const handleStop = useCallback(() => {
     queue.stop();
   }, [queue]);
-
   const handlePrev = useCallback(() => {
     queue.prev();
   }, [queue]);
-
   const handleNext = useCallback(() => {
     queue.next();
   }, [queue]);
@@ -302,16 +300,31 @@ const PageViewer: React.FC = () => {
             immersive.chromeVisible ? "" : "immersive"
           }`}
         >
+          {/* ── Toolbar ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
               {!showPlaybackBar && (
                 <button
+                  type="button"
                   className={`toolbar-button play-button${
                     reciteMode ? " play-button--recite" : ""
                   }`}
-                  onPointerDown={handlePlayPressStart}
-                  onPointerUp={handlePlayPressEnd}
-                  onPointerLeave={handlePlayPressEnd}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressStart();
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onPointerLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onClick={(e) => e.preventDefault()}
                   aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
                 >
                   {reciteMode ? (
@@ -403,6 +416,7 @@ const PageViewer: React.FC = () => {
               </button>
             </div>
 
+            {/* Center: playback bar when active, else surah info pill */}
             {showPlaybackBar ? (
               <div
                 className="toolbar-playback-bar"
@@ -572,6 +586,7 @@ const PageViewer: React.FC = () => {
             </div>
           </div>
 
+          {/* ── Mushaf Content ── */}
           <div
             className="mushaf-content"
             ref={contentRef}
@@ -598,9 +613,6 @@ const PageViewer: React.FC = () => {
                     ? toHindiNumbers(pageInfo?.hizb ?? 0)
                     : pageInfo?.hizb ?? 0}
                 </span>
-                <span className="page-edge-dot" aria-hidden>
-                  •
-                </span>
               </span>
             </div>
 
@@ -610,7 +622,7 @@ const PageViewer: React.FC = () => {
                 <p>{t.mushaf.loading}</p>
               </div>
             ) : (
-              <div className="mushaf-page" ref={mushafPageRef}>
+              <div className="mushaf-page">
                 <MushafPage
                   page={currentPage}
                   verses={verses}
@@ -627,7 +639,6 @@ const PageViewer: React.FC = () => {
                         }
                       : undefined
                   }
-                  bigTextMode={bigTextMode}
                 />
               </div>
             )}
@@ -643,6 +654,8 @@ const PageViewer: React.FC = () => {
           </div>
 
           <BottomNavBar active="quran" />
+
+          {/* ── Verse action sheet (long‑press) ── */}
           <VerseActionSheet
             open={!!sheetVerseKey}
             verseKey={sheetVerseKey}
@@ -651,6 +664,47 @@ const PageViewer: React.FC = () => {
             translationId={settings.translation}
             onClose={closeSheet}
           />
+
+          {/* ── Slide‑up playback sheet ── */}
+          {playbackSheetOpen && (
+            <div
+              className="playback-sheet"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 200,
+              }}
+            >
+              {/* Backdrop */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.5)",
+                }}
+                onClick={() => setPlaybackSheetOpen(false)}
+              />
+              {/* Sheet content – starts below the toolbar */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "56px", // height of .top-toolbar
+                  bottom: 0,
+                  width: "100%",
+                  background: "var(--color-bg-content, #f7f7f8)",
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  overflow: "hidden",
+                  animation: "slideUp 0.25s ease-out",
+                }}
+              >
+                <PlaybackSettings onClose={() => setPlaybackSheetOpen(false)} />
+              </div>
+            </div>
+          )}
         </div>
       </IonContent>
     </IonPage>
