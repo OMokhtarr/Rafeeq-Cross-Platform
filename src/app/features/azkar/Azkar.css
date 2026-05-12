@@ -22,11 +22,7 @@ ion-content::part(scroll) {
 }
 
 [data-theme="day"] .azkar-page-wrapper {
-  background: linear-gradient(
-    160deg,
-    var(--color-parchment-light, #faf7f0) 0%,
-    var(--color-parchment-mid, #f0ead6) 100%
-  );
+  background: #ffffff;
 }
 
 /* ── Container ────────────────────────────────────────────── */

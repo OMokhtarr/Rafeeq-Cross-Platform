@@ -528,7 +528,7 @@ const MushafPage: React.FC<Props> = ({
     <div
       className={`mushaf-page-glyph ${
         bigTextMode ? "mushaf-page-bigtext" : ""
-      }`}
+      } ${page <= 2 ? "mushaf-page-natural-width" : ""}`}
       ref={containerRef}
       style={{
         fontFamily: family,
