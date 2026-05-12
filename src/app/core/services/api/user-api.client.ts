@@ -8,6 +8,11 @@
  * Streaks come from the User API (GET /v1/streaks) and require a valid
  * user session; unauthenticated requests return 403 which the caller handles.
  */
+import {
+  getStoredAccessToken,
+  refreshAccessToken,
+  getStoredRefreshToken,
+} from "../auth/oauth.service";
 
 const USER_API_BASE =
   process.env.REACT_APP_USER_API_BASE ??
@@ -26,7 +31,26 @@ interface TokenState {
 let tokenState: TokenState | null = null;
 let tokenInflight: Promise<string> | null = null;
 
+// Replace the previously token-broker-only getAccessToken with this:
 async function getAccessToken(forceRefresh = false): Promise<string> {
+  // 1. Try user token if available
+  const userToken = await getStoredAccessToken();
+  if (userToken && !forceRefresh) {
+    return userToken;
+  }
+
+  // 2. If we have a refresh token, attempt silent refresh
+  const refreshToken = await getStoredRefreshToken();
+  if (refreshToken) {
+    try {
+      const newToken = await refreshAccessToken();
+      return newToken;
+    } catch {
+      // refresh failed, fall through to broker token
+    }
+  }
+
+  // 3. Fallback to machine‑to‑machine broker token
   const nowSec = Math.floor(Date.now() / 1000);
   if (!forceRefresh && tokenState && tokenState.expiresAt - 60 > nowSec) {
     return tokenState.accessToken;
@@ -35,8 +59,15 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
 
   tokenInflight = (async () => {
     const res = await fetch(TOKEN_BROKER_URL, { method: "POST" });
-    if (!res.ok) throw new UserApiError(res.status, `token broker failed: ${await res.text()}`);
-    const tok = (await res.json()) as { access_token: string; expires_in: number };
+    if (!res.ok)
+      throw new UserApiError(
+        res.status,
+        `token broker failed: ${await res.text()}`,
+      );
+    const tok = (await res.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     tokenState = {
       accessToken: tok.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tok.expires_in,

@@ -88,8 +88,9 @@
 
   /* ── LAYOUT ──────────────────────────────────────── */
 
-  --max-width-content: 700px;
-  --max-width-mobile: 600px;
+  --max-width-content: 500px;
+  --max-width-mobile: 500px;
+  --min-width-mobile: 320px;
   --touch-target: 44px;
 
   /* ── BOTTOM NAV ───────────────────────────────────
