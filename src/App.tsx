@@ -7,9 +7,9 @@ import {
   preloadAllPages,
   seedTextCorpus,
 } from "./app/core/services/data/quran.service";
+import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { Capacitor } from "@capacitor/core";
 
-// Core Ionic CSS
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
@@ -17,7 +17,6 @@ import "@ionic/react/css/typography.css";
 
 import "./App.css";
 
-// Feature pages
 import Home from "./app/features/home/pages/Home";
 import Azkar from "./app/features/azkar/Azkar";
 import PageViewer from "./app/features/viewer/PageViewer";
@@ -34,7 +33,6 @@ import PlaybackSettings from "./app/features/playback/PlaybackSettings";
 import Account from "./app/features/account/Account";
 import Bookmarks from "./app/features/bookmarks/Bookmarks";
 
-// App-wide context
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
@@ -54,23 +52,38 @@ const App: React.FC = () => {
   const history = useHistory();
 
   useEffect(() => {
+    // Seed Quran text corpus (works offline from bundled JSON)
     seedTextCorpus().catch(() => {});
 
+    // Quick network check to avoid long timeouts when offline
+    const networkOk = navigator.onLine;
+
+    if (!networkOk) {
+      // Skip API preloads entirely – metadata will load from IDB
+      initMetadata()
+        .then(() => setMetaReady(true))
+        .catch(() => setMetaReady(true));
+      return;
+    }
+
+    // Online path: init metadata, then preload pages and fonts
     initMetadata()
       .then(() => {
         setMetaReady(true);
+        // Start page preload
         preloadAllPages((done, total) => {
           setPreloadProgress({ done, total });
         });
+        // Start font preload in background (doesn't block UI)
+        preloadAllPageFonts().catch(() => {});
       })
       .catch((err) => {
         console.error("Metadata init failed:", err);
         setMetaReady(true);
-        preloadAllPages();
       });
   }, []);
 
-  // Listen for appUrlOpen events (native custom URL scheme)
+  // appUrlOpen listener (unchanged)
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") return;
 

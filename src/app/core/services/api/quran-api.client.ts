@@ -15,6 +15,7 @@
  */
 
 import type { VerseWord } from "../../../shared/models/verse.model";
+import { idb } from "../storage/idb.service";
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CONTENT_API_BASE =
@@ -516,7 +517,7 @@ export async function fetchTafsirForAyah(
   return { verseKey, text: stripHtml(raw) };
 }
 
-// ─── Recitations (dynamic) ────────────────────────────────────────────────────
+// ─── Recitations (dynamic, cached in IDB) ────────────────────────────────────
 
 export interface ApiRecitation {
   id: number;
@@ -529,28 +530,44 @@ interface RecitationsResponse {
   recitations: ApiRecitation[];
 }
 
-let recitationsCache: ApiRecitation[] | null = null;
-let recitationsPromise: Promise<ApiRecitation[]> | null = null;
+const RECITATIONS_IDB_KEY = "recitations_v1";
 
 export async function fetchRecitations(
   language = "en",
 ): Promise<ApiRecitation[]> {
-  if (recitationsCache) return recitationsCache;
-  if (recitationsPromise) return recitationsPromise;
+  // 1. Try IDB cache first (works offline)
+  try {
+    const cached = await idb.get<{ key: string; value: ApiRecitation[] }>(
+      "meta",
+      RECITATIONS_IDB_KEY,
+    );
+    if (cached?.value?.length) return cached.value;
+  } catch {}
 
-  recitationsPromise = (async () => {
+  // 2. Try network
+  try {
     const data = await apiFetch<RecitationsResponse>("/resources/recitations", {
       language,
     });
     const list = data.recitations ?? [];
-    recitationsCache = list;
+    if (list.length > 0) {
+      // Persist to IDB for offline use
+      idb
+        .put("meta", { key: RECITATIONS_IDB_KEY, value: list })
+        .catch(() => {});
+    }
     return list;
-  })();
-
-  try {
-    return await recitationsPromise;
-  } finally {
-    recitationsPromise = null;
+  } catch (err) {
+    // 3. Network failed, check IDB one more time (may have been populated by another tab)
+    try {
+      const cached = await idb.get<{ key: string; value: ApiRecitation[] }>(
+        "meta",
+        RECITATIONS_IDB_KEY,
+      );
+      if (cached?.value?.length) return cached.value;
+    } catch {}
+    // 4. Return empty – caller will fall back to hardcoded list
+    return [];
   }
 }
 

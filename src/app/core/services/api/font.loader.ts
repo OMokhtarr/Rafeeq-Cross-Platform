@@ -189,10 +189,9 @@ export function setMonoPaletteColor(color: string): void {
 function appendMonoRule(page: number, family: string, color: string): void {
   const styleEl = ensurePaletteStyleEl(MONO_STYLE_ID);
   const monoName = paletteNameForPage(page, "mono");
-  const overrides = Array.from(
-    { length: 10 },
-    (_, i) => `${i} ${color}`,
-  ).join(", ");
+  const overrides = Array.from({ length: 10 }, (_, i) => `${i} ${color}`).join(
+    ", ",
+  );
   styleEl.appendChild(
     document.createTextNode(
       `@font-palette-values ${monoName} { font-family: "${family}"; override-colors: ${overrides}; }\n`,
@@ -212,4 +211,35 @@ function ensurePaletteStyleEl(id: string): HTMLStyleElement {
 
 function pad3(n: number): string {
   return n.toString().padStart(3, "0");
+}
+
+// ─── Preload all 604 page fonts in the background ────────────────────────────
+let fontPreloadPromise: Promise<void> | null = null;
+
+export function preloadAllPageFonts(
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  if (fontPreloadPromise) return fontPreloadPromise;
+
+  fontPreloadPromise = (async () => {
+    let done = 0;
+    const total = 604;
+    // Bismillah font first (used on many pages)
+    try {
+      await ensureBismillahFont();
+    } catch {}
+
+    for (let p = 1; p <= total; p++) {
+      try {
+        await ensurePageFont(p);
+      } catch {
+        // skip individual failures
+      }
+      done++;
+      onProgress?.(done, total);
+      // yield to the browser every 10 pages
+      if (done % 10 === 0) await new Promise((r) => setTimeout(r, 0));
+    }
+  })();
+  return fontPreloadPromise;
 }
