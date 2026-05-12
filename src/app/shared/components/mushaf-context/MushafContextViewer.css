@@ -25,17 +25,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-header, #1c1c1c) 0%,
-    var(--color-bg-header, #1c1c1c) 100%
-  );
+  background: #1c1c1c;
   border-bottom: 2px solid var(--color-gold, #d4b48c);
   flex-shrink: 0;
   direction: rtl;
   gap: 6px;
   width: 100%;
   box-sizing: border-box;
+}
+
+[data-theme="day"] .mcv-header {
+  background: #ffffff;
+  border-bottom: 2px solid var(--color-gold, #d4b48c);
 }
 
 .mcv-header-title {
@@ -68,6 +69,12 @@
   font-family: "Traditional Arabic", "Amiri", serif;
 }
 
+[data-theme="day"] .mcv-hizb-badge {
+  color: #5a4000;
+  background: rgba(180, 134, 11, 0.1);
+  border-color: rgba(180, 134, 11, 0.35);
+}
+
 .mcv-page-nav {
   display: flex;
   align-items: center;
@@ -77,6 +84,11 @@
   border: 1px solid rgba(212, 180, 140, 0.3);
   border-radius: 8px;
   overflow: hidden;
+}
+
+[data-theme="day"] .mcv-page-nav {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .mcv-nav-btn {
@@ -113,6 +125,12 @@
   border-right: 1px solid rgba(212, 180, 140, 0.25);
   border-left: 1px solid rgba(212, 180, 140, 0.25);
   line-height: 26px;
+}
+
+[data-theme="day"] .mcv-page-num {
+  color: #1c1c1c;
+  border-right-color: rgba(0, 0, 0, 0.15);
+  border-left-color: rgba(0, 0, 0, 0.15);
 }
 
 .mcv-header-actions {
@@ -160,6 +178,14 @@
 }
 .mcv-close-btn:hover {
   background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="day"] .mcv-close-btn {
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #1c1c1c;
+}
+[data-theme="day"] .mcv-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* Hint button — sits next to jump/close in the header. */

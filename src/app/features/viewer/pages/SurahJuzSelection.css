@@ -8,11 +8,7 @@
   width: 100%;
   min-width: var(--min-width-mobile, 320px);
   height: 100%;
-  background: linear-gradient(
-    160deg,
-    var(--color-parchment-light, #faf7f0) 0%,
-    var(--color-parchment-mid, #f0ead6) 100%
-  );
+  background: #ffffff;
   color: var(--color-text-primary, #1c1c1c);
   overflow: hidden;
 }
@@ -248,6 +244,12 @@
   font-family: var(--font-latin, Georgia, serif);
   font-weight: 700;
   font-size: 0.95rem;
+  background: rgba(180, 134, 11, 0.12);
+  color: #8a6200;
+}
+
+[data-theme="night"] .sjs-num,
+[data-theme="dark"] .sjs-num {
   background: rgba(212, 180, 140, 0.18);
   color: var(--color-gold, #d4b48c);
 }
@@ -269,8 +271,8 @@
 
 /* Hizb & rub numbers now use gold */
 .sjs-num-hizb {
-  background: rgba(212, 180, 140, 0.18);
-  color: var(--color-gold, #d4b48c);
+  background: rgba(180, 134, 11, 0.12);
+  color: #8a6200;
 }
 
 [data-theme="night"] .sjs-num-hizb,

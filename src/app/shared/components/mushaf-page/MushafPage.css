@@ -43,22 +43,35 @@
   white-space: normal;
 }
 
-/* Bismillah: keep centered */
+/* Bismillah: keep centered. Forced to pure monochrome (black on day, white on
+   night) to match the printed Mushaf's ornamental ink — separate from the
+   parchment-tinted body text color (--color-mushaf-text). */
 .mushaf-bismillah {
   text-align: center;
   font-size: 0.85em;
   margin-bottom: 0.2em;
-  color: var(--color-mushaf-text);
+  color: #000000;
+}
+
+[data-theme="night"] .mushaf-bismillah {
+  color: #ffffff;
 }
 
 .mushaf-line {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: space-between;
   align-items: baseline;
   white-space: nowrap;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Pages 1 (Al-Fatiha) and 2 (Al-Baqarah opening) are typeset centered in the
+   printed Madani Mushaf — lines are naturally short and should not stretch
+   edge-to-edge. Every other page justifies its lines to fill the column. */
+.mushaf-page-natural-width .mushaf-line {
+  justify-content: center;
 }
 
 .mushaf-word {
@@ -210,9 +223,12 @@
   color: #6ee7a3 !important;
 }
 
-/* Decorative surah header */
+/* Decorative surah header. The ink (frame fill + name text) is forced to
+   pure monochrome — black on day, white on night — to match the printed
+   Mushaf's ornamental style. The background follows the page parchment so
+   the header sits flush against the page without a visible seam. */
 .mushaf-surah-header {
-  --sh-ink: var(--color-mushaf-text, #1a1a1a);
+  --sh-ink: #000000;
   --sh-bg: var(--color-mushaf-bg);
   position: relative;
   display: flex;
@@ -239,6 +255,10 @@
   border-radius: 0;
   background: var(--sh-ink);
   box-shadow: none;
+}
+
+[data-theme="night"] .mushaf-surah-header {
+  --sh-ink: #ffffff;
 }
 
 .mushaf-surah-header-name {
