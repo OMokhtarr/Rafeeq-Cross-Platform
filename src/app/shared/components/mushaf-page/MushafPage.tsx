@@ -222,47 +222,29 @@ const MushafPage: React.FC<Props> = ({
         Math.max(0, lineCount - 1) * LINE_GAP_RATIO;
       const heightFit = Math.floor((availH * 0.99) / emPerPx);
 
-      // Width-based clamp.
-      //
-      // KEY FIX — read the ACTUAL rendered font size from the DOM rather than
-      // using the stale `fittedFontPx` state value. Using stale state caused
-      // an oscillation loop across renders:
-      //
-      //   font shrinks → lines become narrower → widthFit grows →
-      //   font grows   → lines become wider    → widthFit shrinks → repeat
-      //
-      // Reading window.getComputedStyle(el).fontSize gives us the font size
-      // that was actually used to paint the line widths we are measuring right
-      // now, so the ratio (availW / maxNatural) * actualFontPx converges in a
-      // single pass instead of oscillating.
-      const lineNodes = el.querySelectorAll<HTMLElement>(".mushaf-line");
-
       let widthFit = FONT_MAX;
-      if (lineNodes.length > 0) {
-        const actualFontPx =
-          parseFloat(window.getComputedStyle(el).fontSize) || FONT_MAX;
-
+      const lineNodes = el.querySelectorAll<HTMLElement>(".mushaf-line");
+      if (lineNodes.length > 0 && fittedFontPx) {
+        let maxNatural = 0;
         for (const ln of lineNodes) {
           let sum = 0;
-          let circleCount = 0;
           for (const child of Array.from(ln.children) as HTMLElement[]) {
             sum += child.getBoundingClientRect().width;
-            if (child.classList.contains("mushaf-ayah-end")) circleCount++;
           }
-          if (sum > 0) {
-            const safetyFactor = circleCount > 1 ? 0.91 : 0.97;
-            const lineWidthFit = Math.floor(
-              (availW * safetyFactor * actualFontPx) / sum,
-            );
-            if (lineWidthFit < widthFit) widthFit = lineWidthFit;
-          }
+          if (sum > maxNatural) maxNatural = sum;
+        }
+        if (maxNatural > 0) {
+          widthFit = Math.floor((availW * 0.97 * fittedFontPx) / maxNatural);
         }
       }
 
-      const best = Math.min(heightFit, widthFit);
-      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, best));
-      // Only update state when the value actually changes to avoid re-render loops
-      setFittedFontPx((prev) => (prev === clamped ? prev : clamped));
+      const target = Math.min(heightFit, widthFit);
+      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, target));
+
+      // Only update state if the value has changed
+      if (clamped !== fittedFontPx) {
+        setFittedFontPx(clamped);
+      }
     };
 
     computeFit();

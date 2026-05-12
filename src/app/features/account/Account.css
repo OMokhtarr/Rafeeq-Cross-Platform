@@ -8,6 +8,10 @@
   min-height: 100%;
   background: var(--color-bg-app, #0d1f14);
   color: var(--color-text-primary, #e8e8e8);
+  max-width: var(--max-width-mobile, 600px);
+  min-width: var(--min-width-mobile, 320px);
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Header ── */
@@ -174,7 +178,9 @@
 }
 
 @keyframes account-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .account-error {

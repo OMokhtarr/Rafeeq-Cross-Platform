@@ -1,0 +1,17 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Rafeeq OAuth</title>
+  </head>
+  <body>
+    <script>
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        // On Android, this will open the app via the custom scheme
+        window.location.href = `com.rafeeq.quranquiz://auth/callback?code=${code}`;
+      }
+    </script>
+  </body>
+</html>

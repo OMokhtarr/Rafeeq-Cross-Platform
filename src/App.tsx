@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { Route, Redirect } from "react-router-dom";
+import { Route, Redirect, useHistory } from "react-router-dom";
 import { initMetadata } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
   seedTextCorpus,
 } from "./app/core/services/data/quran.service";
+import { Capacitor } from "@capacitor/core";
 
 // Core Ionic CSS
 import "@ionic/react/css/core.css";
@@ -38,6 +39,8 @@ import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
+import AuthCallback from "./app/core/services/auth/AuthCallback";
+import { exchangeCodeForToken } from "./app/core/services/auth/oauth.service";
 
 setupIonicReact({ mode: "md" });
 
@@ -48,20 +51,16 @@ const App: React.FC = () => {
     total: 604,
   });
 
+  const history = useHistory();
+
   useEffect(() => {
-    // Kick off the offline corpus seed in parallel with metadata init —
-    // this is what unlocks search before the API preload finishes (and
-    // even on a brand-new install with no network).
-    seedTextCorpus().catch(() => {
-      /* logged in service; safe to ignore here */
-    });
+    seedTextCorpus().catch(() => {});
 
     initMetadata()
       .then(() => {
         setMetaReady(true);
         preloadAllPages((done, total) => {
           setPreloadProgress({ done, total });
-          console.debug(`Preloaded page ${done}/${total}`);
         });
       })
       .catch((err) => {
@@ -69,6 +68,26 @@ const App: React.FC = () => {
         setMetaReady(true);
         preloadAllPages();
       });
+  }, []);
+
+  // Listen for appUrlOpen events (native custom URL scheme)
+  useEffect(() => {
+    if (Capacitor.getPlatform() === "web") return;
+
+    const handleUrlOpen = async (data: any) => {
+      const url = new URL(data.url);
+      const code = url.searchParams.get("code");
+      if (code) {
+        await exchangeCodeForToken(code);
+        history.replace("/account");
+      }
+    };
+
+    const app = Capacitor.Plugins?.App as any;
+    if (app?.addListener) {
+      app.addListener("appUrlOpen", handleUrlOpen);
+      return () => app.removeListener("appUrlOpen", handleUrlOpen);
+    }
   }, []);
 
   if (!metaReady) {
@@ -109,50 +128,61 @@ const App: React.FC = () => {
       <LanguageProvider>
         <VerseVisibilityProvider>
           <PlaybackProvider>
-          <IonApp>
-            {preloadProgress.done < preloadProgress.total && (
-              <div className="global-preload-bar">
-                <div
-                  className="global-preload-fill"
-                  style={{
-                    width: `${(preloadProgress.done / preloadProgress.total) * 100}%`,
-                  }}
-                />
-              </div>
-            )}
-            <IonReactRouter>
-              <IonRouterOutlet id="main">
-                <Route exact path="/" component={Home} />
-                <Route exact path="/viewer" component={PageViewer} />
-                <Route exact path="/surah-juz" component={SurahJuzSelection} />
-                <Route exact path="/search" component={Search} />
-                <Route exact path="/search/results" component={SearchResults} />
-                <Route exact path="/azkar" component={Azkar} />
-                <Route exact path="/quiz-list" component={QuizList} />
-                <Route
-                  exact
-                  path="/akmel-alayah-setup"
-                  component={AkmelAlAyahSetup}
-                />
-                <Route exact path="/akmel-alayah" component={AkmelAlAyah} />
-                <Route
-                  exact
-                  path="/mutashabihat-setup"
-                  component={MutashabihatSetup}
-                />
-                <Route
-                  exact
-                  path="/mutashabihat-test"
-                  component={MutashabihatTest}
-                />
-                <Route exact path="/account" component={Account} />
-                <Route exact path="/bookmarks" component={Bookmarks} />
-                <Route exact path="/settings" component={Settings} />
-                <Route exact path="/playback" component={PlaybackSettings} />
-                <Redirect exact from="/home" to="/" />
-              </IonRouterOutlet>
-            </IonReactRouter>
-          </IonApp>
+            <IonApp>
+              {preloadProgress.done < preloadProgress.total && (
+                <div className="global-preload-bar">
+                  <div
+                    className="global-preload-fill"
+                    style={{
+                      width: `${
+                        (preloadProgress.done / preloadProgress.total) * 100
+                      }%`,
+                    }}
+                  />
+                </div>
+              )}
+              <IonReactRouter>
+                <IonRouterOutlet id="main">
+                  <Route exact path="/" component={Home} />
+                  <Route exact path="/auth/callback" component={AuthCallback} />
+                  <Route exact path="/viewer" component={PageViewer} />
+                  <Route
+                    exact
+                    path="/surah-juz"
+                    component={SurahJuzSelection}
+                  />
+                  <Route exact path="/search" component={Search} />
+                  <Route
+                    exact
+                    path="/search/results"
+                    component={SearchResults}
+                  />
+                  <Route exact path="/azkar" component={Azkar} />
+                  <Route exact path="/quiz-list" component={QuizList} />
+                  <Route
+                    exact
+                    path="/akmel-alayah-setup"
+                    component={AkmelAlAyahSetup}
+                  />
+                  <Route exact path="/akmel-alayah" component={AkmelAlAyah} />
+                  <Route
+                    exact
+                    path="/mutashabihat-setup"
+                    component={MutashabihatSetup}
+                  />
+                  <Route
+                    exact
+                    path="/mutashabihat-test"
+                    component={MutashabihatTest}
+                  />
+                  <Route exact path="/account" component={Account} />
+                  <Route exact path="/bookmarks" component={Bookmarks} />
+                  <Route exact path="/settings" component={Settings} />
+                  <Route exact path="/playback" component={PlaybackSettings} />
+                  <Redirect exact from="/home" to="/" />
+                </IonRouterOutlet>
+              </IonReactRouter>
+            </IonApp>
           </PlaybackProvider>
         </VerseVisibilityProvider>
       </LanguageProvider>

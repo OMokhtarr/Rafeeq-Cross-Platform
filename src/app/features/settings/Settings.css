@@ -29,6 +29,7 @@ ion-content::part(scroll) {
 .settings-container {
   width: 100%;
   max-width: 600px;
+  min-width: var(--min-width-mobile, 320px);
   flex: 1;
   overflow-y: auto;
   box-sizing: border-box;
