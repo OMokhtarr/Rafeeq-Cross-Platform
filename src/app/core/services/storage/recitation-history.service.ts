@@ -1,12 +1,11 @@
 /**
- * Recitation session history – localStorage, last 5 sessions.
+ * Recitation session history – localStorage, unlimited sessions.
  *
  * Stores the full playback queue so a session can be resumed exactly
  * where it was left off.
  */
 
 const STORAGE_KEY = "rafiq_recitation_history_v1";
-const MAX_SESSIONS = 5;
 
 export interface VerseKey {
   sura: number;
@@ -41,7 +40,7 @@ function saveSessions(sessions: RecitationSession[]): void {
   } catch {}
 }
 
-/** Push a new session to the front, keeping at most MAX_SESSIONS. */
+/** Push a new session to the front. */
 export function recordRecitationSession(
   verseKey: string,
   elapsedSeconds: number,
@@ -86,17 +85,16 @@ export function recordRecitationSession(
       };
       // Remove the old one, put updated at front
       const filtered = existing.filter((_, i) => i !== matchIdx);
-      saveSessions([updated, ...filtered].slice(0, MAX_SESSIONS));
+      saveSessions([updated, ...filtered]);
       return;
     }
   }
 
   // No match found → prepend new session
-  const updated = [session, ...existing].slice(0, MAX_SESSIONS);
-  saveSessions(updated);
+  saveSessions([session, ...existing]);
 }
 
-/** Return up to MAX_SESSIONS recent sessions, newest first. */
+/** Return all sessions, newest first. */
 export function getRecitationHistory(): RecitationSession[] {
   return loadSessions();
 }

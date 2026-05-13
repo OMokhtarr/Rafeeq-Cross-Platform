@@ -13,6 +13,7 @@ import { useHistory } from "react-router-dom";
 import { useTheme } from "../../core/context/ThemeContext";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
   MUSHAFS,
   DEFAULT_MUSHAF,
@@ -260,6 +261,7 @@ interface SelectRowProps {
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
+  night?: boolean;
 }
 const SelectRow: React.FC<SelectRowProps> = ({
   icon,
@@ -268,8 +270,9 @@ const SelectRow: React.FC<SelectRowProps> = ({
   value,
   options,
   onChange,
+  night,
 }) => (
-  <div className="settings-row">
+  <div className="settings-row settings-row--select">
     <div className="settings-row-info">
       <span className="settings-row-icon">{icon}</span>
       <div className="settings-row-text">
@@ -277,17 +280,12 @@ const SelectRow: React.FC<SelectRowProps> = ({
         {desc && <p className="settings-row-desc">{desc}</p>}
       </div>
     </div>
-    <select
-      className="settings-select"
+    <InlineSelect
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+      options={options}
+      onChange={onChange}
+      night={night}
+    />
   </div>
 );
 
@@ -438,6 +436,7 @@ const Settings: React.FC = () => {
                     label: lang === "ar" ? m.labelAr : m.labelEn,
                   }))}
                   onChange={(v) => set("mushaf", v as MushafKind)}
+                  night={isNight}
                 />
                 <ToggleRow
                   icon={ICONS.palette}

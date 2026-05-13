@@ -111,9 +111,10 @@ export function usePlaybackQueue(
     el.preload = "auto";
     el.playbackRate = playbackRateRef.current;
 
-    // Attach state‑updating listeners immediately
+    // Attach state‑updating listeners — ignore events that fire during
+    // verse transitions (isLoading true) to prevent play/pause icon flicker.
     el.addEventListener("pause", () =>
-      setState((s) => (s.isPlaying ? { ...s, isPlaying: false } : s)),
+      setState((s) => (s.isPlaying && !s.isLoading ? { ...s, isPlaying: false } : s)),
     );
     el.addEventListener("play", () =>
       setState((s) => (s.isPlaying ? s : { ...s, isPlaying: true })),
@@ -131,15 +132,20 @@ export function usePlaybackQueue(
     return el;
   }, []);
 
-  const updateMediaSession = useCallback((verseKey: string) => {
+  const updateMediaSession = useCallback((verseKey: string, playing: boolean) => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator))
       return;
     const [s, a] = verseKey.split(":");
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: `${s}:${a}`,
-        artist: "Rafeeq",
+        title: `سورة ${s} — آية ${a}`,
+        artist: "رفيق",
+        album: "القرآن الكريم",
+        artwork: [
+          { src: "/images/rafeeq.png", sizes: "512x512", type: "image/png" },
+        ],
       });
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     } catch {
       /* ignore */
     }
@@ -174,6 +180,10 @@ export function usePlaybackQueue(
     indexRef.current = 0;
     verseRepeatCountRef.current = 0;
     rangePassCountRef.current = 0;
+    try {
+      if ("mediaSession" in navigator)
+        navigator.mediaSession.playbackState = "none";
+    } catch {}
     setState(INITIAL_STATE);
   }, [releaseCurrentBlob]);
 
@@ -278,7 +288,7 @@ export function usePlaybackQueue(
         // Re‑bind ended after every successful play
         bindEnded();
 
-        updateMediaSession(verseKey);
+        updateMediaSession(verseKey, true);
         setState((s) => ({
           ...s,
           isPlaying: true,
@@ -348,6 +358,30 @@ export function usePlaybackQueue(
     };
   }, [stop]);
 
+  // Play bismillah (1:1) as a silent intro — no queue/state changes.
+  // Resolves when the audio ends or on any error (non-fatal).
+  const playBismillahIntro = useCallback(async (): Promise<void> => {
+    try {
+      const blobUrl = await getCachedOrDownload(reciterRef.current, 1, 1);
+      const el = ensureEl();
+      el.src = blobUrl;
+      el.playbackRate = playbackRateRef.current;
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          el.removeEventListener("ended", done);
+          el.removeEventListener("error", done);
+          resolve();
+        };
+        el.addEventListener("ended", done);
+        el.addEventListener("error", done);
+        el.play().catch(resolve);
+      });
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Never block the main recitation if bismillah fails
+    }
+  }, [ensureEl]);
+
   // start: initiate playback and background prefetch
   const start = useCallback(
     async (queue: VerseKey[]) => {
@@ -363,6 +397,18 @@ export function usePlaybackQueue(
       prefetchAbortRef.current = controller;
 
       ensureEl();
+
+      // Play bismillah intro when starting at aya 1 of any surah
+      // except Al-Fatiha (sura 1, whose verse 1 is already the bismillah)
+      // and At-Tawbah (sura 9, which has no bismillah by tradition).
+      const first = queue[0];
+      if (first.aya === 1 && first.sura !== 1 && first.sura !== 9) {
+        setState((s) => ({ ...s, currentVerse: `${first.sura}:${first.aya}`, isLoading: true }));
+        await playBismillahIntro();
+        // If stop() was called while bismillah was playing, bail out
+        if (queueRef.current.length === 0) return;
+      }
+
       await playIndex(0);
 
       const reciter = reciterRef.current;
@@ -382,7 +428,7 @@ export function usePlaybackQueue(
       };
       prefetchAll();
     },
-    [ensureEl, playIndex],
+    [ensureEl, playIndex, playBismillahIntro],
   );
 
   const pause = useCallback(() => {
@@ -396,12 +442,20 @@ export function usePlaybackQueue(
       );
     }
     el?.pause();
+    try {
+      if ("mediaSession" in navigator)
+        navigator.mediaSession.playbackState = "paused";
+    } catch {}
   }, []);
 
   const resume = useCallback(async () => {
     const el = audioRef.current;
     if (el && el.src) {
       await el.play().catch(() => {});
+      try {
+        if ("mediaSession" in navigator)
+          navigator.mediaSession.playbackState = "playing";
+      } catch {}
     }
   }, []);
 

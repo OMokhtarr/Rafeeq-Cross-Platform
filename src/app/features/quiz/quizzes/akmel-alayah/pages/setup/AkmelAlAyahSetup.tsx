@@ -5,6 +5,7 @@ import { Preferences } from "@capacitor/preferences";
 import {
   getChapters,
   getSurahNameArabic,
+  getSurahNameEnglish,
 } from "../../../../../../core/services/data/metadata.service";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { useLang } from "../../../../../../core/context/LanguageContext";
@@ -27,9 +28,15 @@ const AkmelAlAyahSetup: React.FC = () => {
   const [questionCount, setQuestionCount] = useState(10);
 
   // Build surah names list from metadata service
-  const surahNamesArabic = useMemo(() => {
+  const surahNames = useMemo(() => {
     const chapters = getChapters();
-    return ["", ...chapters.map((ch) => ch.name_arabic)];
+    return [
+      null,
+      ...chapters.map((ch, i) => ({
+        arabic: ch.name_arabic,
+        english: getSurahNameEnglish(i + 1),
+      })),
+    ];
   }, []);
 
   const toggleJuz = (j: number) =>
@@ -104,7 +111,7 @@ const AkmelAlAyahSetup: React.FC = () => {
                     )}
                   </label>
                   <div className="aa-surah-grid">
-                    {surahNamesArabic.slice(1, 115).map((name, i) => {
+                    {surahNames.slice(1, 115).map((entry, i) => {
                       const num = i + 1;
                       return (
                         <button
@@ -114,8 +121,11 @@ const AkmelAlAyahSetup: React.FC = () => {
                           }`}
                           onClick={() => setSelectedSurah(num)}
                         >
-                          <span className="aa-chip-name" lang="ar" dir="rtl">
-                            {name}
+                          <span className="aa-chip-text">
+                            <span className="aa-chip-name" lang="ar" dir="rtl">
+                              {entry!.arabic}
+                            </span>
+                            <span className="aa-chip-en">{entry!.english}</span>
                           </span>
                           <span className="aa-chip-num">{toHindi(num)}</span>
                         </button>

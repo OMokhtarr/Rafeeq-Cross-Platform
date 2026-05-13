@@ -36,6 +36,19 @@ import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
 
+// ─── Last-page persistence ────────────────────────────────────────────────────
+const LAST_PAGE_KEY = "rafiq_last_page_v1";
+function saveLastPage(page: number) {
+  try { localStorage.setItem(LAST_PAGE_KEY, String(page)); } catch {}
+}
+function loadLastPage(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_PAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(n) && n >= 1 && n <= 604 ? n : null;
+  } catch { return null; }
+}
+
 // ─── Settings helpers ─────────────────────────────────────────────────────────
 const SETTINGS_KEY = "rafiq_settings_v1";
 
@@ -80,7 +93,8 @@ const PageViewer: React.FC = () => {
   const initialPage = (() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
-    return Number.isFinite(raw) && raw >= 1 ? raw : 1;
+    if (Number.isFinite(raw) && raw >= 1) return raw;
+    return loadLastPage() ?? 1;
   })();
 
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -95,6 +109,7 @@ const PageViewer: React.FC = () => {
   const [reciteMode, setReciteMode] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
+  const sheetOpenTimeRef = useRef<number>(0);
 
   const handlePlayPressStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
@@ -109,13 +124,40 @@ const PageViewer: React.FC = () => {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
       if (!reciteMode) {
-        setPlaybackSheetOpen(true); // open slide‑up sheet instead of navigating
+        sheetOpenTimeRef.current = Date.now();
+      setPlaybackSheetOpen(true); // open slide‑up sheet instead of navigating
       }
     }
   }, [reciteMode]);
 
-  const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
+  // playbackVerse: static grey highlight tracking the currently playing verse
+  const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
+  // flashVerse: transient flash used for bookmark / URL navigation jumps
+  const [flashVerse, setFlashVerse] = useState<string | null>(null);
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
+
+  const lastPlaybackVerse = useRef<string | null>(null);
+
+  // Keep playback highlight in sync with the active verse, auto-navigate page.
+  useEffect(() => {
+    const v = queue.state.currentVerse;
+    if (!v || (!queue.state.isPlaying && !queue.state.isLoading)) {
+      if (lastPlaybackVerse.current !== null) {
+        setPlaybackVerse(null);
+        lastPlaybackVerse.current = null;
+      }
+      return;
+    }
+    if (v === lastPlaybackVerse.current) return;
+    lastPlaybackVerse.current = v;
+    setPlaybackVerse(v);
+    setPlaybackSheetOpen(false);
+    const [suraStr, ayaStr] = v.split(":");
+    const targetPage = estimatePageForVerse(parseInt(suraStr, 10), parseInt(ayaStr, 10));
+    if (targetPage && targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+    }
+  }, [queue.state.currentVerse, queue.state.isPlaying, queue.state.isLoading]);
 
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
@@ -154,13 +196,14 @@ const PageViewer: React.FC = () => {
     }
     const v = params.get("v");
     if (v && /^\d+:\d+$/.test(v)) {
-      setHighlightedVerse(v);
-      const tid = setTimeout(() => setHighlightedVerse(null), 3000);
+      setFlashVerse(v);
+      const tid = setTimeout(() => setFlashVerse(null), 3000);
       return () => clearTimeout(tid);
     }
   }, [location.search]);
 
   useEffect(() => {
+    saveLastPage(currentPage);
     let cancelled = false;
     setLoading(true);
     setVerses([]);
@@ -172,7 +215,6 @@ const PageViewer: React.FC = () => {
       }
       setVerses(pageVerses);
       setLoading(false);
-      setHighlightedVerse(null);
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -501,6 +543,28 @@ const PageViewer: React.FC = () => {
                     <rect x="5" y="5" width="14" height="14" rx="2" />
                   </svg>
                 </button>
+                <button
+                  className="toolbar-button playback-settings"
+                  onClick={() => {
+                    sheetOpenTimeRef.current = Date.now();
+                    setPlaybackSheetOpen(true);
+                  }}
+                  aria-label={t.playback.title}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="19" x2="12" y2="5" />
+                    <polyline points="5 12 12 5 19 12" />
+                  </svg>
+                </button>
               </div>
             ) : (
               <button
@@ -509,7 +573,10 @@ const PageViewer: React.FC = () => {
                 onClick={() => history.push(`/surah-juz?page=${currentPage}`)}
                 aria-label={t.mushaf.surahsAndJuz}
               >
-                <span className="pill-surah">{pageInfo?.suraNameAr}</span>
+                <span className="pill-surah-row">
+                  <span className="pill-surah">{pageInfo?.suraNameAr}</span>
+                  <span className="pill-surah-en">{pageInfo?.suraName}</span>
+                </span>
                 <span className="pill-meta">
                   <span>
                     {t.mushaf.page}{" "}
@@ -632,10 +699,18 @@ const PageViewer: React.FC = () => {
                   green={greenVerse ? new Set([greenVerse]) : undefined}
                   onVerseLongPress={handleVerseLongPress}
                   target={
-                    highlightedVerse
+                    playbackVerse
                       ? {
-                          sura: parseInt(highlightedVerse.split(":")[0]),
-                          aya: parseInt(highlightedVerse.split(":")[1]),
+                          sura: parseInt(playbackVerse.split(":")[0]),
+                          aya: parseInt(playbackVerse.split(":")[1]),
+                        }
+                      : undefined
+                  }
+                  flash={
+                    flashVerse
+                      ? {
+                          sura: parseInt(flashVerse.split(":")[0]),
+                          aya: parseInt(flashVerse.split(":")[1]),
                         }
                       : undefined
                   }
@@ -678,14 +753,21 @@ const PageViewer: React.FC = () => {
                 zIndex: 200,
               }}
             >
-              {/* Backdrop */}
+              {/* Backdrop – only closes on direct tap, not bubbled events, and not the same gesture that opened it */}
               <div
                 style={{
                   position: "absolute",
                   inset: 0,
                   background: "rgba(0,0,0,0.5)",
                 }}
-                onClick={() => setPlaybackSheetOpen(false)}
+                onPointerDown={(e) => {
+                  if (
+                    e.target === e.currentTarget &&
+                    Date.now() - sheetOpenTimeRef.current > 300
+                  ) {
+                    setPlaybackSheetOpen(false);
+                  }
+                }}
               />
               {/* Sheet content – starts below the toolbar */}
               <div
@@ -700,8 +782,10 @@ const PageViewer: React.FC = () => {
                   overflow: "hidden",
                   animation: "slideUp 0.25s ease-out",
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               >
-                <PlaybackSettings onClose={() => setPlaybackSheetOpen(false)} />
+                <PlaybackSettings onClose={() => setPlaybackSheetOpen(false)} currentPage={currentPage} />
               </div>
             </div>
           )}

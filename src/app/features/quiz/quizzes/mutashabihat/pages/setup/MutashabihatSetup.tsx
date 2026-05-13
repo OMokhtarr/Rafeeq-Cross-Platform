@@ -2,7 +2,10 @@ import React, { useState, useMemo } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
-import { getChapters } from "../../../../../../core/services/data/metadata.service";
+import {
+  getChapters,
+  getSurahNameEnglish,
+} from "../../../../../../core/services/data/metadata.service";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
@@ -25,10 +28,15 @@ const MutashabihatSetup: React.FC = () => {
   const [questionCount, setQuestionCount] = useState(10);
 
   // Build surah names list from metadata service
-  const surahNamesArabic = useMemo(() => {
+  const surahNames = useMemo(() => {
     const chapters = getChapters();
-    // index 0 is empty, so return ['', ...names]
-    return ["", ...chapters.map((ch) => ch.name_arabic)];
+    return [
+      null,
+      ...chapters.map((ch, i) => ({
+        arabic: ch.name_arabic,
+        english: getSurahNameEnglish(i + 1),
+      })),
+    ];
   }, []);
 
   const toggleSurah = (num: number) =>
@@ -108,7 +116,7 @@ const MutashabihatSetup: React.FC = () => {
                     )}
                   </label>
                   <div className="ms-surah-grid">
-                    {surahNamesArabic.slice(1, 115).map((name, i) => {
+                    {surahNames.slice(1, 115).map((entry, i) => {
                       const num = i + 1;
                       return (
                         <button
@@ -118,8 +126,11 @@ const MutashabihatSetup: React.FC = () => {
                           }`}
                           onClick={() => toggleSurah(num)}
                         >
-                          <span className="ms-chip-name" lang="ar" dir="rtl">
-                            {name}
+                          <span className="ms-chip-text">
+                            <span className="ms-chip-name" lang="ar" dir="rtl">
+                              {entry!.arabic}
+                            </span>
+                            <span className="ms-chip-en">{entry!.english}</span>
                           </span>
                           <span className="ms-chip-num">{toHindi(num)}</span>
                         </button>

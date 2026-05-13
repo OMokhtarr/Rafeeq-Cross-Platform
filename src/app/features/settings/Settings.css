@@ -129,6 +129,18 @@ ion-content::part(scroll) {
   background: var(--color-gold-faint);
 }
 
+.settings-row--select {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.settings-row--select .settings-row-info {
+  width: 100%;
+}
+.settings-row--select .isel {
+  width: 100%;
+}
+
 .settings-row-info {
   display: flex;
   align-items: center;
