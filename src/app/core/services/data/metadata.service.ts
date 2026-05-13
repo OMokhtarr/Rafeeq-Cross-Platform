@@ -733,7 +733,7 @@ export function getSurahNameArabic(suraId: number): string {
 }
 export function getSurahNameEnglish(suraId: number): string {
   const ch = chaptersCache.find((c: any) => c.id === suraId);
-  return ch?.translated_name?.name ?? `Surah ${suraId}`;
+  return ch?.name_simple ?? ch?.translated_name?.name ?? `Surah ${suraId}`;
 }
 export function getSurahStartPage(suraId: number): number {
   const ch = chaptersCache.find((c: any) => c.id === suraId);

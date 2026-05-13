@@ -64,7 +64,7 @@ const SurahJuzSelection: React.FC = () => {
     return chapters.map((ch) => ({
       num: ch.id,
       ar: ch.name_arabic,
-      en: ch.translated_name?.name ?? "",
+      en: ch.name_simple ?? ch.translated_name?.name ?? "",
       ayahs: ch.verses_count,
       revelation: ch.revelation_place === "makkah" ? "meccan" : "medinan",
       startPage: ch.pages[0],

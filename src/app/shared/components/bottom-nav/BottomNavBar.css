@@ -15,8 +15,7 @@
     env(safe-area-inset-left);
   flex-shrink: 0;
   box-sizing: border-box;
-  /* design system shadow-toolbar — subtle lift above content */
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
   transition:
     background var(--transition-theme, 0.25s ease),
     border-color var(--transition-theme, 0.25s ease);

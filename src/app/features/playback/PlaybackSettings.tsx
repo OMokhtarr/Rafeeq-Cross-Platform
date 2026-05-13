@@ -4,6 +4,7 @@ import { useHistory, useLocation } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import { usePlayback } from "../../core/context/PlaybackContext";
+import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
   type RepeatMode,
   type VerseKey,
@@ -134,9 +135,10 @@ interface SurahDownloadState {
 
 interface Props {
   onClose?: () => void;
+  currentPage?: number;
 }
 
-const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
+const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPageProp }) => {
   const history = useHistory();
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
@@ -228,7 +230,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
     onClose?.();
   };
 
-  const currentPage = startPageQuery;
+  const currentPage = currentPageProp ?? startPageQuery;
   const currentSura = getPageStart(currentPage)?.sura ?? 1;
   const currentJuz = Math.ceil(currentPage / 20);
   const currentHizb = Math.ceil(currentPage / 10);
@@ -281,7 +283,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
     () =>
       getChapters().map((c) => ({
         value: c.id,
-        label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${
+        label: `${lang === "ar" ? c.name_arabic : (c.name_simple ?? c.translated_name?.name)} (${
           c.id
         })`,
         versesCount: c.verses_count as number,
@@ -334,7 +336,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
     () =>
       getChapters().map((c) => ({
         value: c.id,
-        label: `${lang === "ar" ? c.name_arabic : c.translated_name?.name} (${
+        label: `${lang === "ar" ? c.name_arabic : (c.name_simple ?? c.translated_name?.name)} (${
           c.id
         })`,
       })),
@@ -351,38 +353,28 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
 
     return (
       <div className={`pb-verse-picker${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
-        <select
-          className={`pb-select${nightCls}`}
-          value={value.sura}
-          onChange={(e) => {
+        <InlineSelect
+          value={String(value.sura)}
+          options={surahPickerOptions.map((o) => ({ value: String(o.value), label: o.label }))}
+          onChange={(v) => {
             setActiveQuick(null);
-            onChange({ sura: parseInt(e.target.value, 10), aya: 1 });
+            onChange({ sura: parseInt(v, 10), aya: 1 });
           }}
-        >
-          {surahPickerOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          night={isNight}
+        />
         <span className="pb-verse-sep">:</span>
-        <select
-          className={`pb-select pb-select-aya${nightCls}`}
-          value={value.aya}
-          onChange={(e) => {
+        <InlineSelect
+          value={String(value.aya)}
+          options={ayaOptions.map((aya) => ({
+            value: String(aya),
+            label: lang === "ar" ? toHindiNumbers(aya) : String(aya),
+          }))}
+          onChange={(v) => {
             setActiveQuick(null);
-            onChange({
-              sura: value.sura,
-              aya: parseInt(e.target.value, 10) || 1,
-            });
+            onChange({ sura: value.sura, aya: parseInt(v, 10) || 1 });
           }}
-        >
-          {ayaOptions.map((aya) => (
-            <option key={aya} value={aya}>
-              {lang === "ar" ? toHindiNumbers(aya) : aya}
-            </option>
-          ))}
-        </select>
+          night={isNight}
+        />
       </div>
     );
   };
@@ -437,9 +429,9 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
     ? tp.resume
     : tp.playAudio;
   const handleCta = queue.state.isPlaying
-    ? () => queue.pause()
+    ? () => { queue.pause(); }
     : queue.state.currentVerse
-    ? () => queue.resume()
+    ? () => { queue.resume(); onClose?.(); }
     : handlePlay;
 
   // Main settings or downloads overlay
@@ -584,17 +576,13 @@ const PlaybackSettings: React.FC<Props> = ({ onClose }) => {
         <section className="pb-section">
           <h2 className={`pb-section-title${nightCls}`}>{tp.reciter}</h2>
           <div className={`pb-card${nightCls}`}>
-            <select
-              className={`pb-select pb-select-full${nightCls}`}
+            <InlineSelect
               value={prefs.reciter}
-              onChange={(e) => updatePref("reciter", e.target.value)}
-            >
-              {reciters.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              options={reciters}
+              onChange={(v) => updatePref("reciter", v)}
+              night={isNight}
+              fullWidth
+            />
             <button
               type="button"
               className={`pb-link-row${nightCls}`}

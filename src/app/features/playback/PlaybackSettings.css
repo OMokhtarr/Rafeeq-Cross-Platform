@@ -113,9 +113,20 @@
 }
 
 .pb-verse-picker {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: flex-start;
   gap: 4px;
+  width: 100%;
+}
+
+/* Surah picker grows, aya picker stays compact */
+.pb-verse-picker > .isel:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.pb-verse-picker > .isel:last-child {
+  flex: 0 0 80px;
+  width: 80px;
 }
 
 .pb-select {

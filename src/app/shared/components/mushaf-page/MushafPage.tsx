@@ -50,6 +50,7 @@ interface Props {
   verses: Verse[];
   showBismillah?: boolean;
   target?: { sura: number; aya: number };
+  flash?: { sura: number; aya: number };
   selected?: Set<string>;
   hidden?: Set<string>;
   green?: Set<string>;
@@ -78,6 +79,7 @@ const MushafPage: React.FC<Props> = ({
   verses,
   showBismillah,
   target,
+  flash,
   selected,
   hidden,
   green,
@@ -354,6 +356,8 @@ const MushafPage: React.FC<Props> = ({
     const key = `${tw.sura}:${tw.aya}`;
     const isTarget =
       !!target && tw.sura === target.sura && tw.aya === target.aya;
+    const isFlash =
+      !!flash && tw.sura === flash.sura && tw.aya === flash.aya;
     const isSelected = !!selected?.has(key);
     const isHidden = !!hidden?.has(key);
     const isGreen = !!green?.has(key);
@@ -389,6 +393,7 @@ const MushafPage: React.FC<Props> = ({
     const cls = [
       base,
       isTarget ? `${base}-target` : "",
+      isFlash ? "mushaf-word-flash" : "",
       isSelected ? "mushaf-verse-selected" : "",
       isHidden ? "mushaf-verse-hidden" : "",
       isGreen ? "mushaf-verse-green" : "",
@@ -402,7 +407,7 @@ const MushafPage: React.FC<Props> = ({
 
     return (
       <span
-        key={`${lineNumber}-${idx}`}
+        key={`${lineNumber}-${idx}${isFlash ? "-f" : ""}`}
         className={cls}
         data-verse-key={key}
         onClick={onVerseTap ? () => handleClick(key) : undefined}

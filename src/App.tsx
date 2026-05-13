@@ -43,7 +43,6 @@ import { exchangeCodeForToken } from "./app/core/services/auth/oauth.service";
 setupIonicReact({ mode: "md" });
 
 const App: React.FC = () => {
-  const [metaReady, setMetaReady] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState({
     done: 0,
     total: 604,
@@ -60,16 +59,13 @@ const App: React.FC = () => {
 
     if (!networkOk) {
       // Skip API preloads entirely – metadata will load from IDB
-      initMetadata()
-        .then(() => setMetaReady(true))
-        .catch(() => setMetaReady(true));
+      initMetadata().catch(() => {});
       return;
     }
 
     // Online path: init metadata, then preload pages and fonts
     initMetadata()
       .then(() => {
-        setMetaReady(true);
         // Start page preload
         preloadAllPages((done, total) => {
           setPreloadProgress({ done, total });
@@ -79,7 +75,6 @@ const App: React.FC = () => {
       })
       .catch((err) => {
         console.error("Metadata init failed:", err);
-        setMetaReady(true);
       });
   }, []);
 
@@ -102,39 +97,6 @@ const App: React.FC = () => {
       return () => app.removeListener("appUrlOpen", handleUrlOpen);
     }
   }, []);
-
-  if (!metaReady) {
-    return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "var(--color-bg-app, #0d1f14)",
-          color: "var(--color-text-primary, #e8e8e8)",
-          fontFamily: "var(--font-arabic, 'Scheherazade New', serif)",
-          fontSize: "1.2rem",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              border: "3px solid rgba(212,180,140,0.3)",
-              borderTopColor: "#d4b48c",
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-              margin: "0 auto 12px",
-            }}
-          />
-          <span>جاري التحميل…</span>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   return (
     <ThemeProvider>

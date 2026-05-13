@@ -8,6 +8,7 @@ import {
 import type { TafsirResource } from "../../../core/services/data/quran.service";
 import { useLang } from "../../../core/context/LanguageContext";
 import { useTheme } from "../../../core/context/ThemeContext";
+import InlineSelect from "../inline-select/InlineSelect";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
 import {
   isPageBookmarked,
@@ -327,24 +328,21 @@ const VerseActionSheet: React.FC<Props> = ({
                   aria-hidden="true"
                 />
               ) : (
-                <select
-                  className={`vas-resource-select${nightClass}`}
+                <InlineSelect
                   value={selectedResourceId}
-                  onChange={(e) => setSelectedResourceId(e.target.value)}
+                  options={
+                    resources.length === 0
+                      ? [{ value: DEFAULT_TAFSIR_ID, label: "Tafsir Muyassar — المیسر" }]
+                      : resources.map((r) => ({
+                          value: r.id,
+                          label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
+                        }))
+                  }
+                  onChange={setSelectedResourceId}
+                  night={isNight}
+                  fullWidth
                   aria-label={t.mushaf.tafsir}
-                >
-                  {resources.length === 0 && (
-                    <option value={DEFAULT_TAFSIR_ID}>
-                      Tafsir Muyassar — المیسر
-                    </option>
-                  )}
-                  {resources.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                      {r.authorName ? ` — ${r.authorName}` : ""}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </div>
 

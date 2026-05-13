@@ -94,11 +94,23 @@ export async function ensurePageFont(page: number): Promise<void> {
 
 export async function ensureBismillahFont(): Promise<void> {
   if (bismillahInjected) return;
+  const blob = await loadOrFetchBismillahFont();
+  await injectFontFace(BISMILLAH_FONT_FAMILY, blob);
+  bismillahInjected = true;
+}
+
+async function loadOrFetchBismillahFont(): Promise<Blob> {
+  // Use page-slot 0 in the fonts store (no real page uses slot 0).
+  const BSML_CACHE_KEY = 0;
+  const cached = await idb.get<CachedFont>("fonts", BSML_CACHE_KEY);
+  if (cached?.blob && cached.cacheVersion === FONT_CACHE_VERSION) {
+    return cached.blob;
+  }
   const res = await fetch(BISMILLAH_CDN_URL);
   if (!res.ok) throw new Error(`bismillah font: HTTP ${res.status}`);
   const blob = await res.blob();
-  await injectFontFace(BISMILLAH_FONT_FAMILY, blob);
-  bismillahInjected = true;
+  idb.put("fonts", { page: BSML_CACHE_KEY, blob, cacheVersion: FONT_CACHE_VERSION }).catch(() => {});
+  return blob;
 }
 
 // ─── Internals ────────────────────────────────────────────────────────────────
