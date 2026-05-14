@@ -22,13 +22,8 @@ const config: CapacitorConfig = {
   // },
 
   server: {
-    // Required for Capacitor 5 on Android
     androidScheme: "https",
-    // Match existing Electron behaviour (file:// URLs)
     iosScheme: "ionic",
-    // Allow hot-reload from dev server during development
-    // Comment this out for production builds
-    // url: "http://192.168.x.x:8100",
   },
 
   plugins: {

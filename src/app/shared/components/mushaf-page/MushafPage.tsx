@@ -356,8 +356,7 @@ const MushafPage: React.FC<Props> = ({
     const key = `${tw.sura}:${tw.aya}`;
     const isTarget =
       !!target && tw.sura === target.sura && tw.aya === target.aya;
-    const isFlash =
-      !!flash && tw.sura === flash.sura && tw.aya === flash.aya;
+    const isFlash = !!flash && tw.sura === flash.sura && tw.aya === flash.aya;
     const isSelected = !!selected?.has(key);
     const isHidden = !!hidden?.has(key);
     const isGreen = !!green?.has(key);

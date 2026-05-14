@@ -13,17 +13,19 @@ const AuthCallback: React.FC = () => {
 
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
-    if (code) {
-      exchangeCodeForToken(code)
-        .then(() => history.replace("/account"))
-        .catch((err) => {
-          console.error("[AuthCallback] token exchange failed:", err);
-          history.replace("/account?error=auth_failed");
-        });
-    } else {
+
+    if (!code) {
       console.error("[AuthCallback] no code in URL params:", location.search);
       history.replace("/account?error=no_code");
+      return;
     }
+
+    exchangeCodeForToken(code)
+      .then(() => history.replace("/account"))
+      .catch((err) => {
+        console.error("[AuthCallback] token exchange failed:", err);
+        history.replace("/account?error=auth_failed");
+      });
   }, []);
 
   return (
