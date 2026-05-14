@@ -1,27 +1,30 @@
 /**
  * Quran Foundation User API client.
  *
- * Bookmarks are stored locally in localStorage only — the QF User API
- * requires user-level OAuth (separate from the content token broker) which
- * is not yet wired up. All bookmark operations are instant and offline-first.
+ * Handles both authenticated (OAuth2 user) and unauthenticated requests.
+ * When a user is signed in, their access token is sent as x-auth-token.
+ * Falls back to the machine‑to‑machine token broker only for unauthenticated calls.
  *
- * Streaks come from the User API (GET /v1/streaks) and require a valid
- * user session; unauthenticated requests return 403 which the caller handles.
+ * User profile is decoded from the stored ID token (no CORS-affected API call).
+ * Bookmarks remain local‑only.
  */
+
 import {
   getStoredAccessToken,
   refreshAccessToken,
   getStoredRefreshToken,
+  getUserProfileFromIdToken,
 } from "../auth/oauth.service";
 
+// ✅ Correct User API base (per official docs)
 const USER_API_BASE =
   process.env.REACT_APP_USER_API_BASE ??
-  "https://apis.quran.foundation/api/qf/v1";
+  "https://apis.quran.foundation/auth/v1";
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CLIENT_ID_HEADER = process.env.REACT_APP_QF_CLIENT_ID ?? "";
 
-// ─── Token cache ──────────────────────────────────────────────────────────────
+// ─── Token cache (machine broker) ────────────────────────────────────────────
 
 interface TokenState {
   accessToken: string;
@@ -31,22 +34,21 @@ interface TokenState {
 let tokenState: TokenState | null = null;
 let tokenInflight: Promise<string> | null = null;
 
-// Replace the previously token-broker-only getAccessToken with this:
 async function getAccessToken(forceRefresh = false): Promise<string> {
-  // 1. Try user token if available
+  // 1. Try user token
   const userToken = await getStoredAccessToken();
   if (userToken && !forceRefresh) {
     return userToken;
   }
 
-  // 2. If we have a refresh token, attempt silent refresh
+  // 2. Silent refresh of user token
   const refreshToken = await getStoredRefreshToken();
   if (refreshToken) {
     try {
       const newToken = await refreshAccessToken();
       return newToken;
     } catch {
-      // refresh failed, fall through to broker token
+      // refresh failed, fall through
     }
   }
 
@@ -106,15 +108,17 @@ async function userApiFetch<T>(
     attempt++;
     try {
       const token = await getAccessToken(attempt > 1);
+      const headers: Record<string, string> = {
+        accept: "application/json",
+        "content-type": "application/json",
+        "x-auth-token": token,
+        ...(CLIENT_ID_HEADER ? { "x-client-id": CLIENT_ID_HEADER } : {}),
+        ...((options.headers as Record<string, string>) ?? {}),
+      };
+
       const res = await fetch(url, {
         ...options,
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          "x-auth-token": token,
-          ...(CLIENT_ID_HEADER ? { "x-client-id": CLIENT_ID_HEADER } : {}),
-          ...((options.headers as Record<string, string>) ?? {}),
-        },
+        headers,
       });
 
       if (res.status === 401 && attempt === 1) {
@@ -167,17 +171,33 @@ export async function fetchStreaks(first = 10): Promise<Streak[]> {
   return data.data ?? [];
 }
 
-// ─── Bookmarks — local-only (localStorage) ────────────────────────────────────
-//
-// The QF User API requires user-level OAuth that is not yet implemented.
-// All bookmark data lives in localStorage under BM_STORAGE_KEY.
-// The stored value is a Record<verseKey, addedAt> where addedAt is an ISO
-// timestamp (used to preserve insertion order for display).
+// ─── User Profile (from ID token, no network call) ────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export async function fetchUserProfile(): Promise<UserProfile | null> {
+  // ✅ Decode from locally stored ID token – no CORS, no network
+  const profile = getUserProfileFromIdToken();
+  if (!profile) return null;
+  return {
+    id: profile.sub,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    email: profile.email,
+  };
+}
+
+// ─── Bookmarks — local-only (unchanged) ───────────────────────────────────────
 
 const BM_STORAGE_KEY = "rafiq_bookmarks_v1";
 
 interface LocalBookmarkMap {
-  [verseKey: string]: string; // value = ISO timestamp of when it was added
+  [verseKey: string]: string;
 }
 
 function loadLocalBookmarks(): LocalBookmarkMap {
@@ -198,9 +218,6 @@ export function isPageBookmarked(verseKey: string): boolean {
   return verseKey in loadLocalBookmarks();
 }
 
-/**
- * Return all bookmarked verse keys, newest first.
- */
 export function getLocalBookmarkedVerseKeys(): string[] {
   const map = loadLocalBookmarks();
   return Object.entries(map)
@@ -208,10 +225,6 @@ export function getLocalBookmarkedVerseKeys(): string[] {
     .map(([key]) => key);
 }
 
-/**
- * Toggle a bookmark. Adds if absent, removes if present.
- * Returns true if now bookmarked, false if removed.
- */
 export function toggleBookmark(verseKey: string): boolean {
   const map = loadLocalBookmarks();
   if (verseKey in map) {
@@ -224,7 +237,6 @@ export function toggleBookmark(verseKey: string): boolean {
   return true;
 }
 
-/** Remove a bookmark by verse key. */
 export function removeLocalBookmark(verseKey: string): void {
   const map = loadLocalBookmarks();
   delete map[verseKey];

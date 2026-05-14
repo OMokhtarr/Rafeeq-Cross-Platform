@@ -132,7 +132,18 @@ async function apiFetch<T>(
         throw new QuranApiNotFound(await res.text());
       }
       if (!res.ok) {
-        throw new QuranApiError(res.status, await res.text());
+        const body = await res.text();
+        // QF returns 400 invalid_request when the token is missing/malformed —
+        // treat it like 401 on the first attempt so we force-refresh and retry.
+        if (
+          res.status === 400 &&
+          attempt === 1 &&
+          body.includes("invalid_request")
+        ) {
+          tokenState = null;
+          continue;
+        }
+        throw new QuranApiError(res.status, body);
       }
       return (await res.json()) as T;
     } catch (err) {
