@@ -171,6 +171,44 @@ export async function fetchStreaks(first = 10): Promise<Streak[]> {
   return data.data ?? [];
 }
 
+// ─── Activity Day ─────────────────────────────────────────────────────────────
+
+interface ActivityDayPayload {
+  type: "QURAN";
+  seconds: number;
+  ranges: string[];
+  mushafId: string;
+  date?: string;
+}
+
+/**
+ * Records a reading activity day, which increments the QF streak counter.
+ * Silently ignored if the user is not logged in.
+ * `ranges` format: "sura:aya-sura:aya" e.g. "2:1-2:7"
+ */
+export async function recordActivityDay(
+  ranges: string[],
+  seconds: number,
+  mushafId: string,
+): Promise<void> {
+  const token = await getStoredAccessToken();
+  if (!token) return; // not logged in — skip silently
+
+  const payload: ActivityDayPayload = {
+    type: "QURAN",
+    seconds,
+    ranges,
+    mushafId,
+  };
+
+  await userApiFetch<unknown>("/activity-days", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).catch((err) => {
+    console.warn("[activity] failed to record activity day:", err);
+  });
+}
+
 // ─── User Profile (from ID token, no network call) ────────────────────────────
 
 export interface UserProfile {

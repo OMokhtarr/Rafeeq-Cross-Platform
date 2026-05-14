@@ -525,7 +525,7 @@ async function searchFromPagesCache(q: string): Promise<SearchResult[]> {
 }
 
 // ─── Mushaf selection helper ─────────────────────────────────────────────────
-function readSelectedMushaf() {
+export function readSelectedMushaf() {
   try {
     const raw = localStorage.getItem("rafiq_settings_v1");
     if (raw) {

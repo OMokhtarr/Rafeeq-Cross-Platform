@@ -31,7 +31,8 @@ import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
-import { isPageBookmarked } from "../../core/services/api/user-api.client";
+import { isPageBookmarked, recordActivityDay } from "../../core/services/api/user-api.client";
+import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
@@ -100,6 +101,10 @@ const PageViewer: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Activity tracking: record time spent on each page for streak purposes
+  const pageEntryTime = useRef<number>(Date.now());
+  const pageVersesRef = useRef<Verse[]>([]);
 
   // Shared playback queue
   const queue = usePlayback();
@@ -188,6 +193,22 @@ const PageViewer: React.FC = () => {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // Fire activity day when user navigates away from the viewer
+  useEffect(() => {
+    return () => {
+      const prevVerses = pageVersesRef.current;
+      const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
+      if (prevVerses.length > 0 && elapsed >= 10) {
+        const first = prevVerses[0];
+        const last  = prevVerses[prevVerses.length - 1];
+        const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
+        const mushafKind = readSelectedMushaf();
+        const mushafId = QF_MUSHAF_IDS[mushafKind] ?? "qpc-v4-tajweed";
+        recordActivityDay([range], elapsed, mushafId);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
@@ -202,7 +223,31 @@ const PageViewer: React.FC = () => {
     }
   }, [location.search]);
 
+  // Maps our internal mushaf kind to the QF activity-days mushafId value
+  const QF_MUSHAF_IDS: Record<string, string> = {
+    qpc_v4_tajweed: "qpc-v4-tajweed",
+    uthmani:        "uthmani-hafs",
+    indopak:        "indopak",
+    imlaei:         "imlaei-hafs",
+  };
+
   useEffect(() => {
+    // Fire activity day for the page we're leaving (if user spent ≥10 s on it)
+    const prevVerses = pageVersesRef.current;
+    const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
+    if (prevVerses.length > 0 && elapsed >= 10) {
+      const first = prevVerses[0];
+      const last  = prevVerses[prevVerses.length - 1];
+      const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
+      const mushafKind = readSelectedMushaf();
+      const mushafId = QF_MUSHAF_IDS[mushafKind] ?? "qpc-v4-tajweed";
+      recordActivityDay([range], elapsed, mushafId);
+    }
+
+    // Reset timer for the new page
+    pageEntryTime.current = Date.now();
+    pageVersesRef.current = [];
+
     saveLastPage(currentPage);
     let cancelled = false;
     setLoading(true);
@@ -213,6 +258,7 @@ const PageViewer: React.FC = () => {
         setLoading(false);
         return;
       }
+      pageVersesRef.current = pageVerses;
       setVerses(pageVerses);
       setLoading(false);
       if (
