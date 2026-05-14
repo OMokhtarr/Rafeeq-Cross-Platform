@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -6,11 +5,20 @@
     <title>Rafeeq OAuth</title>
   </head>
   <body>
+    <p id="status">Completing sign-in…</p>
     <script>
       const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        // On Android, this will open the app via the custom scheme
-        window.location.href = `com.rafeeq.quranquiz://auth/callback?code=${code}`;
+      if (!code) {
+        document.getElementById("status").textContent =
+          "This page is used for signing into the Rafeeq app. Please open the app and tap 'Sign In' to continue.";
+      } else {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+          window.location.href = `com.rafeeq.quranquiz://auth/callback?code=${code}`;
+        } else {
+          // Redirect to your local development server
+          window.location.href = `http://localhost:3000/auth/callback?code=${code}`;
+        }
       }
     </script>
   </body>
