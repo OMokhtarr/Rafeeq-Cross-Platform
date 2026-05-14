@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { Route, Redirect, useHistory } from "react-router-dom";
+import { Route, Redirect } from "react-router-dom";
 import { initMetadata } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
@@ -9,6 +9,7 @@ import {
 } from "./app/core/services/data/quran.service";
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
@@ -48,8 +49,6 @@ const App: React.FC = () => {
     total: 604,
   });
 
-  const history = useHistory();
-
   useEffect(() => {
     // Seed Quran text corpus (works offline from bundled JSON)
     seedTextCorpus().catch(() => {});
@@ -78,24 +77,33 @@ const App: React.FC = () => {
       });
   }, []);
 
-  // appUrlOpen listener (unchanged)
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") return;
 
-    const handleUrlOpen = async (data: any) => {
-      const url = new URL(data.url);
-      const code = url.searchParams.get("code");
-      if (code) {
-        await exchangeCodeForToken(code);
-        history.replace("/account");
-      }
-    };
+    let cleanup: (() => void) | undefined;
 
-    const app = Capacitor.Plugins?.App as any;
-    if (app?.addListener) {
-      app.addListener("appUrlOpen", handleUrlOpen);
-      return () => app.removeListener("appUrlOpen", handleUrlOpen);
-    }
+    CapApp.addListener("appUrlOpen", async (data) => {
+      console.log("[appUrlOpen] url:", data.url);
+      const raw = data.url;
+      const queryStart = raw.indexOf("?");
+      const code = queryStart !== -1
+        ? new URLSearchParams(raw.slice(queryStart)).get("code")
+        : null;
+      console.log("[appUrlOpen] code:", code);
+      if (code) {
+        try {
+          await exchangeCodeForToken(code);
+          console.log("[appUrlOpen] token exchange success");
+          window.location.replace("https://localhost/account");
+        } catch (e) {
+          console.error("[appUrlOpen] token exchange failed:", e);
+        }
+      }
+    }).then((handle) => {
+      cleanup = () => handle.remove();
+    });
+
+    return () => cleanup?.();
   }, []);
 
   return (

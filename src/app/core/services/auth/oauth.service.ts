@@ -4,9 +4,6 @@ const CLIENT_ID = process.env.REACT_APP_QF_OAUTH_CLIENT_ID || "";
 const REDIRECT_URI_WEB =
   process.env.REACT_APP_QF_OAUTH_REDIRECT_URI_WEB ||
   "http://localhost:8100/auth/callback";
-const REDIRECT_URI_NATIVE =
-  process.env.REACT_APP_QF_OAUTH_REDIRECT_URI_NATIVE ||
-  "com.rafeeq.quranquiz://auth/callback";
 const AUTH_BASE = "https://oauth2.quran.foundation/oauth2";
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL || "";
@@ -111,9 +108,29 @@ export interface OAuthUserProfile {
 
 export function getUserProfileFromIdToken(): OAuthUserProfile | null {
   try {
-    const raw = localStorage.getItem(ID_TOKEN_KEY);
+    const raw =
+      Capacitor.getPlatform() === "web"
+        ? localStorage.getItem(ID_TOKEN_KEY)
+        : null;
     if (!raw) return null;
-    // Decode JWT payload (middle part)
+    const parts = raw.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return {
+      sub: payload.sub ?? "",
+      firstName: payload.first_name,
+      lastName: payload.last_name,
+      email: payload.email,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getUserProfileFromIdTokenAsync(): Promise<OAuthUserProfile | null> {
+  try {
+    const raw = await getStoredIdToken();
+    if (!raw) return null;
     const parts = raw.split(".");
     if (parts.length !== 3) return null;
     const payload = JSON.parse(atob(parts[1]));
@@ -134,11 +151,16 @@ export async function signIn(): Promise<string> {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-  // ✅ Store in localStorage so it's available across tabs
-  localStorage.setItem(CODE_VERIFIER_KEY, codeVerifier);
+  if (Capacitor.getPlatform() === "web") {
+    localStorage.setItem(CODE_VERIFIER_KEY, codeVerifier);
+  } else {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.set({ key: CODE_VERIFIER_KEY, value: codeVerifier });
+  }
 
-  const redirectUri =
-    Capacitor.getPlatform() === "web" ? REDIRECT_URI_WEB : REDIRECT_URI_NATIVE;
+  // Always use the web URI — it's the one registered with the OAuth client.
+  // AuthCallback.tsx handles the deep-link redirect back to the app on native.
+  const redirectUri = REDIRECT_URI_WEB;
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -158,10 +180,18 @@ export async function signIn(): Promise<string> {
 export async function exchangeCodeForToken(
   code: string,
 ): Promise<{ accessToken: string; refreshToken?: string; idToken?: string }> {
-  // ✅ Read from localStorage (cross-tab safe)
-  const codeVerifier = localStorage.getItem(CODE_VERIFIER_KEY) || "";
-  const redirectUri =
-    Capacitor.getPlatform() === "web" ? REDIRECT_URI_WEB : REDIRECT_URI_NATIVE;
+  let codeVerifier: string;
+  if (Capacitor.getPlatform() === "web") {
+    codeVerifier = localStorage.getItem(CODE_VERIFIER_KEY) || "";
+  } else {
+    const { Preferences } = await import("@capacitor/preferences");
+    const { value } = await Preferences.get({ key: CODE_VERIFIER_KEY });
+    codeVerifier = value || "";
+  }
+
+  const redirectUri = REDIRECT_URI_WEB;
+
+  console.log("[oauth] exchangeCodeForToken — broker:", TOKEN_BROKER_URL, "verifier length:", codeVerifier.length, "redirect_uri:", redirectUri);
 
   const res = await fetch(`${TOKEN_BROKER_URL}/oauth2/token`, {
     method: "POST",
@@ -186,7 +216,12 @@ export async function exchangeCodeForToken(
   const idToken = data.id_token;
 
   await storeTokens(accessToken, refreshToken, idToken);
-  localStorage.removeItem(CODE_VERIFIER_KEY); // clean up
+  if (Capacitor.getPlatform() === "web") {
+    localStorage.removeItem(CODE_VERIFIER_KEY);
+  } else {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.remove({ key: CODE_VERIFIER_KEY });
+  }
   return { accessToken, refreshToken, idToken };
 }
 

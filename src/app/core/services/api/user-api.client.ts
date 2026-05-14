@@ -13,7 +13,7 @@ import {
   getStoredAccessToken,
   refreshAccessToken,
   getStoredRefreshToken,
-  getUserProfileFromIdToken,
+  getUserProfileFromIdTokenAsync,
 } from "../auth/oauth.service";
 
 // ✅ Correct User API base (per official docs)
@@ -220,7 +220,7 @@ export interface UserProfile {
 
 export async function fetchUserProfile(): Promise<UserProfile | null> {
   // ✅ Decode from locally stored ID token – no CORS, no network
-  const profile = getUserProfileFromIdToken();
+  const profile = await getUserProfileFromIdTokenAsync();
   if (!profile) return null;
   return {
     id: profile.sub,
