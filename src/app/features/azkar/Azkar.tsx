@@ -363,7 +363,6 @@ const Azkar: React.FC = () => {
                       {cat.azkar.length} {ta.zikr}
                     </span>
                   </div>
-                  <span className="azkar-cat-arrow">{isRTL ? "←" : "→"}</span>
                 </button>
               ))}
             </div>

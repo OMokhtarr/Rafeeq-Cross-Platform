@@ -513,48 +513,32 @@ ion-content::part(scroll) {
   cursor: not-allowed;
 }
 
-.mst-hint {
-  background: #ffd700;
-  color: #856404;
+/* Button variants — all share the quiz accent color */
+.mst-hint,
+.mst-context,
+.mst-submit,
+.mst-skip,
+.mst-recite {
+  background: var(--color-quiz);
+  color: #ffffff;
 }
-.mst-hint:hover:not(:disabled) {
-  background: #ffed4a;
-  transform: scale(1.02);
-}
-
-.mst-context {
-  background: #4a90e2;
-  color: white;
-}
-.mst-context.active {
-  background: #2c6fad;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-.mst-context:hover:not(:disabled) {
-  background: #5fa3f0;
-  transform: scale(1.02);
-}
-
-.mst-submit {
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
-  color: var(--color-text-on-dark);
-}
-.mst-submit:hover:not(:disabled) {
+.mst-hint:hover:not(:disabled),
+.mst-context:hover:not(:disabled),
+.mst-submit:hover:not(:disabled),
+.mst-skip:hover:not(:disabled),
+.mst-recite:hover:not(:disabled) {
+  opacity: 0.85;
   transform: scale(1.02);
   box-shadow: var(--shadow-card-hover);
 }
-
-.mst-skip {
-  background: #95a5a6;
-  color: white;
+.mst-context.active {
+  opacity: 0.7;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-.mst-skip:hover:not(:disabled) {
-  background: #7f8c8d;
-  transform: scale(1.02);
+
+.mst-recite {
+  min-width: 42px;
+  padding: 8px 12px;
 }
 
 /* Result box */

@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
@@ -84,9 +84,22 @@ export function pushRecent(query: string, count: number): RecentSearch[] {
 const Search: React.FC = () => {
   const history = useHistory();
   const { t, lang, isRTL } = useLang();
+  const [presentToast] = useIonToast();
   const [recents, setRecents] = useState<RecentSearch[]>([]);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  // Keep the page pinned to the visual viewport so the soft keyboard
+  // does not push the layout upward.
+  useEffect(() => {
+    const vv = (window as any).visualViewport as VisualViewport | undefined;
+    if (!vv) return;
+    const update = () => setViewportHeight(vv.height);
+    vv.addEventListener("resize", update);
+    update();
+    return () => vv.removeEventListener("resize", update);
+  }, []);
 
   // Live search state — populated as the user types.
   const [liveResults, setLiveResults] = useState<SearchResult[]>([]);
@@ -175,10 +188,11 @@ const Search: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent fullscreen scrollY={false}>
         <div
           className="search-page search-page-with-nav"
           dir={isRTL ? "rtl" : "ltr"}
+          style={viewportHeight != null ? { height: viewportHeight } : undefined}
         >
           {/* ── Header ── */}
           <header className="search-page-header">
@@ -347,12 +361,17 @@ const Search: React.FC = () => {
               dir="auto"
               autoFocus
             />
-            {/* Decorative mic — placeholder for future voice search.
-                Submits the typed query when tapped so it isn't dead. */}
             <button
-              type="submit"
+              type="button"
               className="search-bottom-mic"
-              aria-label={lang === "ar" ? "بحث صوتي" : "Voice search (submit)"}
+              aria-label={lang === "ar" ? "بحث صوتي" : "Voice search"}
+              onClick={() =>
+                presentToast({
+                  message: t.tabs.comingSoon,
+                  duration: 2000,
+                  position: "bottom",
+                })
+              }
             >
               <svg
                 viewBox="0 0 24 24"

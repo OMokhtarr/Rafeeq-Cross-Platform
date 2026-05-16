@@ -29,6 +29,8 @@ import AkmelAlAyahSetup from "./app/features/quiz/quizzes/akmel-alayah/pages/set
 import AkmelAlAyah from "./app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah";
 import MutashabihatSetup from "./app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup";
 import MutashabihatTest from "./app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest";
+import AkmelAlNehayatSetup from "./app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup";
+import AkmelAlNehayat from "./app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat";
 import Settings from "app/features/settings/Settings";
 import PlaybackSettings from "./app/features/playback/PlaybackSettings";
 import Account from "./app/features/account/Account";
@@ -158,6 +160,12 @@ const App: React.FC = () => {
                     path="/mutashabihat-test"
                     component={MutashabihatTest}
                   />
+                  <Route
+                    exact
+                    path="/akmel-alnehayat-setup"
+                    component={AkmelAlNehayatSetup}
+                  />
+                  <Route exact path="/akmel-alnehayat" component={AkmelAlNehayat} />
                   <Route exact path="/account" component={Account} />
                   <Route exact path="/bookmarks" component={Bookmarks} />
                   <Route exact path="/settings" component={Settings} />

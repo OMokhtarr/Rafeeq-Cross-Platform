@@ -57,7 +57,7 @@ export interface QuizQuestion {
   /** The hidden portion the user must complete */
   hiddenPortion: string;
   splitPoint: number;
-  splitMethod: "firstHalf" | "widthConstrained";
+  splitMethod: "firstHalf" | "widthConstrained" | "lastWaqf";
   previousVersesContext: Verse[];
   nextVersesForProgression: Verse[];
   correctAnswer: string;

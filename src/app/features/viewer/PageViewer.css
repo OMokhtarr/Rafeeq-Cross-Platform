@@ -494,7 +494,8 @@
 }
 
 .page-edge-surah {
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: normal;
   color: var(--color-text-primary, #2c1810);
   white-space: nowrap;
   overflow: hidden;

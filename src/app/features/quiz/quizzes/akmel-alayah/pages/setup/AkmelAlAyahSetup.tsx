@@ -26,7 +26,7 @@ const AkmelAlAyahSetup: React.FC = () => {
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
-  const [questionCount, setQuestionCount] = useState(25);
+  const [questionCount, setQuestionCount] = useState(5);
 
   const pageOptions = useMemo(
     () =>
@@ -260,8 +260,7 @@ const AkmelAlAyahSetup: React.FC = () => {
                 onClick={handleStart}
                 disabled={!isReady()}
               >
-                <span>{tq.start}</span>
-                <span className="aa-btn-en">{isRTL ? "→" : "←"}</span>
+                {tq.start}
               </button>
 
               <button

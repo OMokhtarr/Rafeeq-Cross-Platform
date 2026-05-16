@@ -121,8 +121,10 @@ async function userApiFetch<T>(
         headers,
       });
 
-      if (res.status === 401 && attempt === 1) {
+      if ((res.status === 401 || res.status === 403) && attempt === 1) {
         tokenState = null;
+        // Force a token refresh before retrying
+        try { await refreshAccessToken(); } catch {}
         continue;
       }
       if (res.status === 204) return {} as T;
