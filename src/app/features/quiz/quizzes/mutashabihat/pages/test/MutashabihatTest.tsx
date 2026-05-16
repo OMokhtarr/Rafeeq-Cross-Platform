@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
 import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
@@ -47,6 +47,7 @@ const MutashabihatTest: React.FC = () => {
   const history = useHistory();
   const { t, isRTL } = useLang();
   const tt = t.quizTest;
+  const [presentToast] = useIonToast();
 
   const [questions, setQuestions] = useState<
     ReturnType<typeof buildMutashabihatQuestion>[]
@@ -453,6 +454,34 @@ const MutashabihatTest: React.FC = () => {
                       disabled={answered}
                     >
                       {tt.skip}
+                    </button>
+                    <button
+                      className="mst-btn mst-recite"
+                      onClick={() =>
+                        presentToast({
+                          message: tt.comingSoon,
+                          duration: 2000,
+                          position: "bottom",
+                        })
+                      }
+                      aria-label="Recite"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="18"
+                        height="18"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="3" width="6" height="12" rx="3" />
+                        <path d="M5 11a7 7 0 0014 0" />
+                        <line x1="12" y1="18" x2="12" y2="22" />
+                        <line x1="9" y1="22" x2="15" y2="22" />
+                      </svg>
                     </button>
                   </div>
 

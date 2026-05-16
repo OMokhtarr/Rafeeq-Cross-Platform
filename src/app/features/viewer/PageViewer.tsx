@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import MushafPage from "../../shared/components/mushaf-page/MushafPage";
@@ -88,6 +88,7 @@ const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
+  const [presentToast] = useIonToast();
 
   const { selected, hidden, hideMany, showVerse, showAll, hiddenCount } =
     useVerseVisibility();
@@ -129,12 +130,14 @@ const PageViewer: React.FC = () => {
     if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
-      if (!reciteMode) {
+      if (reciteMode) {
+        presentToast({ message: t.tabs.comingSoon, duration: 2000, position: "bottom" });
+      } else {
         sheetOpenTimeRef.current = Date.now();
-      setPlaybackSheetOpen(true); // open slide‑up sheet instead of navigating
+        setPlaybackSheetOpen(true);
       }
     }
-  }, [reciteMode]);
+  }, [reciteMode, presentToast, t.tabs.comingSoon]);
 
   // playbackVerse: static grey highlight tracking the currently playing verse
   const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
@@ -722,7 +725,9 @@ const PageViewer: React.FC = () => {
             onClick={handleClick}
           >
             <div className="page-edge-top" data-no-immersive>
-              <span className="page-edge-surah">{pageInfo?.suraNameAr}</span>
+              <span className="page-edge-surah">
+                {lang === "ar" ? pageInfo?.suraNameAr : pageInfo?.suraName}
+              </span>
               <span className="page-edge-meta">
                 <span>
                   {t.mushaf.juz}{" "}

@@ -11,7 +11,7 @@ import BottomNavBar from "../../../../shared/components/bottom-nav/BottomNavBar"
 import "./QuizList.css";
 
 interface QuizEntry {
-  id: "akmel-alayah" | "mutashabihat";
+  id: "akmel-alayah" | "mutashabihat" | "akmel-alnehayat";
   route: string;
   color: string;
 }
@@ -26,6 +26,11 @@ const QUIZZES: QuizEntry[] = [
     id: "mutashabihat",
     route: "/mutashabihat-setup",
     color: "var(--color-quiz)",
+  },
+  {
+    id: "akmel-alnehayat",
+    route: "/akmel-alnehayat-setup",
+    color: "var(--color-gold)",
   },
 ];
 
@@ -45,8 +50,18 @@ const QuizList: React.FC = () => {
 
             <div className="ql-grid">
               {QUIZZES.map((quiz) => {
-                const title = quiz.id === "akmel-alayah" ? tql.akmelTitle : tql.mutashabihatTitle;
-                const desc = quiz.id === "akmel-alayah" ? tql.akmelDesc : tql.mutashabihatDesc;
+                const title =
+                  quiz.id === "akmel-alayah"
+                    ? tql.akmelTitle
+                    : quiz.id === "mutashabihat"
+                    ? tql.mutashabihatTitle
+                    : tql.nehayatTitle;
+                const desc =
+                  quiz.id === "akmel-alayah"
+                    ? tql.akmelDesc
+                    : quiz.id === "mutashabihat"
+                    ? tql.mutashabihatDesc
+                    : tql.nehayatDesc;
                 return (
                   <button
                     key={quiz.id}
@@ -60,7 +75,6 @@ const QuizList: React.FC = () => {
                       <h2 className="ql-card-name">{title}</h2>
                       <p className="ql-card-desc-ar">{desc}</p>
                     </div>
-                    <span className="ql-card-arrow">{isRTL ? "←" : "→"}</span>
                   </button>
                 );
               })}

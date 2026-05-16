@@ -57,6 +57,8 @@ export interface AppStrings {
     akmelDesc: string;
     mutashabihatTitle: string;
     mutashabihatDesc: string;
+    nehayatTitle: string;
+    nehayatDesc: string;
   };
 
   quizSetup: {
@@ -66,6 +68,9 @@ export interface AppStrings {
     mutashabihatTitle: string;
     mutashabihatSubtitle: string;
     mutashabihatInfo: string;
+    nehayatTitle: string;
+    nehayatSubtitle: string;
+    nehayatInfo: string;
     scope: string;
     scopeSurah: string;
     scopePages: string;
@@ -124,6 +129,7 @@ export interface AppStrings {
     ayahLabel: string;
     pageLabel: string;
     hizbLabel: string;
+    comingSoon: string;
   };
 
   mushaf: {
@@ -283,7 +289,7 @@ const ar: AppStrings = {
     azkar: "أذكار",
     ahadith: "أحاديث",
     settings: "إعدادات",
-    comingSoon: "قريباً",
+    comingSoon: "قريباً...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
@@ -291,9 +297,9 @@ const ar: AppStrings = {
   azkar: {
     title: "الأذكار",
     subtitle: "من كتاب صحيح الأذكار الجامع للعلامة الألباني رحمه الله",
-    back: "← رجوع",
-    backToCategories: "← العودة للفئات",
-    backHome: "← الصفحة الرئيسية",
+    back: "رجوع",
+    backToCategories: "العودة للفئات",
+    backHome: "الصفحة الرئيسية",
     done: "✓ تم",
     doneAlt: "تم ✓",
     reset: "↺",
@@ -307,10 +313,10 @@ const ar: AppStrings = {
     title: "الاختبارات",
     subtitle: "اختر اختباراً للبدء",
     start: "ابدأ الاختبار",
-    next: "← السؤال التالي",
+    next: "السؤال التالي",
     finish: "🏁 إنهاء الاختبار",
-    backToList: "← العودة للقائمة",
-    backHome: "← العودة للصفحة الرئيسية",
+    backToList: "العودة للقائمة",
+    backHome: "العودة للصفحة الرئيسية",
   },
   quizList: {
     titleHeader: "الاختبارات المتاحة",
@@ -319,6 +325,8 @@ const ar: AppStrings = {
     akmelDesc: "تُعرض عليك بداية آية وعليك إكمالها من حفظك",
     mutashabihatTitle: "المتشابهات",
     mutashabihatDesc: "ميّز بين الآيات المتشابهة وأكمل الآية الصحيحة",
+    nehayatTitle: "أكمل النهايات",
+    nehayatDesc: "اختر الخاتمة الصحيحة للآية بعد علامة الوقف",
   },
   quizSetup: {
     akmelTitle: "أكمل الآية",
@@ -329,6 +337,10 @@ const ar: AppStrings = {
     mutashabihatSubtitle: "Mutashabihat Quiz — Complete the Similar Verse",
     mutashabihatInfo:
       "ستُعرض عليك بداية آية مشتركة بين عدة آيات متشابهة، عليك إكمال الآية الصحيحة.",
+    nehayatTitle: "أكمل النهايات",
+    nehayatSubtitle: "Waqf Quiz — Complete the Ending",
+    nehayatInfo:
+      "ستُعرض عليك آية مقطوعة عند آخر علامة وقف، اختر الخاتمة الصحيحة من بين أربعة خيارات.",
     scope: "النطاق",
     scopeSurah: "سورة",
     scopePages: "صفحة",
@@ -347,7 +359,7 @@ const ar: AppStrings = {
     pickedJuzs: "أجزاء",
     juzWord: "جزء",
     start: "ابدأ الاختبار",
-    backToList: "← العودة للقائمة",
+    backToList: "العودة للقائمة",
   },
   quizTest: {
     questionOf: "سؤال",
@@ -356,11 +368,11 @@ const ar: AppStrings = {
     confirmExit: "هل تريد الخروج من الاختبار؟",
     exitConfirm: "خروج",
     exitCancel: "متابعة",
-    hint: "💡 تلميح",
-    context: "📖 سياق",
-    hide: "📖 إخفاء",
-    submit: "➤ إرسال",
-    skip: "⏭ تخطي",
+    hint: "تلميح",
+    context: "سياق",
+    hide: "إخفاء",
+    submit: "إرسال",
+    skip: "تخطي",
     promptComplete: "✽ أكمل الآية ✽",
     inputPlaceholder: "أكمل الآية هنا…",
     correctMsg: "أحسنت! إجابة صحيحة",
@@ -368,7 +380,7 @@ const ar: AppStrings = {
     wrongMsg: "إجابة خاطئة",
     correctAnswer: "الإجابة الصحيحة:",
     completionVerse: "إكمال الآية:",
-    nextQuestion: "← السؤال التالي",
+    nextQuestion: "السؤال التالي",
     finishQuiz: "إنهاء الاختبار",
     completeTitle: "انتهى الاختبار!",
     completeAkmelSub: "Akmel Al-Ayah Quiz Complete",
@@ -383,10 +395,11 @@ const ar: AppStrings = {
     errorNoVerses: "لم يُعثر على آيات في النطاق المحدد.\nجرّب نطاقاً أوسع.",
     errorNoMutashabihat:
       "لم يُعثر على آيات متشابهة في النطاق المحدد.\nجرّب نطاقاً أوسع.",
-    backToSetup: "← العودة للإعداد",
+    backToSetup: "العودة للإعداد",
     ayahLabel: "الآية",
     pageLabel: "صفحة",
     hizbLabel: "الحزب",
+    comingSoon: "قريباً...",
   },
   mushaf: {
     page: "صفحة",
@@ -566,7 +579,7 @@ const en: AppStrings = {
     azkar: "Azkar",
     ahadith: "Ahadith",
     settings: "Settings",
-    comingSoon: "Soon",
+    comingSoon: "Coming soon...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
@@ -575,9 +588,9 @@ const en: AppStrings = {
     title: "Azkar",
     subtitle:
       "From Sahih al-Adhkar al-Jami' by Sheikh al-Albani, may Allah have mercy on him",
-    back: "← Back",
-    backToCategories: "← Back to Categories",
-    backHome: "← Home",
+    back: "Back",
+    backToCategories: "Back to Categories",
+    backHome: "Home",
     done: "✓ Done",
     doneAlt: "Done ✓",
     reset: "↺",
@@ -590,10 +603,10 @@ const en: AppStrings = {
     title: "Quizzes",
     subtitle: "Choose a quiz to begin",
     start: "Start Quiz",
-    next: "Next Question →",
+    next: "Next Question",
     finish: "🏁 Finish Quiz",
-    backToList: "← Back to List",
-    backHome: "← Back to Home",
+    backToList: "Back to List",
+    backHome: "Back to Home",
   },
   quizList: {
     titleHeader: "Available Quizzes",
@@ -602,6 +615,8 @@ const en: AppStrings = {
     akmelDesc: "Complete the verse from memory",
     mutashabihatTitle: "Mutashabihat",
     mutashabihatDesc: "Distinguish and complete similar-opening verses",
+    nehayatTitle: "Complete the Ending",
+    nehayatDesc: "Choose the correct ending of the verse after its Waqf sign",
   },
   quizSetup: {
     akmelTitle: "Complete the Verse",
@@ -612,6 +627,10 @@ const en: AppStrings = {
     mutashabihatSubtitle: "اختبار المتشابهات — أكمل الآية المتشابهة",
     mutashabihatInfo:
       "You'll be shown an opening shared by several similar verses — complete the correct one.",
+    nehayatTitle: "Complete the Ending",
+    nehayatSubtitle: "اختبار الوقف — أكمل النهايات",
+    nehayatInfo:
+      "A verse is shown up to its last Waqf sign. Choose the correct ending from four options.",
     scope: "Scope",
     scopeSurah: "Surah",
     scopePages: "Pages",
@@ -630,7 +649,7 @@ const en: AppStrings = {
     pickedJuzs: "juzs",
     juzWord: "Juz",
     start: "Start Quiz",
-    backToList: "← Back to List",
+    backToList: "Back to List",
   },
   quizTest: {
     questionOf: "Question",
@@ -639,11 +658,11 @@ const en: AppStrings = {
     confirmExit: "Exit the quiz?",
     exitConfirm: "Exit",
     exitCancel: "Continue",
-    hint: "💡 Hint",
-    context: "📖 Context",
-    hide: "📖 Hide",
-    submit: "➤ Submit",
-    skip: "⏭ Skip",
+    hint: "Hint",
+    context: "Context",
+    hide: "Hide",
+    submit: "Submit",
+    skip: "Skip",
     promptComplete: "✽ Complete the verse ✽",
     inputPlaceholder: "Type the rest of the verse here…",
     correctMsg: "Correct — well done!",
@@ -651,7 +670,7 @@ const en: AppStrings = {
     wrongMsg: "Incorrect",
     correctAnswer: "Correct answer:",
     completionVerse: "Completion:",
-    nextQuestion: "← Next Question",
+    nextQuestion: "Next Question",
     finishQuiz: "Finish Quiz",
     completeTitle: "Quiz complete!",
     completeAkmelSub: "اكتمل اختبار أكمل الآية",
@@ -666,10 +685,11 @@ const en: AppStrings = {
     errorNoVerses: "No verses found in the selected range.\nTry a wider scope.",
     errorNoMutashabihat:
       "No similar verses found in the selected range.\nTry a wider scope.",
-    backToSetup: "← Back to Setup",
+    backToSetup: "Back to Setup",
     ayahLabel: "Ayah",
     pageLabel: "Page",
     hizbLabel: "Hizb",
+    comingSoon: "Coming soon...",
   },
   mushaf: {
     page: "Page",

@@ -1,4 +1,3 @@
-/* Ensure full height propagates from Ionic */
 ion-content {
   --background: var(--color-bg-content);
 }
@@ -8,11 +7,7 @@ ion-content::part(scroll) {
   align-items: stretch;
 }
 
-/* ═══════════════════════════════════════════════
-   AKMEL AL-AYAH TEST  –  theme‑aware (day/night)
-   ═══════════════════════════════════════════════ */
-
-.aa-test-page-wrapper {
+.an-test-page-wrapper {
   width: 100%;
   height: 100%;
   background: var(--color-bg-page);
@@ -23,8 +18,7 @@ ion-content::part(scroll) {
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
-/* Container: column, no scroll; relies on inner flex */
-.aa-container {
+.an-container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -38,8 +32,8 @@ ion-content::part(scroll) {
   overflow: hidden;
 }
 
-/* Header – normal mode */
-.aa-header {
+/* ── Header ──────────────────────────────────────────────────────── */
+.an-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -53,56 +47,47 @@ ion-content::part(scroll) {
   min-height: 32px;
 }
 
-/* Progress container – fixed width across modes */
-.aa-progress {
+.an-progress {
   flex: 0 0 auto;
   width: 160px;
   max-width: 100%;
 }
-.aa-progress-text {
+.an-progress-text {
   display: block;
   margin-bottom: 3px;
   color: var(--color-text-primary);
   font-family: var(--font-arabic);
   font-size: var(--text-md);
 }
-.aa-bar {
+.an-bar {
   height: 5px;
   background: var(--color-progress-track);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-.aa-bar-fill {
+.an-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
   transition: width 0.35s ease;
 }
 
-.aa-score-pill {
+.an-score-pill {
   flex: 1;
   text-align: center;
-  font-size: inherit;
   font-family: var(--font-arabic);
   font-weight: bold;
   color: var(--color-text-primary);
   white-space: nowrap;
 }
 
-.aa-header-actions {
+.an-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-/* Immersive header – keep identical sizing to normal mode */
-.aa-header-minimal .aa-progress-text,
-.aa-header-minimal .aa-score-pill {
-  font-size: inherit; /* preserve original font size */
-}
-
-/* Exit button remains circular */
-.aa-exit-btn {
+.an-exit-btn {
   background: none;
   border: 2px solid #e74c3c;
   color: #e74c3c;
@@ -117,13 +102,13 @@ ion-content::part(scroll) {
   align-items: center;
   justify-content: center;
 }
-.aa-exit-btn:hover {
+.an-exit-btn:hover {
   background: #e74c3c;
   color: white;
 }
 
-/* Question card – normal full height */
-.aa-card {
+/* ── Question card ───────────────────────────────────────────────── */
+.an-card {
   flex: 0 0 auto;
   width: 100%;
   background: var(--color-bg-card);
@@ -139,28 +124,24 @@ ion-content::part(scroll) {
   transition: all 0.2s ease;
 }
 
-/* Immersive card – buttons only, minimal height */
-.aa-card.aa-card-buttons-only {
+.an-card.an-card-buttons-only {
   padding: 4px 8px;
   flex: 0 0 auto;
   height: auto;
   min-height: 0;
 }
 
-.aa-card-body {
+.an-card-body {
   display: block;
   width: 100%;
 }
-.aa-card-main {
+.an-card-main {
   width: 100%;
   direction: rtl;
 }
-.aa-card-main::-webkit-scrollbar {
-  display: none;
-}
 
-/* Info strip – hidden in immersive mode */
-.aa-info-strip {
+/* Info strip */
+.an-info-strip {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -175,14 +156,14 @@ ion-content::part(scroll) {
   overflow-x: auto;
   scrollbar-width: none;
 }
-[data-theme="night"] .aa-info-strip {
+[data-theme="night"] .an-info-strip {
   background: rgba(212, 180, 140, 0.15);
 }
-.aa-info-strip::-webkit-scrollbar {
+.an-info-strip::-webkit-scrollbar {
   display: none;
 }
 
-.aa-surah-badge {
+.an-surah-badge {
   font-family: var(--font-arabic);
   font-size: var(--text-md);
   font-weight: bold;
@@ -190,7 +171,7 @@ ion-content::part(scroll) {
   white-space: nowrap;
   flex-shrink: 0;
 }
-.aa-meta {
+.an-meta {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   color: var(--color-quiz);
@@ -200,76 +181,96 @@ ion-content::part(scroll) {
   white-space: nowrap;
   flex-shrink: 0;
 }
-[data-theme="night"] .aa-meta {
+[data-theme="night"] .an-meta {
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* Verse box – hidden in immersive mode */
-.aa-verse-box {
+/* ── Verse box ───────────────────────────────────────────────────── */
+.an-verse-box {
   background: var(--color-gold-faint);
   border: 2px solid var(--color-gold);
   border-radius: var(--radius-md);
-  padding: 5px 8px;
+  padding: 8px 10px;
   text-align: center;
-  margin-bottom: 2px;
+  margin-bottom: 6px;
   flex-shrink: 0;
+  position: relative;
 }
-.aa-verse-shared {
+
+.an-verse-text {
   font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   line-height: 1.7;
   color: var(--color-text-primary);
   direction: rtl;
   margin: 0;
+  display: inline;
 }
-.aa-hint-inline {
+
+.an-verse-ellipsis {
   font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-  color: #b8860b;
-  font-weight: 600;
-  border-bottom: 1.5px dashed #b8860b;
-}
-.prompt {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-style: italic;
-  border-top: 1px dotted var(--color-gold);
-  padding-top: 3px;
-  margin: 3px 0 0;
+  color: var(--color-gold);
+  font-weight: bold;
+  margin-right: 4px;
 }
 
-/* Input – hidden in immersive mode */
-.aa-answer-row {
-  margin-bottom: 2px;
-  flex-shrink: 0;
+/* ── MCQ Options ─────────────────────────────────────────────────── */
+.an-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
 }
-.aa-input {
+
+.an-option {
   width: 100%;
-  padding: 12px;
-  font-size: var(--text-md);
-  border: 2px solid var(--color-gold);
+  padding: 10px 14px;
+  border: 2px solid var(--color-input-border);
   border-radius: var(--radius-md);
-  font-family: var(--font-arabic);
-  direction: rtl;
-  transition: all 0.3s;
-  background: var(--color-bg-card);
-  box-sizing: border-box;
-  min-height: 44px;
-  color: var(--color-text-primary);
-}
-.aa-input:focus {
-  border-color: var(--color-text-primary);
-  outline: none;
-  box-shadow: 0 0 0 4px var(--color-gold-faint);
-}
-.aa-input.answered {
   background: var(--color-bg-card-alt);
-  color: var(--color-text-muted);
-  cursor: default;
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: clamp(0.85rem, 2.2vw, 1rem);
+  line-height: 1.6;
+  cursor: pointer;
+  text-align: right;
+  direction: rtl;
+  transition: all 0.2s;
+}
+.an-option:hover:not(:disabled) {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+.an-option.selected {
+  border-color: var(--color-quiz);
+  background: rgba(var(--color-quiz-rgb, 100, 100, 200), 0.1);
+}
+.an-option.correct {
+  border-color: #27ae60;
+  background: #d4edda;
+  color: #1a6b3a;
+  font-weight: bold;
+}
+.an-option.wrong {
+  border-color: #e74c3c;
+  background: #f8d7da;
+  color: #8b1a1a;
+}
+.an-option.dimmed {
+  opacity: 0.4;
+}
+[data-theme="night"] .an-option.correct {
+  background: rgba(76, 175, 125, 0.15);
+  color: #6cd699;
+}
+[data-theme="night"] .an-option.wrong {
+  background: rgba(231, 76, 60, 0.15);
+  color: #f37b6f;
 }
 
-/* Action buttons – compact, horizontal, always visible */
-.aa-actions {
+/* ── Action buttons ──────────────────────────────────────────────── */
+.an-actions {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -278,13 +279,8 @@ ion-content::part(scroll) {
   margin-top: 4px;
   margin-bottom: 7px;
 }
-.aa-card-buttons-only .aa-actions {
-  margin-top: 4px;
-  margin-bottom: 4px;
-}
 
-/* Base button style – pill shape, consistent dimensions */
-.aa-btn {
+.an-btn {
   flex: 0 0 auto;
   padding: 8px 16px;
   border: none;
@@ -299,46 +295,21 @@ ion-content::part(scroll) {
   gap: 4px;
   min-width: 70px;
   min-height: 24px;
-}
-.aa-btn-en {
-  font-size: 0.65rem;
-  opacity: 0.8;
-}
-.aa-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Button variants — all share the quiz accent color */
-.aa-hint,
-.aa-context,
-.aa-submit,
-.aa-skip,
-.aa-recite {
   background: var(--color-quiz);
   color: #ffffff;
 }
-.aa-hint:hover:not(:disabled),
-.aa-context:hover:not(:disabled),
-.aa-submit:hover:not(:disabled),
-.aa-skip:hover:not(:disabled),
-.aa-recite:hover:not(:disabled) {
+.an-btn:hover:not(:disabled) {
   opacity: 0.85;
   transform: scale(1.02);
   box-shadow: var(--shadow-card-hover);
 }
-.aa-context.active {
-  opacity: 0.7;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+.an-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.aa-recite {
-  min-width: 42px;
-  padding: 8px 12px;
-}
-
-/* Result box – hidden in immersive mode */
-.aa-result {
+/* ── Result ──────────────────────────────────────────────────────── */
+.an-result {
   border-radius: var(--radius-md);
   padding: 6px 10px;
   margin-bottom: 4px;
@@ -346,63 +317,46 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  animation: aaSlide 0.3s ease;
+  animation: anSlide 0.3s ease;
   flex-shrink: 0;
 }
-.aa-result.correct {
+.an-result.correct {
   background: #d4edda;
   border: 2px solid #27ae60;
 }
-.aa-result.wrong {
+.an-result.wrong {
   background: #f8d7da;
   border: 2px solid #e74c3c;
 }
-.aa-result.skipped {
+.an-result.skipped {
   background: #e8f4fd;
   border: 2px solid #95a5a6;
 }
-[data-theme="night"] .aa-result.correct {
+[data-theme="night"] .an-result.correct {
   background: rgba(76, 175, 125, 0.15);
   color: #6cd699;
 }
-[data-theme="night"] .aa-result.wrong {
+[data-theme="night"] .an-result.wrong {
   background: rgba(231, 76, 60, 0.15);
   color: #f37b6f;
 }
-[data-theme="night"] .aa-result.skipped {
+[data-theme="night"] .an-result.skipped {
   background: rgba(241, 196, 15, 0.12);
   color: #f0d068;
 }
-.aa-result-icon {
+.an-result-icon {
   font-size: 1rem;
 }
-.aa-result-text {
+.an-result-text {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-text-primary);
-  direction: rtl;
-}
-.aa-correct-answer {
-  text-align: center;
-  direction: rtl;
-  margin-top: 4px;
-}
-.aa-correct-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  font-family: var(--font-arabic);
-}
-.aa-correct-text {
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-  font-family: var(--font-arabic);
-  font-weight: bold;
   direction: rtl;
 }
 
-/* Next button – hidden in immersive mode */
-.aa-next-btn {
+/* ── Next button ─────────────────────────────────────────────────── */
+.an-next-btn {
   width: 100%;
   padding: 12px;
   background: #27ae60;
@@ -414,20 +368,19 @@ ion-content::part(scroll) {
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
+  justify-content: center;
   margin-top: 2px;
   flex-shrink: 0;
   min-height: 44px;
 }
-.aa-next-btn:hover {
+.an-next-btn:hover {
   background: #2ecc71;
   transform: scale(1.02);
 }
 
-/* Context viewer – fills remaining space */
-.aa-context-viewer {
+/* ── Context viewer ──────────────────────────────────────────────── */
+.an-context-viewer {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -437,18 +390,18 @@ ion-content::part(scroll) {
   border: 1px solid var(--color-gold);
   overflow: hidden;
 }
-.aa-context-viewer > div,
-.aa-context-viewer .mcv-container {
+.an-context-viewer > div,
+.an-context-viewer .mcv-container {
   flex: 1;
   min-height: 0;
   height: 100%;
   width: 100%;
 }
 
-/* Loading / Error / Complete */
-.aa-loading,
-.aa-error,
-.aa-complete {
+/* ── Loading / Error / Complete ──────────────────────────────────── */
+.an-loading,
+.an-error,
+.an-complete {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -457,21 +410,20 @@ ion-content::part(scroll) {
   background: var(--color-bg-page);
   color: var(--color-text-primary);
 }
-.aa-spinner {
+.an-spinner {
   border: 5px solid var(--color-progress-track);
   border-top: 5px solid var(--color-gold);
   border-radius: 50%;
   width: 50px;
   height: 50px;
-  animation: aaSpin 1s linear infinite;
+  animation: anSpin 1s linear infinite;
   margin-bottom: 15px;
 }
-@keyframes aaSpin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes anSpin {
+  to { transform: rotate(360deg); }
 }
-.aa-error-box {
+
+.an-error-box {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: 30px;
@@ -481,24 +433,21 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
   white-space: pre-line;
 }
-.aa-error-box p {
+.an-error-box p {
   margin: 0 0 16px;
   font-family: var(--font-arabic);
 }
-.aa-error-box button {
+.an-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+  background: var(--color-text-primary);
   color: var(--color-text-on-dark);
   border: none;
   border-radius: var(--radius-pill);
   font-size: var(--text-md);
   cursor: pointer;
 }
-.aa-complete-card {
+
+.an-complete-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: 30px 35px;
@@ -507,48 +456,48 @@ ion-content::part(scroll) {
   border: 3px solid var(--color-gold);
   color: var(--color-text-primary);
 }
-.aa-complete-card h2 {
+.an-complete-card h2 {
   font-family: var(--font-arabic-display);
   font-size: var(--text-3xl);
   margin: 0 0 4px;
 }
-.aa-complete-sub {
+.an-complete-sub {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   margin: 0 0 18px;
   font-style: italic;
 }
-.aa-score-ring {
+.an-score-ring {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 4px;
   margin-bottom: 4px;
 }
-.aa-score-num {
+.an-score-num {
   font-size: 3rem;
   font-weight: bold;
   color: var(--color-text-primary);
 }
-.aa-score-sep {
+.an-score-sep {
   font-size: 2rem;
   color: var(--color-text-muted);
 }
-.aa-score-total {
+.an-score-total {
   font-size: 1.8rem;
   color: var(--color-text-muted);
 }
-.aa-score-pct {
+.an-score-pct {
   font-size: 1.3rem;
   color: var(--color-text-primary);
   margin: 0 0 20px;
 }
-.aa-complete-actions {
+.an-complete-actions {
   display: flex;
   gap: 10px;
   justify-content: center;
 }
-.aa-complete-actions button {
+.an-complete-actions button {
   padding: 10px 20px;
   border: none;
   border-radius: var(--radius-lg);
@@ -557,45 +506,34 @@ ion-content::part(scroll) {
   cursor: pointer;
   transition: all 0.25s;
 }
-.aa-complete-actions button:first-child {
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+.an-complete-actions button:first-child {
+  background: var(--color-text-primary);
   color: var(--color-text-on-dark);
 }
-.aa-complete-actions button:last-child {
+.an-complete-actions button:last-child {
   background: var(--color-progress-track);
   color: var(--color-text-primary);
 }
-.aa-complete-actions button:hover {
+.an-complete-actions button:hover {
   transform: scale(1.05);
 }
 
-@keyframes aaSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes anSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-  .aa-verse-shared {
-    font-size: 1.2rem;
-    line-height: 1.9rem;
+  .an-verse-text {
+    font-size: 1.1rem;
+    line-height: 1.8rem;
   }
-  .aa-header {
+  .an-header {
     flex-wrap: wrap;
     height: auto;
     gap: 8px;
   }
-  .aa-header-actions {
+  .an-header-actions {
     margin-left: auto;
   }
 }
