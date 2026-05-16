@@ -6,8 +6,11 @@ import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   fetchStreaks,
   fetchUserProfile,
+  fetchAllNotes,
+  deleteNote,
   type Streak,
   type UserProfile,
+  type Note,
   UserApiError,
 } from "../../core/services/api/user-api.client";
 import {
@@ -16,6 +19,7 @@ import {
   getStoredAccessToken,
 } from "../../core/services/auth/oauth.service";
 import AccountModal from "./AccountModal";
+import GoalsCard from "./GoalsCard";
 import "./Account.css";
 
 type ModalType = "about" | "request" | "terms" | "privacy" | null;
@@ -101,39 +105,49 @@ const Account: React.FC = () => {
   const [featureSent, setFeatureSent] = useState(false);
   const featureRef = useRef<HTMLTextAreaElement>(null);
 
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  // Check login state once on mount (and whenever lang changes for error strings)
   useEffect(() => {
     getStoredAccessToken().then((token) => {
-      const isLoggedIn = !!token;
-      setLoggedIn(isLoggedIn);
-      if (isLoggedIn) {
-        setLoading(true);
-        Promise.all([
-          fetchStreaks(10).catch((err) => {
-            if (
-              err instanceof UserApiError &&
-              (err.status === 401 || err.status === 403)
-            ) {
-              setError(
-                lang === "ar"
-                  ? "يرجى تسجيل الدخول لعرض بياناتك"
-                  : "Please sign in to view your data",
-              );
-            } else {
-              setError(
-                lang === "ar" ? "تعذر تحميل البيانات" : "Could not load data",
-              );
-            }
-            return [];
-          }),
-          fetchUserProfile().catch(() => null),
-        ]).then(([streaksData, profileData]) => {
-          setStreaks(streaksData as Streak[]);
-          setUserProfile(profileData as UserProfile | null);
-          setLoading(false);
-        });
-      }
+      setLoggedIn(!!token);
     });
-  }, [lang]);
+  }, []);
+
+  // Load all user data whenever the user becomes logged in
+  useEffect(() => {
+    if (!loggedIn) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetchStreaks(10).catch((err) => {
+        if (
+          err instanceof UserApiError &&
+          (err.status === 401 || err.status === 403)
+        ) {
+          setError(
+            lang === "ar"
+              ? "يرجى تسجيل الدخول لعرض بياناتك"
+              : "Please sign in to view your data",
+          );
+        } else {
+          setError(
+            lang === "ar" ? "تعذر تحميل البيانات" : "Could not load data",
+          );
+        }
+        return [];
+      }),
+      fetchUserProfile().catch(() => null),
+      fetchAllNotes(100).catch(() => []),
+    ]).then(([streaksData, profileData, notesData]) => {
+      setStreaks(streaksData as Streak[]);
+      setUserProfile(profileData as UserProfile | null);
+      setNotes(notesData as Note[]);
+      setLoading(false);
+    });
+  }, [loggedIn, lang]);
 
   const handleLogin = () => signIn();
   const handleLogout = async () => {
@@ -141,8 +155,10 @@ const Account: React.FC = () => {
     setLoggedIn(false);
     setUserProfile(null);
     setStreaks([]);
+    setNotes([]);
     setError(null);
     setStreakOpen(false);
+    setNotesOpen(false);
   };
 
   const activeStreak = streaks.find((s) => s.status === "ACTIVE");
@@ -194,6 +210,9 @@ const Account: React.FC = () => {
     terms:          lang === "ar" ? "شروط الخدمة"                        : "Terms of Service",
     privacy:        lang === "ar" ? "سياسة الخصوصية"                     : "Privacy Policy",
     deleteAccount:  lang === "ar" ? "حذف الحساب"                         : "Delete Account",
+    notes:          lang === "ar" ? "ملاحظاتي"                           : "My Notes",
+    noNotes:        lang === "ar" ? "لا توجد ملاحظات بعد"                : "No notes yet",
+    noteVerse:      lang === "ar" ? "الآية"                              : "Verse",
     send:           lang === "ar" ? "إرسال"                              : "Send",
     sent:           lang === "ar" ? "تم الإرسال!"                        : "Sent!",
     featurePlaceholder: lang === "ar"
@@ -202,6 +221,15 @@ const Account: React.FC = () => {
     featureHint: lang === "ar"
       ? "اكتب اقتراحك وسنأخذه بعين الاعتبار."
       : "Write your suggestion and we'll take it into consideration.",
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await deleteNote(noteId);
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch {
+      setNotesError(lang === "ar" ? "تعذر حذف الملاحظة" : "Could not delete note");
+    }
   };
 
   const handleShare = async () => {
@@ -365,6 +393,77 @@ const Account: React.FC = () => {
                           <p className="ac-streak-empty">{t.noStreak}</p>
                         )}
                       </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Goals card ── */}
+            {loggedIn && <GoalsCard lang={lang} isRTL={isRTL} />}
+
+            {/* ── Notes card ── */}
+            {loggedIn && (
+              <div className="ac-card ac-notes-card">
+                <button
+                  className="ac-streak-header"
+                  onClick={() => setNotesOpen((o) => !o)}
+                  aria-expanded={notesOpen}
+                >
+                  <div className="ac-streak-header-left">
+                    <span className="ac-streak-flame">📝</span>
+                    <div>
+                      <p className="ac-streak-title">{t.notes}</p>
+                      {!notesOpen && !loading && (
+                        <p className="ac-streak-summary">
+                          {notes.length > 0
+                            ? `${notes.length} ${lang === "ar" ? "ملاحظة" : notes.length === 1 ? "note" : "notes"}`
+                            : t.noNotes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <svg className={`ac-chevron ${notesOpen ? "ac-chevron-up" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+
+                {notesOpen && (
+                  <div className="ac-streak-body">
+                    {loading ? (
+                      <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
+                    ) : notesError ? (
+                      <p className="ac-error">{notesError}</p>
+                    ) : notes.length === 0 ? (
+                      <p className="ac-streak-empty">{t.noNotes}</p>
+                    ) : (
+                      <ul className="ac-notes-list">
+                        {notes.map((note) => (
+                          <li key={note.id} className="ac-note-row">
+                            <div className="ac-note-row-info">
+                              <span className="ac-note-row-verse">
+                                {t.noteVerse} {note.verseKey}
+                              </span>
+                              <p className="ac-note-row-body">{note.body}</p>
+                              <span className="ac-note-row-date">
+                                {formatDate(note.updatedAt || note.createdAt)}
+                              </span>
+                            </div>
+                            <button
+                              className="ac-note-delete-btn"
+                              onClick={() => handleDeleteNote(note.id)}
+                              aria-label={lang === "ar" ? "حذف الملاحظة" : "Delete note"}
+                            >
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                <path d="M10 11v6M14 11v6" />
+                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                              </svg>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 )}

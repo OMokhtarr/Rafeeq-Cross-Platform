@@ -232,6 +232,196 @@ export async function fetchUserProfile(): Promise<UserProfile | null> {
   };
 }
 
+// ─── Notes API ───────────────────────────────────────────────────────────────
+
+export interface Note {
+  id: string;
+  body: string;
+  verseKey: string;       // "sura:aya" e.g. "2:255"
+  createdAt: string;      // ISO timestamp
+  updatedAt: string;
+}
+
+interface NotesResponse {
+  data: Note[];
+  pagination?: {
+    startCursor: string;
+    endCursor: string;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+interface SingleNoteResponse {
+  data: Note;
+}
+
+function isUnavailable(err: unknown): boolean {
+  return err instanceof UserApiError && (err.status === 401 || err.status === 403 || err.status === 404);
+}
+
+/** Fetch all notes for the signed-in user. */
+export async function fetchAllNotes(first = 50): Promise<Note[]> {
+  const token = await getStoredAccessToken();
+  if (!token) return [];
+  try {
+    const res = await userApiFetch<NotesResponse>(`/notes?first=${first}`);
+    return res.data ?? [];
+  } catch (err) {
+    if (isUnavailable(err)) return [];
+    throw err;
+  }
+}
+
+/** Fetch notes for a specific verse key ("sura:aya"). */
+export async function fetchNotesForVerse(verseKey: string): Promise<Note[]> {
+  const token = await getStoredAccessToken();
+  if (!token) return [];
+  try {
+    const encoded = encodeURIComponent(verseKey);
+    const res = await userApiFetch<NotesResponse>(`/notes?verse_key=${encoded}&first=50`);
+    return res.data ?? [];
+  } catch (err) {
+    if (isUnavailable(err)) return [];
+    throw err;
+  }
+}
+
+/** Add a new note for a verse. */
+export async function addNote(verseKey: string, body: string): Promise<Note> {
+  const res = await userApiFetch<SingleNoteResponse>("/notes", {
+    method: "POST",
+    body: JSON.stringify({ verse_key: verseKey, body }),
+  });
+  return res.data;
+}
+
+/** Update an existing note by ID. */
+export async function updateNote(noteId: string, body: string): Promise<Note> {
+  const res = await userApiFetch<SingleNoteResponse>(`/notes/${noteId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ body }),
+  });
+  return res.data;
+}
+
+/** Delete a note by ID. */
+export async function deleteNote(noteId: string): Promise<void> {
+  await userApiFetch<unknown>(`/notes/${noteId}`, { method: "DELETE" });
+}
+
+// ─── Goals API ───────────────────────────────────────────────────────────────
+
+export type GoalDuration = "DAILY" | "WEEKLY" | "MONTHLY";
+export type GoalCategory = "PAGES" | "VERSES" | "JUZS";
+
+export interface Goal {
+  id: string;
+  type: string;
+  amount: number;
+  duration: GoalDuration;
+  category: GoalCategory;
+  mushafId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface TodayGoalPlan {
+  goalId: string | null;
+  id: string | null;
+  goal?: Goal;
+}
+
+interface TodayGoalPlanResponse {
+  data: TodayGoalPlan;
+}
+
+interface GoalResponse {
+  data: Goal;
+}
+
+export interface GoalTimeline {
+  date: string;
+  minimumAmount: number;
+}
+
+interface GoalTimelineResponse {
+  data: GoalTimeline[];
+}
+
+const DEFAULT_MUSHAF_ID = "2";
+
+export async function fetchTodayGoalPlan(): Promise<TodayGoalPlan | null> {
+  const token = await getStoredAccessToken();
+  if (!token) return null;
+  try {
+    const res = await userApiFetch<TodayGoalPlanResponse>(
+      `/goals/today?type=QURAN&mushafId=${DEFAULT_MUSHAF_ID}`,
+    );
+    return res.data ?? null;
+  } catch (err) {
+    if (isUnavailable(err)) return null;
+    throw err;
+  }
+}
+
+export async function createGoal(
+  amount: number,
+  duration: GoalDuration,
+  category: GoalCategory = "PAGES",
+): Promise<Goal> {
+  const res = await userApiFetch<GoalResponse>(
+    `/goals?mushafId=${DEFAULT_MUSHAF_ID}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ type: "QURAN", amount, duration, category }),
+    },
+  );
+  return res.data;
+}
+
+export async function updateGoal(
+  goalId: string,
+  amount: number,
+  duration: GoalDuration,
+): Promise<Goal> {
+  const res = await userApiFetch<GoalResponse>(
+    `/goals/${goalId}?mushafId=${DEFAULT_MUSHAF_ID}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ amount, duration }),
+    },
+  );
+  return res.data;
+}
+
+export async function deleteGoal(
+  goalId: string,
+  category: GoalCategory = "PAGES",
+): Promise<void> {
+  await userApiFetch<unknown>(
+    `/goals/${goalId}?category=${category}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function fetchGoalTimeline(
+  amount: number,
+  duration: GoalDuration,
+  category: GoalCategory = "PAGES",
+): Promise<GoalTimeline[]> {
+  try {
+    const params = `type=QURAN&amount=${amount}&duration=${duration}&category=${category}&mushafId=${DEFAULT_MUSHAF_ID}`;
+    const res = await userApiFetch<GoalTimelineResponse>(
+      `/goals/timeline?${params}`,
+    );
+    return res.data ?? [];
+  } catch (err) {
+    if (isUnavailable(err)) return [];
+    throw err;
+  }
+}
+
 // ─── Bookmarks — local-only (unchanged) ───────────────────────────────────────
 
 const BM_STORAGE_KEY = "rafiq_bookmarks_v1";
