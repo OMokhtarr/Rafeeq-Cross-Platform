@@ -129,6 +129,10 @@ const MushafPage: React.FC<Props> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
+  // Hidden-verse line overlays: one horizontal bar per (verse × mushaf-line).
+  interface HiddenSegment { top: number; left: number; width: number }
+  const [hiddenSegments, setHiddenSegments] = useState<HiddenSegment[]>([]);
+
   // Mid-page surah starts: any aya-1 verse that isn't the first verse on
   // the page. These render an inline surah-name banner + (for non-Tawbah)
   // bismillah row positioned right before the line where the new surah's
@@ -265,6 +269,52 @@ const MushafPage: React.FC<Props> = ({
     fittedFontPx, // keep so we re-run after first pass sets a value
     bigTextMode,
   ]);
+
+  // Measure hidden-word spans after layout and compute one overlay bar per
+  // contiguous hidden segment on each mushaf line.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const hasHidden = hidden && hidden.size > 0;
+    const hasPartial = partialTarget && partialTarget.hiddenPositions && partialTarget.hiddenPositions.size > 0;
+    if (!container || (!hasHidden && !hasPartial)) {
+      setHiddenSegments([]);
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    // Each hidden non-end-marker word gets data-hidden-seg="verseKey:lineNum"
+    const spans = container.querySelectorAll<HTMLElement>(
+      "[data-hidden-seg]",
+    );
+    // Group spans by their segment key (verseKey:lineNum)
+    const groups = new Map<string, HTMLElement[]>();
+    for (const span of spans) {
+      const segKey = span.dataset.hiddenSeg!;
+      const arr = groups.get(segKey) ?? [];
+      arr.push(span);
+      groups.set(segKey, arr);
+    }
+    const segments: HiddenSegment[] = [];
+    for (const spans of groups.values()) {
+      if (spans.length === 0) continue;
+      let minLeft = Infinity;
+      let maxRight = -Infinity;
+      let bottomY = 0;
+      for (const span of spans) {
+        const r = span.getBoundingClientRect();
+        if (r.width === 0) continue;
+        minLeft = Math.min(minLeft, r.left);
+        maxRight = Math.max(maxRight, r.right);
+        bottomY = r.bottom - r.height * 0.3;
+      }
+      if (minLeft === Infinity) continue;
+      segments.push({
+        left: minLeft - containerRect.left,
+        width: maxRight - minLeft,
+        top: bottomY - containerRect.top,
+      });
+    }
+    setHiddenSegments(segments);
+  }, [hidden, partialTarget, fittedFontPx, fontReady, verses, bigTextMode]);
 
   if (!fontReady) {
     return (
@@ -404,11 +454,30 @@ const MushafPage: React.FC<Props> = ({
       .filter(Boolean)
       .join(" ");
 
+    // Tag spans that should contribute to a hidden-line overlay.
+    // Two cases:
+    //   1. Whole-verse hide (isHidden): every non-end-marker word on the line.
+    //   2. Partial-target hide (isWordPastReveal): the end-marker span whose
+    //      position is in hiddenPositions, plus any non-end word at the same
+    //      position — both need to be measured to draw one bar per line segment.
+    const isPartialWordHidden =
+      isPartialTargetVerse &&
+      !isEndMarker &&
+      !!partialTarget!.hiddenPositions?.has(tw.word.position);
+
+    const hiddenSegKey =
+      isHidden && !isEndMarker
+        ? `${key}:${lineNumber}`
+        : isWordPastReveal || isPartialWordHidden
+          ? `partial:${key}:${lineNumber}`
+          : undefined;
+
     return (
       <span
         key={`${lineNumber}-${idx}${isFlash ? "-f" : ""}`}
         className={cls}
         data-verse-key={key}
+        {...(hiddenSegKey ? { "data-hidden-seg": hiddenSegKey } : {})}
         onClick={onVerseTap ? () => handleClick(key) : undefined}
         onTouchStart={
           onVerseTap || onVerseLongPress ? () => startPress(key) : undefined
@@ -536,6 +605,7 @@ const MushafPage: React.FC<Props> = ({
       ref={containerRef}
       style={{
         fontFamily: family,
+        position: "relative",
         ...(fittedFontPx !== null && !bigTextMode
           ? { fontSize: `${fittedFontPx}px` }
           : null),
@@ -545,6 +615,25 @@ const MushafPage: React.FC<Props> = ({
       }}
     >
       {bigTextMode ? renderWrappedFlow() : renderStrictLines()}
+      {hiddenSegments.map((seg, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: seg.top,
+            left: seg.left,
+            width: seg.width,
+            height: 0.5,
+            background: theme === "night"
+              ? "rgba(200,200,200,0.18)"
+              : "rgba(120,120,120,0.22)",
+            borderRadius: 1,
+            pointerEvents: "none",
+            transform: "none",
+          }}
+        />
+      ))}
     </div>
   );
 };

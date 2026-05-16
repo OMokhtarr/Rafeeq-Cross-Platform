@@ -30,6 +30,7 @@ import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
 import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
+import { useWakeLock } from "../../core/hooks/useWakeLock";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import { isPageBookmarked, recordActivityDay } from "../../core/services/api/user-api.client";
 import { readSelectedMushaf } from "../../core/services/data/quran.service";
@@ -86,7 +87,7 @@ function readSettings(): ReadSettings {
 const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const { t, lang } = useLang();
+  const { t, lang, isRTL } = useLang();
 
   const { selected, hidden, hideMany, showVerse, showAll, hiddenCount } =
     useVerseVisibility();
@@ -169,6 +170,7 @@ const PageViewer: React.FC = () => {
   const audio = useAudioPlayer();
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
   const immersive = useImmersiveMode();
+  useWakeLock();
 
   const pageVerseKeyForBookmark =
     verses.length > 0 ? `${verses[0].sura}:${verses[0].aya}` : null;
@@ -284,10 +286,21 @@ const PageViewer: React.FC = () => {
     if (sheetVerseKey) immersive.showChrome();
   }, [sheetVerseKey, immersive]);
 
+  // Tracks whether the user has explicitly paused; reset only when playback fully stops
+  const [userPaused, setUserPaused] = useState(false);
+  useEffect(() => {
+    if (!queue.state.currentVerse) setUserPaused(false);
+  }, [queue.state.currentVerse]);
+
   // Playback bar controls
   const handlePlayPause = useCallback(() => {
-    if (queue.state.isPlaying) queue.pause();
-    else queue.resume().catch(() => {});
+    if (queue.state.isPlaying) {
+      setUserPaused(true);
+      queue.pause();
+    } else {
+      setUserPaused(false);
+      queue.resume().catch(() => {});
+    }
   }, [queue]);
   const handleStop = useCallback(() => {
     queue.stop();
@@ -512,7 +525,7 @@ const PageViewer: React.FC = () => {
               >
                 <button
                   className="toolbar-button playback-nav"
-                  onClick={handlePrev}
+                  onClick={isRTL ? handleNext : handlePrev}
                   aria-label="Previous"
                 >
                   <svg
@@ -523,18 +536,18 @@ const PageViewer: React.FC = () => {
                     stroke="currentColor"
                     strokeWidth="1.8"
                   >
-                    <polygon points="5 19 15 12 5 5" />
-                    <line x1="19" y1="5" x2="19" y2="19" />
+                    <polygon points="19 5 9 12 19 19" />
+                    <line x1="5" y1="5" x2="5" y2="19" />
                   </svg>
                 </button>
                 <button
                   className="toolbar-button playback-play"
                   onClick={handlePlayPause}
                   aria-label={
-                    queue.state.isPlaying ? t.mushaf.pause : t.mushaf.play
+                    queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? t.mushaf.pause : t.mushaf.play
                   }
                 >
-                  {queue.state.isPlaying ? (
+                  {queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? (
                     <svg
                       viewBox="0 0 24 24"
                       width="22"
@@ -559,7 +572,7 @@ const PageViewer: React.FC = () => {
                 </button>
                 <button
                   className="toolbar-button playback-nav"
-                  onClick={handleNext}
+                  onClick={isRTL ? handlePrev : handleNext}
                   aria-label="Next"
                 >
                   <svg
@@ -570,8 +583,8 @@ const PageViewer: React.FC = () => {
                     stroke="currentColor"
                     strokeWidth="1.8"
                   >
-                    <polygon points="19 5 9 12 19 19" />
-                    <line x1="5" y1="5" x2="5" y2="19" />
+                    <polygon points="5 19 15 12 5 5" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
                   </svg>
                 </button>
                 <button
@@ -589,6 +602,7 @@ const PageViewer: React.FC = () => {
                     <rect x="5" y="5" width="14" height="14" rx="2" />
                   </svg>
                 </button>
+                <div className="playback-bar-divider" aria-hidden="true" />
                 <button
                   className="toolbar-button playback-settings"
                   onClick={() => {
@@ -607,8 +621,7 @@ const PageViewer: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <line x1="12" y1="19" x2="12" y2="5" />
-                    <polyline points="5 12 12 5 19 12" />
+                    <polyline points="5 15 12 8 19 15" />
                   </svg>
                 </button>
               </div>

@@ -92,6 +92,26 @@ export async function countCachedAudio(): Promise<number> {
   return idb.count(STORE);
 }
 
+/**
+ * Returns a map of sura → number of cached verses for the given reciter.
+ * Scans only key strings (no blob data) so it's fast even with many entries.
+ */
+export async function getCachedCountsPerSurah(
+  reciter: string,
+): Promise<Record<number, number>> {
+  const keys = await idb.getAllKeys(STORE);
+  const prefix = `${reciter}:`;
+  const counts: Record<number, number> = {};
+  for (const k of keys) {
+    if (!k.startsWith(prefix)) continue;
+    const parts = k.split(":");
+    if (parts.length !== 3) continue;
+    const sura = parseInt(parts[1], 10);
+    if (!isNaN(sura)) counts[sura] = (counts[sura] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function deleteCached(
   reciter: string,
   sura: number,

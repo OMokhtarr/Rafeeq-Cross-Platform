@@ -310,17 +310,6 @@ ion-content::part(scroll) {
   font-family: var(--font-arabic);
   text-align: right;
 }
-.aa-page-input input {
-  padding: 8px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: 8px;
-  font-size: 1rem;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-}
 
 .aa-range-info {
   color: var(--color-gold);
@@ -399,16 +388,32 @@ ion-content::part(scroll) {
   border-color: var(--color-quran);
 }
 
-.aa-count-custom {
-  width: 70px;
+.aa-count-select {
+  flex: 1;
+}
+.aa-count-select .isel__trigger {
   padding: 9px 5px;
   border: 1.5px solid var(--color-input-border);
   border-radius: 10px;
-  font-size: 1rem;
-  text-align: center;
-  direction: ltr;
   background: var(--color-bg-card-alt);
   color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 1.05rem;
+  min-height: unset;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.aa-count-select .isel__trigger:hover {
+  background: var(--color-gold-faint);
+}
+.aa-count-select.active .isel__trigger {
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
+}
+.aa-count-select.active .isel__trigger:hover {
+  background: var(--color-quran);
 }
 
 /* ── Start button ───────────────────────────── */
@@ -470,8 +475,5 @@ ion-content::part(scroll) {
   }
   .aa-surah-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  }
-  .aa-count-row {
-    flex-wrap: wrap;
   }
 }

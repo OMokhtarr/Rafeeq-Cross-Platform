@@ -191,10 +191,6 @@
   user-select: none;
 }
 
-.mushaf-verse-hidden:not(.mushaf-verse-end-marker)::after {
-  display: none !important;
-}
-
 /* Keep the ayah number ornament fully visible */
 .mushaf-verse-hidden.mushaf-verse-end-marker {
   visibility: visible !important;
@@ -206,12 +202,6 @@
   text-shadow: none !important;
 }
 
-[data-theme="night"] .mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
-  visibility: hidden !important;
-  opacity: 0 !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-}
 
 [data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
   visibility: visible !important;

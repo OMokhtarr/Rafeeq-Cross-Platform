@@ -222,11 +222,16 @@ export function usePlaybackQueue(
     stop();
   }, [stop]);
 
+  const endedHandlerRef = useRef<(() => void) | null>(null);
+
   const bindEnded = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
+    if (endedHandlerRef.current) {
+      el.removeEventListener("ended", endedHandlerRef.current);
+    }
     const handler = () => advance();
-    el.removeEventListener("ended", handler);
+    endedHandlerRef.current = handler;
     el.addEventListener("ended", handler);
   }, [advance]);
 

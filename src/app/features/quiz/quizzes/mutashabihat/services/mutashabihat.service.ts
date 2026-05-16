@@ -1,5 +1,5 @@
 import { stripDiacritics } from "../../../../../core/utils/arabic.util";
-import { getSurahNameArabic } from "../../../../../core/services/data/metadata.service";
+import { getSurahNameArabic, getSurahNameEnglish } from "../../../../../core/services/data/metadata.service";
 import type { Verse } from "../../../../../shared/models/verse.model";
 
 export interface MutashabihatGroup {
@@ -17,6 +17,7 @@ interface RichVerse {
   page: number;
   juz: number;
   suraNameAr: string;
+  suraName: string;
   hiddenStart: string;
 }
 
@@ -88,6 +89,7 @@ export function getAllMutashabihatGroups(verses: Verse[]): MutashabihatGroup[] {
         page: e.page,
         juz: e.juz,
         suraNameAr: getSurahNameArabic(e.sura),
+        suraName: getSurahNameEnglish(e.sura),
         hiddenStart: e.words.slice(WINDOW).join(" "),
       })),
     });
@@ -173,7 +175,7 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
     sura: target.sura,
     aya: target.aya,
     suraNameAr: target.suraNameAr,
-    suraName: target.suraNameAr,
+    suraName: target.suraName,
     page: target.page,
     fullText: target.text,
     versePart: displayedPortion,

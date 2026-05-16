@@ -121,6 +121,16 @@ export class IDBService {
     });
   }
 
+  async getAllKeys(store: string): Promise<string[]> {
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(store, "readonly");
+      const req = tx.objectStore(store).getAllKeys();
+      req.onsuccess = () => resolve(req.result as string[]);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   // ── Writes ─────────────────────────────────────────────────────────────────
 
   async put<T>(store: string, item: T): Promise<void> {

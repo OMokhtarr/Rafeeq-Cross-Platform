@@ -64,7 +64,12 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  scrollbar-width: none;
+}
+.isel__list::-webkit-scrollbar {
+  display: none;
 }
 .isel__list.isel--night {
   background: #252525;
