@@ -13,6 +13,7 @@ import {
   countCachedAudio,
   clearAllCachedAudio,
   downloadAndCache,
+  getCachedCountsPerSurah,
 } from "../../core/services/audio/audio-cache.service";
 import {
   getJuzStart,
@@ -167,6 +168,12 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const [surahDownloads, setSurahDownloads] = useState<
     Record<number, SurahDownloadState>
   >({});
+  const [cachedCounts, setCachedCounts] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    if (!downloadsOpen) return;
+    getCachedCountsPerSurah(prefs.reciter).then(setCachedCounts).catch(() => {});
+  }, [downloadsOpen, prefs.reciter]);
 
   // Dynamic reciters
   const [reciters, setReciters] = useState<{ value: string; label: string }[]>(
@@ -231,13 +238,31 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   };
 
   const currentPage = currentPageProp ?? startPageQuery;
-  const currentSura = getPageStart(currentPage)?.sura ?? 1;
   const currentJuz = Math.ceil(currentPage / 20);
   const currentHizb = Math.ceil(currentPage / 10);
   const currentRub = useMemo(
     () => getRubNumberForPage(currentPage),
     [currentPage],
   );
+
+  // All surahs that start on (or continue from) the current page
+  const surahsOnPage = useMemo(() => {
+    const start = getPageStart(currentPage);
+    if (!start) return [1];
+    const surahs: number[] = [start.sura];
+    if (currentPage >= 604) return surahs;
+    const nextStart = getPageStart(currentPage + 1);
+    if (!nextStart || nextStart.sura === start.sura) return surahs;
+    // Any surah between start.sura+1 and nextStart.sura-1 is fully contained on this page.
+    // nextStart.sura is on this page only if it starts mid-page (aya > 1).
+    for (let s = start.sura + 1; s < nextStart.sura; s++) {
+      surahs.push(s);
+    }
+    if (nextStart.aya > 1) {
+      surahs.push(nextStart.sura);
+    }
+    return surahs;
+  }, [currentPage]);
 
   const setRangeToPage = (p: number) => {
     setStartVerse(pageStart(p));
@@ -253,7 +278,6 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     const ch = getChapters().find((c) => c.id === s);
     setStartVerse({ sura: s, aya: 1 });
     setEndVerse({ sura: s, aya: ch ? ch.verses_count : 1 });
-    setActiveQuick("surah");
   };
   const setRangeToJuz = (j: number) => {
     setStartVerse(getJuzStart(j));
@@ -316,6 +340,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
       delete next[sura]?.abortController;
       return next;
     });
+    getCachedCountsPerSurah(prefs.reciter).then(setCachedCounts).catch(() => {});
   };
 
   const cancelSurahDownload = (sura: number) => {
@@ -330,6 +355,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const handleClearCache = async () => {
     await clearAllCachedAudio();
     setSurahDownloads({});
+    setCachedCounts({});
   };
 
   const surahPickerOptions = useMemo(
@@ -465,6 +491,8 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             const progress = state
               ? Math.round((state.done / state.total) * 100)
               : 0;
+            const cachedCount = cachedCounts[sura.value] ?? 0;
+            const isFullyCached = cachedCount >= sura.versesCount;
             return (
               <div key={sura.value} className={`pb-surah-row${nightCls}`}>
                 <div className="pb-surah-info">
@@ -476,6 +504,13 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
                       : sura.versesCount}{" "}
                     {lang === "ar" ? "آية" : "verses"})
                   </span>
+                  {!isDownloading && cachedCount > 0 && (
+                    <span className={`pb-cached-badge${isFullyCached ? " pb-cached-badge--full" : ""}${nightCls}`}>
+                      {lang === "ar"
+                        ? `${toHindiNumbers(cachedCount)}/${toHindiNumbers(sura.versesCount)} محفوظ`
+                        : `${cachedCount}/${sura.versesCount} cached`}
+                    </span>
+                  )}
                 </div>
                 <div className="pb-surah-actions">
                   {isDownloading ? (
@@ -500,12 +535,12 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
                   ) : (
                     <button
                       type="button"
-                      className={`pb-mini-btn${nightCls}`}
+                      className={`pb-mini-btn${isFullyCached ? " pb-mini-btn--done" : ""}${nightCls}`}
                       onClick={() =>
                         startSurahDownload(sura.value, sura.versesCount)
                       }
                     >
-                      {tp.downloadStart}
+                      {isFullyCached ? tp.downloadRedownload : tp.downloadStart}
                     </button>
                   )}
                 </div>
@@ -632,18 +667,24 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             >
               {tp.quickFromPage(String(currentPage))}
             </button>
-            <button
-              className={`pb-seg-btn${nightCls}${
-                activeQuick === "surah" ? " is-active" : ""
-              }`}
-              onClick={() => setRangeToSurah(currentSura)}
-            >
-              {tp.quickSurah(
-                lang === "ar"
-                  ? getSurahNameArabic(currentSura)
-                  : getSurahNameEnglish(currentSura),
-              )}
-            </button>
+            {surahsOnPage.map((s) => (
+              <button
+                key={s}
+                className={`pb-seg-btn${nightCls}${
+                  activeQuick === `surah-${s}` ? " is-active" : ""
+                }`}
+                onClick={() => {
+                  setRangeToSurah(s);
+                  setActiveQuick(`surah-${s}`);
+                }}
+              >
+                {tp.quickSurah(
+                  lang === "ar"
+                    ? getSurahNameArabic(s)
+                    : getSurahNameEnglish(s),
+                )}
+              </button>
+            ))}
             <button
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "juz" ? " is-active" : ""

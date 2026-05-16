@@ -179,8 +179,8 @@
 
 .pb-seg-btn {
   background: transparent;
-  border: 1px solid transparent;
-  color: var(--color-text-secondary, rgba(0, 0, 0, 0.7));
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  color: #1a1a1c;
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
@@ -318,8 +318,10 @@
 
 .pb-surah-info {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 .pb-surah-name {
   font-family: var(--font-arabic, "Scheherazade New", serif);
@@ -372,6 +374,27 @@
 [data-theme="night"] .pb-mini-btn-warn {
   background: #d4726a;
 }
+.pb-mini-btn--done {
+  background: transparent;
+  border: 1.5px solid var(--color-quran, #1f8f6b);
+  color: var(--color-quran, #1f8f6b);
+}
+
+.pb-cached-badge {
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--color-quran, #1f8f6b);
+  color: #fff;
+  white-space: nowrap;
+}
+.pb-cached-badge--full {
+  font-weight: 600;
+}
+.pb-cached-badge.pb--night {
+  background: var(--color-quran, #1e7b47);
+  color: #fff;
+}
 
 /* ── Night modifier ─────────────────────────────────────────────────────────── */
 .pb-page.pb--night {
@@ -420,7 +443,8 @@
   border-color: rgba(255, 255, 255, 0.06);
 }
 .pb-seg-btn.pb--night {
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.75));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 .pb-seg-btn.pb--night:hover {
   background: rgba(255, 255, 255, 0.06);

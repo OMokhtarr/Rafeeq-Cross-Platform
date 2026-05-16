@@ -28,7 +28,6 @@ const InlineSelect: React.FC<Props> = ({
   const [listStyle, setListStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const openedAtRef = useRef<number>(0);
 
   const selected = options.find((o) => o.value === value);
   const nightCls = night ? " isel--night" : "";
@@ -66,23 +65,26 @@ const InlineSelect: React.FC<Props> = ({
     if (!open) return;
     const close = (e: MouseEvent | TouchEvent) => {
       if (
-        !triggerRef.current?.contains(e.target as Node) &&
-        !listRef.current?.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
+        triggerRef.current?.contains(e.target as Node) ||
+        listRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
     };
     const closeOnScroll = (e: Event) => {
-      // Ignore scroll events that originate inside the list itself
       if (listRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("touchstart", close);
-    window.addEventListener("scroll", closeOnScroll, true);
+    // Defer registration by one tick so the tap that opened the dropdown
+    // has finished bubbling before we start listening for outside clicks.
+    const tid = setTimeout(() => {
+      document.addEventListener("mousedown", close);
+      document.addEventListener("touchend", close);
+      window.addEventListener("scroll", closeOnScroll, true);
+    }, 0);
     return () => {
+      clearTimeout(tid);
       document.removeEventListener("mousedown", close);
-      document.removeEventListener("touchstart", close);
+      document.removeEventListener("touchend", close);
       window.removeEventListener("scroll", closeOnScroll, true);
     };
   }, [open]);
@@ -110,9 +112,7 @@ const InlineSelect: React.FC<Props> = ({
               aria-selected={o.value === value}
               data-selected={o.value === value ? "true" : undefined}
               className={`isel__option${nightCls}${o.value === value ? " isel__option--active" : ""}`}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                if (Date.now() - openedAtRef.current < 300) return;
+              onPointerDown={() => {
                 onChange(o.value);
                 setOpen(false);
               }}
@@ -149,10 +149,7 @@ const InlineSelect: React.FC<Props> = ({
         ref={triggerRef}
         type="button"
         className={`isel__trigger${nightCls}`}
-        onClick={() => {
-          if (!open) openedAtRef.current = Date.now();
-          setOpen((o) => !o);
-        }}
+        onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}

@@ -127,14 +127,6 @@ const Azkar: React.FC = () => {
   // Touch tracking for swipe-to-reset (per-item)
   const touchRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
-  // Load persisted state whenever the category changes
-  useEffect(() => {
-    if (!selectedCategory) return;
-    const { counters: c, completed: d } = loadCatState(selectedCategory);
-    setCounters(c);
-    setCompleted(d);
-  }, [selectedCategory]);
-
   // Persist on change
   useEffect(() => {
     if (!selectedCategory) return;
@@ -142,8 +134,10 @@ const Azkar: React.FC = () => {
   }, [selectedCategory, counters, completed]);
 
   const handleCategorySelect = (catId: string) => {
+    localStorage.removeItem(stateKey(catId));
+    setCounters({});
+    setCompleted({});
     setSelectedCategory(catId);
-    // counters/completed will be loaded by the effect above
     window.scrollTo(0, 0);
   };
 

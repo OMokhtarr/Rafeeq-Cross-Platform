@@ -520,10 +520,6 @@ ion-content::part(scroll) {
   border: 3px solid var(--color-gold);
   color: var(--color-text-primary);
 }
-.aa-complete-badge {
-  font-size: 3rem;
-  margin-bottom: 8px;
-}
 .aa-complete-card h2 {
   font-family: var(--font-arabic-display);
   font-size: var(--text-3xl);

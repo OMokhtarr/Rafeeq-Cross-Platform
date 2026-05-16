@@ -92,6 +92,8 @@ export interface AppStrings {
     score: string;
     exit: string;
     confirmExit: string;
+    exitConfirm: string;
+    exitCancel: string;
     hint: string;
     context: string;
     hide: string;
@@ -208,6 +210,7 @@ export interface AppStrings {
     closeLabel: string;
     downloadsTitle: string;
     downloadStart: string;
+    downloadRedownload: string;
     downloadCancel: string;
     downloadClear: string;
     downloadProgress: (done: string, total: string) => string;
@@ -351,6 +354,8 @@ const ar: AppStrings = {
     score: "النتيجة",
     exit: "✕",
     confirmExit: "هل تريد الخروج من الاختبار؟",
+    exitConfirm: "خروج",
+    exitCancel: "متابعة",
     hint: "💡 تلميح",
     context: "📖 سياق",
     hide: "📖 إخفاء",
@@ -364,7 +369,7 @@ const ar: AppStrings = {
     correctAnswer: "الإجابة الصحيحة:",
     completionVerse: "إكمال الآية:",
     nextQuestion: "← السؤال التالي",
-    finishQuiz: "🏁 إنهاء الاختبار",
+    finishQuiz: "إنهاء الاختبار",
     completeTitle: "انتهى الاختبار!",
     completeAkmelSub: "Akmel Al-Ayah Quiz Complete",
     completeMutashabihatSub: "Mutashabihat Quiz Complete",
@@ -476,6 +481,7 @@ const ar: AppStrings = {
     closeLabel: "إغلاق",
     downloadsTitle: "إدارة التحميلات",
     downloadStart: "تحميل النطاق المختار",
+    downloadRedownload: "إعادة التحميل",
     downloadCancel: "إيقاف التحميل",
     downloadClear: "مسح التحميلات",
     downloadProgress: (done: string, total: string) =>
@@ -631,6 +637,8 @@ const en: AppStrings = {
     score: "Score",
     exit: "✕",
     confirmExit: "Exit the quiz?",
+    exitConfirm: "Exit",
+    exitCancel: "Continue",
     hint: "💡 Hint",
     context: "📖 Context",
     hide: "📖 Hide",
@@ -644,7 +652,7 @@ const en: AppStrings = {
     correctAnswer: "Correct answer:",
     completionVerse: "Completion:",
     nextQuestion: "← Next Question",
-    finishQuiz: "🏁 Finish Quiz",
+    finishQuiz: "Finish Quiz",
     completeTitle: "Quiz complete!",
     completeAkmelSub: "اكتمل اختبار أكمل الآية",
     completeMutashabihatSub: "اكتمل اختبار المتشابهات",
@@ -756,6 +764,7 @@ const en: AppStrings = {
     closeLabel: "Close",
     downloadsTitle: "Manage downloads",
     downloadStart: "Download selected range",
+    downloadRedownload: "Re-download",
     downloadCancel: "Stop download",
     downloadClear: "Clear cached audio",
     downloadProgress: (done: string, total: string) =>

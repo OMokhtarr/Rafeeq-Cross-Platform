@@ -306,17 +306,6 @@ ion-content::part(scroll) {
   font-family: var(--font-arabic);
   text-align: right;
 }
-.ms-page-input input {
-  padding: 8px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-md);
-  font-size: var(--text-md);
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
-}
 
 .ms-range-info {
   color: var(--color-gold);
@@ -395,16 +384,32 @@ ion-content::part(scroll) {
   border-color: var(--color-quran);
 }
 
-.ms-count-custom {
-  width: 70px;
+.ms-count-select {
+  flex: 1;
+}
+.ms-count-select .isel__trigger {
   padding: 9px 5px;
   border: 1.5px solid var(--color-input-border);
   border-radius: var(--radius-md);
-  font-size: var(--text-md);
-  text-align: center;
-  direction: ltr;
   background: var(--color-bg-card-alt);
   color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  min-height: unset;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.ms-count-select .isel__trigger:hover {
+  background: var(--color-gold-faint);
+}
+.ms-count-select.active .isel__trigger {
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
+}
+.ms-count-select.active .isel__trigger:hover {
+  background: var(--color-quran);
 }
 
 /* ── Start button ───────────────────────────── */
@@ -466,8 +471,5 @@ ion-content::part(scroll) {
   }
   .ms-surah-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  }
-  .ms-count-row {
-    flex-wrap: wrap;
   }
 }

@@ -10,6 +10,7 @@ import {
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
+import InlineSelect from "../../../../../../shared/components/inline-select/InlineSelect";
 import type { QuizConfig } from "../../../../../../shared/models/verse.model";
 import "./AkmelAlAyahSetup.css";
 
@@ -25,7 +26,25 @@ const AkmelAlAyahSetup: React.FC = () => {
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
-  const [questionCount, setQuestionCount] = useState(10);
+  const [questionCount, setQuestionCount] = useState(25);
+
+  const pageOptions = useMemo(
+    () =>
+      Array.from({ length: 604 }, (_, i) => ({
+        value: String(i + 1),
+        label: isRTL ? toHindi(i + 1) : String(i + 1),
+      })),
+    [isRTL],
+  );
+
+  const countOptions = useMemo(
+    () =>
+      [25, 30, 35, 40, 45, 50].map((n) => ({
+        value: String(n),
+        label: isRTL ? toHindi(n) : String(n),
+      })),
+    [isRTL],
+  );
 
   // Build surah names list from metadata service
   const surahNames = useMemo(() => {
@@ -122,12 +141,23 @@ const AkmelAlAyahSetup: React.FC = () => {
                           onClick={() => setSelectedSurah(num)}
                         >
                           <span className="aa-chip-text">
-                            <span className="aa-chip-name" lang="ar" dir="rtl">
-                              {entry!.arabic}
-                            </span>
-                            <span className="aa-chip-en">{entry!.english}</span>
+                            {isRTL ? (
+                              <>
+                                <span className="aa-chip-name" lang="ar" dir="rtl">
+                                  {entry!.arabic}
+                                </span>
+                                <span className="aa-chip-en">{entry!.english}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="aa-chip-en">{entry!.english}</span>
+                                <span className="aa-chip-name" lang="ar" dir="rtl">
+                                  {entry!.arabic}
+                                </span>
+                              </>
+                            )}
                           </span>
-                          <span className="aa-chip-num">{toHindi(num)}</span>
+                          <span className="aa-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
                         </button>
                       );
                     })}
@@ -145,33 +175,29 @@ const AkmelAlAyahSetup: React.FC = () => {
                   <div className="aa-page-row">
                     <div className="aa-page-input">
                       <span>{tq.to}</span>
-                      <input
-                        type="number"
-                        min={pageFrom}
-                        max="604"
-                        value={pageTo}
-                        onChange={(e) =>
-                          setPageTo(parseInt(e.target.value) || pageFrom)
-                        }
+                      <InlineSelect
+                        value={String(pageTo)}
+                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
+                        onChange={(v) => setPageTo(Number(v))}
+                        fullWidth
                       />
                     </div>
                     <div className="aa-page-input">
                       <span>{tq.from}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="604"
-                        value={pageFrom}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value) || 1;
-                          setPageFrom(v);
-                          if (v > pageTo) setPageTo(v);
+                      <InlineSelect
+                        value={String(pageFrom)}
+                        options={pageOptions}
+                        onChange={(v) => {
+                          const n = Number(v);
+                          setPageFrom(n);
+                          if (n > pageTo) setPageTo(n);
                         }}
+                        fullWidth
                       />
                     </div>
                   </div>
                   <p className="aa-range-info">
-                    {tq.pageCount}: {toHindi(pageTo - pageFrom + 1)}
+                    {tq.pageCount}: {isRTL ? toHindi(pageTo - pageFrom + 1) : String(pageTo - pageFrom + 1)}
                   </p>
                 </div>
               )}
@@ -211,24 +237,20 @@ const AkmelAlAyahSetup: React.FC = () => {
                   {[5, 10, 15, 20].map((n) => (
                     <button
                       key={n}
-                      className={`aa-count-btn ${
-                        questionCount === n ? "active" : ""
-                      }`}
+                      className={`aa-count-btn ${questionCount === n ? "active" : ""}`}
                       onClick={() => setQuestionCount(n)}
                     >
-                      {toHindi(n)}
+                      {isRTL ? toHindi(n) : String(n)}
                     </button>
                   ))}
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={questionCount}
-                    onChange={(e) =>
-                      setQuestionCount(parseInt(e.target.value) || 10)
-                    }
-                    className="aa-count-custom"
-                  />
+                  <div className={`aa-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
+                    <InlineSelect
+                      value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
+                      options={countOptions}
+                      onChange={(v) => setQuestionCount(Number(v))}
+                      fullWidth
+                    />
+                  </div>
                 </div>
               </div>
 

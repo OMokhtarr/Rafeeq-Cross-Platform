@@ -29,6 +29,8 @@ import { useLang } from "../../../../../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../../../../../core/context/VerseVisibilityContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
+import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
+import QuizExitModal from "../../../../components/QuizExitModal";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
 
@@ -43,7 +45,7 @@ function isSoundOn(): boolean {
 
 const MutashabihatTest: React.FC = () => {
   const history = useHistory();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const tt = t.quizTest;
 
   const [questions, setQuestions] = useState<
@@ -58,12 +60,14 @@ const MutashabihatTest: React.FC = () => {
   const [skipped, setSkipped] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [showContext, setShowContext] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
   const [selectedVerseIdx, setSelectedVerseIdx] = useState(0); // 0 = target verse
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
+  useWakeLock();
   const { showAll: showAllVerses } = useVerseVisibility();
 
   // Quiz depends on every verse being visible — clear any hide state the user
@@ -183,9 +187,7 @@ const MutashabihatTest: React.FC = () => {
     if (hintLevel < q.hints.length) setHintLevel((l) => l + 1);
   };
 
-  const handleExit = () => {
-    if (window.confirm(tt.confirmExit)) history.push("/mutashabihat-setup");
-  };
+  const handleExit = () => setShowExitModal(true);
 
   const handleToggleContext = () => {
     setShowContext((prev) => !prev);
@@ -242,7 +244,6 @@ const MutashabihatTest: React.FC = () => {
           <div className="mst-test-page-wrapper">
             <div className="mst-complete">
               <div className="mst-complete-card">
-                <div className="mst-complete-badge">🎯</div>
                 <h2>{tt.completeTitle}</h2>
                 <p className="mst-complete-sub">{tt.completeMutashabihatSub}</p>
                 <div className="mst-score-ring">
@@ -279,7 +280,7 @@ const MutashabihatTest: React.FC = () => {
       aya: q.aya,
       text: q.fullText,
       page: q.page,
-      suraName: q.suraNameAr,
+      suraName: q.suraName ?? "",
       suraNameAr: q.suraNameAr,
       isTarget: true,
       hiddenPortion: q.hiddenPortion,
@@ -289,7 +290,7 @@ const MutashabihatTest: React.FC = () => {
       aya: sv.aya,
       text: sv.text,
       page: sv.page,
-      suraName: sv.suraNameAr,
+      suraName: sv.suraName ?? "",
       suraNameAr: sv.suraNameAr,
       isTarget: false,
       hiddenPortion: sv.hiddenStart,
@@ -310,8 +311,8 @@ const MutashabihatTest: React.FC = () => {
             >
               <div className="mst-progress">
                 <span className="mst-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} /{" "}
-                  {toHindi(questions.length)}
+                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
+                  {isRTL ? toHindi(questions.length) : questions.length}
                 </span>
                 <div className="mst-bar">
                   <div
@@ -346,17 +347,27 @@ const MutashabihatTest: React.FC = () => {
               {!immersiveMode && (
                 <div className="mst-info-strip">
                   <div className="mst-info-top-row">
-                    <span className="mst-surah-badge" lang="ar" dir="rtl">
-                      {q.suraNameAr}
+                    <span className="mst-surah-badge">
+                      {isRTL ? (
+                        <>
+                          <span lang="ar" dir="rtl">{q.suraNameAr}</span>
+                          {q.suraName && <span dir="ltr"> · {q.suraName}</span>}
+                        </>
+                      ) : (
+                        <>
+                          {q.suraName && <span>{q.suraName}</span>}
+                          <span lang="ar" dir="rtl"> · {q.suraNameAr}</span>
+                        </>
+                      )}
                     </span>
                     <span className="mst-meta">
-                      {tt.ayahLabel} {toHindi(q.aya)}
+                      {tt.ayahLabel} {isRTL ? toHindi(q.aya) : q.aya}
                     </span>
                     <span className="mst-meta">
-                      {tt.pageLabel} {toHindi(q.page)}
+                      {tt.pageLabel} {isRTL ? toHindi(q.page) : q.page}
                     </span>
                     <span className="mst-meta">
-                      {tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}
+                      {tt.hizbLabel} {isRTL ? toHindi(Math.ceil(q.page / 4)) : Math.ceil(q.page / 4)}
                     </span>
                     {siblings.length > 0 && (
                       <span className="mst-similar-badge">
@@ -380,12 +391,22 @@ const MutashabihatTest: React.FC = () => {
                             if (!showContext) setShowContext(true);
                           }}
                         >
-                          <span className="mst-chip-surah" lang="ar" dir="rtl">
-                            {tv.suraNameAr}
+                          <span className="mst-chip-surah">
+                            {isRTL ? (
+                              <>
+                                <span lang="ar" dir="rtl">{tv.suraNameAr}</span>
+                                {tv.suraName && <span dir="ltr"> · {tv.suraName}</span>}
+                              </>
+                            ) : (
+                              <>
+                                {tv.suraName && <span>{tv.suraName}</span>}
+                                <span lang="ar" dir="rtl"> · {tv.suraNameAr}</span>
+                              </>
+                            )}
                           </span>
                           <span className="mst-chip-meta">
-                            {tt.ayahLabel} {toHindi(tv.aya)} · {tt.pageLabel}{" "}
-                            {toHindi(tv.page)}
+                            {tt.ayahLabel} {isRTL ? toHindi(tv.aya) : tv.aya} · {tt.pageLabel}{" "}
+                            {isRTL ? toHindi(tv.page) : tv.page}
                           </span>
                         </button>
                       ))}
@@ -545,6 +566,11 @@ const MutashabihatTest: React.FC = () => {
               </div>
             )}
           </div>
+          <QuizExitModal
+            isOpen={showExitModal}
+            onCancel={() => setShowExitModal(false)}
+            onConfirm={() => history.push("/quiz-list")}
+          />
           <BottomNavBar active="quiz" />
         </div>
       </IonContent>

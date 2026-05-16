@@ -1,0 +1,81 @@
+.qem-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: qemFadeIn 0.18s ease;
+}
+
+.qem-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-top: 3px solid var(--color-gold);
+  border-left: 3px solid var(--color-gold);
+  border-right: 3px solid var(--color-gold);
+  padding: 28px 24px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: qemSlideUp 0.22s ease;
+}
+
+.qem-message {
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+  text-align: center;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.qem-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.qem-btn {
+  flex: 1;
+  max-width: 160px;
+  padding: 12px 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+}
+.qem-btn:hover {
+  transform: scale(1.03);
+}
+
+.qem-cancel {
+  background: var(--color-progress-track);
+  color: var(--color-text-primary);
+}
+
+.qem-confirm {
+  background: #e74c3c;
+  color: #fff;
+}
+.qem-confirm:hover {
+  background: #c0392b;
+}
+
+@keyframes qemFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes qemSlideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}

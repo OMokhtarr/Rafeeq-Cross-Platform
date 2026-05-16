@@ -31,45 +31,8 @@ const QUIZZES: QuizEntry[] = [
 
 const QuizList: React.FC = () => {
   const history = useHistory();
-  const { t, lang, isRTL } = useLang();
+  const { t, isRTL } = useLang();
   const tql = t.quizList;
-
-  // For each card show "primary" in current language and "secondary" in the
-  // other language, mirroring the dual-line look of the design.
-  const labels: Record<
-    QuizEntry["id"],
-    {
-      primary: string;
-      secondary: string;
-      descPrimary: string;
-      descSecondary: string;
-    }
-  > = {
-    "akmel-alayah": {
-      primary: lang === "ar" ? "أكمل الآية" : "Complete the Verse",
-      secondary: lang === "ar" ? "Complete the Verse" : "أكمل الآية",
-      descPrimary:
-        lang === "ar"
-          ? "تُعرض عليك بداية آية وعليك إكمالها من حفظك"
-          : "Complete the verse from memory",
-      descSecondary:
-        lang === "ar"
-          ? "Complete the verse from memory"
-          : "تُعرض عليك بداية آية وعليك إكمالها من حفظك",
-    },
-    mutashabihat: {
-      primary: lang === "ar" ? "المتشابهات" : "Mutashabihat",
-      secondary: lang === "ar" ? "Mutashabihat" : "المتشابهات",
-      descPrimary:
-        lang === "ar"
-          ? "ميّز بين الآيات المتشابهة وأكمل الآية الصحيحة"
-          : "Distinguish and complete similar-opening verses",
-      descSecondary:
-        lang === "ar"
-          ? "Distinguish and complete similar-opening verses"
-          : "ميّز بين الآيات المتشابهة وأكمل الآية الصحيحة",
-    },
-  };
 
   return (
     <IonPage>
@@ -78,12 +41,12 @@ const QuizList: React.FC = () => {
           <div className="ql-container">
             <div className="ql-header" dir={isRTL ? "rtl" : "ltr"}>
               <h1 className="ql-title">{tql.titleHeader}</h1>
-              <p className="ql-subtitle">{tql.subtitleHeader}</p>
             </div>
 
             <div className="ql-grid">
               {QUIZZES.map((quiz) => {
-                const l = labels[quiz.id];
+                const title = quiz.id === "akmel-alayah" ? tql.akmelTitle : tql.mutashabihatTitle;
+                const desc = quiz.id === "akmel-alayah" ? tql.akmelDesc : tql.mutashabihatDesc;
                 return (
                   <button
                     key={quiz.id}
@@ -94,10 +57,8 @@ const QuizList: React.FC = () => {
                     onClick={() => history.push(quiz.route)}
                   >
                     <div className="ql-card-body" dir={isRTL ? "rtl" : "ltr"}>
-                      <h2 className="ql-card-name">{l.primary}</h2>
-                      <p className="ql-card-desc-ar">{l.descPrimary}</p>
-                      <p className="ql-card-name-en">{l.secondary}</p>
-                      <p className="ql-card-desc-en">{l.descSecondary}</p>
+                      <h2 className="ql-card-name">{title}</h2>
+                      <p className="ql-card-desc-ar">{desc}</p>
                     </div>
                     <span className="ql-card-arrow">{isRTL ? "←" : "→"}</span>
                   </button>

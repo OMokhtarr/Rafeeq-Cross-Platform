@@ -22,6 +22,8 @@ import { useLang } from "../../../../../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../../../../../core/context/VerseVisibilityContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
+import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
+import QuizExitModal from "../../../../components/QuizExitModal";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -75,7 +77,7 @@ function buildQuestion(verse: any): QuizQuestion {
 
 const AkmelAlAyah: React.FC = () => {
   const history = useHistory();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const tt = t.quizTest;
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -88,11 +90,13 @@ const AkmelAlAyah: React.FC = () => {
   const [skipped, setSkipped] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [showContext, setShowContext] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
+  useWakeLock();
   const { showAll: showAllVerses } = useVerseVisibility();
 
   // Quiz depends on every verse being visible — clear any hide state the user
@@ -222,9 +226,7 @@ const AkmelAlAyah: React.FC = () => {
     if (hintLevel < words.length) setHintLevel((l) => l + 1);
   };
 
-  const handleExit = () => {
-    if (window.confirm(tt.confirmExit)) history.push("/akmel-alayah-setup");
-  };
+  const handleExit = () => setShowExitModal(true);
 
   const handleToggleContext = () => {
     setShowContext((prev) => !prev);
@@ -287,7 +289,6 @@ const AkmelAlAyah: React.FC = () => {
           <div className="aa-test-page-wrapper">
             <div className="aa-complete">
               <div className="aa-complete-card">
-                <div className="aa-complete-badge">🎉</div>
                 <h2>{tt.completeTitle}</h2>
                 <p className="aa-complete-sub">{tt.completeAkmelSub}</p>
                 <div className="aa-score-ring">
@@ -333,8 +334,8 @@ const AkmelAlAyah: React.FC = () => {
             >
               <div className="aa-progress">
                 <span className="aa-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} /{" "}
-                  {toHindi(questions.length)}
+                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
+                  {isRTL ? toHindi(questions.length) : questions.length}
                 </span>
                 <div className="aa-bar">
                   <div
@@ -368,17 +369,27 @@ const AkmelAlAyah: React.FC = () => {
               {/* Info strip – hidden in immersive mode (already in page-edge-top) */}
               {!immersiveMode && (
                 <div className="aa-info-strip">
-                  <span className="aa-surah-badge" lang="ar" dir="rtl">
-                    {q.suraNameAr}
+                  <span className="aa-surah-badge">
+                    {isRTL ? (
+                      <>
+                        <span lang="ar" dir="rtl">{q.suraNameAr}</span>
+                        {q.suraName && <span dir="ltr"> · {q.suraName}</span>}
+                      </>
+                    ) : (
+                      <>
+                        {q.suraName && <span>{q.suraName}</span>}
+                        <span lang="ar" dir="rtl"> · {q.suraNameAr}</span>
+                      </>
+                    )}
                   </span>
                   <span className="aa-meta">
-                    {tt.ayahLabel} {toHindi(q.aya)}
+                    {tt.ayahLabel} {isRTL ? toHindi(q.aya) : q.aya}
                   </span>
                   <span className="aa-meta">
-                    {tt.pageLabel} {toHindi(q.page)}
+                    {tt.pageLabel} {isRTL ? toHindi(q.page) : q.page}
                   </span>
                   <span className="aa-meta">
-                    {tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}
+                    {tt.hizbLabel} {isRTL ? toHindi(Math.ceil(q.page / 4)) : Math.ceil(q.page / 4)}
                   </span>
                 </div>
               )}
@@ -538,6 +549,11 @@ const AkmelAlAyah: React.FC = () => {
               </div>
             )}
           </div>
+          <QuizExitModal
+            isOpen={showExitModal}
+            onCancel={() => setShowExitModal(false)}
+            onConfirm={() => history.push("/quiz-list")}
+          />
           <BottomNavBar active="quiz" />
         </div>
       </IonContent>

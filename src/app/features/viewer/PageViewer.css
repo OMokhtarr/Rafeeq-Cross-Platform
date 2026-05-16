@@ -1520,6 +1520,14 @@
   justify-content: center;
 }
 
+.playback-bar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(212, 180, 140, 0.35);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
 .toolbar-button.playback-nav,
 .toolbar-button.playback-play,
 .toolbar-button.playback-stop,
@@ -1556,6 +1564,10 @@
 .toolbar-button.playback-nav:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+[dir="rtl"] .toolbar-button.playback-nav svg {
+  transform: scaleX(-1);
 }
 [data-theme="night"] .toolbar-button.playback-nav,
 [data-theme="night"] .toolbar-button.playback-stop,
