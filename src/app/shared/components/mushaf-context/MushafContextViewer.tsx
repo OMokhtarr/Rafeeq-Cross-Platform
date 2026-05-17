@@ -331,7 +331,6 @@ const MushafContextViewer: React.FC<Props> = ({
             <MushafPage
               page={currentPage}
               verses={verses}
-              showBismillah={showBismillah}
               hidden={mergedHidden}
               grey={greySet}
               partialTarget={partialTarget}
