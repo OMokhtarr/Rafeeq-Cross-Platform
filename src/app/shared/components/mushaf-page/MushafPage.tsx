@@ -136,7 +136,11 @@ const MushafPage: React.FC<Props> = ({
   const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
   // Hidden-verse line overlays: one horizontal bar per (verse × mushaf-line).
-  interface HiddenSegment { top: number; left: number; width: number }
+  interface HiddenSegment {
+    top: number;
+    left: number;
+    width: number;
+  }
   const [hiddenSegments, setHiddenSegments] = useState<HiddenSegment[]>([]);
 
   // Mid-page surah starts: any aya-1 verse that isn't the first verse on
@@ -197,12 +201,9 @@ const MushafPage: React.FC<Props> = ({
     const node = containerRef.current;
     if (!node) return;
 
-    const LINE_HEIGHT_RATIO = 1.4;
-    const LINE_GAP_RATIO = 0.25;
-    const BISMILLAH_LINES = 1.15;
+    const TOTAL_SLOTS = 15;
     const FONT_MIN = 8;
     const FONT_MAX = 64;
-    const SURAH_HEADER_LINES = 1.4;
 
     const computeFit = () => {
       const el = containerRef.current;
@@ -219,21 +220,15 @@ const MushafPage: React.FC<Props> = ({
       const availW = parent.clientWidth - padL - padR;
       if (availH <= 0 || availW <= 0) return;
 
-      const lineCount = Math.max(1, groupByLine(verses).length);
-      const midBismillahCount = midPageSurahStarts.filter(
-        (s) => s.showBismillah,
-      ).length;
-      const chromeLines =
-        (showBismillah ? BISMILLAH_LINES : 0) +
-        (!suppressTopHeader && verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0) +
-        midPageSurahStarts.length * SURAH_HEADER_LINES +
-        midBismillahCount * BISMILLAH_LINES +
-        (trailingSurahStart ? SURAH_HEADER_LINES : 0);
-
-      const emPerPx =
-        (chromeLines + lineCount) * LINE_HEIGHT_RATIO +
-        Math.max(0, lineCount - 1) * LINE_GAP_RATIO;
-      const heightFit = Math.floor((availH * 0.99) / emPerPx);
+      // Each slot (verse line, surah header, bismillah) is exactly 1/15 of
+      // the available height. Font size is chosen so one line of text fills
+      // one slot. Header and bismillah are sized to the same slot height via
+      // CSS custom property --slot-px set below.
+      const slotPx = availH / TOTAL_SLOTS;
+      // A verse line rendered at font size F has visual height F * LINE_HEIGHT.
+      // We want F * LINE_HEIGHT = slotPx, so F = slotPx / LINE_HEIGHT.
+      const LINE_HEIGHT = 1.4;
+      const heightFit = Math.floor(slotPx / LINE_HEIGHT);
 
       let widthFit = FONT_MAX;
       const lineNodes = el.querySelectorAll<HTMLElement>(".mushaf-line");
@@ -254,7 +249,9 @@ const MushafPage: React.FC<Props> = ({
       const target = Math.min(heightFit, widthFit);
       const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, target));
 
-      // Only update state if the value has changed
+      // Expose slot height to CSS so header/bismillah can match exactly one slot.
+      el.style.setProperty("--slot-px", `${Math.round(slotPx)}px`);
+
       if (clamped !== fittedFontPx) {
         setFittedFontPx(clamped);
       }
@@ -284,16 +281,17 @@ const MushafPage: React.FC<Props> = ({
   useLayoutEffect(() => {
     const container = containerRef.current;
     const hasHidden = hidden && hidden.size > 0;
-    const hasPartial = partialTarget && partialTarget.hiddenPositions && partialTarget.hiddenPositions.size > 0;
+    const hasPartial =
+      partialTarget &&
+      partialTarget.hiddenPositions &&
+      partialTarget.hiddenPositions.size > 0;
     if (!container || (!hasHidden && !hasPartial)) {
       setHiddenSegments([]);
       return;
     }
     const containerRect = container.getBoundingClientRect();
     // Each hidden non-end-marker word gets data-hidden-seg="verseKey:lineNum"
-    const spans = container.querySelectorAll<HTMLElement>(
-      "[data-hidden-seg]",
-    );
+    const spans = container.querySelectorAll<HTMLElement>("[data-hidden-seg]");
     // Group spans by their segment key (verseKey:lineNum)
     const groups = new Map<string, HTMLElement[]>();
     for (const span of spans) {
@@ -370,7 +368,9 @@ const MushafPage: React.FC<Props> = ({
   };
 
   const surahStartVerse =
-    !suppressTopHeader && verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
+    !suppressTopHeader && verses.length > 0 && verses[0].aya === 1
+      ? verses[0]
+      : null;
   const surahHeaderName = surahStartVerse
     ? getSurahNameArabic(surahStartVerse.sura)
     : null;
@@ -478,8 +478,8 @@ const MushafPage: React.FC<Props> = ({
       isHidden && !isEndMarker
         ? `${key}:${lineNumber}`
         : isWordPastReveal || isPartialWordHidden
-          ? `partial:${key}:${lineNumber}`
-          : undefined;
+        ? `partial:${key}:${lineNumber}`
+        : undefined;
 
     return (
       <span
@@ -588,7 +588,11 @@ const MushafPage: React.FC<Props> = ({
     }
 
     if (trailingSurahStart) {
-      flowItems.push({ type: "header", sura: trailingSurahStart.sura, key: "trailing-header" });
+      flowItems.push({
+        type: "header",
+        sura: trailingSurahStart.sura,
+        key: "trailing-header",
+      });
     }
 
     return (
@@ -640,9 +644,10 @@ const MushafPage: React.FC<Props> = ({
             left: seg.left,
             width: seg.width,
             height: 0.5,
-            background: theme === "night"
-              ? "rgba(200,200,200,0.18)"
-              : "rgba(120,120,120,0.22)",
+            background:
+              theme === "night"
+                ? "rgba(200,200,200,0.18)"
+                : "rgba(120,120,120,0.22)",
             borderRadius: 1,
             pointerEvents: "none",
             transform: "none",

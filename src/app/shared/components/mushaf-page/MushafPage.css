@@ -48,8 +48,14 @@
    parchment-tinted body text color (--color-mushaf-text). */
 .mushaf-bismillah {
   text-align: center;
-  font-size: 0.85em;
-  margin-bottom: 0.2em;
+  /* Fill exactly one slot. Font is ~60% of slot height to leave breathing room. */
+  height: var(--slot-px, 2em);
+  font-size: calc(var(--slot-px, 2em) * 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
   color: #000000;
 }
 
@@ -229,9 +235,10 @@
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 0.4em;
+  gap: 4px;
   width: 100%;
-  height: 2.2em;
+  /* Fill exactly one slot — same height as a verse line. */
+  height: var(--slot-px, 2.2em);
   background: var(--sh-bg);
   box-sizing: border-box;
   flex-shrink: 0;
@@ -267,7 +274,7 @@
   clip-path: var(--lobe);
   background: var(--sh-bg);
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: 0.85em;
+  font-size: calc(var(--slot-px, 2em) * 0.5);
   font-weight: 700;
   line-height: 1;
   color: var(--sh-ink);
