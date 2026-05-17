@@ -48,11 +48,8 @@ import "./MushafPage.css";
 interface Props {
   page: number;
   verses: Verse[];
-  showBismillah?: boolean;
-  /** Suppress the auto-rendered top-of-page surah header (previous page shows it as trailing). */
-  suppressTopHeader?: boolean;
-  /** Surah header to render at the bottom of this page (next page starts this surah). No bismillah — that stays on the next page. */
-  trailingSurahStart?: { sura: number };
+  /** First verse of the next page — used to show a trailing surah header when the next page starts a new surah and this page has a free slot. */
+  nextPageFirstVerse?: { sura: number; aya: number } | null;
   target?: { sura: number; aya: number };
   flash?: { sura: number; aya: number };
   selected?: Set<string>;
@@ -81,9 +78,7 @@ const LONG_PRESS_MS = 350;
 const MushafPage: React.FC<Props> = ({
   page,
   verses,
-  showBismillah,
-  suppressTopHeader = false,
-  trailingSurahStart,
+  nextPageFirstVerse,
   target,
   flash,
   selected,
@@ -127,13 +122,7 @@ const MushafPage: React.FC<Props> = ({
   const pressKey = useRef<string | null>(null);
   const consumedByLongPress = useRef(false);
 
-  // Container-aware font sizing. The 15 Madani lines must fit between the
-  // top chrome (surah header / bismillah) and the bottom of the parent
-  // box. Word→line grouping is fixed by the API (`lineNumber`), so we only
-  // need to scale the font; the flex `justify-content: space-between` on
-  // each .mushaf-line keeps spacing consistent at any font size.
   const containerRef = useRef<HTMLDivElement>(null);
-  const [fittedFontPx, setFittedFontPx] = useState<number | null>(null);
 
   // Hidden-verse line overlays: one horizontal bar per (verse × mushaf-line).
   interface HiddenSegment {
@@ -148,6 +137,42 @@ const MushafPage: React.FC<Props> = ({
   // bismillah row positioned right before the line where the new surah's
   // first word lives. The page-start surah (verses[0].aya === 1) stays
   // handled by the top-of-page banner so existing layouts don't shift.
+  // Count distinct verse line slots on this page.
+  const verseLineCount = React.useMemo(() => {
+    const lineNums = new Set<number>();
+    for (const v of verses)
+      for (const w of v.words ?? []) lineNums.add(w.lineNumber);
+    return lineNums.size;
+  }, [verses]);
+
+  const surahStartVerse =
+    verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
+
+  // Free slots = 15 minus actual verse lines.
+  //
+  // Rules (each case uses exactly as many free slots as available):
+  //   freeSlots >= 2, surah starts here → header (top) + bismillah (top)
+  //   freeSlots == 1, surah starts here → bismillah only (header goes on prev page — not our concern)
+  //   freeSlots == 1, next page starts a surah → trailing header (bottom)
+  //   freeSlots == 0 → nothing extra
+  //   Tawbah (9) never gets a bismillah.
+  const freeSlots = 15 - verseLineCount;
+
+  const showTopHeader = !!surahStartVerse && freeSlots >= 2;
+  const showTopBismillah =
+    !!surahStartVerse &&
+    surahStartVerse.sura !== 9 &&
+    freeSlots >= 1 &&
+    page > 1;
+
+  const slotsUsedByTop = (showTopHeader ? 1 : 0) + (showTopBismillah ? 1 : 0);
+  const trailingSura =
+    nextPageFirstVerse?.aya === 1 && nextPageFirstVerse.sura !== 9
+      ? nextPageFirstVerse.sura
+      : null;
+  const showTrailingHeader =
+    !!trailingSura && freeSlots - slotsUsedByTop >= 1 && page > 2;
+
   const midPageSurahStarts = React.useMemo(() => {
     if (verses.length === 0) return [];
     return verses
@@ -155,15 +180,14 @@ const MushafPage: React.FC<Props> = ({
       .map((v) => ({
         sura: v.sura,
         lineNumber: v.words[0].lineNumber,
-        // Tawbah (9) has no bismillah by tradition.
         showBismillah: v.sura !== 9,
       }));
   }, [verses]);
 
-  // Bismillah font is needed if the top strip is shown OR any mid-page
+  // Bismillah font is needed if the top bismillah is shown OR any mid-page
   // surah start renders its own inline bismillah.
   const needsBismillahFont =
-    !!showBismillah || midPageSurahStarts.some((s) => s.showBismillah);
+    showTopBismillah || midPageSurahStarts.some((s) => s.showBismillah);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,97 +208,37 @@ const MushafPage: React.FC<Props> = ({
     };
   }, [page, needsBismillahFont]);
 
-  // Reset fitted size when page/verses change so we never carry a stale
-  // font size from the previous page into the next page's first render.
-  // Without this, page N's fitted size is applied to page N+1's DOM before
-  // computeFit runs, causing the width measurement to be based on the wrong
-  // font size and producing an incorrect widthFit on the first pass.
-  useEffect(() => {
-    setFittedFontPx(null);
-  }, [page, verses]);
-
-  // Font fitting logic (only used when bigTextMode = false)
+  // Keep --slot-px in sync with the container height so the surah header and
+  // bismillah always occupy exactly 1/15 of the page (no font-size fitting).
+  // Font-size is derived from the height available for verse lines only.
   useLayoutEffect(() => {
-    if (!fontReady) return;
-    if (bigTextMode) return;
-
-    const node = containerRef.current;
-    if (!node) return;
-
-    const TOTAL_SLOTS = 15;
-    const FONT_MIN = 8;
-    const FONT_MAX = 64;
-
-    const computeFit = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const parent = el.parentElement;
-      if (!parent) return;
-
-      const parentStyle = window.getComputedStyle(parent);
-      const padT = parseFloat(parentStyle.paddingTop) || 0;
-      const padB = parseFloat(parentStyle.paddingBottom) || 0;
-      const padL = parseFloat(parentStyle.paddingLeft) || 0;
-      const padR = parseFloat(parentStyle.paddingRight) || 0;
-      const availH = parent.clientHeight - padT - padB;
-      const availW = parent.clientWidth - padL - padR;
-      if (availH <= 0 || availW <= 0) return;
-
-      // Each slot (verse line, surah header, bismillah) is exactly 1/15 of
-      // the available height. Font size is chosen so one line of text fills
-      // one slot. Header and bismillah are sized to the same slot height via
-      // CSS custom property --slot-px set below.
-      const slotPx = availH / TOTAL_SLOTS;
-      // A verse line rendered at font size F has visual height F * LINE_HEIGHT.
-      // We want F * LINE_HEIGHT = slotPx, so F = slotPx / LINE_HEIGHT.
-      const LINE_HEIGHT = 1.4;
-      const heightFit = Math.floor(slotPx / LINE_HEIGHT);
-
-      let widthFit = FONT_MAX;
-      const lineNodes = el.querySelectorAll<HTMLElement>(".mushaf-line");
-      if (lineNodes.length > 0 && fittedFontPx) {
-        let maxNatural = 0;
-        for (const ln of lineNodes) {
-          let sum = 0;
-          for (const child of Array.from(ln.children) as HTMLElement[]) {
-            sum += child.getBoundingClientRect().width;
-          }
-          if (sum > maxNatural) maxNatural = sum;
-        }
-        if (maxNatural > 0) {
-          widthFit = Math.floor((availW * 0.97 * fittedFontPx) / maxNatural);
-        }
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.clientHeight;
+      const w = el.clientWidth;
+      if (h <= 0 || w <= 0) return;
+      const slotPx = Math.round(h / 15);
+      el.style.setProperty("--slot-px", `${slotPx}px`);
+      el.style.setProperty("--header-px", `${slotPx}px`);
+      // Pages 1-2 stack naturally from top — width-only sizing.
+      if (page <= 2) {
+        el.style.fontSize = `${Math.round(Math.min(w * 0.055, 28))}px`;
+        return;
       }
-
-      const target = Math.min(heightFit, widthFit);
-      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, target));
-
-      // Expose slot height to CSS so header/bismillah can match exactly one slot.
-      el.style.setProperty("--slot-px", `${Math.round(slotPx)}px`);
-
-      if (clamped !== fittedFontPx) {
-        setFittedFontPx(clamped);
-      }
+      // Font size is always derived from a full 15-slot page so text stays
+      // the same size regardless of how many slots header/bismillah occupy.
+      // Header and bismillah have a fixed height (--slot-px) that comes out
+      // of the flex space-between distribution — they don't shrink the text.
+      const byHeight = slotPx / 1.8;
+      const byWidth = w * (showTrailingHeader ? 0.048 : 0.052);
+      el.style.fontSize = `${Math.round(Math.min(byHeight, byWidth))}px`;
     };
-
-    computeFit();
-    const ro = new ResizeObserver(computeFit);
-    if (node.parentElement) ro.observe(node.parentElement);
-    window.addEventListener("orientationchange", computeFit);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("orientationchange", computeFit);
-    };
-  }, [
-    fontReady,
-    verses,
-    showBismillah,
-    suppressTopHeader,
-    trailingSurahStart,
-    midPageSurahStarts,
-    fittedFontPx, // keep so we re-run after first pass sets a value
-    bigTextMode,
-  ]);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fontReady, showTrailingHeader]);
 
   // Measure hidden-word spans after layout and compute one overlay bar per
   // contiguous hidden segment on each mushaf line.
@@ -321,7 +285,7 @@ const MushafPage: React.FC<Props> = ({
       });
     }
     setHiddenSegments(segments);
-  }, [hidden, partialTarget, fittedFontPx, fontReady, verses, bigTextMode]);
+  }, [hidden, partialTarget, fontReady, verses, bigTextMode]);
 
   if (!fontReady) {
     return (
@@ -367,10 +331,6 @@ const MushafPage: React.FC<Props> = ({
     handler?.(key);
   };
 
-  const surahStartVerse =
-    !suppressTopHeader && verses.length > 0 && verses[0].aya === 1
-      ? verses[0]
-      : null;
   const surahHeaderName = surahStartVerse
     ? getSurahNameArabic(surahStartVerse.sura)
     : null;
@@ -390,14 +350,25 @@ const MushafPage: React.FC<Props> = ({
   const renderBismillah = (key: string) => (
     <div
       className="mushaf-bismillah"
-      style={{
-        fontFamily: BISMILLAH_FONT_FAMILY,
-      }}
+      style={{ fontFamily: BISMILLAH_FONT_FAMILY }}
       key={key}
     >
       ﭑ ﭒ ﭓ
     </div>
   );
+
+  // When header and bismillah appear together they each get their own full slot
+  // (13-line pages have 2 free slots — header takes slot 1, bismillah takes slot 2).
+  const renderHeaderWithBismillah = (sura: number, keyPrefix: string) => {
+    const name = getSurahNameArabic(sura);
+    if (!name) return null;
+    return (
+      <React.Fragment key={keyPrefix}>
+        {renderSurahHeader(sura, `${keyPrefix}-header`)}
+        {renderBismillah(`${keyPrefix}-bismillah`)}
+      </React.Fragment>
+    );
+  };
 
   const midStartsByLine = new Map<number, typeof midPageSurahStarts>();
   for (const s of midPageSurahStarts) {
@@ -510,18 +481,25 @@ const MushafPage: React.FC<Props> = ({
   // --- Strict line‑by‑line layout (default) ---
   const renderStrictLines = () => (
     <>
-      {surahHeaderName &&
-        surahStartVerse &&
-        renderSurahHeader(surahStartVerse.sura, "top-header")}
-      {showBismillah && renderBismillah("top-bismillah")}
+      {showTopHeader && showTopBismillah
+        ? renderHeaderWithBismillah(
+            surahStartVerse!.sura,
+            "top-header-bismillah",
+          )
+        : showTopBismillah && !showTopHeader
+        ? renderBismillah("top-bismillah")
+        : showTopHeader
+        ? renderSurahHeader(surahStartVerse!.sura, "top-header")
+        : null}
       {lines.map((line) => {
         const midStarts = midStartsByLine.get(line.lineNumber) ?? [];
         return (
           <React.Fragment key={line.lineNumber}>
             {midStarts.map((s) => (
               <React.Fragment key={`mid-${s.sura}`}>
-                {renderSurahHeader(s.sura, `mid-header-${s.sura}`)}
-                {s.showBismillah && renderBismillah(`mid-bismillah-${s.sura}`)}
+                {s.showBismillah
+                  ? renderHeaderWithBismillah(s.sura, `mid-${s.sura}`)
+                  : renderSurahHeader(s.sura, `mid-header-${s.sura}`)}
               </React.Fragment>
             ))}
             <div className="mushaf-line">
@@ -530,8 +508,8 @@ const MushafPage: React.FC<Props> = ({
           </React.Fragment>
         );
       })}
-      {trailingSurahStart &&
-        renderSurahHeader(trailingSurahStart.sura, "trailing-header")}
+      {showTrailingHeader &&
+        renderSurahHeader(trailingSura!, "trailing-header")}
     </>
   );
 
@@ -558,7 +536,7 @@ const MushafPage: React.FC<Props> = ({
         key: "top-header",
       });
     }
-    if (showBismillah) {
+    if (showTopBismillah) {
       flowItems.push({ type: "bismillah", key: "top-bismillah" });
     }
 
@@ -585,14 +563,6 @@ const MushafPage: React.FC<Props> = ({
           key: `${line.lineNumber}-${wordIdx++}`,
         });
       }
-    }
-
-    if (trailingSurahStart) {
-      flowItems.push({
-        type: "header",
-        sura: trailingSurahStart.sura,
-        key: "trailing-header",
-      });
     }
 
     return (
@@ -625,9 +595,6 @@ const MushafPage: React.FC<Props> = ({
       style={{
         fontFamily: family,
         position: "relative",
-        ...(fittedFontPx !== null && !bigTextMode
-          ? { fontSize: `${fittedFontPx}px` }
-          : null),
         fontPalette: tajweedOn
           ? paletteNameForPage(page, theme)
           : paletteNameForPage(page, "mono"),

@@ -346,13 +346,6 @@ const PageViewer: React.FC = () => {
   };
 
   const pageInfo = getPageInfo();
-  // True when the next page begins a new surah — show its header at the bottom
-  // of this page (as in the printed Mushaf) instead of the top of the next.
-  const trailingSurahStart =
-    nextPageFirstVerse?.aya === 1 && nextPageFirstVerse.sura !== 9
-      ? { sura: nextPageFirstVerse.sura }
-      : null;
-
   // Show bismillah at top when this page starts a surah (header was on prev page,
   // bismillah stays here — matching the printed Mushaf layout).
   const isSurahStart =
@@ -776,13 +769,7 @@ const PageViewer: React.FC = () => {
                 <MushafPage
                   page={currentPage}
                   verses={verses}
-                  showBismillah={isSurahStart}
-                  suppressTopHeader={
-                    verses.length > 0 &&
-                    verses[0].aya === 1 &&
-                    currentPage !== 1
-                  }
-                  trailingSurahStart={trailingSurahStart ?? undefined}
+                  nextPageFirstVerse={nextPageFirstVerse}
                   selected={selected}
                   hidden={hidden}
                   green={greenVerse ? new Set([greenVerse]) : undefined}

@@ -16,7 +16,7 @@
      first-render overshoot worse, causing lines to wrap before the second
      pass shrinks the font. */
   font-size: clamp(20px, 4.6vw, 34px);
-  line-height: 1.4;
+  line-height: 1.8;
   color: var(--color-mushaf-text, #1a1a1a);
   overflow: hidden;
   transition: color var(--transition-theme, 0.25s ease);
@@ -48,9 +48,8 @@
    parchment-tinted body text color (--color-mushaf-text). */
 .mushaf-bismillah {
   text-align: center;
-  /* Fill exactly one slot. Font is ~60% of slot height to leave breathing room. */
-  height: var(--slot-px, 2em);
-  font-size: calc(var(--slot-px, 2em) * 0.6);
+  height: var(--header-px, 44px);
+  font-size: min(calc(var(--header-px, 44px) * 0.6), 28px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,6 +57,7 @@
   box-sizing: border-box;
   color: #000000;
 }
+
 
 [data-theme="night"] .mushaf-bismillah {
   color: #ffffff;
@@ -71,13 +71,20 @@
   white-space: nowrap;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Pages 1 (Al-Fatiha) and 2 (Al-Baqarah opening) are typeset centered in the
    printed Madani Mushaf — lines are naturally short and should not stretch
-   edge-to-edge. Every other page justifies its lines to fill the column. */
+   edge-to-edge. Content stacks from the top with natural spacing. */
+.mushaf-page-natural-width {
+  justify-content: flex-start !important;
+  gap: 0.6em;
+}
+
 .mushaf-page-natural-width .mushaf-line {
   justify-content: center;
+  white-space: normal;
 }
 
 .mushaf-word {
@@ -238,7 +245,7 @@
   gap: 4px;
   width: 100%;
   /* Fill exactly one slot — same height as a verse line. */
-  height: var(--slot-px, 2.2em);
+  height: var(--header-px, 44px);
   background: var(--sh-bg);
   box-sizing: border-box;
   flex-shrink: 0;
@@ -274,7 +281,7 @@
   clip-path: var(--lobe);
   background: var(--sh-bg);
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: calc(var(--slot-px, 2em) * 0.5);
+  font-size: min(calc(var(--header-px, 44px) * 0.5), 22px);
   font-weight: 700;
   line-height: 1;
   color: var(--sh-ink);

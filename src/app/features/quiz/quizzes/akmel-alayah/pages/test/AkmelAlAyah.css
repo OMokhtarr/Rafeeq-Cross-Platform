@@ -268,15 +268,16 @@ ion-content::part(scroll) {
   cursor: default;
 }
 
-/* Action buttons – compact, horizontal, always visible */
+/* Action buttons – compact, horizontal, always visible, single row */
 .aa-actions {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 5px;
   justify-content: center;
   margin-top: 4px;
   margin-bottom: 7px;
+  overflow: hidden;
 }
 .aa-card-buttons-only .aa-actions {
   margin-top: 4px;
@@ -285,8 +286,9 @@ ion-content::part(scroll) {
 
 /* Base button style – pill shape, consistent dimensions */
 .aa-btn {
-  flex: 0 0 auto;
-  padding: 8px 16px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 3px 8px;
   border: none;
   border-radius: 30px;
   font-size: var(--text-sm);
@@ -296,9 +298,9 @@ ion-content::part(scroll) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-width: 70px;
-  min-height: 24px;
+  gap: 3px;
+  min-height: 0;
+  white-space: nowrap;
 }
 .aa-btn-en {
   font-size: 0.65rem;
@@ -333,8 +335,9 @@ ion-content::part(scroll) {
 }
 
 .aa-recite {
-  min-width: 42px;
-  padding: 8px 12px;
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 3px 8px;
 }
 
 /* Result box – hidden in immersive mode */
