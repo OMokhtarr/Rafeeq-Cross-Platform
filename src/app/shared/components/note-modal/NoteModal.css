@@ -1,0 +1,407 @@
+/* Note Modal — slide-up bottom sheet for verse notes. */
+
+.nm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1900;
+  animation: nm-fade 0.18s ease-out;
+}
+
+@keyframes nm-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Sheet ── */
+
+.nm-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2000;
+  background: var(--color-bg-content, #ffffff);
+  color: var(--color-text-primary, #111111);
+  border-top: 2px solid var(--color-gold, #b8860b);
+  border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: nm-slide-up 0.22s ease-out;
+}
+
+.nm--night {
+  background: var(--color-bg-card, #1c1c1c);
+  color: var(--color-text-primary, #e8e8e8);
+  border-top-color: var(--color-gold, #d4b48c);
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes nm-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Handle ── */
+
+.nm-handle {
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 0;
+  background: var(--color-gold, #d4b48c);
+  opacity: 0.45;
+  border-radius: var(--radius-full, 9999px);
+  flex-shrink: 0;
+}
+
+/* ── Header ── */
+
+.nm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.nm-title {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Back button ── */
+
+.nm-back-btn {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  color: var(--color-text-secondary, #3a3a3a);
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nm-back-btn:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+/* ── Add note button (+) ── */
+
+.nm-add-btn {
+  background: rgba(212, 180, 140, 0.1);
+  border: 1px solid var(--color-gold, #b8860b);
+  color: var(--color-gold, #b8860b);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nm-add-btn:hover {
+  background: rgba(212, 180, 140, 0.2);
+}
+
+.nm-add-btn.nm--night {
+  color: var(--color-gold, #d4b48c);
+  border-color: var(--color-gold, #d4b48c);
+  background: rgba(212, 180, 140, 0.08);
+}
+
+/* ── Close button ── */
+
+.nm-close {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  color: var(--color-text-secondary, #3a3a3a);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nm-close:hover { background: rgba(128, 128, 128, 0.1); }
+
+.nm-close.nm--night {
+  color: var(--color-text-secondary, #b0a898);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Body ── */
+
+.nm-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-4, 1rem);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── List ── */
+
+.nm-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nm-note-item {
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nm-note-item.nm--night {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.nm-note-body {
+  margin: 0;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: var(--text-base, 0.9rem);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nm-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nm-note-date {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.65rem;
+  opacity: 0.45;
+}
+
+.nm-note-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nm-icon-btn {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  color: var(--color-text-secondary, #3a3a3a);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nm-icon-btn:hover {
+  background: rgba(212, 180, 140, 0.12);
+  color: var(--color-gold, #b8860b);
+  border-color: var(--color-gold, #b8860b);
+}
+
+.nm-icon-btn.nm--night {
+  color: var(--color-text-secondary, #b0a898);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nm-icon-btn--danger:hover {
+  background: rgba(180, 30, 30, 0.1);
+  color: #e07070;
+  border-color: rgba(180, 30, 30, 0.4);
+}
+
+/* ── Empty state ── */
+
+.nm-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+}
+
+.nm-empty {
+  margin: 0;
+  color: var(--color-text-secondary, #3a3a3a);
+  font-size: var(--text-sm, 0.72rem);
+  opacity: 0.7;
+  text-align: center;
+}
+
+.nm--night .nm-empty {
+  color: var(--color-text-secondary, #b0a898);
+}
+
+.nm-compose-cta {
+  background: var(--color-gold, #b8860b);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.nm-compose-cta:hover { opacity: 0.85; }
+
+/* ── Loading ── */
+
+.nm-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm, 0.72rem);
+  opacity: 0.6;
+  padding: 16px 0;
+}
+
+.nm-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: nm-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes nm-spin { to { transform: rotate(360deg); } }
+
+/* ── Error ── */
+
+.nm-error {
+  margin: 0;
+  padding: 0 var(--space-4, 1rem);
+  color: #b91c1c;
+  font-size: var(--text-sm, 0.72rem);
+  flex-shrink: 0;
+}
+
+.nm--night .nm-error { color: #f87171; }
+
+/* ── Compose / textarea ── */
+
+.nm-textarea {
+  flex: 1;
+  min-height: 140px;
+  resize: none;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: var(--text-base, 0.9rem);
+  line-height: 1.7;
+  background: rgba(128, 128, 128, 0.04);
+  color: var(--color-text-primary, #111);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.nm-textarea:focus {
+  border-color: var(--color-gold, #b8860b);
+}
+
+.nm-textarea.nm--night {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-primary, #e8e8e8);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nm-textarea.nm--night:focus {
+  border-color: var(--color-gold, #d4b48c);
+}
+
+.nm-compose-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nm-cancel-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  background: transparent;
+  color: var(--color-text-secondary, #3a3a3a);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nm-cancel-btn:hover { background: rgba(128, 128, 128, 0.08); }
+
+.nm-cancel-btn.nm--night {
+  color: var(--color-text-secondary, #b0a898);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nm-save-btn {
+  flex: 2;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-gold, #b8860b);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.nm-save-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nm-save-btn:not(:disabled):hover { opacity: 0.88; }

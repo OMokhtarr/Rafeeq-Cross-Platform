@@ -1,18 +1,14 @@
 /**
  * MUTASHABIHAT TEST PAGE
- * Migrated from: src/features/mutashabihat/MutashabihatTest.js
+ * Immersive mode: when context viewer is open, the question card collapses
+ * to show only the compact row of action buttons (Hint, Context, Submit, Skip).
+ * The Mushaf viewer fills the rest of the screen.
  *
- * Changes:
- *  1. Wrapped in IonPage + IonContent
- *  2. useNavigate → useHistory; location.state → Capacitor Preferences
- *  3. getAllMutashabihatGroups now receives verse map from quran.service
- *     (was using require() directly — now uses the in-memory cache)
- *  4. toHindi → toHindiNumbers from arabic.util.ts
- *  5. All quiz UI, sibling display, hint, feedback logic preserved exactly
+ * CHIP UPDATES: Click any info‑strip chip to switch the context viewer to that verse.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
 import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
@@ -27,11 +23,14 @@ import {
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import {
   ensureSeeded,
-  getAllVersesAsMap,
+  getAllVerses,
 } from "../../../../../../core/services/data/quran.service";
 import { useLang } from "../../../../../../core/context/LanguageContext";
+import { useVerseVisibility } from "../../../../../../core/context/VerseVisibilityContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
+import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
+import QuizExitModal from "../../../../components/QuizExitModal";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
 
@@ -46,8 +45,9 @@ function isSoundOn(): boolean {
 
 const MutashabihatTest: React.FC = () => {
   const history = useHistory();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const tt = t.quizTest;
+  const [presentToast] = useIonToast();
 
   const [questions, setQuestions] = useState<
     ReturnType<typeof buildMutashabihatQuestion>[]
@@ -61,14 +61,21 @@ const MutashabihatTest: React.FC = () => {
   const [skipped, setSkipped] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [showContext, setShowContext] = useState(false);
-  // Which verse is shown in the context viewer (target verse or a sibling)
-  const [contextVerseIdx, setContextVerseIdx] = useState<number>(-1); // -1 = target verse
-
+  const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
+  const [selectedVerseIdx, setSelectedVerseIdx] = useState(0); // 0 = target verse
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
+  useWakeLock();
+  const { showAll: showAllVerses } = useVerseVisibility();
+
+  // Quiz depends on every verse being visible — clear any hide state the user
+  // may have left behind in the page viewer before the quiz starts.
+  useEffect(() => {
+    showAllVerses();
+  }, [showAllVerses]);
 
   // ── Load config + build questions ─────────────────────────────────────────
   useEffect(() => {
@@ -89,17 +96,15 @@ const MutashabihatTest: React.FC = () => {
 
         await ensureSeeded();
 
-        // Build full verse map by walking pages 1..604 via the API/IDB path.
-        // First run downloads all pages (slow); subsequent runs hit IDB.
-        const verseMap = await getAllVersesAsMap();
-        const allGroups = getAllMutashabihatGroups(verseMap);
+        const allVerses = await getAllVerses();
+        const allGroups = getAllMutashabihatGroups(allVerses);
 
         let filtered =
           config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
             : config.scopeType === "page"
-              ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
-              : filterGroupsByJuzs(allGroups, config.selectedJuzs);
+            ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
+            : filterGroupsByJuzs(allGroups, config.selectedJuzs);
 
         if (filtered.length === 0) {
           setError(tt.errorNoMutashabihat);
@@ -108,7 +113,10 @@ const MutashabihatTest: React.FC = () => {
         }
 
         const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-        const chosen = shuffled.slice(0, config.questionCount);
+        // Ensure every selected group has at least 2 verses (safety)
+        const chosen = shuffled
+          .filter((g) => g.verses.length >= 2)
+          .slice(0, config.questionCount);
 
         if (!cancelled) {
           setQuestions(chosen.map((g) => buildMutashabihatQuestion(g)));
@@ -156,6 +164,8 @@ const MutashabihatTest: React.FC = () => {
     setAnswered(true);
     setCorrect(false);
     if (isSoundOn()) beep("wrong");
+    setShowContext(false);
+    setSelectedVerseIdx(0); // reset to target
   };
 
   const handleNext = () => {
@@ -167,7 +177,7 @@ const MutashabihatTest: React.FC = () => {
       setSkipped(false);
       setHintLevel(0);
       setShowContext(false);
-      setContextVerseIdx(-1);
+      setSelectedVerseIdx(0);
     } else {
       setQuizComplete(true);
     }
@@ -178,8 +188,10 @@ const MutashabihatTest: React.FC = () => {
     if (hintLevel < q.hints.length) setHintLevel((l) => l + 1);
   };
 
-  const handleExit = () => {
-    if (window.confirm(tt.confirmExit)) history.push("/mutashabihat-setup");
+  const handleExit = () => setShowExitModal(true);
+
+  const handleToggleContext = () => {
+    setShowContext((prev) => !prev);
   };
 
   const getHintText = () => {
@@ -193,11 +205,13 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-loading">
-            <div className="mst-spinner"></div>
-            <p>{tt.loadingMutashabihat}</p>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-loading">
+              <div className="mst-spinner"></div>
+              <p>{tt.loadingMutashabihat}</p>
+            </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
@@ -206,15 +220,17 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-error">
-            <div className="mst-error-box">
-              <p>{error}</p>
-              <button onClick={() => history.push("/mutashabihat-setup")}>
-                {tt.backToSetup}
-              </button>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-error">
+              <div className="mst-error-box">
+                <p>{error}</p>
+                <button onClick={() => history.push("/mutashabihat-setup")}>
+                  {tt.backToSetup}
+                </button>
+              </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
@@ -226,82 +242,78 @@ const MutashabihatTest: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="mst-complete">
-            <div className="mst-complete-card">
-              <div className="mst-complete-badge">🎯</div>
-              <h2>{tt.completeTitle}</h2>
-              <p className="mst-complete-sub">{tt.completeMutashabihatSub}</p>
-              <div className="mst-score-ring">
-                <span className="mst-score-num">{score}</span>
-                <span className="mst-score-sep">/</span>
-                <span className="mst-score-total">{questions.length}</span>
-              </div>
-              <p className="mst-score-pct">{pct}%</p>
-              <div className="mst-complete-actions">
-                <button onClick={() => history.push("/mutashabihat-setup")}>
-                  {tt.newQuiz}
-                </button>
-                <button onClick={() => history.push("/quiz-list")}>{tt.quizListLink}</button>
+          <div className="mst-test-page-wrapper">
+            <div className="mst-complete">
+              <div className="mst-complete-card">
+                <h2>{tt.completeTitle}</h2>
+                <p className="mst-complete-sub">{tt.completeMutashabihatSub}</p>
+                <div className="mst-score-ring">
+                  <span className="mst-score-num">{score}</span>
+                  <span className="mst-score-sep">/</span>
+                  <span className="mst-score-total">{questions.length}</span>
+                </div>
+                <p className="mst-score-pct">{pct}%</p>
+                <div className="mst-complete-actions">
+                  <button onClick={() => history.push("/mutashabihat-setup")}>
+                    {tt.newQuiz}
+                  </button>
+                  <button onClick={() => history.push("/quiz-list")}>
+                    {tt.quizListLink}
+                  </button>
+                </div>
               </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
   }
 
-  const siblings = q.siblingVerses ?? [];
   const maxHints = q.hints.length;
+  const immersiveMode = showContext;
+  const siblings = q.siblingVerses ?? [];
 
-  // Build the full list of verses shown in the toolbar:
-  // index 0 = target verse (the question), 1..n = sibling verses
+  // Build toolbar verses with full data for the context viewer
   const toolbarVerses = [
-    { sura: q.sura, aya: q.aya, text: q.fullText, page: q.page, suraName: q.suraName, suraNameAr: q.suraNameAr, isTarget: true },
-    ...siblings.map((sv: any) => ({ ...sv, isTarget: false })),
+    {
+      sura: q.sura,
+      aya: q.aya,
+      text: q.fullText,
+      page: q.page,
+      suraName: q.suraName ?? "",
+      suraNameAr: q.suraNameAr,
+      isTarget: true,
+      hiddenPortion: q.hiddenPortion,
+    },
+    ...siblings.map((sv: any) => ({
+      sura: sv.sura,
+      aya: sv.aya,
+      text: sv.text,
+      page: sv.page,
+      suraName: sv.suraName ?? "",
+      suraNameAr: sv.suraNameAr,
+      isTarget: false,
+      hiddenPortion: sv.hiddenStart,
+    })),
   ];
-  // The verse currently shown in the viewer
-  const activeViewerVerseIdx = contextVerseIdx < 0 ? 0 : contextVerseIdx;
-  const activeViewerVerse = toolbarVerses[activeViewerVerseIdx] ?? toolbarVerses[0];
 
-  // ── Main quiz render (JSX preserved from MutashabihatTest.js) ─────────────
+  // ── Main quiz render ───────────────────────────────────────────────────────
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="mst-test-page-wrapper">
-        <div className={`mst-container ${showContext ? "with-sidebar" : ""}`}>
-          {/* Context Viewer — no toolbar here, chips are in info-strip */}
-          {showContext && (
-            <div className="mst-sidebar-wrapper">
-              <div className="mst-page-viewer">
-                <MushafContextViewer
-                  verse={{
-                    sura: activeViewerVerse.sura,
-                    aya: activeViewerVerse.aya,
-                    text: activeViewerVerse.text ?? "",
-                    page: activeViewerVerse.page,
-                    suraName: activeViewerVerse.suraName,
-                    suraNameAr: activeViewerVerse.suraNameAr,
-                  }}
-                  snippet={q?.displayedPortion}
-                  hiddenPortion={q?.hiddenPortion}
-                  hintLevel={hintLevel}
-                  showAnswer={answered}
-                  isOpen={showContext}
-                  onClose={() => setShowContext(false)}
-                  mode="sidebar"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Main quiz panel */}
-          <div className="mst-main">
-            {/* Header */}
-            <div className="mst-header">
+          <div className="mst-container">
+            {/* Header – minimal when immersive */}
+            <div
+              className={`mst-header ${
+                immersiveMode ? "mst-header-minimal" : ""
+              }`}
+            >
               <div className="mst-progress">
                 <span className="mst-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} / {toHindi(questions.length)}
+                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
+                  {isRTL ? toHindi(questions.length) : questions.length}
                 </span>
                 <div className="mst-bar">
                   <div
@@ -312,163 +324,284 @@ const MutashabihatTest: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="mst-score-pill">{tt.score}: {score}</div>
-              <button className="mst-exit-btn" onClick={handleExit}>
-                {tt.exit}
-              </button>
+              <div className="mst-score-pill">
+                {tt.score}: {score}
+              </div>
+              <div className="mst-header-actions">
+                <button
+                  className="mst-exit-btn"
+                  onClick={handleExit}
+                  aria-label={tt.exit}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* Question card */}
-            <div className="mst-card">
-              {/* Info strip — surah/page/hizb top row + inline chips below */}
-              <div className="mst-info-strip">
-                {/* Row 1: surah + meta pills */}
-                <div className="mst-info-top-row">
-                  <span className="mst-surah-badge" lang="ar" dir="rtl">{q.suraNameAr}</span>
-                  <span className="mst-meta">{tt.ayahLabel} {toHindi(q.aya)}</span>
-                  <span className="mst-meta">{tt.pageLabel} {toHindi(q.page)}</span>
-                  <span className="mst-meta">{tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}</span>
-                  {siblings.length > 0 && (
-                    <span className="mst-similar-badge">🔗 {siblings.length}</span>
-                  )}
-                </div>
-
-                {/* Row 2: verse chips — target + siblings (always visible, tap to open context) */}
-                {toolbarVerses.length > 0 && (
-                  <div className="mst-inline-chips">
-                    {toolbarVerses.map((tv, ti) => (
-                      <button
-                        key={ti}
-                        className={`mst-inline-chip ${activeViewerVerseIdx === ti && showContext ? "active" : ""} ${tv.isTarget ? "target" : "sibling"}`}
-                        onClick={() => { setContextVerseIdx(ti); setShowContext(true); }}
-                        title={`${tv.suraNameAr} — ${tt.ayahLabel} ${tv.aya}`}
-                      >
-                        <span className="mst-chip-surah" lang="ar" dir="rtl">{tv.suraNameAr}</span>
-                        <span className="mst-chip-meta">{tt.ayahLabel} {toHindi(tv.aya)} · {tt.pageLabel} {toHindi(tv.page)}</span>
-                        <span className="mst-chip-preview" lang="ar" dir="rtl">{(tv.text ?? "").slice(0, 18)}…</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Card body: [actions column (left)] + [main content (right)] */}
-              <div className="mst-card-body">
-
-                {/* Left column: action buttons */}
-                <div className="mst-actions">
-                  <button
-                    className="mst-btn mst-hint"
-                    onClick={handleHint}
-                    disabled={hintLevel >= maxHints || answered}
-                  >
-                    {tt.hint}
-                    {hintLevel > 0 && (
-                      <span className="mst-btn-en">
-                        ({hintLevel}/{maxHints})
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    className={`mst-btn mst-context ${showContext ? "active" : ""}`}
-                    onClick={() => setShowContext((v) => !v)}
-                  >
-                    {showContext ? tt.hide : tt.context}
-                  </button>
-
-                  <button
-                    className="mst-btn mst-submit"
-                    onClick={handleSubmit}
-                    disabled={!userAnswer.trim() || answered}
-                  >
-                    {tt.submit}
-                  </button>
-
-                  <button
-                    className="mst-btn mst-skip"
-                    onClick={handleSkip}
-                    disabled={answered}
-                  >
-                    {tt.skip}
-                  </button>
-                </div>
-
-                {/* Right: verse + input + result + next */}
-                <div className="mst-card-main">
-                  <div className="mst-verse-box">
-                    <p className="mst-verse-shared" lang="ar" dir="rtl">{q.displayedPortion}</p>
-                    {hintLevel > 0 && (
-                      <span className="mst-hint-inline" lang="ar" dir="rtl"> {getHintText()}</span>
-                    )}
-                    <p className="mst-prompt">{tt.promptComplete}</p>
-                  </div>
-
-                  <div className="mst-answer-row">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      dir="rtl"
-                      inputMode="text"
-                      enterKeyHint={answered ? "done" : "send"}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && !answered && handleSubmit()
-                      }
-                      onFocus={(e) => {
-                        const el = e.currentTarget;
-                        setTimeout(
-                          () =>
-                            el.scrollIntoView({
-                              block: "center",
-                              behavior: "smooth",
-                            }),
-                          250,
-                        );
-                      }}
-                      readOnly={answered}
-                      placeholder={tt.inputPlaceholder}
-                      className={`mst-input ${answered ? "answered" : ""}`}
-                    />
-                  </div>
-
-                  {/* Result feedback */}
-                  {answered && (
-                    <div
-                      className={`mst-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
-                    >
-                      <span className="mst-result-icon">
-                        {correct ? "✅" : skipped ? "⏭" : "❌"}
-                      </span>
-                      <span className="mst-result-text">
-                        {correct ? tt.correctMsg : skipped ? tt.skippedMsg : tt.wrongMsg}
-                      </span>
-                      {!correct && (
-                        <div className="mst-correct-answer">
-                          <span className="mst-correct-label">{tt.completionVerse} </span>
-                          <span className="mst-correct-text" lang="ar" dir="rtl">{q.hiddenPortion}</span>
-                        </div>
+            {/* Question card – full or minimized (buttons only) */}
+            <div
+              className={`mst-card ${
+                immersiveMode ? "mst-card-buttons-only" : ""
+              }`}
+            >
+              {/* Info strip – hidden in immersive mode */}
+              {!immersiveMode && (
+                <div className="mst-info-strip">
+                  <div className="mst-info-top-row">
+                    <span className="mst-surah-badge">
+                      {isRTL ? (
+                        <>
+                          <span lang="ar" dir="rtl">{q.suraNameAr}</span>
+                          {q.suraName && <span dir="ltr"> · {q.suraName}</span>}
+                        </>
+                      ) : (
+                        <>
+                          {q.suraName && <span>{q.suraName}</span>}
+                          <span lang="ar" dir="rtl"> · {q.suraNameAr}</span>
+                        </>
                       )}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.ayahLabel} {isRTL ? toHindi(q.aya) : q.aya}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.pageLabel} {isRTL ? toHindi(q.page) : q.page}
+                    </span>
+                    <span className="mst-meta">
+                      {tt.hizbLabel} {isRTL ? toHindi(Math.ceil(q.page / 4)) : Math.ceil(q.page / 4)}
+                    </span>
+                    {siblings.length > 0 && (
+                      <span className="mst-similar-badge">
+                        🔗 {siblings.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {toolbarVerses.length > 0 && (
+                    <div className="mst-inline-chips">
+                      {toolbarVerses.map((tv, ti) => (
+                        <button
+                          key={ti}
+                          className={`mst-inline-chip ${
+                            selectedVerseIdx === ti ? "active-chip" : ""
+                          }`}
+                          onClick={() => {
+                            console.log("Chip clicked:", ti, toolbarVerses[ti]);
+
+                            setSelectedVerseIdx(ti);
+                            if (!showContext) setShowContext(true);
+                          }}
+                        >
+                          <span className="mst-chip-surah">
+                            {isRTL ? (
+                              <>
+                                <span lang="ar" dir="rtl">{tv.suraNameAr}</span>
+                                {tv.suraName && <span dir="ltr"> · {tv.suraName}</span>}
+                              </>
+                            ) : (
+                              <>
+                                {tv.suraName && <span>{tv.suraName}</span>}
+                                <span lang="ar" dir="rtl"> · {tv.suraNameAr}</span>
+                              </>
+                            )}
+                          </span>
+                          <span className="mst-chip-meta">
+                            {tt.ayahLabel} {isRTL ? toHindi(tv.aya) : tv.aya} · {tt.pageLabel}{" "}
+                            {isRTL ? toHindi(tv.page) : tv.page}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   )}
+                </div>
+              )}
 
-                  {answered && (
-                    <button className="mst-next-btn" onClick={handleNext}>
-                      {idx + 1 < questions.length ? tt.nextQuestion : tt.finishQuiz}
+              <div className="mst-card-body">
+                <div className="mst-card-main">
+                  {/* Action buttons – always visible */}
+                  <div className="mst-actions">
+                    <button
+                      className="mst-btn mst-hint"
+                      onClick={handleHint}
+                      disabled={hintLevel >= maxHints || answered}
+                    >
+                      {tt.hint}
+                      {hintLevel > 0 && (
+                        <span className="mst-btn-en">
+                          ({hintLevel}/{maxHints})
+                        </span>
+                      )}
                     </button>
+
+                    <button
+                      className="mst-btn mst-context"
+                      onClick={handleToggleContext}
+                    >
+                      {tt.context}
+                    </button>
+
+                    <button
+                      className="mst-btn mst-submit"
+                      onClick={handleSubmit}
+                      disabled={!userAnswer.trim() || answered}
+                    >
+                      {tt.submit}
+                    </button>
+
+                    <button
+                      className="mst-btn mst-skip"
+                      onClick={handleSkip}
+                      disabled={answered}
+                    >
+                      {tt.skip}
+                    </button>
+                    <button
+                      className="mst-btn mst-recite"
+                      onClick={() =>
+                        presentToast({
+                          message: tt.comingSoon,
+                          duration: 2000,
+                          position: "bottom",
+                        })
+                      }
+                      aria-label="Recite"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="18"
+                        height="18"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="3" width="6" height="12" rx="3" />
+                        <path d="M5 11a7 7 0 0014 0" />
+                        <line x1="12" y1="18" x2="12" y2="22" />
+                        <line x1="9" y1="22" x2="15" y2="22" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Full content – hidden in immersive mode */}
+                  {!immersiveMode && (
+                    <>
+                      <div className="mst-verse-box">
+                        <p className="mst-verse-shared" lang="ar" dir="rtl">
+                          {q.displayedPortion}
+                        </p>
+                        {hintLevel > 0 && (
+                          <span className="mst-hint-inline" lang="ar" dir="rtl">
+                            {" "}
+                            {getHintText()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mst-answer-row">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          dir="rtl"
+                          inputMode="text"
+                          enterKeyHint={answered ? "done" : "send"}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && !answered && handleSubmit()
+                          }
+                          onFocus={(e) => {
+                            const el = e.currentTarget;
+                            setTimeout(
+                              () =>
+                                el.scrollIntoView({
+                                  block: "center",
+                                  behavior: "smooth",
+                                }),
+                              250,
+                            );
+                          }}
+                          readOnly={answered}
+                          placeholder={tt.inputPlaceholder}
+                          className={`mst-input ${answered ? "answered" : ""}`}
+                        />
+                      </div>
+
+                      {answered && (
+                        <div
+                          className={`mst-result ${
+                            correct ? "correct" : skipped ? "skipped" : "wrong"
+                          }`}
+                        >
+                          <span className="mst-result-icon">
+                            {correct ? "✅" : skipped ? "⏭" : "❌"}
+                          </span>
+                          <span className="mst-result-text">
+                            {correct
+                              ? tt.correctMsg
+                              : skipped
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
+                          </span>
+                          {!correct && (
+                            <div className="mst-correct-answer">
+                              <span className="mst-correct-label">
+                                {tt.completionVerse}{" "}
+                              </span>
+                              <span
+                                className="mst-correct-text"
+                                lang="ar"
+                                dir="rtl"
+                              >
+                                {q.hiddenPortion}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {answered && (
+                        <button className="mst-next-btn" onClick={handleNext}>
+                          {idx + 1 < questions.length
+                            ? tt.nextQuestion
+                            : tt.finishQuiz}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
-
               </div>
             </div>
+
+            {/* Context Viewer – fills remaining space */}
+            {showContext && (
+              <div className="mst-context-viewer">
+                <MushafContextViewer
+                  key={selectedVerseIdx} // ← forces re‑mount when selected verse changes
+                  verse={toolbarVerses[selectedVerseIdx]}
+                  snippet={q.sharedPhraseRaw}
+                  hiddenPortion={toolbarVerses[selectedVerseIdx].hiddenPortion}
+                  hintLevel={hintLevel}
+                  showAnswer={answered && selectedVerseIdx === 0}
+                  isOpen={showContext}
+                  onClose={() => setShowContext(false)}
+                  mode="sidebar"
+                />
+              </div>
+            )}
           </div>
+          <QuizExitModal
+            isOpen={showExitModal}
+            onCancel={() => setShowExitModal(false)}
+            onConfirm={() => history.push("/quiz-list")}
+          />
+          <BottomNavBar active="quiz" />
         </div>
-        </div>
-        <BottomNavBar active="quiz" fixed />
       </IonContent>
     </IonPage>
   );

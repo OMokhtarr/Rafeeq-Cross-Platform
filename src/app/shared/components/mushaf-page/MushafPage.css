@@ -1,158 +1,66 @@
 .mushaf-page-glyph {
   direction: rtl;
   width: 100%;
-  /* Fill the available page area between the bismillah (if shown) and
-     the page-footer below. Must NOT have a min-height in viewport units
-     — the parent is overflow:hidden, so a vh-based floor would push the
-     hizb footer below the BottomNavBar. min-height:0 lets the flex
-     parent shrink this to whatever space is left. */
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* REVERTED: space-between is correct for Mushaf layout — it distributes
+     lines evenly across the full page height, matching the printed Mushaf.
+     flex-start caused all lines to cluster at the top with a large empty gap. */
   justify-content: space-between;
-  gap: 0.25em;
-  padding: 0 16px;
+  gap: 0;
   box-sizing: border-box;
+  /* REVERTED: clamp(20px, 4.6vw, 34px) is the base — computeFit overrides
+     this with a fitted px value anyway. A larger clamp only makes the
+     first-render overshoot worse, causing lines to wrap before the second
+     pass shrinks the font. */
   font-size: clamp(20px, 4.6vw, 34px);
-  line-height: 1.7;
+  line-height: 1.4;
   color: var(--color-mushaf-text, #1a1a1a);
   overflow: hidden;
-  transition:
-    color var(--transition-theme, 0.25s ease);
+  transition: color var(--transition-theme, 0.25s ease);
 }
 
+/* Big text mode: no fixed line height, natural wrapping */
+.mushaf-page-glyph.mushaf-page-bigtext {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.mushaf-big-text-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end; /* right-aligned for RTL text */
+  gap: 0.25em 0.5em;
+  line-height: 1.6;
+}
+
+.mushaf-big-text-container .mushaf-word,
+.mushaf-big-text-container .mushaf-ayah-end {
+  display: inline-block;
+  margin: 0 0.02em;
+  white-space: normal;
+}
+
+/* Bismillah: keep centered. Forced to pure monochrome (black on day, white on
+   night) to match the printed Mushaf's ornamental ink — separate from the
+   parchment-tinted body text color (--color-mushaf-text). */
 .mushaf-bismillah {
   text-align: center;
-  font-size: 1.3em;
-  margin-bottom: 0.4em;
-}
-
-/* ── Decorative Surah-name header ──────────────────────────────────────────
-   Renders above the Bismillah at the top of any page that starts a new
-   surah. Visually a wide horizontal banner with an inner cartouche holding
-   the surah name, flanked by arabesque rosettes — built entirely from CSS
-   so it scales with the page font and adapts to day/night themes. */
-.mushaf-surah-header {
+  /* Fill exactly one slot. Font is ~60% of slot height to leave breathing room. */
+  height: var(--slot-px, 2em);
+  font-size: calc(var(--slot-px, 2em) * 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0.15em auto 0.45em;
-  padding: 0;
-  width: 100%;
   flex-shrink: 0;
+  box-sizing: border-box;
+  color: #000000;
 }
 
-.mushaf-surah-header-frame {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 60%;
-  max-width: 92%;
-  padding: 0.55em 3.4em;
-  border: 2px solid var(--color-mushaf-text, #1a1a1a);
-  border-radius: 2px;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      transparent 0 6px,
-      rgba(212, 180, 140, 0.18) 6px 7px
-    );
-  box-shadow:
-    inset 0 0 0 1px var(--color-mushaf-text, #1a1a1a),
-    inset 0 0 0 4px transparent,
-    inset 0 0 0 5px var(--color-mushaf-text, #1a1a1a);
-}
-
-/* Side rosettes — small ornamental medallions using radial-gradient flowers. */
-.mushaf-surah-header-frame::before,
-.mushaf-surah-header-frame::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 1.6em;
-  height: 1.6em;
-  transform: translateY(-50%);
-  border: 1.5px solid var(--color-mushaf-text, #1a1a1a);
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at center,
-      var(--color-mushaf-text, #1a1a1a) 0 0.18em,
-      transparent 0.22em
-    ),
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 30deg,
-      rgba(212, 180, 140, 0.45) 30deg 60deg,
-      transparent 60deg 90deg,
-      rgba(212, 180, 140, 0.45) 90deg 120deg,
-      transparent 120deg 150deg,
-      rgba(212, 180, 140, 0.45) 150deg 180deg,
-      transparent 180deg 210deg,
-      rgba(212, 180, 140, 0.45) 210deg 240deg,
-      transparent 240deg 270deg,
-      rgba(212, 180, 140, 0.45) 270deg 300deg,
-      transparent 300deg 330deg,
-      rgba(212, 180, 140, 0.45) 330deg 360deg
-    );
-}
-
-.mushaf-surah-header-frame::before {
-  inset-inline-start: 0.55em;
-}
-
-.mushaf-surah-header-frame::after {
-  inset-inline-end: 0.55em;
-}
-
-.mushaf-surah-header-name {
-  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-  font-size: 1.05em;
-  font-weight: 700;
-  color: var(--color-mushaf-text, #1a1a1a);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  text-shadow: 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="night"] .mushaf-surah-header-frame {
-  border-color: var(--color-mushaf-text, #f4ecd8);
-  box-shadow:
-    inset 0 0 0 1px var(--color-mushaf-text, #f4ecd8),
-    inset 0 0 0 4px transparent,
-    inset 0 0 0 5px var(--color-mushaf-text, #f4ecd8);
-}
-
-[data-theme="night"] .mushaf-surah-header-frame::before,
-[data-theme="night"] .mushaf-surah-header-frame::after {
-  border-color: var(--color-mushaf-text, #f4ecd8);
-  background:
-    radial-gradient(
-      circle at center,
-      var(--color-mushaf-text, #f4ecd8) 0 0.18em,
-      transparent 0.22em
-    ),
-    conic-gradient(
-      from 0deg,
-      transparent 0deg 30deg,
-      rgba(212, 180, 140, 0.55) 30deg 60deg,
-      transparent 60deg 90deg,
-      rgba(212, 180, 140, 0.55) 90deg 120deg,
-      transparent 120deg 150deg,
-      rgba(212, 180, 140, 0.55) 150deg 180deg,
-      transparent 180deg 210deg,
-      rgba(212, 180, 140, 0.55) 210deg 240deg,
-      transparent 240deg 270deg,
-      rgba(212, 180, 140, 0.55) 270deg 300deg,
-      transparent 300deg 330deg,
-      rgba(212, 180, 140, 0.55) 330deg 360deg
-    );
-}
-
-[data-theme="night"] .mushaf-surah-header-name {
-  color: var(--color-mushaf-text, #f4ecd8);
+[data-theme="night"] .mushaf-bismillah {
+  color: #ffffff;
 }
 
 .mushaf-line {
@@ -161,23 +69,48 @@
   justify-content: space-between;
   align-items: baseline;
   white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Pages 1 (Al-Fatiha) and 2 (Al-Baqarah opening) are typeset centered in the
+   printed Madani Mushaf — lines are naturally short and should not stretch
+   edge-to-edge. Every other page justifies its lines to fill the column. */
+.mushaf-page-natural-width .mushaf-line {
+  justify-content: center;
 }
 
 .mushaf-word {
   display: inline-block;
+  position: relative;
 }
 
 .mushaf-ayah-end {
   display: inline-block;
-  margin: 0 0.15em;
   position: relative;
+  flex-shrink: 1;
 }
 
+/* Playback highlight — static, no animation */
 .mushaf-word-target,
 .mushaf-ayah-end-target {
-  background: rgba(255, 215, 0, 0.32);
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(212, 180, 140, 0.5);
+  background: rgba(150, 150, 150, 0.25);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(120, 120, 120, 0.35);
+}
+
+/* Navigation flash — each word of the flashed verse gets this class.
+   No border-radius so adjacent words merge into one seamless highlight band.
+   The box-shadow is inset top+bottom only to draw a unified border above
+   and below the whole verse without vertical gaps between words. */
+.mushaf-word-flash {
+  animation: verse-flash 3s ease-out forwards;
+}
+
+@keyframes verse-flash {
+  0%   { background: rgba(150, 150, 150, 0);    box-shadow: none; }
+  15%  { background: rgba(150, 150, 150, 0.35); box-shadow: inset 0 2px 0 rgba(120,120,120,0.4), inset 0 -2px 0 rgba(120,120,120,0.4); }
+  100% { background: rgba(150, 150, 150, 0);    box-shadow: none; }
 }
 
 /* ── Selection ──────────────────────────────────────────────────────────
@@ -197,8 +130,7 @@
    their saturation — the verse-end ornament gets the same treatment. */
 .mushaf-verse-grey,
 .mushaf-verse-grey.mushaf-ayah-end {
-  color: #9a9a9a !important;
-  opacity: 0.85;
+  opacity: 0.25;
 }
 
 [data-theme="night"] .mushaf-verse-grey,
@@ -228,71 +160,6 @@
   box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55);
 }
 
-/* ── Hidden ─────────────────────────────────────────────────────────────
-   We don't strip the glyphs (that would break Madani justification).
-   Instead, fade them and pin a small placeholder badge on the ayah-end
-   ornament so the user can clearly see *that* a verse is hidden and
-   tap to bring it back.
-   ──────────────────────────────────────────────────────────────────── */
-.mushaf-verse-hidden {
-  color: transparent !important;
-  text-shadow: none !important;
-  background: linear-gradient(
-    to bottom,
-    transparent 45%,
-    rgba(139, 69, 19, 0.35) 45%,
-    rgba(139, 69, 19, 0.35) 55%,
-    transparent 55%
-  );
-  cursor: pointer;
-  user-select: none;
-}
-
-[data-theme="night"] .mushaf-verse-hidden {
-  background: linear-gradient(
-    to bottom,
-    transparent 45%,
-    rgba(212, 180, 140, 0.35) 45%,
-    rgba(212, 180, 140, 0.35) 55%,
-    transparent 55%
-  );
-}
-
-/* The end-of-ayah glyph keeps its silhouette so the verse boundary stays
-   readable; we just fade it. */
-.mushaf-verse-hidden.mushaf-ayah-end {
-  background: none;
-  opacity: 0.35;
-  color: var(--color-mushaf-text, #1a1a1a) !important;
-}
-
-[data-theme="night"] .mushaf-verse-hidden.mushaf-ayah-end {
-  color: var(--color-mushaf-text, #f4ecd8) !important;
-}
-
-/* Small placeholder badge — pinned to the ayah-end ornament once per verse */
-.mushaf-hidden-badge {
-  position: absolute;
-  top: -0.45em;
-  inset-inline-end: -0.55em;
-  font-size: 0.45em;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  background: #8b4513;
-  color: #fff9e6;
-  border-radius: 999px;
-  padding: 0.05em 0.45em;
-  line-height: 1.4;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-  user-select: none;
-}
-
-[data-theme="night"] .mushaf-hidden-badge {
-  background: var(--color-gold, #d4b48c);
-  color: #1a2336;
-}
-
 .mushaf-page-loading {
   display: flex;
   align-items: center;
@@ -315,4 +182,111 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ── Hidden words (preserve layout, hide glyphs) ───────────────────────── */
+.mushaf-verse-hidden:not(.mushaf-verse-end-marker) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Keep the ayah number ornament fully visible */
+.mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #1a1a1a) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #1a1a1a) !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+
+[data-theme="night"] .mushaf-verse-hidden.mushaf-verse-end-marker {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--color-mushaf-text, #ffffff) !important;
+  -webkit-text-fill-color: var(--color-mushaf-text, #ffffff) !important;
+}
+
+.mushaf-word-hinted {
+  color: #2e7d32 !important;
+}
+
+[data-theme="night"] .mushaf-word-hinted {
+  color: #6ee7a3 !important;
+}
+
+/* Decorative surah header. The ink (frame fill + name text) is forced to
+   pure monochrome — black on day, white on night — to match the printed
+   Mushaf's ornamental style. The background follows the page parchment so
+   the header sits flush against the page without a visible seam. */
+.mushaf-surah-header {
+  --sh-ink: #000000;
+  --sh-bg: var(--color-mushaf-bg);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  /* Fill exactly one slot — same height as a verse line. */
+  height: var(--slot-px, 2.2em);
+  background: var(--sh-bg);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.mushaf-surah-header-frame {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--sh-ink);
+  box-shadow: none;
+}
+
+[data-theme="night"] .mushaf-surah-header {
+  --sh-ink: #ffffff;
+}
+
+.mushaf-surah-header-name {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  clip-path: var(--lobe);
+  background: var(--sh-bg);
+  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  font-size: calc(var(--slot-px, 2em) * 0.5);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--sh-ink);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding: 0 0.6em;
+  text-shadow: none;
+}
+
+/* In the compact MushafContextViewer, override space-between so lines
+   stack naturally from the top without forced vertical gaps. */
+.mcv-body .mushaf-page-glyph {
+  justify-content: flex-start;
+  gap: 0.25em;
 }

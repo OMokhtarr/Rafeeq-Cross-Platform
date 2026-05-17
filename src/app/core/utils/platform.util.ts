@@ -53,7 +53,8 @@ export const platform = {
    */
   getArabicFont(): string {
     if (this.isIOS) return '"Traditional Arabic", "Geeza Pro", serif';
-    if (this.isAndroid) return '"Noto Naskh Arabic", "Noto Serif Arabic", serif';
+    if (this.isAndroid)
+      return '"Noto Naskh Arabic", "Noto Serif Arabic", serif';
     if (this.isElectron)
       return '"Traditional Arabic", "Scheherazade New", "Amiri", serif';
     // Web: Amiri loaded via Google Fonts (matches current App.css @import)
@@ -64,8 +65,7 @@ export const platform = {
   /** How many Web Workers to spin up for heavy tasks (search index, quiz gen) */
   getWorkerCount(): number {
     if (this.isMobile) return 1;
-    if (this.isElectron)
-      return Math.min(navigator.hardwareConcurrency - 1, 4);
+    if (this.isElectron) return Math.min(navigator.hardwareConcurrency - 1, 4);
     return 2;
   },
 } as const;

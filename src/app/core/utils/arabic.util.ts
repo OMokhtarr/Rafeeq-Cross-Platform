@@ -1,7 +1,5 @@
 /**
  * ARABIC UTILITIES
- * Shared helpers extracted from QuizTest.js, MutashabihatTest.js,
- * QuizSetup.js, MutashabihatSetup.js, PageViewer.js, and mutashabihatUtils.js.
  * Previously each file had its own local copy — now one canonical source.
  */
 
@@ -25,7 +23,6 @@ export const toHindiNumbers = (number: number | string): string => {
 
 /**
  * Arabic diacritics (tashkeel) Unicode ranges used across the app.
- * Extended range from mutashabihatUtils.js (most complete version).
  */
 const DIACRITIC_RE =
   /[\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g;
@@ -34,8 +31,6 @@ const PAUSE_RE = /[ۚۖۗۘۙۛ۝]/g;
 /**
  * Strip Arabic diacritics (تشكيل) and pause marks from text.
  * Used for answer checking (fuzzy match) and search normalisation.
- * Extracted from: QuizTest.js (removeDiacritics), PageViewer.js (removeDiacritics),
- *                 mutashabihatUtils.js (stripDiacritics — most complete version kept)
  */
 export const removeDiacritics = (text: string): string => {
   if (!text) return "";
@@ -46,7 +41,7 @@ export const removeDiacritics = (text: string): string => {
     .trim();
 };
 
-/** Alias for removeDiacritics — matches old name used in mutashabihatUtils.js */
+/** Alias for removeDiacritics */
 export const stripDiacritics = removeDiacritics;
 
 // ─── Answer checking ──────────────────────────────────────────────────────────

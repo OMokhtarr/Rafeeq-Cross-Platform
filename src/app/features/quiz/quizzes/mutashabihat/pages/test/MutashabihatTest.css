@@ -9,56 +9,52 @@ ion-content::part(scroll) {
 }
 
 /* ═══════════════════════════════════════════════
-   MUTASHABIHAT TEST  –  matches QuizTest visual style
+   MUTASHABIHAT TEST – uses design tokens for day/night
    ═══════════════════════════════════════════════ */
 
-/* ── Outer centering wrapper ─────────────────── */
 .mst-test-page-wrapper {
   width: 100%;
   height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  justify-content: center;
-  padding-bottom: 72px;
+  flex-direction: column;
+  align-items: center;
   box-sizing: border-box;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme);
+  overflow: hidden;
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
-/* ── Layout — vertical stack ─────────────────── */
 .mst-container {
   width: 100%;
   max-width: 600px;
   box-sizing: border-box;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   padding: 4px;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   overflow: hidden;
-  gap: 4px;
+  gap: 8px;
+  padding: 10px;
 }
-.mst-container.with-sidebar { gap: 4px; }
+.mst-container.with-sidebar {
+  gap: 8px;
+}
 
-/* ── Sidebar (viewer) — top 75% ─────────────── */
-.mst-sidebar-wrapper {
+.mst-main {
   width: 100%;
   box-sizing: border-box;
-  flex: 2;
-  order: 2;
-  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-card);
-  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,.25);
   min-height: 0;
-  box-sizing: border-box;
+  gap: 8px;
 }
 
-/* Sibling navigator inside sidebar */
 .mst-sibling-nav {
   background: var(--color-gold-faint);
   border-bottom: 2px solid var(--color-gold);
@@ -67,8 +63,8 @@ ion-content::part(scroll) {
 }
 
 .mst-sibling-title {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.95rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   font-weight: bold;
   color: var(--color-text-primary);
   margin: 0 0 8px;
@@ -80,10 +76,10 @@ ion-content::part(scroll) {
 
 .mst-sibling-count {
   background: var(--color-quiz);
-  color: white;
-  border-radius: 20px;
+  color: var(--color-text-on-dark);
+  border-radius: var(--radius-pill);
   padding: 1px 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
 }
 
 .mst-sibling-tabs {
@@ -96,146 +92,174 @@ ion-content::part(scroll) {
 .mst-sibling-tab {
   padding: 4px 10px;
   border: 2px solid var(--color-gold);
-  border-radius: 20px;
-  background: white;
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.8rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-card);
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   cursor: pointer;
-  transition: all .2s;
+  transition: all 0.2s;
   direction: rtl;
+  color: var(--color-text-primary);
 }
 .mst-sibling-tab.active {
   background: var(--color-text-primary);
-  color: white;
+  color: var(--color-bg-card);
   border-color: var(--color-gold);
 }
 
 .mst-sibling-verse {
-  background: white;
-  border-radius: 8px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
   border: 1px solid var(--color-gold);
 }
 .mst-sibling-verse-text {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 1rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   direction: rtl;
   color: var(--color-text-primary);
   line-height: 1.8;
   margin: 0 0 4px;
 }
 .mst-sibling-meta {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: var(--font-arabic);
   direction: rtl;
   margin: 0;
 }
 
-.mst-page-viewer { flex: 1; min-height: 0; overflow: hidden; }
-
-/* ── Main quiz panel — bottom 25% ──────────── */
-.mst-main {
-  width: 100%;
-  box-sizing: border-box;
+.mst-page-viewer {
   flex: 1;
-  order: 1;
-  width: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-  box-sizing: border-box;
-}
-
-/* When the context viewer is open, guarantee the main panel keeps enough
-   vertical space for the header + 4 stacked action buttons + input.
-   Otherwise the actions column (Hint/Context/Submit/Skip) gets clipped
-   by the card's overflow:hidden. */
-.mst-container.with-sidebar .mst-main {
-  flex: 0 0 auto;
-  min-height: 320px;
-}
-.mst-container.with-sidebar .mst-sidebar-wrapper {
-  flex: 1 1 auto;
-}
-
-/* ── Header ─────────────────────────────────── */
-.mst-header {
-  width: 100%;
-  box-sizing: border-box;
   background: var(--color-bg-card);
-  border-radius: 10px;
-  padding: 4px 10px;
-  margin-bottom: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gold);
+  overflow: hidden;
+}
+
+.mst-page-viewer > div,
+.mst-page-viewer .mcv-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Header — matches aa-header exactly ───────────────────────────────── */
+.mst-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 4px 10px;
+  margin-bottom: 4px;
   border: 2px solid var(--color-gold);
   flex-shrink: 0;
-  min-height: 40px;
+  min-height: 32px;
 }
-.mst-progress { flex: 2; margin-right: 10px; }
+
+.mst-progress {
+  flex: 0 0 auto;
+  width: 160px;
+  max-width: 100%;
+}
 .mst-progress-text {
   display: block;
   margin-bottom: 3px;
   color: var(--color-text-primary);
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.9rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
 }
 .mst-bar {
   height: 5px;
   background: var(--color-progress-track);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .mst-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
-  transition: width .35s ease;
+  transition: width 0.35s ease;
 }
 
 .mst-score-pill {
   flex: 1;
   text-align: center;
-  font-size: 1.1rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-size: inherit;
+  font-family: var(--font-arabic);
   font-weight: bold;
   color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
+.mst-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Immersive header */
+.mst-header-minimal .mst-progress-text,
+.mst-header-minimal .mst-score-pill {
+  font-size: inherit;
+}
+
+/* ── Exit button — matches aa-exit-btn (small circle) ─────────────────── */
 .mst-exit-btn {
   background: none;
   border: 2px solid #e74c3c;
   color: #e74c3c;
-  padding: 10px 16px;
-  border-radius: 20px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: all .25s;
-  white-space: nowrap;
-  min-height: 44px;
+  font-size: var(--text-sm);
+  transition: all 0.25s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.mst-exit-btn:hover { background: #e74c3c; color: white; }
+.mst-exit-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
 
-/* ── Card ───────────────────────────────────── */
+/* Card shrinks to its content — context viewer fills the remaining height */
 .mst-card {
+  flex: 0 0 auto;
   width: 100%;
-  box-sizing: border-box;
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 5px 10px;
   border: 2px solid var(--color-gold);
-  box-shadow: 0 3px 8px rgba(0,0,0,.12);
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  height: auto;
+  overflow-y: auto;
+  transition: all 0.2s ease;
 }
 
-/* Card body: buttons column on the left, content on the right */
+/* Immersive card – buttons only, minimal height */
+.mst-card.mst-card-buttons-only {
+  padding: 4px 8px;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+.mst-card-buttons-only .mst-info-strip {
+  display: none;
+}
+
 .mst-card-body {
   display: flex;
   flex-direction: row;
@@ -244,20 +268,24 @@ ion-content::part(scroll) {
   min-height: 0;
   overflow: hidden;
   align-items: stretch;
-  direction: ltr; /* actions on physical left */
+  direction: ltr;
 }
 
-/* Left column: action buttons stacked vertically */
+/* ── Action buttons — matches aa-actions exactly ──────────────────────── */
 .mst-actions {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  width: 58px;
-  justify-content: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 7px;
+}
+.mst-card-buttons-only .mst-actions {
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
-/* Right: verse box + input + result */
 .mst-card-main {
   flex: 1;
   min-width: 0;
@@ -268,10 +296,13 @@ ion-content::part(scroll) {
   overflow-x: hidden;
   scrollbar-width: none;
   direction: rtl;
+  width: 100%;
 }
-.mst-card-main::-webkit-scrollbar { display: none; }
+.mst-card-main::-webkit-scrollbar {
+  display: none;
+}
 
-/* ── Info strip ─────────────────────────────── */
+/* Info strip */
 .mst-info-strip {
   display: flex;
   flex-direction: row;
@@ -280,7 +311,7 @@ ion-content::part(scroll) {
   gap: 4px;
   padding: 4px 8px;
   background: linear-gradient(to bottom, #e8dccc, #dac09a);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   margin-bottom: 3px;
   direction: rtl;
   flex-shrink: 0;
@@ -288,43 +319,50 @@ ion-content::part(scroll) {
   scrollbar-width: none;
   min-height: 0;
 }
-.mst-info-strip::-webkit-scrollbar { display: none; }
+[data-theme="night"] .mst-info-strip {
+  background: rgba(212, 180, 140, 0.15);
+}
+.mst-info-strip::-webkit-scrollbar {
+  display: none;
+}
 
-/* Top row — kept for compat, just inline flex now */
 .mst-info-top-row {
-  display: contents; /* children render directly inside mst-info-strip */
+  display: contents;
 }
 
 .mst-surah-badge {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.88rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   font-weight: bold;
   color: var(--color-text-primary);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .mst-meta {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.75rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-quiz);
-  background: rgba(255,255,255,.3);
+  background: rgba(255, 255, 255, 0.3);
   padding: 1px 7px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
   flex-shrink: 0;
 }
+[data-theme="night"] .mst-meta {
+  background: rgba(0, 0, 0, 0.2);
+}
 .mst-similar-badge {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.75rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   background: var(--color-quiz);
   color: var(--color-gold-faint);
   padding: 2px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   flex-shrink: 0;
   white-space: nowrap;
 }
 
-/* ── Inline chips row (inside info-strip) ─── */
+/* Inline chips */
 .mst-inline-chips {
   display: flex;
   flex-direction: row;
@@ -341,38 +379,51 @@ ion-content::part(scroll) {
   align-items: center;
   gap: 4px;
   padding: 2px 7px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-gold);
-  background: rgba(255,255,255,0.75);
+  background: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  transition: all .18s;
+  transition: all 0.18s;
   direction: rtl;
   flex-shrink: 0;
   white-space: nowrap;
+  color: var(--color-text-primary);
+}
+[data-theme="night"] .mst-inline-chip {
+  background: rgba(0, 0, 0, 0.3);
 }
 .mst-inline-chip:hover {
   border-color: var(--color-quiz);
-  background: white;
+  background: var(--color-gold-faint);
 }
 .mst-inline-chip.active.target {
-  background: rgba(255,215,0,0.22);
+  background: rgba(255, 215, 0, 0.22);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
 }
 .mst-inline-chip.active.sibling {
-  background: rgba(74,144,226,0.12);
+  background: rgba(74, 144, 226, 0.12);
   border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 .mst-inline-chip.sibling {
-  border-color: rgba(74,144,226,0.5);
+  border-color: rgba(74, 144, 226, 0.5);
+}
+.mst-inline-chip.active-chip {
+  background: var(--ion-color-primary-tint, #4c8dff);
+  border-color: var(--ion-color-primary, #3880ff);
+  color: white;
+}
+.mst-inline-chip.active-chip .mst-chip-surah,
+.mst-inline-chip.active-chip .mst-chip-meta {
+  color: white;
 }
 
-/* ── Verse box ──────────────────────────────── */
+/* Verse box */
 .mst-verse-box {
   background: var(--color-gold-faint);
   border: 2px solid var(--color-gold);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 5px 8px;
   text-align: center;
   margin-bottom: 2px;
@@ -380,7 +431,7 @@ ion-content::part(scroll) {
 }
 
 .mst-verse-shared {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   line-height: 1.7;
   color: var(--color-text-primary);
@@ -389,7 +440,7 @@ ion-content::part(scroll) {
 }
 
 .mst-hint-inline {
-  font-family: "Traditional Arabic","Amiri",serif;
+  font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   color: #b8860b;
   font-weight: 600;
@@ -398,140 +449,180 @@ ion-content::part(scroll) {
 
 .mst-prompt {
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-style: italic;
   border-top: 1px dotted var(--color-gold);
   padding-top: 4px;
   margin: 4px 0 0;
 }
 
-/* ── Siblings teaser ────────────────────────── */
-.mst-siblings-teaser {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  background: #fff3cd;
-  border: 1.5px solid #f39c12;
-  border-radius: 8px;
-  padding: 4px 8px;
+/* Input */
+.mst-answer-row {
   margin-bottom: 4px;
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.82rem;
-  color: #856404;
-  direction: rtl;
   flex-shrink: 0;
 }
-.mst-tease-icon { font-size: 1.1rem; flex-shrink: 0; }
-
-/* ── Input ──────────────────────────────────── */
-.mst-answer-row { margin-bottom: 4px; flex-shrink: 0; }
 
 .mst-input {
   width: 100%;
-  padding: 12px 12px;
-  font-size: 1rem;
+  padding: 12px;
+  font-size: var(--text-md);
   border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  font-family: "Traditional Arabic","Amiri",serif;
+  border-radius: var(--radius-md);
+  font-family: var(--font-arabic);
   direction: rtl;
-  transition: all .3s;
-  background: white;
+  transition: all 0.3s;
+  background: var(--color-bg-card);
   box-sizing: border-box;
   min-height: 44px;
+  color: var(--color-text-primary);
 }
 .mst-input:focus {
   border-color: var(--color-text-primary);
   outline: none;
-  box-shadow: 0 0 0 4px rgba(44,62,80,.1);
+  box-shadow: 0 0 0 4px var(--color-gold-faint);
 }
 .mst-input.answered {
-  background: #f5f0e8;
-  color: #888;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-muted);
   cursor: default;
 }
 
-/* ── Action buttons ─────────────────────────── */
-/* mst-actions now defined in mst-card-body section */
-
+/* ── Buttons — match aa-btn sizing exactly ────────────────────────────── */
 .mst-btn {
   flex: 0 0 auto;
-  padding: 10px 2px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  border-radius: 30px;
+  font-size: var(--text-sm);
+  font-family: var(--font-arabic);
   cursor: pointer;
-  transition: all .25s;
-  display: flex;
-  flex-direction: column;
+  transition: all 0.25s;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  min-width: 0;
-  width: 100%;
-  min-height: 44px;
+  gap: 4px;
+  min-width: 70px;
+  min-height: 24px;
 }
-.mst-btn-en { font-size: 0.58rem; opacity: .75; }
-.mst-btn:disabled { opacity: .4; cursor: not-allowed; }
+.mst-btn-en {
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+.mst-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-.mst-hint    { background: #ffd700; color: #856404; }
-.mst-hint:hover:not(:disabled)    { background: #ffed4a; transform: scale(1.02); }
+/* Button variants — all share the quiz accent color */
+.mst-hint,
+.mst-context,
+.mst-submit,
+.mst-skip,
+.mst-recite {
+  background: var(--color-quiz);
+  color: #ffffff;
+}
+.mst-hint:hover:not(:disabled),
+.mst-context:hover:not(:disabled),
+.mst-submit:hover:not(:disabled),
+.mst-skip:hover:not(:disabled),
+.mst-recite:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-card-hover);
+}
+.mst-context.active {
+  opacity: 0.7;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
 
-.mst-context { background: #4a90e2; color: white; }
-.mst-context.active { background: #2c6fad; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }
-.mst-context:hover:not(:disabled) { background: #5fa3f0; transform: scale(1.02); }
+.mst-recite {
+  min-width: 42px;
+  padding: 8px 12px;
+}
 
-.mst-submit  { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
-.mst-submit:hover:not(:disabled)  { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
-
-.mst-skip    { background: #95a5a6; color: white; }
-.mst-skip:hover:not(:disabled)    { background: #7f8c8d; transform: scale(1.02); }
-
-/* ── Result box ─────────────────────────────── */
+/* Result box */
 .mst-result {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 6px 10px;
   margin-bottom: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  animation: mstSlide .3s ease;
+  animation: mstSlide 0.3s ease;
   flex-shrink: 0;
 }
-.mst-result.correct  { background: #d4edda; border: 2px solid #27ae60; }
-.mst-result.wrong    { background: #f8d7da; border: 2px solid #e74c3c; }
-.mst-result.skipped  { background: #e8f4fd; border: 2px solid #95a5a6; }
+.mst-result.correct {
+  background: #d4edda;
+  border: 2px solid #27ae60;
+}
+.mst-result.wrong {
+  background: #f8d7da;
+  border: 2px solid #e74c3c;
+}
+.mst-result.skipped {
+  background: #e8f4fd;
+  border: 2px solid #95a5a6;
+}
+[data-theme="night"] .mst-result.correct {
+  background: rgba(76, 175, 125, 0.15);
+  color: #6cd699;
+}
+[data-theme="night"] .mst-result.wrong {
+  background: rgba(231, 76, 60, 0.15);
+  color: #f37b6f;
+}
+[data-theme="night"] .mst-result.skipped {
+  background: rgba(241, 196, 15, 0.12);
+  color: #f0d068;
+}
 
-.mst-result-icon { font-size: 1rem; }
+.mst-result-icon {
+  font-size: 1rem;
+}
 .mst-result-text {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.82rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-text-primary);
   direction: rtl;
 }
 
-.mst-correct-answer { text-align: center; direction: rtl; margin-top: 4px; }
-.mst-correct-label  { font-size: 0.85rem; color: #666; font-family: "Traditional Arabic","Amiri",serif; }
-.mst-correct-text   { font-size: 1rem; color: var(--color-text-primary); font-family: "Traditional Arabic","Amiri",serif; font-weight: bold; direction: rtl; }
+.mst-correct-answer {
+  text-align: center;
+  direction: rtl;
+  margin-top: 4px;
+}
+.mst-correct-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+}
+.mst-correct-text {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-weight: bold;
+  direction: rtl;
+}
 
-/* Sibling reveal section after answering */
+/* Siblings reveal */
 .mst-siblings-reveal {
   width: 100%;
   margin-top: 10px;
   direction: rtl;
 }
 .mst-siblings-reveal-title {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.85rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
   font-weight: bold;
   margin: 0 0 6px;
 }
 .mst-sibling-item {
-  background: white;
-  border-radius: 8px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
   margin-bottom: 6px;
   border: 1px solid var(--color-gold);
@@ -543,37 +634,37 @@ ion-content::part(scroll) {
   margin-bottom: 4px;
 }
 .mst-sibling-surah {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.85rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-quiz);
 }
 .mst-sibling-ref {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.8rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 .mst-sibling-text {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 1rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   color: var(--color-text-primary);
   line-height: 1.7;
   margin: 0;
   direction: rtl;
 }
 
-/* ── Next button ────────────────────────────── */
+/* Next button */
 .mst-next-btn {
   width: 100%;
   padding: 12px;
   background: #27ae60;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
-  transition: all .3s;
+  transition: all 0.3s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -582,9 +673,12 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   min-height: 44px;
 }
-.mst-next-btn:hover { background: #2ecc71; transform: scale(1.02); }
+.mst-next-btn:hover {
+  background: #2ecc71;
+  transform: scale(1.02);
+}
 
-/* ── Loading / Error / Complete ─────────────── */
+/* Loading / Error / Complete */
 .mst-loading,
 .mst-error,
 .mst-complete {
@@ -593,12 +687,11 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
-  color: white;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
 }
-
 .mst-spinner {
-  border: 5px solid rgba(255,255,255,.3);
+  border: 5px solid var(--color-progress-track);
   border-top: 5px solid var(--color-gold);
   border-radius: 50%;
   width: 50px;
@@ -606,11 +699,14 @@ ion-content::part(scroll) {
   animation: mstSpin 1s linear infinite;
   margin-bottom: 15px;
 }
-@keyframes mstSpin { to { transform: rotate(360deg); } }
-
+@keyframes mstSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .mst-error-box {
   background: var(--color-bg-card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 30px;
   text-align: center;
   max-width: 400px;
@@ -618,35 +714,43 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
   white-space: pre-line;
 }
-.mst-error-box p { margin: 0 0 16px; font-family: "Traditional Arabic","Amiri",serif; }
+.mst-error-box p {
+  margin: 0 0 16px;
+  font-family: var(--font-arabic);
+}
 .mst-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary));
-  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
+  color: var(--color-text-on-dark);
   border: none;
-  border-radius: 30px;
-  font-size: 1rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-md);
   cursor: pointer;
 }
-
-/* Complete screen */
 .mst-complete-card {
   background: var(--color-bg-card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 30px 35px;
   text-align: center;
   max-width: 380px;
   border: 3px solid var(--color-gold);
   color: var(--color-text-primary);
 }
-.mst-complete-badge { font-size: 3rem; margin-bottom: 8px; }
 .mst-complete-card h2 {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 1.7rem;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-3xl);
   margin: 0 0 4px;
 }
-.mst-complete-sub { color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 18px; font-style: italic; }
-
+.mst-complete-sub {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0 0 18px;
+  font-style: italic;
+}
 .mst-score-ring {
   display: flex;
   align-items: baseline;
@@ -654,33 +758,65 @@ ion-content::part(scroll) {
   gap: 4px;
   margin-bottom: 4px;
 }
-.mst-score-num   { font-size: 3rem; font-weight: bold; color: var(--color-text-primary); }
-.mst-score-sep   { font-size: 2rem; color: var(--color-text-muted); }
-.mst-score-total { font-size: 1.8rem; color: var(--color-text-muted); }
-.mst-score-pct   { font-size: 1.3rem; color: var(--color-text-primary); margin: 0 0 20px; }
-
-.mst-complete-actions { display: flex; gap: 10px; justify-content: center; }
+.mst-score-num {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+.mst-score-sep {
+  font-size: 2rem;
+  color: var(--color-text-muted);
+}
+.mst-score-total {
+  font-size: 1.8rem;
+  color: var(--color-text-muted);
+}
+.mst-score-pct {
+  font-size: 1.3rem;
+  color: var(--color-text-primary);
+  margin: 0 0 20px;
+}
+.mst-complete-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
 .mst-complete-actions button {
   padding: 10px 20px;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-family: "Traditional Arabic","Amiri",serif;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
-  transition: all .25s;
+  transition: all 0.25s;
 }
-.mst-complete-actions button:first-child { background: linear-gradient(135deg,var(--color-text-primary),var(--color-text-primary)); color: white; }
-.mst-complete-actions button:last-child  { background: var(--color-progress-track); color: var(--color-text-primary); }
-.mst-complete-actions button:hover { transform: scale(1.05); }
+.mst-complete-actions button:first-child {
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary),
+    var(--color-text-primary)
+  );
+  color: var(--color-text-on-dark);
+}
+.mst-complete-actions button:last-child {
+  background: var(--color-progress-track);
+  color: var(--color-text-primary);
+}
+.mst-complete-actions button:hover {
+  transform: scale(1.05);
+}
 
-/* ── Animations ─────────────────────────────── */
 @keyframes mstSlide {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-
-/* ── Verse selector toolbar ─────────────────── */
 .mst-verse-toolbar {
   display: flex;
   flex-direction: row;
@@ -693,96 +829,124 @@ ion-content::part(scroll) {
   direction: rtl;
   scrollbar-width: none;
 }
-.mst-verse-toolbar::-webkit-scrollbar { display: none; }
-
+.mst-verse-toolbar::-webkit-scrollbar {
+  display: none;
+}
 .mst-verse-chip {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
   padding: 5px 9px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 2px solid var(--color-gold);
-  background: white;
+  background: var(--color-bg-card);
   cursor: pointer;
-  transition: all .2s;
+  transition: all 0.2s;
   direction: rtl;
   min-width: 90px;
   max-width: 130px;
   flex-shrink: 0;
   text-align: right;
+  color: var(--color-text-primary);
 }
-.mst-verse-chip:hover { border-color: var(--color-quiz); }
+.mst-verse-chip:hover {
+  border-color: var(--color-quiz);
+}
 .mst-verse-chip.active.target {
-  background: rgba(255,215,0,0.18);
+  background: rgba(255, 215, 0, 0.18);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212,180,140,0.5);
+  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
 }
 .mst-verse-chip.active.sibling {
-  background: rgba(74,144,226,0.1);
+  background: rgba(74, 144, 226, 0.1);
   border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74,144,226,0.3);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
-.mst-verse-chip.sibling { border-color: rgba(74,144,226,0.4); }
-
+.mst-verse-chip.sibling {
+  border-color: rgba(74, 144, 226, 0.4);
+}
 .mst-chip-surah {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.78rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: bold;
   color: var(--color-text-primary);
   white-space: nowrap;
 }
 .mst-chip-meta {
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.68rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   color: var(--color-quiz);
   white-space: nowrap;
 }
-/* Preview text hidden — chips are pill-shaped now */
-.mst-chip-preview { display: none; }
-
-/* ── Open context hint button (after answering) ─ */
+.mst-chip-preview {
+  display: none;
+}
 .mst-open-context-hint {
   width: 100%;
   padding: 6px 10px;
-  background: rgba(74,144,226,0.1);
+  background: rgba(74, 144, 226, 0.1);
   border: 1.5px solid #4a90e2;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: #2c6fad;
-  font-family: "Traditional Arabic","Amiri",serif;
-  font-size: 0.82rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   direction: rtl;
-  transition: all .2s;
+  transition: all 0.2s;
   flex-shrink: 0;
   margin-top: 4px;
 }
-.mst-open-context-hint:hover { background: rgba(74,144,226,0.18); }
-
-/* ── Responsive ─────────────────────────────── */
-@media (max-width: 768px) {
-  .mst-sidebar-wrapper { flex: 3; }
-  .mst-main { flex: 1; }
-  .mst-actions { flex-direction: column; }
-  .mst-verse-shared { font-size: 1.2rem; line-height: 1.9rem; }
-  .mst-header { flex-wrap: wrap; height: auto; }
-  .mst-juz-grid { grid-template-columns: repeat(5,1fr); }
-
-  /* Keep the action column visible when context is open on small screens */
-  .mst-container.with-sidebar .mst-main {
-    flex: 0 0 auto;
-    min-height: 320px;
-  }
-  .mst-container.with-sidebar .mst-sidebar-wrapper {
-    flex: 1 1 auto;
-  }
+.mst-open-context-hint:hover {
+  background: rgba(74, 144, 226, 0.18);
 }
 
-/* Night-mode tweaks: lift result-state colors so they read on a dark surface. */
-[data-theme="night"] .mst-result.correct { background: rgba(76, 175, 125, 0.15); color: #6cd699; }
-[data-theme="night"] .mst-result.wrong   { background: rgba(231, 76, 60, 0.15);  color: #f37b6f; }
-[data-theme="night"] .mst-result.skipped { background: rgba(241, 196, 15, 0.12); color: #f0d068; }
+/* ── Immersive mode support ───────────────────────────────────────────── */
+.mst-header-minimal {
+  padding: 4px 12px;
+  min-height: 44px;
+}
+.mst-header-minimal .mst-progress-text,
+.mst-header-minimal .mst-score-pill {
+  font-size: inherit;
+}
+
+/* Context viewer – takes remaining space */
+.mst-context-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gold);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.mst-context-viewer > div,
+.mst-context-viewer .mcv-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mst-verse-shared {
+    font-size: 1.2rem;
+    line-height: 1.9rem;
+  }
+  .mst-header {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 8px;
+  }
+  .mst-header-actions {
+    margin-left: auto;
+  }
+}

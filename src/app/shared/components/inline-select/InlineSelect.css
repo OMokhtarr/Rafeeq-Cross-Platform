@@ -1,0 +1,114 @@
+.isel {
+  display: inline-block;
+}
+.isel--full {
+  display: block;
+  width: 100%;
+}
+
+/* Trigger button */
+.isel__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--color-input-bg, #f5f3ef);
+  color: var(--color-text-primary, #1a1a1c);
+  border: 1px solid var(--color-input-border, rgba(0,0,0,0.15));
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: start;
+  min-height: 40px;
+  transition: border-color 0.15s;
+}
+.isel__trigger:focus-visible {
+  outline: 2px solid var(--color-gold, #d4b48c);
+  outline-offset: 1px;
+}
+.isel__trigger.isel--night {
+  background: rgba(255,255,255,0.07);
+  color: var(--color-text-primary, #e9e9ea);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.isel__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isel__arrow {
+  flex-shrink: 0;
+  fill: currentColor;
+  opacity: 0.5;
+  transition: transform 0.2s;
+}
+.isel__arrow--open {
+  transform: rotate(180deg);
+}
+
+/* Dropdown list — rendered via portal at document.body, positioned with inline style */
+.isel__list {
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-input-border, rgba(0,0,0,0.12));
+  border-radius: 8px;
+  padding: 4px 0;
+  margin: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  scrollbar-width: none;
+}
+.isel__list::-webkit-scrollbar {
+  display: none;
+}
+.isel__list.isel--night {
+  background: #252525;
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* Option rows */
+.isel__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: var(--color-text-primary, #1a1a1c);
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+.isel__option:hover,
+.isel__option:active {
+  background: rgba(0,0,0,0.05);
+}
+.isel__option.isel--night {
+  color: var(--color-text-primary, #e9e9ea);
+}
+.isel__option.isel--night:hover,
+.isel__option.isel--night:active {
+  background: rgba(255,255,255,0.06);
+}
+.isel__option--active {
+  color: var(--color-gold, #d4b48c);
+  font-weight: 500;
+}
+.isel__option--active.isel--night {
+  color: var(--color-gold, #d4b48c);
+}
+
+.isel__check {
+  flex-shrink: 0;
+  color: var(--color-gold, #d4b48c);
+}

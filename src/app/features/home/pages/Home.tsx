@@ -53,7 +53,6 @@ const Home: React.FC = () => {
               {/* Bottom gradient fade — blends into the app bg above the tab bar */}
               <div className="home-stage-fade" aria-hidden="true" />
             </div>
-
             <BottomNavBar active="home" />
           </div>
         </div>

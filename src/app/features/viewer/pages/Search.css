@@ -1,0 +1,282 @@
+/* ═══════════════════════════════════════════════
+   SEARCH page (recent searches + pinned input)
+   Tokens come from src/styles/tokens.css — both day and night themes
+   are driven by --color-* vars on :root[data-theme="..."].
+   ═══════════════════════════════════════════════ */
+
+.search-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  overflow: hidden;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+/* ── Header ── */
+.search-page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px max(env(safe-area-inset-top, 0px), 14px);
+  flex-shrink: 0;
+}
+
+.search-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--color-back-btn-border);
+  color: var(--color-back-btn-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.search-back-btn:hover {
+  background: var(--color-gold-faint);
+}
+.search-back-btn:active {
+  transform: scale(0.94);
+}
+
+.search-page-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: end;
+  font-family: inherit;
+  color: var(--color-text-primary);
+}
+
+.search-clear-all {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.search-clear-all:hover {
+  background: var(--color-gold-faint);
+  color: var(--color-text-primary);
+}
+
+/* ── Recents ── */
+.recents-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0 0;
+  min-height: 0;
+  /* Hide the scrollbar — content still scrolls, just no chrome. */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/old Edge */
+}
+
+.recents-section::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.recents-title {
+  margin: 0;
+  padding: 0 20px 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.recents-empty {
+  margin: 0;
+  padding: 30px 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.recents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  cursor: pointer;
+  border-top: 1px solid var(--color-row-border);
+  transition: background var(--transition-fast);
+}
+
+.recent-row:last-child {
+  border-bottom: 1px solid var(--color-row-border);
+}
+
+.recent-row:hover {
+  background: var(--color-gold-faint);
+}
+
+.recent-row:active {
+  background: var(--color-gold-subtle);
+}
+
+.recent-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  color: var(--color-text-muted);
+}
+
+.recent-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recent-query {
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-count {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-latin);
+}
+
+.recent-chev {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  color: var(--color-text-muted);
+  line-height: 1;
+}
+
+/* Live results — re-uses the .recent-row chrome but adds a verse-key
+   badge in place of the magnifier icon and a verse preview below the
+   surah name. */
+.result-row-badge {
+  flex-shrink: 0;
+  font-family: var(--font-latin);
+  font-size: 0.78rem;
+  letter-spacing: 0.4px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.result-row-arabic-name {
+  font-family: var(--font-arabic);
+  color: var(--color-text-muted);
+  margin-inline-start: 4px;
+}
+
+.result-row-preview {
+  font-family: var(--font-arabic);
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Bottom input bar ── */
+.search-bottom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px max(14px, env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.search-bottom-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  margin-inline-end: -52px; /* tucks under the input's inset-start padding */
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.search-bottom-input {
+  flex: 1;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  padding-inline: 56px 18px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.search-bottom-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.85;
+}
+
+.search-bottom-input:focus {
+  border-color: var(--color-gold);
+}
+
+.search-bottom-mic {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-gold);
+  color: var(--color-bg-app);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 4px var(--color-gold-subtle);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-base);
+}
+
+.search-bottom-mic:hover {
+  box-shadow: 0 0 0 6px var(--color-gold-subtle);
+}
+
+.search-bottom-mic:active {
+  transform: scale(0.94);
+}
+

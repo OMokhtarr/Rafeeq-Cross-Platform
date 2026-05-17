@@ -9,12 +9,13 @@
   width: 100%;
   background: var(--color-bg-tab, rgba(13, 31, 20, 0.96));
   border-top: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.18));
-  padding: 6px env(safe-area-inset-right) max(8px, env(safe-area-inset-bottom))
+  /* Slimmer bar — 2px top, minimal bottom (just safe-area on devices that
+     need it). Frees vertical space for the mushaf content. */
+  padding: 2px env(safe-area-inset-right) max(2px, env(safe-area-inset-bottom))
     env(safe-area-inset-left);
   flex-shrink: 0;
   box-sizing: border-box;
-  /* design system shadow-toolbar — subtle lift above content */
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
   transition:
     background var(--transition-theme, 0.25s ease),
     border-color var(--transition-theme, 0.25s ease);
@@ -31,7 +32,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px 2px 4px;
+  padding: 2px 2px 1px;
   border-radius: var(--radius-lg, 12px);
   transition:
     background var(--transition-base, 0.2s ease),
@@ -40,7 +41,8 @@
   color: var(--color-tab-inactive, rgba(255, 255, 255, 0.55));
   position: relative;
   min-width: 0;
-  min-height: 56px;
+  /* Was 56px — pulled down to 44px so the whole nav bar shrinks. */
+  min-height: 44px;
   font-family: inherit;
 }
 
@@ -180,7 +182,7 @@
     font-size: 0.55rem;
   }
   .rfq-tab {
-    padding: 8px 4px;
+    padding: 4px 4px;
   }
 }
 

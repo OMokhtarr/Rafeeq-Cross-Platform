@@ -57,6 +57,8 @@ export interface AppStrings {
     akmelDesc: string;
     mutashabihatTitle: string;
     mutashabihatDesc: string;
+    nehayatTitle: string;
+    nehayatDesc: string;
   };
 
   quizSetup: {
@@ -66,6 +68,9 @@ export interface AppStrings {
     mutashabihatTitle: string;
     mutashabihatSubtitle: string;
     mutashabihatInfo: string;
+    nehayatTitle: string;
+    nehayatSubtitle: string;
+    nehayatInfo: string;
     scope: string;
     scopeSurah: string;
     scopePages: string;
@@ -92,6 +97,8 @@ export interface AppStrings {
     score: string;
     exit: string;
     confirmExit: string;
+    exitConfirm: string;
+    exitCancel: string;
     hint: string;
     context: string;
     hide: string;
@@ -122,6 +129,7 @@ export interface AppStrings {
     ayahLabel: string;
     pageLabel: string;
     hizbLabel: string;
+    comingSoon: string;
   };
 
   mushaf: {
@@ -152,6 +160,12 @@ export interface AppStrings {
     hideSelected: string;
     clearSelection: string;
     showAllHidden: string;
+    contextLoading: string;
+    contextClose: string;
+    contextHint: string;
+    contextNextPage: string;
+    contextPrevPage: string;
+    contextJumpBack: string;
     selectionCount: (n: string) => string;
     hide: string;
     cancelSelection: string;
@@ -173,6 +187,8 @@ export interface AppStrings {
     toggleHideTitle: string;
     toggleShowTitle: string;
     nextVerseTitle: string;
+    micLabel: string;
+    stopLabel: string;
   };
 
   playback: {
@@ -200,6 +216,7 @@ export interface AppStrings {
     closeLabel: string;
     downloadsTitle: string;
     downloadStart: string;
+    downloadRedownload: string;
     downloadCancel: string;
     downloadClear: string;
     downloadProgress: (done: string, total: string) => string;
@@ -272,7 +289,7 @@ const ar: AppStrings = {
     azkar: "أذكار",
     ahadith: "أحاديث",
     settings: "إعدادات",
-    comingSoon: "قريباً",
+    comingSoon: "قريباً...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
@@ -280,25 +297,26 @@ const ar: AppStrings = {
   azkar: {
     title: "الأذكار",
     subtitle: "من كتاب صحيح الأذكار الجامع للعلامة الألباني رحمه الله",
-    back: "← رجوع",
-    backToCategories: "← العودة للفئات",
-    backHome: "← الصفحة الرئيسية",
+    back: "رجوع",
+    backToCategories: "العودة للفئات",
+    backHome: "الصفحة الرئيسية",
     done: "✓ تم",
     doneAlt: "تم ✓",
     reset: "↺",
     resetTitle: "إعادة العداد",
     zikr: "ذِكر",
     allDone: "✅ اكتملت الأذكار",
-    quote: "«مَنْ سَبَّحَ اللَّهَ فِي دُبُرِ كُلِّ صَلَاةٍ ثَلَاثًا وَثَلَاثِينَ»",
+    quote:
+      "«مَنْ سَبَّحَ اللَّهَ فِي دُبُرِ كُلِّ صَلَاةٍ ثَلَاثًا وَثَلَاثِينَ»",
   },
   quiz: {
     title: "الاختبارات",
     subtitle: "اختر اختباراً للبدء",
     start: "ابدأ الاختبار",
-    next: "← السؤال التالي",
+    next: "السؤال التالي",
     finish: "🏁 إنهاء الاختبار",
-    backToList: "← العودة للقائمة",
-    backHome: "← العودة للصفحة الرئيسية",
+    backToList: "العودة للقائمة",
+    backHome: "العودة للصفحة الرئيسية",
   },
   quizList: {
     titleHeader: "الاختبارات المتاحة",
@@ -307,14 +325,22 @@ const ar: AppStrings = {
     akmelDesc: "تُعرض عليك بداية آية وعليك إكمالها من حفظك",
     mutashabihatTitle: "المتشابهات",
     mutashabihatDesc: "ميّز بين الآيات المتشابهة وأكمل الآية الصحيحة",
+    nehayatTitle: "أكمل النهايات",
+    nehayatDesc: "اختر الخاتمة الصحيحة للآية بعد علامة الوقف",
   },
   quizSetup: {
     akmelTitle: "أكمل الآية",
     akmelSubtitle: "Quran Quiz — Complete the Verse",
-    akmelInfo: "ستُعرض عليك بداية آية وعليك إكمالها. اختر نطاق الاختبار وعدد الأسئلة.",
+    akmelInfo:
+      "ستُعرض عليك بداية آية وعليك إكمالها. اختر نطاق الاختبار وعدد الأسئلة.",
     mutashabihatTitle: "المتشابهات",
     mutashabihatSubtitle: "Mutashabihat Quiz — Complete the Similar Verse",
-    mutashabihatInfo: "ستُعرض عليك بداية آية مشتركة بين عدة آيات متشابهة، عليك إكمال الآية الصحيحة.",
+    mutashabihatInfo:
+      "ستُعرض عليك بداية آية مشتركة بين عدة آيات متشابهة، عليك إكمال الآية الصحيحة.",
+    nehayatTitle: "أكمل النهايات",
+    nehayatSubtitle: "Waqf Quiz — Complete the Ending",
+    nehayatInfo:
+      "ستُعرض عليك آية مقطوعة عند آخر علامة وقف، اختر الخاتمة الصحيحة من بين أربعة خيارات.",
     scope: "النطاق",
     scopeSurah: "سورة",
     scopePages: "صفحة",
@@ -333,27 +359,29 @@ const ar: AppStrings = {
     pickedJuzs: "أجزاء",
     juzWord: "جزء",
     start: "ابدأ الاختبار",
-    backToList: "← العودة للقائمة",
+    backToList: "العودة للقائمة",
   },
   quizTest: {
     questionOf: "سؤال",
     score: "النتيجة",
-    exit: "✕ خروج",
+    exit: "✕",
     confirmExit: "هل تريد الخروج من الاختبار؟",
-    hint: "💡 تلميح",
-    context: "📖 سياق",
-    hide: "📖 إخفاء",
-    submit: "➤ إرسال",
-    skip: "⏭ تخطي",
+    exitConfirm: "خروج",
+    exitCancel: "متابعة",
+    hint: "تلميح",
+    context: "سياق",
+    hide: "إخفاء",
+    submit: "إرسال",
+    skip: "تخطي",
     promptComplete: "✽ أكمل الآية ✽",
-    inputPlaceholder: "اكتب إكمال الآية هنا…",
+    inputPlaceholder: "أكمل الآية هنا…",
     correctMsg: "أحسنت! إجابة صحيحة",
     skippedMsg: "تم التخطي",
     wrongMsg: "إجابة خاطئة",
     correctAnswer: "الإجابة الصحيحة:",
     completionVerse: "إكمال الآية:",
-    nextQuestion: "← السؤال التالي",
-    finishQuiz: "🏁 إنهاء الاختبار",
+    nextQuestion: "السؤال التالي",
+    finishQuiz: "إنهاء الاختبار",
     completeTitle: "انتهى الاختبار!",
     completeAkmelSub: "Akmel Al-Ayah Quiz Complete",
     completeMutashabihatSub: "Mutashabihat Quiz Complete",
@@ -365,11 +393,13 @@ const ar: AppStrings = {
     errorLoadingAkmel: "حدث خطأ أثناء تحميل الأسئلة",
     errorLoadingMutashabihat: "حدث خطأ أثناء تحميل الأسئلة",
     errorNoVerses: "لم يُعثر على آيات في النطاق المحدد.\nجرّب نطاقاً أوسع.",
-    errorNoMutashabihat: "لم يُعثر على آيات متشابهة في النطاق المحدد.\nجرّب نطاقاً أوسع.",
-    backToSetup: "← العودة للإعداد",
+    errorNoMutashabihat:
+      "لم يُعثر على آيات متشابهة في النطاق المحدد.\nجرّب نطاقاً أوسع.",
+    backToSetup: "العودة للإعداد",
     ayahLabel: "الآية",
     pageLabel: "صفحة",
     hizbLabel: "الحزب",
+    comingSoon: "قريباً...",
   },
   mushaf: {
     page: "صفحة",
@@ -404,6 +434,12 @@ const ar: AppStrings = {
     cancelSelection: "إلغاء التحديد",
     backLabel: "رجوع",
     closeLabel: "إغلاق",
+    contextLoading: "جاري تحميل الصفحة…",
+    contextClose: "إغلاق",
+    contextHint: "تلميح",
+    contextNextPage: "الصفحة التالية",
+    contextPrevPage: "الصفحة السابقة",
+    contextJumpBack: "العودة إلى آية السؤال",
     fontSizeOptions: [
       { value: "small", label: "صغير" },
       { value: "medium", label: "متوسط" },
@@ -430,6 +466,8 @@ const ar: AppStrings = {
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
     nextVerseTitle: "إظهار الآية التالية",
+    micLabel: "المايكروفون",
+    stopLabel: "إيقاف التشغيل",
   },
   playback: {
     title: "إعدادات التشغيل",
@@ -456,6 +494,7 @@ const ar: AppStrings = {
     closeLabel: "إغلاق",
     downloadsTitle: "إدارة التحميلات",
     downloadStart: "تحميل النطاق المختار",
+    downloadRedownload: "إعادة التحميل",
     downloadCancel: "إيقاف التحميل",
     downloadClear: "مسح التحميلات",
     downloadProgress: (done: string, total: string) =>
@@ -519,12 +558,12 @@ const ar: AppStrings = {
       { value: "hard", label: "صعب" },
     ],
     reciters: [
-      { value: "minshawi-murattal", label: "محمد صديق المنشاوي (مرتل)" },
-      { value: "husary", label: "الحصري" },
-      { value: "minshawi", label: "المنشاوي" },
-      { value: "sudais", label: "السديس" },
-      { value: "afasy", label: "العفاسي" },
-      { value: "ghamdi", label: "الغامدي" },
+      { value: "minshawi-murattal", label: "محمد صديق المنشاوي — مرتل" },
+      { value: "husary", label: "محمود خليل الحصري" },
+      { value: "minshawi", label: "محمد صديق المنشاوي — مجود" },
+      { value: "sudais", label: "عبد الرحمن السديس" },
+      { value: "afasy", label: "مشاري راشد العفاسي" },
+      { value: "ghamdi", label: "سعد الغامدي" },
     ],
   },
 };
@@ -540,33 +579,34 @@ const en: AppStrings = {
     azkar: "Azkar",
     ahadith: "Ahadith",
     settings: "Settings",
-    comingSoon: "Soon",
+    comingSoon: "Coming soon...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
   },
   azkar: {
     title: "Azkar",
-    subtitle: "From Sahih al-Adhkar al-Jami' by Sheikh al-Albani, may Allah have mercy on him",
-    back: "← Back",
-    backToCategories: "← Back to Categories",
-    backHome: "← Home",
+    subtitle:
+      "From Sahih al-Adhkar al-Jami' by Sheikh al-Albani, may Allah have mercy on him",
+    back: "Back",
+    backToCategories: "Back to Categories",
+    backHome: "Home",
     done: "✓ Done",
     doneAlt: "Done ✓",
     reset: "↺",
     resetTitle: "Reset counter",
     zikr: "dhikr",
     allDone: "✅ All complete",
-    quote: "\"Glorify Allah after every prayer thirty-three times\"",
+    quote: '"Glorify Allah after every prayer thirty-three times"',
   },
   quiz: {
     title: "Quizzes",
     subtitle: "Choose a quiz to begin",
     start: "Start Quiz",
-    next: "Next Question →",
+    next: "Next Question",
     finish: "🏁 Finish Quiz",
-    backToList: "← Back to List",
-    backHome: "← Back to Home",
+    backToList: "Back to List",
+    backHome: "Back to Home",
   },
   quizList: {
     titleHeader: "Available Quizzes",
@@ -575,14 +615,22 @@ const en: AppStrings = {
     akmelDesc: "Complete the verse from memory",
     mutashabihatTitle: "Mutashabihat",
     mutashabihatDesc: "Distinguish and complete similar-opening verses",
+    nehayatTitle: "Complete the Ending",
+    nehayatDesc: "Choose the correct ending of the verse after its Waqf sign",
   },
   quizSetup: {
     akmelTitle: "Complete the Verse",
     akmelSubtitle: "اختبار القرآن — أكمل الآية",
-    akmelInfo: "You will be shown the start of a verse and asked to complete it. Choose your scope and number of questions.",
+    akmelInfo:
+      "You will be shown the start of a verse and asked to complete it. Choose your scope and number of questions.",
     mutashabihatTitle: "Mutashabihat",
     mutashabihatSubtitle: "اختبار المتشابهات — أكمل الآية المتشابهة",
-    mutashabihatInfo: "You'll be shown an opening shared by several similar verses — complete the correct one.",
+    mutashabihatInfo:
+      "You'll be shown an opening shared by several similar verses — complete the correct one.",
+    nehayatTitle: "Complete the Ending",
+    nehayatSubtitle: "اختبار الوقف — أكمل النهايات",
+    nehayatInfo:
+      "A verse is shown up to its last Waqf sign. Choose the correct ending from four options.",
     scope: "Scope",
     scopeSurah: "Surah",
     scopePages: "Pages",
@@ -601,18 +649,20 @@ const en: AppStrings = {
     pickedJuzs: "juzs",
     juzWord: "Juz",
     start: "Start Quiz",
-    backToList: "← Back to List",
+    backToList: "Back to List",
   },
   quizTest: {
     questionOf: "Question",
     score: "Score",
-    exit: "✕ Exit",
+    exit: "✕",
     confirmExit: "Exit the quiz?",
-    hint: "💡 Hint",
-    context: "📖 Context",
-    hide: "📖 Hide",
-    submit: "➤ Submit",
-    skip: "⏭ Skip",
+    exitConfirm: "Exit",
+    exitCancel: "Continue",
+    hint: "Hint",
+    context: "Context",
+    hide: "Hide",
+    submit: "Submit",
+    skip: "Skip",
     promptComplete: "✽ Complete the verse ✽",
     inputPlaceholder: "Type the rest of the verse here…",
     correctMsg: "Correct — well done!",
@@ -620,8 +670,8 @@ const en: AppStrings = {
     wrongMsg: "Incorrect",
     correctAnswer: "Correct answer:",
     completionVerse: "Completion:",
-    nextQuestion: "← Next Question",
-    finishQuiz: "🏁 Finish Quiz",
+    nextQuestion: "Next Question",
+    finishQuiz: "Finish Quiz",
     completeTitle: "Quiz complete!",
     completeAkmelSub: "اكتمل اختبار أكمل الآية",
     completeMutashabihatSub: "اكتمل اختبار المتشابهات",
@@ -633,11 +683,13 @@ const en: AppStrings = {
     errorLoadingAkmel: "Error loading questions",
     errorLoadingMutashabihat: "Error loading questions",
     errorNoVerses: "No verses found in the selected range.\nTry a wider scope.",
-    errorNoMutashabihat: "No similar verses found in the selected range.\nTry a wider scope.",
-    backToSetup: "← Back to Setup",
+    errorNoMutashabihat:
+      "No similar verses found in the selected range.\nTry a wider scope.",
+    backToSetup: "Back to Setup",
     ayahLabel: "Ayah",
     pageLabel: "Page",
     hizbLabel: "Hizb",
+    comingSoon: "Coming soon...",
   },
   mushaf: {
     page: "Page",
@@ -667,6 +719,12 @@ const en: AppStrings = {
     hideSelected: "Hide selected verses",
     clearSelection: "Clear selection",
     showAllHidden: "Show all hidden verses",
+    contextLoading: "Loading page…",
+    contextClose: "Close",
+    contextHint: "Hint",
+    contextNextPage: "Next page",
+    contextPrevPage: "Previous page",
+    contextJumpBack: "Go back to the target verse",
     selectionCount: (n: string) => `${n} verse${n === "1" ? "" : "s"} selected`,
     hide: "Hide",
     cancelSelection: "Cancel selection",
@@ -698,6 +756,8 @@ const en: AppStrings = {
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
     nextVerseTitle: "Reveal next verse",
+    micLabel: "Microphone",
+    stopLabel: "Stop playback",
   },
   playback: {
     title: "Playback Settings",
@@ -724,6 +784,7 @@ const en: AppStrings = {
     closeLabel: "Close",
     downloadsTitle: "Manage downloads",
     downloadStart: "Download selected range",
+    downloadRedownload: "Re-download",
     downloadCancel: "Stop download",
     downloadClear: "Clear cached audio",
     downloadProgress: (done: string, total: string) =>
@@ -787,12 +848,12 @@ const en: AppStrings = {
       { value: "hard", label: "Hard" },
     ],
     reciters: [
-      { value: "minshawi-murattal", label: "Muhammad Siddiq Al Minshawy (Murattal)" },
-      { value: "husary", label: "Al-Husary" },
-      { value: "minshawi", label: "Al-Minshawi" },
-      { value: "sudais", label: "Al-Sudais" },
-      { value: "afasy", label: "Al-Afasy" },
-      { value: "ghamdi", label: "Al-Ghamdi" },
+      { value: "minshawi-murattal", label: "Muhammad Siddiq Al-Minshawi — Murattal" },
+      { value: "husary", label: "Mahmoud Khalil Al-Husary" },
+      { value: "minshawi", label: "Muhammad Siddiq Al-Minshawi — Mujawwad" },
+      { value: "sudais", label: "Abdul Rahman Al-Sudais" },
+      { value: "afasy", label: "Mishary Rashid Al-Afasy" },
+      { value: "ghamdi", label: "Sa'd Al-Ghamdi" },
     ],
   },
 };

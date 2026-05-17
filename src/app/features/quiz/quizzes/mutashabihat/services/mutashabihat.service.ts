@@ -1,23 +1,6 @@
-/**
- * MUTASHABIHAT SERVICE
- * Migrated from: src/shared/utils/mutashabihatUtils.js
- *
- * All logic preserved exactly. Changes:
- *  1. TypeScript types added
- *  2. `require("../../data/quran-text.json")` replaced with import from verseCache
- *     (quranLoader's verseCache is now the single source of truth for verse text)
- *  3. Moved into features/mutashabihat/services/ — only used by mutashabihat feature
- *  4. stripDiacritics/removeDiacritics imported from shared arabic.util.ts
- */
-
 import { stripDiacritics } from "../../../../../core/utils/arabic.util";
-import { surahNamesArabic } from "../../../../../core/services/data/repositories/ayah.repository";
-import { pageData } from "../../../../../../data/quranData";
-
-// Re-export for consumers that imported from the old location
-export { stripDiacritics };
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { getSurahNameArabic, getSurahNameEnglish } from "../../../../../core/services/data/metadata.service";
+import type { Verse } from "../../../../../shared/models/verse.model";
 
 export interface MutashabihatGroup {
   id: string;
@@ -34,139 +17,103 @@ interface RichVerse {
   page: number;
   juz: number;
   suraNameAr: string;
+  suraName: string;
   hiddenStart: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Return the page number for a given sura:aya pair */
-function getPageForVerse(sura: number, aya: number): number {
-  for (let p = pageData.length - 1; p >= 1; p--) {
-    const [pSura, pAya] = pageData[p];
-    if (sura > pSura || (sura === pSura && aya >= pAya)) return p;
-  }
-  return 1;
-}
-
-function getJuzForPage(page: number): number {
-  return Math.ceil(page / 20);
-}
-
-// ─── Group builder ────────────────────────────────────────────────────────────
-
-let _cachedGroups: MutashabihatGroup[] | null = null;
-
-/**
- * Build and cache all mutashabihat groups from the verse cache.
- * Logic identical to mutashabihatUtils.js → getAllMutashabihatGroups().
- *
- * Requires quran.service.ts ensureSeeded() to have run first so that
- * the in-memory verseCache in ayah.repository.ts is populated.
- * Call this from a useEffect / async context, not at module load time.
- */
-export function getAllMutashabihatGroups(
-  verses: Record<string, string>,
-): MutashabihatGroup[] {
-  if (_cachedGroups) return _cachedGroups;
+export function getAllMutashabihatGroups(verses: Verse[]): MutashabihatGroup[] {
+  const groups: MutashabihatGroup[] = [];
+  // Try window size 3 (most common for similar verses)
+  const WINDOW = 3;
+  const MIN_WORDS = 5; // need at least one completion word after the window
 
   const phraseMap = new Map<
     string,
-    Array<{
+    {
       sura: number;
       aya: number;
       text: string;
-      normWords: string[];
-      window: number;
-      phrase: string;
-    }>
+      page: number;
+      juz: number;
+      words: string[];
+    }[]
   >();
 
-  for (const [key, text] of Object.entries(verses)) {
-    const [suraStr, ayaStr] = key.split(":");
-    const sura = parseInt(suraStr);
-    const aya = parseInt(ayaStr);
-    const norm = stripDiacritics(text);
-    const words = norm.split(/\s+/).filter(Boolean);
-
-    if (words.length < 5) continue;
-
-    for (const window of [3, 4]) {
-      if (words.length < window + 2) continue;
-      const phrase = words.slice(0, window).join(" ");
-      const mapKey = `${window}|${phrase}`;
-      if (!phraseMap.has(mapKey)) phraseMap.set(mapKey, []);
-      phraseMap
-        .get(mapKey)!
-        .push({ sura, aya, text, normWords: words, window, phrase });
+  for (const v of verses) {
+    // Extract word strings from the verse's words array (skip end markers)
+    let wordStrings: string[];
+    if (v.words && v.words.length > 0) {
+      wordStrings = v.words
+        .filter((w) => w.charType === "end")
+        .map((w) => w.text_uthmani);
+    } else {
+      // Fallback to splitting the text (less accurate)
+      wordStrings = v.text.split(/\s+/).filter((w) => w.length > 0);
     }
+
+    // Need at least MIN_WORDS total words to have a completion after the window
+    if (wordStrings.length < MIN_WORDS) continue;
+
+    const phrase = wordStrings.slice(0, WINDOW).join(" ");
+    if (!phraseMap.has(phrase)) {
+      phraseMap.set(phrase, []);
+    }
+    phraseMap.get(phrase)!.push({
+      sura: v.sura,
+      aya: v.aya,
+      text: v.text,
+      page: v.page,
+      juz: v.juz ?? Math.ceil(v.page / 20),
+      words: wordStrings,
+    });
   }
 
-  const groups: MutashabihatGroup[] = [];
-  const usedVerseKeys = new Set<string>();
-
-  for (const [mapKey, entries] of phraseMap.entries()) {
+  for (const [phrase, entries] of phraseMap.entries()) {
     if (entries.length < 2) continue;
 
-    const { window, phrase } = entries[0];
-
-    const continuations = new Set(
-      entries.map((e) => e.normWords.slice(window, window + 5).join(" ")),
+    // Check that the completions (after the window) are not all identical
+    const completions = entries.map((e) =>
+      stripDiacritics(e.words.slice(WINDOW).join(" ")),
     );
-    if (continuations.size < 2) continue;
+    if (new Set(completions).size < 2) continue;
 
-    const pairKey = entries
-      .map((e) => `${e.sura}:${e.aya}`)
-      .sort()
-      .join(",");
-    if (window === 3 && usedVerseKeys.has(pairKey)) continue;
-    if (window === 4) usedVerseKeys.add(pairKey);
-
-    const richVerses: RichVerse[] = entries.map((e) => {
-      const page = getPageForVerse(e.sura, e.aya);
-      return {
+    groups.push({
+      id: `${WINDOW}|${stripDiacritics(phrase)}`,
+      sharedPhrase: stripDiacritics(phrase),
+      sharedPhraseRaw: phrase,
+      windowSize: WINDOW,
+      verses: entries.map((e) => ({
         sura: e.sura,
         aya: e.aya,
         text: e.text,
-        page,
-        juz: getJuzForPage(page),
-        suraNameAr: surahNamesArabic[e.sura] ?? `سورة ${e.sura}`,
-        hiddenStart: e.normWords.slice(window).join(" "),
-      };
-    });
-
-    groups.push({
-      id: mapKey,
-      sharedPhrase: phrase,
-      sharedPhraseRaw: entries[0].text.split(/\s+/).slice(0, window).join(" "),
-      windowSize: window,
-      verses: richVerses,
+        page: e.page,
+        juz: e.juz,
+        suraNameAr: getSurahNameArabic(e.sura),
+        suraName: getSurahNameEnglish(e.sura),
+        hiddenStart: e.words.slice(WINDOW).join(" "),
+      })),
     });
   }
 
-  groups.sort((a, b) => {
-    if (b.windowSize !== a.windowSize) return b.windowSize - a.windowSize;
-    return a.verses[0].sura - b.verses[0].sura;
-  });
-
-  _cachedGroups = groups;
   return groups;
 }
 
-/** Invalidate the cached groups (call if quiz data changes) */
-export function clearMutashabihatCache(): void {
-  _cachedGroups = null;
-}
-
-// ─── Filter helpers ───────────────────────────────────────────────────────────
-// Identical to mutashabihatUtils.js — logic unchanged.
+// Filtering functions – each ensures at least MIN_GROUP_SIZE verses remain
+const MIN_GROUP_SIZE = 2;
 
 export function filterGroupsBySurahs(
   groups: MutashabihatGroup[],
   surahs: number[],
 ): MutashabihatGroup[] {
-  if (!surahs || surahs.length === 0) return groups;
   const set = new Set(surahs);
-  return groups.filter((g) => g.verses.every((v) => set.has(v.sura)));
+  const filtered: MutashabihatGroup[] = [];
+  for (const g of groups) {
+    const matching = g.verses.filter((v) => set.has(v.sura));
+    if (matching.length >= MIN_GROUP_SIZE) {
+      filtered.push({ ...g, verses: matching });
+    }
+  }
+  return filtered;
 }
 
 export function filterGroupsByPages(
@@ -174,24 +121,39 @@ export function filterGroupsByPages(
   pageFrom: number,
   pageTo: number,
 ): MutashabihatGroup[] {
-  return groups.filter((g) =>
-    g.verses.every((v) => v.page >= pageFrom && v.page <= pageTo),
-  );
+  const filtered: MutashabihatGroup[] = [];
+  for (const g of groups) {
+    const matching = g.verses.filter(
+      (v) => v.page >= pageFrom && v.page <= pageTo,
+    );
+    if (matching.length >= MIN_GROUP_SIZE) {
+      filtered.push({ ...g, verses: matching });
+    }
+  }
+  return filtered;
 }
 
 export function filterGroupsByJuzs(
   groups: MutashabihatGroup[],
   juzs: number[],
 ): MutashabihatGroup[] {
-  if (!juzs || juzs.length === 0) return groups;
   const set = new Set(juzs);
-  return groups.filter((g) => g.verses.every((v) => set.has(v.juz)));
+  const filtered: MutashabihatGroup[] = [];
+  for (const g of groups) {
+    const matching = g.verses.filter((v) => set.has(v.juz));
+    if (matching.length >= MIN_GROUP_SIZE) {
+      filtered.push({ ...g, verses: matching });
+    }
+  }
+  return filtered;
 }
 
-// ─── Question builder ─────────────────────────────────────────────────────────
-// Identical to mutashabihatUtils.js → buildMutashabihatQuestion()
-
 export function buildMutashabihatQuestion(group: MutashabihatGroup) {
+  // Safety guard: group must have at least 2 verses to have a meaningful sibling
+  if (group.verses.length < 2) {
+    throw new Error("Mutashabihat group must contain at least 2 verses");
+  }
+
   const idx = Math.floor(Math.random() * group.verses.length);
   const target = group.verses[idx];
   const siblings = group.verses.filter((_, i) => i !== idx);
@@ -206,14 +168,14 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
     targetVerse: target,
     siblingVerses: siblings,
     sharedPhrase: displayedPortion,
+    sharedPhraseRaw: group.sharedPhraseRaw, // raw Arabic phrase (with diacritics)
     displayedPortion,
     hiddenPortion,
     hints: hiddenWords,
-    // Legacy compat fields used by VerseContextViewer
     sura: target.sura,
     aya: target.aya,
     suraNameAr: target.suraNameAr,
-    suraName: target.suraNameAr,
+    suraName: target.suraName,
     page: target.page,
     fullText: target.text,
     versePart: displayedPortion,
@@ -221,27 +183,19 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
   };
 }
 
-// ─── Answer checker ───────────────────────────────────────────────────────────
-// Identical to mutashabihatUtils.js → checkMutashabihatAnswer()
-
 export function checkMutashabihatAnswer(
   userAnswer: string,
   question: { hiddenPortion: string },
 ): boolean {
   if (!userAnswer || !question.hiddenPortion) return false;
-
   const normalize = (t: string) =>
     stripDiacritics(t).replace(/\s+/g, " ").trim().toLowerCase();
-
   const user = normalize(userAnswer);
   const correct = normalize(question.hiddenPortion);
-
   if (user === correct) return true;
-
   const correctWords = correct.split(" ").filter(Boolean);
   const userWords = user.split(" ").filter(Boolean);
   if (userWords.length === 0) return false;
-
   let matched = 0;
   userWords.forEach((w, i) => {
     if (
@@ -250,6 +204,5 @@ export function checkMutashabihatAnswer(
     )
       matched++;
   });
-
   return matched / correctWords.length >= 0.6;
 }

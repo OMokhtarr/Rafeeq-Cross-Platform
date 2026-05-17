@@ -1,13 +1,12 @@
 /**
  * AKMEL AL-AYAH TEST PAGE
- * src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.tsx
- *
- * JSX structure identical to MutashabihatTest.tsx.
- * aa- prefix throughout, warm brown/tan palette matching mst-.
+ * Immersive mode: when context viewer is open, the question card collapses
+ * to show only a compact row of action buttons (Hint, Submit, Skip).
+ * The header becomes minimal, and the Mushaf viewer fills the rest.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
 import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
@@ -20,8 +19,11 @@ import {
   getPageRangeVerses,
 } from "../../../../../../core/services/data/quran.service";
 import { useLang } from "../../../../../../core/context/LanguageContext";
+import { useVerseVisibility } from "../../../../../../core/context/VerseVisibilityContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
+import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
+import QuizExitModal from "../../../../components/QuizExitModal";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -75,8 +77,9 @@ function buildQuestion(verse: any): QuizQuestion {
 
 const AkmelAlAyah: React.FC = () => {
   const history = useHistory();
-  const { t } = useLang();
+  const { t, isRTL } = useLang();
   const tt = t.quizTest;
+  const [presentToast] = useIonToast();
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [idx, setIdx] = useState(0);
@@ -88,11 +91,20 @@ const AkmelAlAyah: React.FC = () => {
   const [skipped, setSkipped] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
   const [showContext, setShowContext] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [score, setScore] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
+  useWakeLock();
+  const { showAll: showAllVerses } = useVerseVisibility();
+
+  // Quiz depends on every verse being visible — clear any hide state the user
+  // may have left behind in the page viewer before the quiz starts.
+  useEffect(() => {
+    showAllVerses();
+  }, [showAllVerses]);
 
   // ── Load config + generate questions ──────────────────────────────────────
   useEffect(() => {
@@ -189,6 +201,7 @@ const AkmelAlAyah: React.FC = () => {
     setAnswered(true);
     setCorrect(false);
     if (isSoundOn()) beep("wrong");
+    setShowContext(false); // ← Close immersive mode on skip
   };
 
   const handleNext = () => {
@@ -199,7 +212,7 @@ const AkmelAlAyah: React.FC = () => {
       setCorrect(false);
       setSkipped(false);
       setHintLevel(0);
-      setShowContext(false);
+      setShowContext(false); // ← Already closing immersive mode
     } else {
       setQuizComplete(true);
     }
@@ -214,9 +227,10 @@ const AkmelAlAyah: React.FC = () => {
     if (hintLevel < words.length) setHintLevel((l) => l + 1);
   };
 
-  const handleExit = () => {
-    if (window.confirm(tt.confirmExit))
-      history.push("/akmel-alayah-setup");
+  const handleExit = () => setShowExitModal(true);
+
+  const handleToggleContext = () => {
+    setShowContext((prev) => !prev);
   };
 
   const getHintText = () => {
@@ -234,11 +248,13 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-loading">
-            <div className="aa-spinner"></div>
-            <p>{tt.loadingAkmel}</p>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-loading">
+              <div className="aa-spinner"></div>
+              <p>{tt.loadingAkmel}</p>
+            </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
@@ -248,15 +264,17 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-error">
-            <div className="aa-error-box">
-              <p>{error}</p>
-              <button onClick={() => history.push("/akmel-alayah-setup")}>
-                {tt.backToSetup}
-              </button>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-error">
+              <div className="aa-error-box">
+                <p>{error}</p>
+                <button onClick={() => history.push("/akmel-alayah-setup")}>
+                  {tt.backToSetup}
+                </button>
+              </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
@@ -269,26 +287,29 @@ const AkmelAlAyah: React.FC = () => {
     return (
       <IonPage>
         <IonContent fullscreen>
-          <div className="aa-complete">
-            <div className="aa-complete-card">
-              <div className="aa-complete-badge">🎉</div>
-              <h2>{tt.completeTitle}</h2>
-              <p className="aa-complete-sub">{tt.completeAkmelSub}</p>
-              <div className="aa-score-ring">
-                <span className="aa-score-num">{score}</span>
-                <span className="aa-score-sep">/</span>
-                <span className="aa-score-total">{questions.length}</span>
-              </div>
-              <p className="aa-score-pct">{pct}%</p>
-              <div className="aa-complete-actions">
-                <button onClick={() => history.push("/akmel-alayah-setup")}>
-                  {tt.newQuiz}
-                </button>
-                <button onClick={() => history.push("/quiz-list")}>{tt.quizListLink}</button>
+          <div className="aa-test-page-wrapper">
+            <div className="aa-complete">
+              <div className="aa-complete-card">
+                <h2>{tt.completeTitle}</h2>
+                <p className="aa-complete-sub">{tt.completeAkmelSub}</p>
+                <div className="aa-score-ring">
+                  <span className="aa-score-num">{score}</span>
+                  <span className="aa-score-sep">/</span>
+                  <span className="aa-score-total">{questions.length}</span>
+                </div>
+                <p className="aa-score-pct">{pct}%</p>
+                <div className="aa-complete-actions">
+                  <button onClick={() => history.push("/akmel-alayah-setup")}>
+                    {tt.newQuiz}
+                  </button>
+                  <button onClick={() => history.push("/quiz-list")}>
+                    {tt.quizListLink}
+                  </button>
+                </div>
               </div>
             </div>
+            <BottomNavBar active="quiz" />
           </div>
-          <BottomNavBar active="quiz" fixed />
         </IonContent>
       </IonPage>
     );
@@ -298,17 +319,245 @@ const AkmelAlAyah: React.FC = () => {
     .trim()
     .split(" ")
     .filter(Boolean).length;
+  const immersiveMode = showContext;
 
   // ── Main quiz render ───────────────────────────────────────────────────────
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="aa-test-page-wrapper">
-        <div className={`aa-container ${showContext ? "with-sidebar" : ""}`}>
-          {/* Context Sidebar */}
-          {showContext && (
-            <div className="aa-sidebar-wrapper">
-              <div className="aa-page-viewer">
+          <div className="aa-container">
+            {/* Header – becomes minimal when immersive */}
+            <div
+              className={`aa-header ${
+                immersiveMode ? "aa-header-minimal" : ""
+              }`}
+            >
+              <div className="aa-progress">
+                <span className="aa-progress-text">
+                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
+                  {isRTL ? toHindi(questions.length) : questions.length}
+                </span>
+                <div className="aa-bar">
+                  <div
+                    className="aa-bar-fill"
+                    style={{
+                      width: `${((idx + 1) / questions.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="aa-score-pill">
+                {tt.score}: {score}
+              </div>
+              <div className="aa-header-actions">
+                <button
+                  className="aa-exit-btn"
+                  onClick={handleExit}
+                  aria-label={tt.exit}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Question card – full or minimized (buttons only) */}
+            <div
+              className={`aa-card ${
+                immersiveMode ? "aa-card-buttons-only" : ""
+              }`}
+            >
+              {/* Info strip – hidden in immersive mode (already in page-edge-top) */}
+              {!immersiveMode && (
+                <div className="aa-info-strip">
+                  <span className="aa-surah-badge">
+                    {isRTL ? (
+                      <>
+                        <span lang="ar" dir="rtl">{q.suraNameAr}</span>
+                        {q.suraName && <span dir="ltr"> · {q.suraName}</span>}
+                      </>
+                    ) : (
+                      <>
+                        {q.suraName && <span>{q.suraName}</span>}
+                        <span lang="ar" dir="rtl"> · {q.suraNameAr}</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.ayahLabel} {isRTL ? toHindi(q.aya) : q.aya}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.pageLabel} {isRTL ? toHindi(q.page) : q.page}
+                  </span>
+                  <span className="aa-meta">
+                    {tt.hizbLabel} {isRTL ? toHindi(Math.ceil(q.page / 4)) : Math.ceil(q.page / 4)}
+                  </span>
+                </div>
+              )}
+
+              <div className="aa-card-body">
+                <div className="aa-card-main">
+                  {/* Action buttons – always visible */}
+                  <div className="aa-actions">
+                    <button
+                      className="aa-btn aa-hint"
+                      onClick={handleHint}
+                      disabled={hintLevel >= maxHints || answered}
+                    >
+                      {tt.hint}
+                      {hintLevel > 0 && (
+                        <span className="aa-btn-en">
+                          ({hintLevel}/{maxHints})
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      className="aa-btn aa-context"
+                      onClick={handleToggleContext}
+                    >
+                      {tt.context}
+                    </button>
+
+                    <button
+                      className="aa-btn aa-submit"
+                      onClick={handleSubmit}
+                      disabled={!userAnswer.trim() || answered}
+                    >
+                      {tt.submit}
+                    </button>
+                    <button
+                      className="aa-btn aa-skip"
+                      onClick={handleSkip}
+                      disabled={answered}
+                    >
+                      {tt.skip}
+                    </button>
+                    <button
+                      className="aa-btn aa-recite"
+                      onClick={() =>
+                        presentToast({
+                          message: tt.comingSoon,
+                          duration: 2000,
+                          position: "bottom",
+                        })
+                      }
+                      aria-label="Recite"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="18"
+                        height="18"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="3" width="6" height="12" rx="3" />
+                        <path d="M5 11a7 7 0 0014 0" />
+                        <line x1="12" y1="18" x2="12" y2="22" />
+                        <line x1="9" y1="22" x2="15" y2="22" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Full content – hidden in immersive mode */}
+                  {!immersiveMode && (
+                    <>
+                      <div className="aa-verse-box">
+                        <p className="aa-verse-shared" lang="ar" dir="rtl">
+                          {q.versePart ?? q.displayedPortion}
+                        </p>
+                        {hintLevel > 0 && (
+                          <span className="aa-hint-inline" lang="ar" dir="rtl">
+                            {" "}
+                            {getHintText()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="aa-answer-row">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          dir="rtl"
+                          inputMode="text"
+                          enterKeyHint={answered ? "done" : "send"}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && !answered && handleSubmit()
+                          }
+                          onFocus={(e) => {
+                            const el = e.currentTarget;
+                            setTimeout(
+                              () =>
+                                el.scrollIntoView({
+                                  block: "center",
+                                  behavior: "smooth",
+                                }),
+                              250,
+                            );
+                          }}
+                          readOnly={answered}
+                          placeholder={tt.inputPlaceholder}
+                          className={`aa-input ${answered ? "answered" : ""}`}
+                        />
+                      </div>
+
+                      {answered && (
+                        <div
+                          className={`aa-result ${
+                            correct ? "correct" : skipped ? "skipped" : "wrong"
+                          }`}
+                        >
+                          <span className="aa-result-icon">
+                            {correct ? "✅" : skipped ? "⏭" : "❌"}
+                          </span>
+                          <span className="aa-result-text">
+                            {correct
+                              ? tt.correctMsg
+                              : skipped
+                              ? tt.skippedMsg
+                              : tt.wrongMsg}
+                          </span>
+                          {!correct && (
+                            <div className="aa-correct-answer">
+                              <span className="aa-correct-label">
+                                {tt.correctAnswer}{" "}
+                              </span>
+                              <span
+                                className="aa-correct-text"
+                                lang="ar"
+                                dir="rtl"
+                              >
+                                {q.hiddenPortion ?? q.correctAnswer}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {answered && (
+                        <button className="aa-next-btn" onClick={handleNext}>
+                          {idx + 1 < questions.length
+                            ? tt.nextQuestion
+                            : tt.finishQuiz}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Context Viewer – fills remaining space */}
+            {showContext && (
+              <div className="aa-context-viewer">
                 <MushafContextViewer
                   verse={{
                     sura: q.sura,
@@ -327,167 +576,15 @@ const AkmelAlAyah: React.FC = () => {
                   mode="sidebar"
                 />
               </div>
-            </div>
-          )}
-
-          {/* Main quiz panel */}
-          <div className="aa-main">
-            {/* Header */}
-            <div className="aa-header">
-              <div className="aa-progress">
-                <span className="aa-progress-text">
-                  {tt.questionOf} {toHindi(idx + 1)} / {toHindi(questions.length)}
-                </span>
-                <div className="aa-bar">
-                  <div
-                    className="aa-bar-fill"
-                    style={{
-                      width: `${((idx + 1) / questions.length) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="aa-score-pill">{tt.score}: {score}</div>
-              <button className="aa-exit-btn" onClick={handleExit}>
-                {tt.exit}
-              </button>
-            </div>
-
-            {/* Question card */}
-            <div className="aa-card">
-              <div className="aa-info-strip">
-                <span className="aa-surah-badge" lang="ar" dir="rtl">{q.suraNameAr}</span>
-                <span className="aa-meta">{tt.ayahLabel} {toHindi(q.aya)}</span>
-                <span className="aa-meta">{tt.pageLabel} {toHindi(q.page)}</span>
-                <span className="aa-meta">{tt.hizbLabel} {toHindi(Math.ceil(q.page / 4))}</span>
-              </div>
-
-              {/* Card body: [actions column left] + [main content right] */}
-              <div className="aa-card-body">
-
-                {/* Left column: action buttons */}
-                <div className="aa-actions">
-                  <button
-                    className="aa-btn aa-hint"
-                    onClick={handleHint}
-                    disabled={hintLevel >= maxHints || answered}
-                  >
-                    {tt.hint}
-                    {hintLevel > 0 && (
-                      <span className="aa-btn-en">
-                        ({hintLevel}/{maxHints})
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    className={`aa-btn aa-context ${showContext ? "active" : ""}`}
-                    onClick={() => setShowContext((v) => !v)}
-                  >
-                    {showContext ? tt.hide : tt.context}
-                  </button>
-
-                  <button
-                    className="aa-btn aa-submit"
-                    onClick={handleSubmit}
-                    disabled={!userAnswer.trim() || answered}
-                  >
-                    {tt.submit}
-                  </button>
-
-                  <button
-                    className="aa-btn aa-skip"
-                    onClick={handleSkip}
-                    disabled={answered}
-                  >
-                    {tt.skip}
-                  </button>
-                </div>
-
-                {/* Right: verse + input + result + next */}
-                <div className="aa-card-main">
-                  <div className="aa-verse-box">
-                    <p className="aa-verse-shared" lang="ar" dir="rtl">
-                      {q.versePart ?? q.displayedPortion}
-                    </p>
-                    {hintLevel > 0 && (
-                      <span className="aa-hint-inline" lang="ar" dir="rtl"> {getHintText()}</span>
-                    )}
-                    <p className="aa-prompt">{tt.promptComplete}</p>
-                  </div>
-
-                  <div className="aa-answer-row">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      dir="rtl"
-                      inputMode="text"
-                      enterKeyHint={answered ? "done" : "send"}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      value={userAnswer}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setUserAnswer(e.target.value)
-                      }
-                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                        e.key === "Enter" && !answered && handleSubmit()
-                      }
-                      onFocus={(e) => {
-                        // When the soft keyboard opens, scroll the input into
-                        // view so the submit button (rendered just below)
-                        // stays above the keyboard on short phones.
-                        const el = e.currentTarget;
-                        setTimeout(
-                          () =>
-                            el.scrollIntoView({
-                              block: "center",
-                              behavior: "smooth",
-                            }),
-                          250,
-                        );
-                      }}
-                      readOnly={answered}
-                      placeholder={tt.inputPlaceholder}
-                      className={`aa-input ${answered ? "answered" : ""}`}
-                    />
-                  </div>
-
-                  {/* Result feedback */}
-                  {answered && (
-                    <div
-                      className={`aa-result ${correct ? "correct" : skipped ? "skipped" : "wrong"}`}
-                    >
-                      <span className="aa-result-icon">
-                        {correct ? "✅" : skipped ? "⏭" : "❌"}
-                      </span>
-                      <span className="aa-result-text">
-                        {correct ? tt.correctMsg : skipped ? tt.skippedMsg : tt.wrongMsg}
-                      </span>
-                      {!correct && (
-                        <div className="aa-correct-answer">
-                          <span className="aa-correct-label">{tt.correctAnswer} </span>
-                          <span className="aa-correct-text" lang="ar" dir="rtl">
-                            {q.hiddenPortion ?? q.correctAnswer}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {answered && (
-                    <button className="aa-next-btn" onClick={handleNext}>
-                      {idx + 1 < questions.length ? tt.nextQuestion : tt.finishQuiz}
-                    </button>
-                  )}
-                </div>
-
-              </div>
-            </div>
+            )}
           </div>
+          <QuizExitModal
+            isOpen={showExitModal}
+            onCancel={() => setShowExitModal(false)}
+            onConfirm={() => history.push("/quiz-list")}
+          />
+          <BottomNavBar active="quiz" />
         </div>
-        </div>
-        <BottomNavBar active="quiz" fixed />
       </IonContent>
     </IonPage>
   );

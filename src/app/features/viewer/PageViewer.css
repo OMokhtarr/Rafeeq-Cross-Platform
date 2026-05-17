@@ -1,27 +1,13 @@
-/* Main container - full viewport */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-}
-
+/* Main container - fills the centered column */
 .mushaf-container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: var(--color-bg-content);
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     color var(--transition-theme);
 }
 
@@ -35,20 +21,18 @@ body {
   padding: 10px 16px;
   background: var(--color-bg-toolbar);
   color: var(--color-text-primary);
-  border-bottom: 1px solid #e8e0d0;
-  box-shadow: var(--shadow-toolbar);
+  border-bottom: 0.5px solid #e8e0d0;
+  box-shadow: none;
   flex-shrink: 0;
   position: relative;
   z-index: 100;
-  transition:
-    background var(--transition-theme),
-    color var(--transition-theme),
+  transition: background var(--transition-theme), color var(--transition-theme),
     border-color var(--transition-theme);
 }
 
 [data-theme="night"] .top-toolbar {
   background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  border-bottom: 3px solid var(--color-gold);
+  border-bottom: 1px solid var(--color-gold);
   color: white;
 }
 
@@ -67,9 +51,7 @@ body {
   cursor: pointer;
   padding: 0;
   border-radius: 8px;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,13 +81,31 @@ body {
   transform: scale(0.95);
 }
 
-.menu-icon {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
+/* Play button — gold accent; recite mode uses gold background */
+.toolbar-button.play-button {
+  color: var(--color-gold, #b8860b);
 }
-.menu-icon * {
-  stroke: currentColor;
+[data-theme="night"] .toolbar-button.play-button {
+  color: var(--color-gold, #d4b48c);
+}
+.toolbar-button.play-button--recite {
+  background: rgba(212, 180, 140, 0.2);
+  color: var(--color-gold, #b8860b);
+}
+[data-theme="night"] .toolbar-button.play-button--recite {
+  background: rgba(212, 180, 140, 0.15);
+  color: var(--color-gold, #d4b48c);
+}
+
+/* Stop button — red tint */
+.toolbar-button.stop-button {
+  color: #c0392b;
+}
+[data-theme="night"] .toolbar-button.stop-button {
+  color: #e57373;
+}
+.toolbar-button.stop-button:hover {
+  background: rgba(192, 57, 43, 0.12);
 }
 
 .page-navigation-compact {
@@ -174,9 +174,7 @@ body {
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 6px;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease;
   min-width: 28px;
   min-height: 28px;
   display: flex;
@@ -307,6 +305,24 @@ body {
   color: white;
 }
 
+/* Bookmark button — gold when active (bookmarked) */
+.toolbar-button.bookmark-button {
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+.toolbar-button.bookmark-button--active {
+  color: var(--color-gold, #d4b48c);
+}
+.toolbar-button.bookmark-button--active svg {
+  filter: drop-shadow(0 0 4px rgba(212, 180, 140, 0.5));
+}
+[data-theme="day"] .toolbar-button.bookmark-button {
+  color: rgba(0, 0, 0, 0.4);
+}
+[data-theme="day"] .toolbar-button.bookmark-button--active {
+  color: var(--color-gold, #b8860b);
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
@@ -314,282 +330,265 @@ body {
   flex-shrink: 0;
 }
 
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.search-icon,
-.settings-icon,
-.view-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-}
-.search-icon *,
-.settings-icon *,
-.view-icon * {
-  stroke: currentColor;
-}
-
-/* The inline surah quick-select duplicates the hamburger → /surah-juz route
-   and isn't part of the design's toolbar reference. Hide it visually but
-   keep it in the DOM so any code referencing #surah-quick-select still
-   works. The hamburger button is the canonical surah picker. */
-.surah-quick-select {
-  display: none;
-}
-
-/* Search Panel */
-.search-panel {
-  background-color: white;
-  padding: 15px 24px;
-  border-bottom: 2px solid #d4b48c;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  animation: slideDown 0.3s ease;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.search-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.search-input {
+/* ─────────────────────────────────────────────────────────────────────────
+   Center pill — rounded chip showing surah (line 1) + page/juz/hizb (line 2).
+   Acts as a tap target that opens the surah/juz selector, matching the
+   reference design. Replaces the loose .toolbar-center stack we had before.
+   ───────────────────────────────────────────────────────────────────── */
+.toolbar-center-pill {
   flex: 1;
-  padding: 12px 20px;
-  font-size: 1.1rem;
-  border: 2px solid #d4b48c;
-  border-radius: 40px;
-  outline: none;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  direction: rtl;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  border-color: #8b4513;
-  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
-}
-
-.search-submit {
-  padding: 10px 25px;
-  background-color: #8b4513;
-  color: white;
-  border: none;
-  border-radius: 30px;
+  margin: 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 180, 140, 0.25);
+  color: inherit;
+  border-radius: 14px;
   cursor: pointer;
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  min-height: 44px;
+  min-width: 0;
+  transition: background 0.18s ease, transform 0.12s ease,
+    border-color 0.18s ease;
+}
+
+.toolbar-center-pill:hover {
+  background: rgba(212, 180, 140, 0.18);
+  border-color: rgba(212, 180, 140, 0.45);
+}
+
+.toolbar-center-pill:active {
+  transform: scale(0.98);
+}
+
+[data-theme="day"] .toolbar-center-pill {
+  background: rgba(212, 180, 140, 0.12);
+  border-color: rgba(212, 180, 140, 0.35);
+}
+
+.pill-surah-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pill-surah {
   font-size: 1rem;
-  font-family: "Traditional Arabic", serif;
-  transition: all 0.2s ease;
+  font-weight: 700;
+  color: inherit;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
-.search-submit:hover {
-  background-color: #a0522d;
-  transform: scale(1.05);
+.pill-surah-en {
+  font-family: var(--font-latin, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  flex-shrink: 2;
+  min-width: 0;
+  opacity: 0.8;
 }
 
-.search-clear {
-  padding: 8px 15px;
-  background: none;
-  border: 1px solid #d4b48c;
-  border-radius: 30px;
-  cursor: pointer;
-  font-size: 1rem;
-  color: #8b4513;
-  transition: all 0.2s ease;
+[data-theme="night"] .pill-surah-en {
+  color: rgba(244, 236, 216, 0.55);
 }
 
-.search-clear:hover {
-  background-color: #f0e9d8;
-}
-
-.search-close {
-  padding: 8px 15px;
-  background: none;
-  border: 1px solid #999;
-  border-radius: 30px;
-  cursor: pointer;
-  font-size: 1rem;
-  color: #666;
-  transition: all 0.2s ease;
-}
-
-.search-close:hover {
-  background-color: #f0f0f0;
-}
-
-/* Settings Panel */
-.settings-panel {
-  position: absolute;
-  top: 80px;
-  left: 24px;
-  width: 350px;
-  background-color: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 2px solid #d4b48c;
-  z-index: 1000;
-  animation: slideLeft 0.3s ease;
-}
-
-@keyframes slideLeft {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.settings-header {
-  display: flex;
-  justify-content: space-between;
+.pill-meta {
+  display: inline-flex;
   align-items: center;
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  color: white;
-  border-radius: 13px 13px 0 0;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
-.settings-header h3 {
-  font-size: 1.2rem;
-  font-family: "Traditional Arabic", serif;
+.pill-sep {
+  opacity: 0.5;
 }
 
-.settings-close {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 5px;
-}
-
-.settings-close:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.settings-content {
-  padding: 20px;
-}
-
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-.setting-item label {
-  font-size: 1rem;
-  color: #1c1c1c;
-  font-family: "Traditional Arabic", serif;
-}
-
-.setting-select {
-  padding: 8px 15px;
-  border: 1px solid #d4b48c;
-  border-radius: 20px;
-  font-family: "Traditional Arabic", serif;
-  outline: none;
-  background-color: #fff9e6;
-  min-width: 120px;
-}
-
-.toggle-button {
-  padding: 6px 20px;
-  background-color: #8b4513;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-family: "Traditional Arabic", serif;
-  transition: all 0.2s ease;
-}
-
-.toggle-button:hover {
-  background-color: #a0522d;
+[data-theme="night"] .pill-meta {
+  color: rgba(244, 236, 216, 0.65);
 }
 
 /* Mushaf content
-   No scrolling here — the page text must fit between the toolbar (top)
-   and the page-footer / BottomNavBar (bottom). MushafPage runs a JS probe
-   that sizes the font so all 15 lines fit the available box; clipping
-   keeps any sub-pixel overflow from spilling past the hizb footer. */
+   The mushaf surface fills the viewport edge-to-edge at all times. The
+   top toolbar and bottom nav are rendered as ABSOLUTE overlays (see the
+   immersive-mode block below) so toggling their visibility doesn't
+   reflow the page — the layout is locked, only the chrome opacity flips.
+
+   Inside this surface live two thin strips (.page-edge-top / -bottom)
+   that always show the surah name, juz/hizb, and page number — that's
+   the metadata the user needs even when the toolbar is hidden. */
 .mushaf-content {
   flex: 1;
   background-color: var(--color-mushaf-bg);
-  border: 2px solid var(--color-mushaf-border);
-  border-radius: 20px;
-  margin: 15px;
-  padding: 20px;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  /* Reserve a top + bottom band for the running header/footer.
+     - When the chrome (toolbar / bottom nav) is visible, it sits inside
+       these bands at a higher z-index and covers the page-edge strips.
+     - When the chrome slides off (immersive mode), the strips show in
+       the same bands.
+     Either way, the verse text never extends into these bands — so the
+     mushaf text stays fully visible in BOTH states. The padding is
+     intentionally constant across states so the font-fit probe sees the
+     same available height; only the chrome's transform animates. */
+  padding: 65px 0 65px;
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
   position: relative;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     border-color var(--transition-theme);
 }
 
-/* Trim the bottom margin so the page never sits behind the nav bar. */
-.mushaf-content.mushaf-content-with-nav {
-  margin-bottom: 8px;
+/* ─────────────────────────────────────────────────────────────────────────
+   Page edge strips — running header / footer (surah, juz/hizb, page
+   number) drawn over the mushaf surface in the same band the chrome
+   occupies. When the toolbar / bottom nav are visible, the chrome (which
+   has a higher z-index) covers the strips; tapping to enter immersive
+   mode slides the chrome off and reveals these strips underneath.
+   They are absolute overlays so the mushaf surface itself stays full-
+   bleed and the font-fit probe never sees a changing height.
+   ───────────────────────────────────────────────────────────────────── */
+.page-edge-top,
+.page-edge-bottom {
+  position: absolute;
+  inset-inline: 0;
+  pointer-events: none;
+  z-index: 50;
+  font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
+  color: var(--color-text-muted, #8a8170);
+  background: transparent;
+  user-select: none;
 }
 
-/* .mushaf-content::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  left: 20px;
-  width: 50px;
-  height: 50px;
-  border-top: 2px solid #d4b48c;
-  border-left: 2px solid #d4b48c;
-  opacity: 0.3;
-} */
+.page-edge-top {
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px 6px;
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
 
-/* .mushaf-content::after {
-  content: "";
+.page-edge-surah {
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--color-text-primary, #2c1810);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-edge-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.page-edge-dot {
+  opacity: 0.5;
+}
+
+.page-edge-bottom {
+  bottom: 0;
+  /* Default centered; .align-start / .align-end override per page parity. */
+  text-align: center;
+  padding: 6px 20px max(12px, env(safe-area-inset-bottom, 0px));
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #8a8170);
+  letter-spacing: 0.5px;
+}
+
+/* Odd pages → page number on the LEFT; even pages → on the RIGHT.
+   Using physical left/right (not logical start/end) so the rule means
+   the same thing regardless of the document direction. */
+.page-edge-bottom.align-start {
+  text-align: left;
+}
+
+.page-edge-bottom.align-end {
+  text-align: right;
+}
+
+[data-theme="night"] .page-edge-surah {
+  color: #f4ecd8;
+}
+
+[data-theme="night"] .page-edge-top,
+[data-theme="night"] .page-edge-bottom {
+  color: rgba(244, 236, 216, 0.7);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Immersive mode — chrome is OVERLAID on the mushaf, never inline.
+   Default state (chrome visible): toolbar pinned to the top edge, bottom
+   nav pinned to the bottom edge, both above the mushaf surface.
+   Immersive state: same overlays slide off-screen, opacity → 0,
+   pointer-events disabled. The mushaf surface itself never moves.
+   ───────────────────────────────────────────────────────────────────── */
+.mushaf-container {
+  position: relative;
+}
+
+.mushaf-container .top-toolbar {
   position: absolute;
-  bottom: 10px;
-  right: 20px;
-  width: 50px;
-  height: 50px;
-  border-bottom: 2px solid #d4b48c;
-  border-right: 2px solid #d4b48c;
-  opacity: 0.3;
-} */
+  top: 0;
+  inset-inline: 0;
+  z-index: 100;
+  transition: transform 0.28s ease, opacity 0.22s ease,
+    background var(--transition-theme), color var(--transition-theme),
+    border-color var(--transition-theme);
+  will-change: transform, opacity;
+}
+
+.mushaf-container .rfq-tab-bar {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  z-index: 100;
+  transition: transform 0.28s ease, opacity 0.22s ease,
+    background var(--transition-theme, 0.25s ease),
+    border-color var(--transition-theme, 0.25s ease);
+  will-change: transform, opacity;
+}
+
+.mushaf-container.immersive .top-toolbar {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mushaf-container.immersive .rfq-tab-bar {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
 
 .mushaf-page {
   /* Fills the parent (.mushaf-content). The parent is overflow:hidden and
@@ -606,13 +605,12 @@ body {
   z-index: 1;
   background-color: var(--color-mushaf-bg);
   color: var(--color-mushaf-text);
-  padding: 16px 30px;
+  padding: 16px 6px;
   max-width: 750px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
-  transition:
-    background-color var(--transition-theme),
+  transition: background-color var(--transition-theme),
     color var(--transition-theme);
 }
 
@@ -626,15 +624,6 @@ body {
   flex-shrink: 0;
   position: relative;
 }
-
-/* .bismillah-line::before,
-.bismillah-line::after {
-  content: "۞";
-  color: #8b4513;
-  font-size: 1.8rem;
-  opacity: 0.6;
-  margin: 0 20px;
-} */
 
 .bismillah-text {
   font-size: 2rem;
@@ -793,9 +782,7 @@ body {
 
 .verse-separator.highlighted .separator-number {
   color: #ffd700;
-  text-shadow:
-    0 0 8px #ffd700,
-    0 0 12px rgba(255, 215, 0, 0.5);
+  text-shadow: 0 0 8px #ffd700, 0 0 12px rgba(255, 215, 0, 0.5);
 }
 
 .verse-separator.highlighted .separator-symbol {
@@ -894,12 +881,6 @@ body {
   color: #1c1c1c;
   font-family: "Traditional Arabic", serif;
 }
-
-/* .result-page::before {
-  content: "📄";
-  margin-left: 5px;
-  opacity: 0.7;
-} */
 
 .result-preview {
   color: #666;
@@ -1000,14 +981,6 @@ body {
   }
 }
 
-/* Prevent scrolling */
-::-webkit-scrollbar {
-  display: none;
-}
-* {
-  scrollbar-width: none;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    Side drawer (hamburger menu)
    Replaces the old in-toolbar search/settings popovers. Hosts the surah
@@ -1098,9 +1071,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.15s,
-    transform 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .drawer-back:hover,
@@ -1146,10 +1117,7 @@ body {
   font-size: 1rem;
   text-align: start;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
 .drawer-item:hover:not(:disabled) {
@@ -1341,9 +1309,7 @@ body {
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
   font-size: 0.95rem;
-  transition:
-    background 0.15s,
-    transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .sel-btn:hover {
@@ -1518,12 +1484,17 @@ body {
 /* ── Responsive: small phones in landscape / very short viewports ─────── */
 @media (max-height: 560px) {
   .mushaf-content {
-    margin: 8px;
-    padding: 10px;
-    border-radius: 14px;
+    flex: 1;
+    margin: 15px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .mushaf-page {
-    padding: 8px 16px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   .top-toolbar {
     padding: 6px 10px;
@@ -1536,6 +1507,75 @@ body {
     padding: 10px;
   }
   .mushaf-page {
-    padding: 10px 12px;
+    padding: 10px 4px;
   }
+}
+
+/* ── Mini Playback Bar (in toolbar center) ─────────────────────────── */
+.toolbar-playback-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.playback-bar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(212, 180, 140, 0.35);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.toolbar-button.playback-nav,
+.toolbar-button.playback-play,
+.toolbar-button.playback-stop,
+.toolbar-button.playback-settings {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-gold, #d4b48c);
+  border: 1px solid rgba(212, 180, 140, 0.25);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.toolbar-button.playback-nav:hover,
+.toolbar-button.playback-stop:hover,
+.toolbar-button.playback-settings:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.toolbar-button.playback-play {
+  width: 40px;
+  height: 40px;
+  background: var(--color-gold, #d4b48c);
+  color: #1c1c1c;
+  border: none;
+}
+.toolbar-button.playback-stop {
+  background: rgba(192, 57, 43, 0.15);
+  color: #d4726a;
+  border-color: rgba(192, 57, 43, 0.3);
+}
+.toolbar-button.playback-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+[dir="rtl"] .toolbar-button.playback-nav svg {
+  transform: scaleX(-1);
+}
+[data-theme="night"] .toolbar-button.playback-nav,
+[data-theme="night"] .toolbar-button.playback-stop,
+[data-theme="night"] .toolbar-button.playback-settings {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="night"] .toolbar-button.playback-play {
+  background: var(--color-gold, #d4b48c);
+  color: #0d1f14;
 }

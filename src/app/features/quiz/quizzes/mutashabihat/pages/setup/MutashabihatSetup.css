@@ -9,23 +9,16 @@ ion-content::part(scroll) {
 }
 
 /* ═══════════════════════════════════════════════
-   MUTASHABIHAT SETUP  —  identical design to QuizSetup
+   MUTASHABIHAT SETUP — uses design tokens for day/night
    ═══════════════════════════════════════════════ */
 
 .ms-setup-page-wrapper {
   width: 100%;
-  /* Bound to dynamic viewport — IonContent ignores absolute-positioned
-     BottomNavBar in layout, so `100%` here would still leak under it. */
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  /* Reserve space for the fixed BottomNavBar (~70px) + safe-area inset. */
-  padding: 10px 10px calc(14px + 70px + env(safe-area-inset-bottom, 0px));
-  box-sizing: border-box;
+  flex-direction: column;
   overflow: hidden;
   transition:
     background var(--transition-theme),
@@ -37,27 +30,32 @@ ion-content::part(scroll) {
   align-items: stretch;
   justify-content: center;
   width: 100%;
+  flex: 1;
   min-height: 0;
+  padding: 10px;
   box-sizing: border-box;
 }
 
 .ms-setup-card {
   background-color: var(--color-bg-card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 12px 18px;
   max-width: 600px;
   width: 100%;
   height: 100%;
-  /* Card fills the wrapper exactly — wrapper already accounts for BottomNavBar. */
   max-height: 100%;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  border: 3px solid var(--color-gold);
+  box-shadow: var(--shadow-card-lift);
+  border: 1px solid var(--color-border-card);
   direction: rtl;
   box-sizing: border-box;
+  transition:
+    background-color var(--transition-theme),
+    border-color var(--transition-theme),
+    color var(--transition-theme);
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -68,15 +66,15 @@ ion-content::part(scroll) {
 }
 
 .ms-title {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1.7rem;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-xl);
   color: var(--color-text-primary);
   margin: 0 0 2px;
 }
 
 .ms-subtitle {
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-style: italic;
   margin: 0;
   direction: ltr;
@@ -88,8 +86,8 @@ ion-content::part(scroll) {
   gap: 8px;
   align-items: flex-start;
   background: var(--color-gold-faint);
-  border: 2px solid var(--color-gold);
-  border-radius: 12px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-lg);
   padding: 7px 12px;
   margin-bottom: 10px;
   flex-shrink: 0;
@@ -102,8 +100,8 @@ ion-content::part(scroll) {
 
 .ms-info-box p {
   margin: 0;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.88rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   color: var(--color-text-primary);
   line-height: 1.5;
 }
@@ -127,19 +125,20 @@ ion-content::part(scroll) {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  color: var(--color-text-primary);
+  color: var(--color-gold);
   font-weight: bold;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
 }
 
 .ms-count-badge {
-  background: var(--color-text-primary);
+  background: var(--color-bg-card-alt);
   color: var(--color-gold);
-  border-radius: 20px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-pill);
   padding: 1px 9px;
-  font-size: 0.8rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: var(--text-sm);
+  font-family: var(--font-arabic);
   font-weight: normal;
   margin-right: auto;
 }
@@ -159,24 +158,28 @@ ion-content::part(scroll) {
   justify-content: center;
   gap: 5px;
   padding: 6px 4px;
-  border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  background: white;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
   cursor: pointer;
-  transition: all 0.25s;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
 }
 .ms-type-btn.active {
-  background: var(--color-text-primary);
-  border-color: var(--color-gold);
-  color: white;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+  box-shadow: var(--shadow-card);
 }
 .ms-type-icon {
   font-size: 1rem;
 }
 .ms-type-ar {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.9rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
 }
 .ms-type-en {
   font-size: 0.6rem;
@@ -193,26 +196,26 @@ ion-content::part(scroll) {
   overflow-y: auto;
   padding: 4px 2px;
   scrollbar-width: thin;
-  scrollbar-color: var(--color-quiz) var(--color-bg-card-alt);
+  scrollbar-color: var(--color-gold) var(--color-bg-card-alt);
 }
 .ms-surah-grid::-webkit-scrollbar {
   width: 4px;
 }
 .ms-surah-grid::-webkit-scrollbar-thumb {
-  background: var(--color-quiz);
+  background: var(--color-gold);
   border-radius: 10px;
 }
 
-/* RTL chip: name on the right, number badge on the left */
 .ms-surah-chip {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 4px;
   padding: 6px 8px;
-  border: 2px solid var(--color-gold);
-  border-radius: 8px;
-  background: white;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.2s;
   direction: rtl;
@@ -222,40 +225,65 @@ ion-content::part(scroll) {
   background: var(--color-gold-faint);
 }
 .ms-surah-chip.active {
-  background: var(--color-text-primary);
-  color: white;
-  border-color: var(--color-gold);
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
+}
+
+.ms-chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
 }
 
 .ms-chip-name {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.92rem;
-  flex: 1;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   text-align: right;
+  line-height: 1.3;
+}
+
+.ms-chip-en {
+  font-family: var(--font-latin, sans-serif);
+  font-size: 0.65rem;
+  opacity: 0.65;
+  text-align: right;
+  direction: ltr;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ms-surah-chip.active .ms-chip-en {
+  opacity: 0.85;
 }
 
 .ms-chip-num {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.72rem;
-  color: var(--color-quiz);
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
   background: var(--color-gold-subtle);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
   flex-shrink: 0;
   line-height: 1.6;
+  align-self: center;
 }
 .ms-surah-chip.active .ms-chip-num {
-  color: var(--color-gold);
+  color: var(--color-text-on-dark);
   background: rgba(255, 255, 255, 0.18);
 }
 
 .ms-hint-text {
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   text-align: center;
   margin-top: 6px;
   font-style: italic;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic);
 }
 
 /* ── Page range ─────────────────────────────── */
@@ -274,26 +302,17 @@ ion-content::part(scroll) {
 }
 .ms-page-input span {
   color: var(--color-text-muted);
-  font-size: 0.9rem;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-size: var(--text-md);
+  font-family: var(--font-arabic);
   text-align: right;
-}
-.ms-page-input input {
-  padding: 8px;
-  border: 2px solid var(--color-gold);
-  border-radius: 8px;
-  font-size: 1rem;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .ms-range-info {
-  color: var(--color-quran);
+  color: var(--color-gold);
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   margin: 4px 0 0;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic);
   text-align: right;
 }
 
@@ -310,9 +329,10 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   padding: 8px 4px;
-  border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  background: white;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -320,19 +340,19 @@ ion-content::part(scroll) {
   background: var(--color-gold-faint);
 }
 .ms-juz-chip.active {
-  background: var(--color-text-primary);
-  color: white;
-  border-color: var(--color-gold);
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
 }
 .ms-juz-label {
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.68rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   opacity: 0.7;
 }
 .ms-juz-num {
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic);
   font-weight: bold;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
 /* ── Question count ─────────────────────────── */
@@ -346,11 +366,12 @@ ion-content::part(scroll) {
 .ms-count-btn {
   flex: 1;
   padding: 9px 5px;
-  border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  background: white;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1.05rem;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -358,31 +379,49 @@ ion-content::part(scroll) {
   background: var(--color-gold-faint);
 }
 .ms-count-btn.active {
-  background: var(--color-text-primary);
-  color: white;
-  border-color: var(--color-gold);
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
 }
 
-.ms-count-custom {
-  width: 70px;
+.ms-count-select {
+  flex: 1;
+}
+.ms-count-select .isel__trigger {
   padding: 9px 5px;
-  border: 2px solid var(--color-gold);
-  border-radius: 10px;
-  font-size: 1rem;
-  text-align: center;
-  direction: ltr;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  min-height: unset;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.ms-count-select .isel__trigger:hover {
+  background: var(--color-gold-faint);
+}
+.ms-count-select.active .isel__trigger {
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
+}
+.ms-count-select.active .isel__trigger:hover {
+  background: var(--color-quran);
 }
 
 /* ── Start button ───────────────────────────── */
 .ms-start-btn {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-primary) 100%);
-  color: white;
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
   border: none;
-  border-radius: 40px;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 1.2rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-arabic);
+  font-size: var(--text-xl);
   cursor: pointer;
   transition: all 0.3s;
   margin-top: 6px;
@@ -394,16 +433,16 @@ ion-content::part(scroll) {
 }
 .ms-start-btn:hover:not(:disabled) {
   transform: scale(1.02);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-card-lift);
 }
 .ms-start-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .ms-btn-en {
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
   opacity: 0.8;
-  font-family: sans-serif;
+  font-family: var(--font-latin);
 }
 
 /* ── Back button ────────────────────────────── */
@@ -411,18 +450,18 @@ ion-content::part(scroll) {
   display: block;
   margin: 8px auto 0;
   background: none;
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-input-border);
   color: var(--color-text-primary);
   padding: 6px 20px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  font-family: "Traditional Arabic", "Amiri", serif;
-  font-size: 0.9rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
   transition: all 0.2s;
   flex-shrink: 0;
 }
 .ms-back-btn:hover {
-  background: var(--color-bg-card-alt);
+  background: var(--color-gold-faint);
 }
 
 /* ── Responsive ─────────────────────────────── */
@@ -433,8 +472,4 @@ ion-content::part(scroll) {
   .ms-surah-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
-  .ms-count-row {
-    flex-wrap: wrap;
-  }
 }
-

@@ -1,11 +1,6 @@
 /**
  * VERSE / AYAH MODEL
  * Canonical type definitions for Quran verse data used across the app.
- * Extracted and consolidated from the implicit shapes in:
- *   - quranLoader.js  (getVersesForPage return type)
- *   - verseSplitter.js (verse parameter shape)
- *   - mutashabihatUtils.js (richVerses shape)
- *   - QuizTest.js / MutashabihatTest.js (question object shapes)
  */
 
 // ─── Core verse ───────────────────────────────────────────────────────────────
@@ -34,25 +29,20 @@ export interface Verse {
 }
 
 export interface VerseWord {
-  /** 1-based position within the verse, including the end-of-ayah marker. */
   position: number;
-  /** "word" for actual words, "end" for the ayah-number ornament. */
   charType: "word" | "end";
-  /** Plain Uthmani Unicode for this word (also available as the ornament). */
-  textUthmani: string;
-  /** QPC V1 glyph code — pair with font p{NNN}.ttf for true Madani layout. */
-  codeV1: string;
-  /** Mushaf line number 1–15 on the page this word lives on. */
+  text_uthmani: string;
+  codeV2: string;
   lineNumber: number;
-  /** Mushaf page number 1–604. */
   pageNumber: number;
+  translation?: string; // optional
+  transliteration?: string; // optional
 }
 
 // ─── Quiz question shapes ─────────────────────────────────────────────────────
 
 /**
  * A standard verse-completion quiz question.
- * Produced by quiz-engine.service.ts (was: verseSplitter.createQuizQuestion).
  */
 export interface QuizQuestion {
   id: string; // "sura:aya" e.g. "2:255"
@@ -67,7 +57,7 @@ export interface QuizQuestion {
   /** The hidden portion the user must complete */
   hiddenPortion: string;
   splitPoint: number;
-  splitMethod: "firstHalf" | "widthConstrained";
+  splitMethod: "firstHalf" | "widthConstrained" | "lastWaqf";
   previousVersesContext: Verse[];
   nextVersesForProgression: Verse[];
   correctAnswer: string;
@@ -79,7 +69,6 @@ export interface QuizQuestion {
 
 /**
  * A mutashabihat quiz question.
- * Produced by mutashabihatUtils.buildMutashabihatQuestion.
  */
 export interface MutashabihatQuestion {
   groupId: string;

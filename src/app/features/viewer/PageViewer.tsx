@@ -4,37 +4,52 @@
  * Renders the Madani Mushaf page-by-page. Verses are rendered glyph-by-glyph
  * by <MushafPage>; this component owns:
  *   - page navigation (arrows, surah picker, swipe)
+ *   - the slide‑up playback sheet (instead of navigating away)
+ *   - per‑verse recitation playback
  *   - the hamburger side drawer (surah list, search, settings, selection ops)
- *   - server-side search via the Foundation API
- *   - per-verse recitation playback
  *   - optional translation panel under each verse
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonToast } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
-import { pageData } from "../../../data/quranData";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import MushafPage from "../../shared/components/mushaf-page/MushafPage";
+import { getPage, prefetchPage } from "../../core/services/data/quran.service";
 import {
-  getPage,
-  prefetchPage,
-  getKnownPageCeiling,
-  surahNamesArabic,
-  getSurahName,
-} from "../../core/services/data/quran.service";
-import {
-  searchQuran,
-  type SearchResult,
-} from "../../core/services/api/quran-api.client";
+  getSuraForPage,
+  getSurahNameArabic,
+  getChapters,
+  estimatePageForVerse,
+  getSurahStartPage,
+  getSurahNameEnglish,
+} from "../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
 import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
+import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
+import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
+import { useWakeLock } from "../../core/hooks/useWakeLock";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
+import { isPageBookmarked, recordActivityDay } from "../../core/services/api/user-api.client";
+import { readSelectedMushaf } from "../../core/services/data/quran.service";
+import PlaybackSettings from "../playback/PlaybackSettings";
+import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
 
-import type { Verse } from "../../shared/models/verse.model";
+// ─── Last-page persistence ────────────────────────────────────────────────────
+const LAST_PAGE_KEY = "rafiq_last_page_v1";
+function saveLastPage(page: number) {
+  try { localStorage.setItem(LAST_PAGE_KEY, String(page)); } catch {}
+}
+function loadLastPage(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_PAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(n) && n >= 1 && n <= 604 ? n : null;
+  } catch { return null; }
+}
 
 // ─── Settings helpers ─────────────────────────────────────────────────────────
 const SETTINGS_KEY = "rafiq_settings_v1";
@@ -52,7 +67,7 @@ function readSettings(): ReadSettings {
     if (raw) {
       const s = JSON.parse(raw);
       return {
-        reciter: s.reciter ?? "husary",
+        reciter: s.reciter ?? "4",
         soundEffects: s.soundEffects ?? true,
         translation: s.translation ?? "",
         showTranslation: s.showTranslation ?? false,
@@ -60,25 +75,11 @@ function readSettings(): ReadSettings {
     }
   } catch {}
   return {
-    reciter: "husary",
+    reciter: "4",
     soundEffects: true,
     translation: "",
     showTranslation: false,
   };
-}
-
-// pageData has 606 entries (index 0 unused, 1..604 real pages, 605 is the
-// exclusive end-marker). Resolve the page that contains sura:aya by walking
-// pageData and returning the last index whose start is <= the verse.
-function resolvePage(sura: number, aya: number): number {
-  for (let p = 1; p < pageData.length - 1; p++) {
-    const [s1, a1] = pageData[p];
-    const [s2, a2] = pageData[p + 1];
-    const startsBefore = s1 < sura || (s1 === sura && a1 <= aya);
-    const endsAfter = s2 > sura || (s2 === sura && a2 > aya);
-    if (startsBefore && endsAfter) return p;
-  }
-  return 1;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -86,104 +87,186 @@ function resolvePage(sura: number, aya: number): number {
 const PageViewer: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const { t, isRTL, lang } = useLang();
+  const { t, lang, isRTL } = useLang();
+  const [presentToast] = useIonToast();
 
-  const {
-    selected,
-    toggleSelected,
-    clearSelection,
-    selectionCount,
-    hidden,
-    hideMany,
-    showVerse,
-    showAll,
-    hiddenCount,
-  } = useVerseVisibility();
+  const { selected, hidden, hideMany, showVerse, showAll, hiddenCount } =
+    useVerseVisibility();
 
   const initialPage = (() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
-    return Number.isFinite(raw) && raw >= 1 ? raw : 1;
+    if (Number.isFinite(raw) && raw >= 1) return raw;
+    return loadLastPage() ?? 1;
   })();
 
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
+  const [nextPageFirstVerse, setNextPageFirstVerse] = useState<{ sura: number; aya: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedSurah, setSelectedSurah] = useState(1);
 
-  // Drawer + nested panels (search/settings live INSIDE the drawer now)
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  type DrawerView = "menu" | "search" | "settings";
-  const [drawerView, setDrawerView] = useState<DrawerView>("menu");
+  // Activity tracking: record time spent on each page for streak purposes
+  const pageEntryTime = useRef<number>(Date.now());
+  const pageVersesRef = useRef<Verse[]>([]);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // Shared playback queue
+  const queue = usePlayback();
+  const showPlaybackBar = queue.state.currentVerse !== null;
 
-  const [highlightedVerse, setHighlightedVerse] = useState<string | null>(null);
-  // The verse last revealed by the "next verse" toolbar button — rendered
-  // in green by <MushafPage>. Cleared on page change.
+  // Long‑press / short‑tap on the play button
+  const [reciteMode, setReciteMode] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
+  const sheetOpenTimeRef = useRef<number>(0);
+
+  const handlePlayPressStart = useCallback(() => {
+    longPressTimerRef.current = setTimeout(() => {
+      setReciteMode((m) => !m);
+      queue.stop();
+      longPressTimerRef.current = null;
+    }, 800);
+  }, [queue]);
+
+  const handlePlayPressEnd = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+      if (reciteMode) {
+        presentToast({ message: t.tabs.comingSoon, duration: 2000, position: "bottom" });
+      } else {
+        sheetOpenTimeRef.current = Date.now();
+        setPlaybackSheetOpen(true);
+      }
+    }
+  }, [reciteMode, presentToast, t.tabs.comingSoon]);
+
+  // playbackVerse: static grey highlight tracking the currently playing verse
+  const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
+  // flashVerse: transient flash used for bookmark / URL navigation jumps
+  const [flashVerse, setFlashVerse] = useState<string | null>(null);
   const [greenVerse, setGreenVerse] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState("متوسط");
-  const [fontType, setFontType] = useState("أميري");
 
-  // Settings (reciter + translation choice — read from localStorage).
+  const lastPlaybackVerse = useRef<string | null>(null);
+
+  // Keep playback highlight in sync with the active verse, auto-navigate page.
+  useEffect(() => {
+    const v = queue.state.currentVerse;
+    if (!v || (!queue.state.isPlaying && !queue.state.isLoading)) {
+      if (lastPlaybackVerse.current !== null) {
+        setPlaybackVerse(null);
+        lastPlaybackVerse.current = null;
+      }
+      return;
+    }
+    if (v === lastPlaybackVerse.current) return;
+    lastPlaybackVerse.current = v;
+    setPlaybackVerse(v);
+    setPlaybackSheetOpen(false);
+    const [suraStr, ayaStr] = v.split(":");
+    const targetPage = estimatePageForVerse(parseInt(suraStr, 10), parseInt(ayaStr, 10));
+    if (targetPage && targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+    }
+  }, [queue.state.currentVerse, queue.state.isPlaying, queue.state.isLoading]);
+
   const [settings, setSettings] = useState<ReadSettings>(readSettings);
 
-  // Audio — owned here so opening/closing the action sheet shares one player.
   const audio = useAudioPlayer();
-
-  // Verse action sheet (long-press → audio / translation / tafsir).
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
+  const immersive = useImmersiveMode();
+  useWakeLock();
 
-  // ── Refs ──────────────────────────────────────────────────────────────────
+  const pageVerseKeyForBookmark =
+    verses.length > 0 ? `${verses[0].sura}:${verses[0].aya}` : null;
+  const [bookmarked, setBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (pageVerseKeyForBookmark) {
+      setBookmarked(isPageBookmarked(pageVerseKeyForBookmark));
+    }
+  }, [pageVerseKeyForBookmark]);
+
   const contentRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  // When the next-verse button rolls over to a new page, this holds the
-  // target page so the load effect can mark its first verse green.
   const pendingGreenForPage = useRef<number | null>(null);
 
   const totalPages = 604;
 
-  // ── Re-read settings whenever the drawer closes (user may have visited /settings) ──
   useEffect(() => {
-    if (!drawerOpen) {
-      setSettings(readSettings());
-    }
-  }, [drawerOpen]);
+    const onFocus = () => setSettings(readSettings());
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
-  // ── Sync currentPage with ?page= query param on navigation ───────────────
+  // Fire activity day when user navigates away from the viewer
+  useEffect(() => {
+    return () => {
+      const prevVerses = pageVersesRef.current;
+      const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
+      if (prevVerses.length > 0 && elapsed >= 10) {
+        const first = prevVerses[0];
+        const last  = prevVerses[prevVerses.length - 1];
+        const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
+        const mushafKind = readSelectedMushaf();
+        const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
+        recordActivityDay([range], elapsed, mushafId);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
     if (Number.isFinite(raw) && raw >= 1 && raw !== currentPage) {
       setCurrentPage(raw);
     }
+    const v = params.get("v");
+    if (v && /^\d+:\d+$/.test(v)) {
+      setFlashVerse(v);
+      const tid = setTimeout(() => setFlashVerse(null), 3000);
+      return () => clearTimeout(tid);
+    }
   }, [location.search]);
 
-  // ── Load page verses ──────────────────────────────────────────────────────
+  // Maps our internal mushaf kind to the QF numeric mushafId (integers only)
+  const QF_MUSHAF_IDS: Record<string, number> = {
+    qpc_v4_tajweed: 2,
+    uthmani:        1,
+    indopak:        4,
+    imlaei:         3,
+  };
+
   useEffect(() => {
+    // Fire activity day for the page we're leaving (if user spent ≥10 s on it)
+    const prevVerses = pageVersesRef.current;
+    const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
+    if (prevVerses.length > 0 && elapsed >= 10) {
+      const first = prevVerses[0];
+      const last  = prevVerses[prevVerses.length - 1];
+      const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
+      const mushafKind = readSelectedMushaf();
+      const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
+      recordActivityDay([range], elapsed, mushafId);
+    }
+
+    // Reset timer for the new page
+    pageEntryTime.current = Date.now();
+    pageVersesRef.current = [];
+
+    saveLastPage(currentPage);
     let cancelled = false;
     setLoading(true);
     setVerses([]);
-
     getPage(currentPage).then((pageVerses) => {
       if (cancelled) return;
       if (!pageVerses.length) {
-        const ceiling = getKnownPageCeiling();
-        if (ceiling !== null && currentPage > ceiling) {
-          setCurrentPage(ceiling);
-          return;
-        }
+        setLoading(false);
+        return;
       }
+      pageVersesRef.current = pageVerses;
       setVerses(pageVerses);
       setLoading(false);
-      setHighlightedVerse(null);
-      // If the next-verse button drove this page change, unhide and mark
-      // the page's first verse green; otherwise just clear any prior green.
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -197,44 +280,50 @@ const PageViewer: React.FC = () => {
       }
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
+      if (currentPage < totalPages) {
+        getPage(currentPage + 1).then((nextVerses) => {
+          if (cancelled) return;
+          const first = nextVerses[0] ?? null;
+          setNextPageFirstVerse(first ? { sura: first.sura, aya: first.aya } : null);
+        }).catch(() => {});
+      } else {
+        setNextPageFirstVerse(null);
+      }
     });
     return () => {
       cancelled = true;
     };
   }, [currentPage]);
 
-  // Auto-focus the search input when the drawer flips to the search view.
   useEffect(() => {
-    if (drawerOpen && drawerView === "search" && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [drawerOpen, drawerView]);
+    if (sheetVerseKey) immersive.showChrome();
+  }, [sheetVerseKey, immersive]);
 
-  // Lock body scroll while the drawer is open.
+  // Tracks whether the user has explicitly paused; reset only when playback fully stops
+  const [userPaused, setUserPaused] = useState(false);
   useEffect(() => {
-    if (drawerOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-  }, [drawerOpen]);
+    if (!queue.state.currentVerse) setUserPaused(false);
+  }, [queue.state.currentVerse]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const getSurahStartPage = (surahIndex: number): number => {
-    for (let page = 1; page < pageData.length; page++) {
-      const [sura, aya] = pageData[page];
-      if (sura === surahIndex && aya === 1) return page;
+  // Playback bar controls
+  const handlePlayPause = useCallback(() => {
+    if (queue.state.isPlaying) {
+      setUserPaused(true);
+      queue.pause();
+    } else {
+      setUserPaused(false);
+      queue.resume().catch(() => {});
     }
-    return 1;
-  };
-
-  const handleSurahChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const surah = parseInt(e.target.value);
-    setSelectedSurah(surah);
-    setCurrentPage(getSurahStartPage(surah));
-  };
+  }, [queue]);
+  const handleStop = useCallback(() => {
+    queue.stop();
+  }, [queue]);
+  const handlePrev = useCallback(() => {
+    queue.prev();
+  }, [queue]);
+  const handleNext = useCallback(() => {
+    queue.next();
+  }, [queue]);
 
   const goToPrevious = useCallback(() => {
     setCurrentPage((p) => (p > 1 ? p - 1 : p));
@@ -245,79 +334,33 @@ const PageViewer: React.FC = () => {
 
   const getPageInfo = () => {
     if (currentPage < 1 || currentPage > totalPages) return null;
-    const [suraIndex] = pageData[currentPage];
+    const suraIndex = getSuraForPage(currentPage) ?? 1;
     return {
       sura: suraIndex,
-      suraName: getSurahName(suraIndex, "english"),
-      suraNameAr: surahNamesArabic[suraIndex] ?? `سورة ${suraIndex}`,
-      juz: Math.ceil(currentPage / 20),
-      hizb: Math.ceil(currentPage / 4),
+      suraName: getSurahNameEnglish(suraIndex),
+      suraNameAr: getSurahNameArabic(suraIndex),
+      juz: Math.ceil((currentPage * 30) / 604),
+      hizb: Math.ceil((currentPage * 60) / 604),
+      rub: Math.ceil((currentPage * 240) / 604),
     };
   };
 
   const pageInfo = getPageInfo();
+  // True when the next page begins a new surah — show its header at the bottom
+  // of this page (as in the printed Mushaf) instead of the top of the next.
+  const trailingSurahStart =
+    nextPageFirstVerse?.aya === 1 && nextPageFirstVerse.sura !== 9
+      ? { sura: nextPageFirstVerse.sura }
+      : null;
+
+  // Show bismillah at top when this page starts a surah (header was on prev page,
+  // bismillah stays here — matching the printed Mushaf layout).
   const isSurahStart =
-    verses.length > 0 && verses[0].aya === 1 && verses[0].sura !== 9;
+    verses.length > 0 &&
+    verses[0].aya === 1 &&
+    verses[0].sura !== 9 &&
+    currentPage !== 1;
 
-  const openDrawer = (view: DrawerView = "menu") => {
-    setDrawerView(view);
-    setDrawerOpen(true);
-  };
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setDrawerView("menu");
-    clearSearch();
-  };
-
-  // ── Search (server-side) ─────────────────────────────────────────────────
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    setSearchError(null);
-    try {
-      const rows = await searchQuran(q, { language: "ar", perPage: 20 });
-      // Resolve page from sura/aya since the API may not include it.
-      const enriched = rows.map((r) => ({
-        ...r,
-        page: r.page > 0 ? r.page : resolvePage(r.sura, r.aya),
-      }));
-      setSearchResults(enriched);
-    } catch (err) {
-      console.error("[PageViewer] search failed", err);
-      setSearchError(t.mushaf.searchError);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleResultClick = (result: SearchResult) => {
-    setCurrentPage(result.page);
-    closeDrawer();
-    setHighlightedVerse(`${result.sura}:${result.aya}`);
-    setTimeout(() => setHighlightedVerse(null), 3000);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchResults([]);
-    setSearchError(null);
-  };
-
-  // ── Selection / hide ─────────────────────────────────────────────────────
-  const handleVerseTap = useCallback(
-    (key: string) => {
-      toggleSelected(key);
-    },
-    [toggleSelected],
-  );
-
-  // ── Long-press → open verse action sheet ─────────────────────────────────
   const handleVerseLongPress = useCallback((key: string) => {
     setSheetVerseKey(key);
   }, []);
@@ -326,123 +369,126 @@ const PageViewer: React.FC = () => {
     audio.stop();
   }, [audio]);
 
-  // ── Hide-toggle (for the toolbar button) ─────────────────────────────────
-  // Page-wide: toggles every verse currently rendered on the page.
-  // If at least one verse on the page is hidden, the press shows all;
-  // otherwise it hides all.
   const pageVerseKeys = verses.map((v) => `${v.sura}:${v.aya}`);
   const anyPageHidden = pageVerseKeys.some((k) => hidden.has(k));
-  const allPageHidden =
-    pageVerseKeys.length > 0 && pageVerseKeys.every((k) => hidden.has(k));
   const togglePageHidden = useCallback(() => {
-    if (pageVerseKeys.length === 0) return;
-    if (anyPageHidden) {
-      for (const k of pageVerseKeys) showVerse(k);
-    } else {
-      hideMany(pageVerseKeys);
-    }
-  }, [anyPageHidden, hideMany, pageVerseKeys, showVerse]);
-
-  // ── Next-verse reveal ────────────────────────────────────────────────────
-  // Reveal the first hidden verse on the page in green. If every verse on
-  // the page is already shown, navigate to the next page and mark its first
-  // verse green (the load effect picks up `pendingGreenForPage`).
-  const handleNextVerse = useCallback(() => {
-    if (verses.length === 0) return;
-    const firstHiddenKey = pageVerseKeys.find((k) => hidden.has(k));
-    if (firstHiddenKey) {
-      showVerse(firstHiddenKey);
-      setGreenVerse(firstHiddenKey);
+    if (anyPageHidden || hiddenCount > 0) {
+      showAll();
       return;
     }
-    if (currentPage < totalPages) {
-      pendingGreenForPage.current = currentPage + 1;
-      setCurrentPage(currentPage + 1);
+    const keys: string[] = [];
+    for (const ch of getChapters()) {
+      const count: number = ch.verses_count ?? 0;
+      for (let a = 1; a <= count; a++) keys.push(`${ch.id}:${a}`);
     }
-  }, [
-    currentPage,
-    hidden,
-    pageVerseKeys,
-    showVerse,
-    totalPages,
-    verses.length,
-  ]);
+    if (keys.length > 0) hideMany(keys);
+  }, [anyPageHidden, hiddenCount, hideMany, showAll]);
 
-  // ── Swipe ─────────────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    touchStartX.current = x;
+    touchStartY.current = y;
+    immersive.registerTouchStart(x, y, e.target);
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-    if (Math.abs(dx) > 50 && Math.abs(dx) > dy * 1.5) {
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - touchStartX.current;
+    const dy = Math.abs(endY - touchStartY.current);
+    const isSwipe = Math.abs(dx) > 50 && Math.abs(dx) > dy * 1.5;
+    if (isSwipe) {
       if (dx > 0) goToNext();
       else goToPrevious();
+    } else {
+      immersive.maybeToggleOnTap(endX, endY);
     }
     touchStartX.current = null;
     touchStartY.current = null;
   };
 
-  // ── JSX ───────────────────────────────────────────────────────────────────
+  const handleMouseDown = (e: React.MouseEvent) => {
+    immersive.registerTouchStart(e.clientX, e.clientY, e.target);
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    immersive.maybeToggleOnTap(e.clientX, e.clientY);
+  };
+
   return (
     <IonPage>
       <IonContent fullscreen scrollY={false}>
-        <div className="mushaf-container">
+        <div
+          className={`mushaf-container ${
+            immersive.chromeVisible ? "" : "immersive"
+          }`}
+        >
           {/* ── Toolbar ── */}
           <div className="top-toolbar">
             <div className="toolbar-left">
-              <button
-                className="toolbar-button menu-button"
-                onClick={() => openDrawer("menu")}
-                title={t.mushaf.menu}
-                aria-label={t.mushaf.menu}
-              >
-                <svg
-                  className="menu-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              </button>
-              <div className="page-navigation-compact">
+              {!showPlaybackBar && (
                 <button
-                  onClick={goToPrevious}
-                  disabled={currentPage === 1}
-                  className="nav-arrow prev"
-                  aria-label={t.mushaf.page}
+                  type="button"
+                  className={`toolbar-button play-button${
+                    reciteMode ? " play-button--recite" : ""
+                  }`}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressStart();
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onPointerLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onClick={(e) => e.preventDefault()}
+                  aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
                 >
-                  {isRTL ? "←" : "→"}
+                  {reciteMode ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  )}
                 </button>
-                <span className="page-indicator">
-                  <span className="page-label">{t.mushaf.page}</span>
-                  <span className="page-number">
-                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
-                  </span>
-                </span>
-                <button
-                  onClick={goToNext}
-                  disabled={currentPage === totalPages}
-                  className="nav-arrow next"
-                  aria-label={t.mushaf.page}
-                >
-                  {isRTL ? "→" : "←"}
-                </button>
-              </div>
-              {/* Hide-toggle: page-wide blanket show/hide of every verse on
-                  the current page. Pressing while any verse on the page is
-                  hidden restores all; otherwise it hides all. */}
+              )}
               <button
                 type="button"
-                className={`toolbar-button hide-toggle-button ${anyPageHidden ? "active" : ""}`}
+                className={`toolbar-button hide-toggle-button ${
+                  anyPageHidden ? "active" : ""
+                }`}
                 onClick={togglePageHidden}
                 disabled={verses.length === 0}
                 title={
@@ -458,7 +504,6 @@ const PageViewer: React.FC = () => {
                 aria-pressed={anyPageHidden}
               >
                 {anyPageHidden ? (
-                  // eye-off
                   <svg
                     viewBox="0 0 24 24"
                     width="20"
@@ -476,7 +521,6 @@ const PageViewer: React.FC = () => {
                     <path d="M6.61 6.61C4.13 8.13 2.4 10.62 2 12c1 3 5 7.5 10 7.5a10.94 10.94 0 005.39-1.39" />
                   </svg>
                 ) : (
-                  // eye
                   <svg
                     viewBox="0 0 24 24"
                     width="20"
@@ -493,25 +537,189 @@ const PageViewer: React.FC = () => {
                   </svg>
                 )}
               </button>
-              {/* Next-verse reveal: shows the next hidden verse on the page in
-                  green; rolls over to the first verse of the next page when
-                  every verse on the current page is already shown. */}
+            </div>
+
+            {/* Center: playback bar when active, else surah info pill */}
+            {showPlaybackBar ? (
+              <div
+                className="toolbar-playback-bar"
+                aria-label="Playback controls"
+              >
+                <button
+                  className="toolbar-button playback-nav"
+                  onClick={isRTL ? handleNext : handlePrev}
+                  aria-label="Previous"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <polygon points="19 5 9 12 19 19" />
+                    <line x1="5" y1="5" x2="5" y2="19" />
+                  </svg>
+                </button>
+                <button
+                  className="toolbar-button playback-play"
+                  onClick={handlePlayPause}
+                  aria-label={
+                    queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? t.mushaf.pause : t.mushaf.play
+                  }
+                >
+                  {queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="22"
+                      height="22"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      <polygon points="6 4 20 12 6 20" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  className="toolbar-button playback-nav"
+                  onClick={isRTL ? handlePrev : handleNext}
+                  aria-label="Next"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <polygon points="5 19 15 12 5 5" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
+                  </svg>
+                </button>
+                <button
+                  className="toolbar-button playback-stop"
+                  onClick={handleStop}
+                  aria-label={t.mushaf.stopLabel}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="currentColor"
+                    stroke="none"
+                  >
+                    <rect x="5" y="5" width="14" height="14" rx="2" />
+                  </svg>
+                </button>
+                <div className="playback-bar-divider" aria-hidden="true" />
+                <button
+                  className="toolbar-button playback-settings"
+                  onClick={() => {
+                    sheetOpenTimeRef.current = Date.now();
+                    setPlaybackSheetOpen(true);
+                  }}
+                  aria-label={t.playback.title}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="5 15 12 8 19 15" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                className="toolbar-button next-verse-button"
-                onClick={handleNextVerse}
-                disabled={
-                  verses.length === 0 ||
-                  (!pageVerseKeys.some((k) => hidden.has(k)) &&
-                    currentPage >= totalPages)
-                }
-                title={t.mushaf.nextVerseTitle}
-                aria-label={t.mushaf.nextVerseTitle}
+                className="toolbar-center-pill"
+                onClick={() => history.push(`/surah-juz?page=${currentPage}`)}
+                aria-label={t.mushaf.surahsAndJuz}
+              >
+                <span className="pill-surah-row">
+                  <span className="pill-surah">{pageInfo?.suraNameAr}</span>
+                  <span className="pill-surah-en">{pageInfo?.suraName}</span>
+                </span>
+                <span className="pill-meta">
+                  <span>
+                    {t.mushaf.page}{" "}
+                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
+                  </span>
+                  <span className="pill-sep" aria-hidden>
+                    |
+                  </span>
+                  <span>
+                    {t.mushaf.juz}{" "}
+                    {lang === "ar"
+                      ? toHindiNumbers(pageInfo?.juz ?? 0)
+                      : pageInfo?.juz ?? 0}
+                  </span>
+                  <span className="pill-sep" aria-hidden>
+                    |
+                  </span>
+                  <span>
+                    {t.mushaf.hizb}{" "}
+                    {lang === "ar"
+                      ? toHindiNumbers(pageInfo?.hizb ?? 0)
+                      : pageInfo?.hizb ?? 0}
+                  </span>
+                </span>
+              </button>
+            )}
+
+            <div className="toolbar-right">
+              <button
+                type="button"
+                className={`toolbar-button bookmark-button${
+                  bookmarked ? " bookmark-button--active" : ""
+                }`}
+                onClick={() => history.push("/bookmarks")}
+                title="Bookmarks"
+                aria-label="Bookmarks"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
+                  width="22"
+                  height="22"
+                  fill={bookmarked ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="toolbar-button search-button"
+                onClick={() => history.push("/search")}
+                title={t.mushaf.search}
+                aria-label={t.mushaf.search}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
@@ -519,68 +727,45 @@ const PageViewer: React.FC = () => {
                   strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <polyline points="6 9 12 15 18 9" />
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </button>
-            </div>
-
-            <div className="toolbar-center">
-              <div className="surah-info">
-                <span className="surah-name-arabic">
-                  {pageInfo?.suraNameAr}
-                </span>
-                <span className="surah-name-latin">{pageInfo?.suraName}</span>
-              </div>
-              <div className="page-metadata">
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.page}</span>
-                  <span className="metadata-value">
-                    {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
-                  </span>
-                </span>
-                <span className="metadata-separator">|</span>
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.juz}</span>
-                  <span className="metadata-value">
-                    {lang === "ar"
-                      ? toHindiNumbers(pageInfo?.juz ?? 0)
-                      : pageInfo?.juz ?? 0}
-                  </span>
-                </span>
-                <span className="metadata-separator">|</span>
-                <span className="metadata-item">
-                  <span className="metadata-label">{t.mushaf.hizb}</span>
-                  <span className="metadata-value">
-                    {lang === "ar"
-                      ? toHindiNumbers(pageInfo?.hizb ?? 0)
-                      : pageInfo?.hizb ?? 0}
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            <div className="toolbar-right">
-              <select
-                className="surah-quick-select"
-                value={selectedSurah}
-                onChange={handleSurahChange}
-              >
-                {surahNamesArabic.slice(1, 115).map((name, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}. {name}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
           {/* ── Mushaf Content ── */}
           <div
-            className="mushaf-content mushaf-content-with-nav"
+            className="mushaf-content"
             ref={contentRef}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onClick={handleClick}
           >
+            <div className="page-edge-top" data-no-immersive>
+              <span className="page-edge-surah">
+                {lang === "ar" ? pageInfo?.suraNameAr : pageInfo?.suraName}
+              </span>
+              <span className="page-edge-meta">
+                <span>
+                  {t.mushaf.juz}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.juz ?? 0)
+                    : pageInfo?.juz ?? 0}
+                </span>
+                <span className="page-edge-dot" aria-hidden>
+                  •
+                </span>
+                <span>
+                  {t.mushaf.hizb}{" "}
+                  {lang === "ar"
+                    ? toHindiNumbers(pageInfo?.hizb ?? 0)
+                    : pageInfo?.hizb ?? 0}
+                </span>
+              </span>
+            </div>
+
             {loading ? (
               <div className="mushaf-loading">
                 <div className="loading-spinner" />
@@ -592,319 +777,107 @@ const PageViewer: React.FC = () => {
                   page={currentPage}
                   verses={verses}
                   showBismillah={isSurahStart}
+                  suppressTopHeader={
+                    verses.length > 0 &&
+                    verses[0].aya === 1 &&
+                    currentPage !== 1
+                  }
+                  trailingSurahStart={trailingSurahStart ?? undefined}
                   selected={selected}
                   hidden={hidden}
                   green={greenVerse ? new Set([greenVerse]) : undefined}
-                  onVerseTap={handleVerseTap}
                   onVerseLongPress={handleVerseLongPress}
                   target={
-                    highlightedVerse
+                    playbackVerse
                       ? {
-                          sura: parseInt(highlightedVerse.split(":")[0]),
-                          aya: parseInt(highlightedVerse.split(":")[1]),
+                          sura: parseInt(playbackVerse.split(":")[0]),
+                          aya: parseInt(playbackVerse.split(":")[1]),
+                        }
+                      : undefined
+                  }
+                  flash={
+                    flashVerse
+                      ? {
+                          sura: parseInt(flashVerse.split(":")[0]),
+                          aya: parseInt(flashVerse.split(":")[1]),
                         }
                       : undefined
                   }
                 />
-
-                <div className="page-footer">
-                  {t.mushaf.hizb}{" "}
-                  {lang === "ar"
-                    ? toHindiNumbers(Math.ceil(currentPage / 4))
-                    : Math.ceil(currentPage / 4)}
-                </div>
               </div>
             )}
+
+            <div
+              className={`page-edge-bottom ${
+                currentPage % 2 === 1 ? "align-end" : "align-start"
+              }`}
+              data-no-immersive
+            >
+              {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
+            </div>
           </div>
 
           <BottomNavBar active="quran" />
 
-          {/* ── Side drawer ── */}
-          {drawerOpen && (
-            <>
-              <div
-                className="drawer-backdrop"
-                onClick={closeDrawer}
-                aria-hidden="true"
-              />
-              <aside
-                className={`side-drawer ${drawerView === "search" ? "drawer-search-mode" : ""}`}
-                role="dialog"
-                aria-label={t.mushaf.menu}
-                dir={isRTL ? "rtl" : "ltr"}
-              >
-                <header className="drawer-header">
-                  {drawerView !== "menu" && (
-                    <button
-                      className="drawer-back"
-                      onClick={() => {
-                        setDrawerView("menu");
-                        clearSearch();
-                      }}
-                      aria-label={t.mushaf.backLabel}
-                    >
-                      {isRTL ? "›" : "‹"}
-                    </button>
-                  )}
-                  <h3 className="drawer-title">
-                    {drawerView === "menu" && t.mushaf.menu}
-                    {drawerView === "search" && t.mushaf.searchTitle}
-                    {drawerView === "settings" && t.mushaf.settingsTitle}
-                  </h3>
-                  <button
-                    className="drawer-close"
-                    onClick={closeDrawer}
-                    aria-label={t.mushaf.closeLabel}
-                  >
-                    ✕
-                  </button>
-                </header>
-
-                <div className="drawer-body">
-                  {drawerView === "menu" && (
-                    <nav className="drawer-menu">
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push("/surah-juz");
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ☰
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.surahsAndJuz}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => setDrawerView("search")}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          🔍
-                        </span>
-                        <span className="drawer-item-label">{t.mushaf.search}</span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push(`/playback?page=${currentPage}`);
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ▶
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.playback.title}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => setDrawerView("settings")}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⚙
-                        </span>
-                        <span className="drawer-item-label">{t.mushaf.settings}</span>
-                      </button>
-
-                      <div className="drawer-divider" />
-
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          clearSelection();
-                        }}
-                        disabled={selectionCount === 0}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⊘
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.clearSelection}
-                        </span>
-                      </button>
-
-                      <button
-                        className="drawer-item drawer-item-warn"
-                        onClick={() => {
-                          showAll();
-                        }}
-                        disabled={hiddenCount === 0}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          👁
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.showAllHidden}
-                          {hiddenCount > 0 &&
-                            ` (${lang === "ar" ? toHindiNumbers(hiddenCount) : hiddenCount})`}
-                        </span>
-                      </button>
-                    </nav>
-                  )}
-
-                  {drawerView === "search" && (
-                    <div className="drawer-search">
-                      <form onSubmit={handleSearch} className="search-form">
-                        <input
-                          ref={searchInputRef}
-                          type="text"
-                          placeholder={t.mushaf.searchPlaceholder}
-                          value={searchQuery}
-                          dir={isRTL ? "rtl" : "ltr"}
-                          onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            if (!e.target.value.trim()) {
-                              setSearchResults([]);
-                              setSearchError(null);
-                            }
-                          }}
-                          className="search-input"
-                        />
-                        <div className="search-form-actions">
-                          <button
-                            type="submit"
-                            className="search-submit"
-                            disabled={searching}
-                          >
-                            {searching ? "…" : t.mushaf.search}
-                          </button>
-                          {searchQuery && (
-                            <button
-                              type="button"
-                              className="search-clear"
-                              onClick={clearSearch}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </form>
-                      {searching && (
-                        <div className="search-status">{t.mushaf.searching}</div>
-                      )}
-                      {searchError && (
-                        <div className="search-status search-error">
-                          {searchError}
-                        </div>
-                      )}
-                      {searchResults.length > 0 && (
-                        <div className="search-results">
-                          <div className="results-header">
-                            <span>
-                              {t.mushaf.searchResults}:{" "}
-                              {lang === "ar"
-                                ? toHindiNumbers(searchResults.length)
-                                : searchResults.length}
-                            </span>
-                          </div>
-                          <div className="results-list">
-                            {searchResults.map((r, i) => (
-                              <div
-                                key={`${r.sura}-${r.aya}-${i}`}
-                                className="result-item"
-                                onClick={() => handleResultClick(r)}
-                              >
-                                <div className="result-main">
-                                  <span className="result-surah">
-                                    {surahNamesArabic[r.sura] ??
-                                      `${r.sura}`}
-                                  </span>
-                                  <span className="result-verse">
-                                    {t.mushaf.verseLabel}{" "}
-                                    {lang === "ar" ? toHindiNumbers(r.aya) : r.aya}
-                                  </span>
-                                </div>
-                                <div className="result-meta">
-                                  <span className="result-page">
-                                    {t.mushaf.pageLabelInResult}{" "}
-                                    {lang === "ar" ? toHindiNumbers(r.page) : r.page}
-                                  </span>
-                                  <span className="result-preview" dir="rtl">
-                                    {r.text?.length > 60
-                                      ? r.text.substring(0, 60) + "…"
-                                      : r.text}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {!searching &&
-                        !searchError &&
-                        searchQuery &&
-                        searchResults.length === 0 && (
-                          <div className="no-results">
-                            <p>{t.mushaf.noResults}: "{searchQuery}"</p>
-                          </div>
-                        )}
-                    </div>
-                  )}
-
-                  {drawerView === "settings" && (
-                    <div className="drawer-settings">
-                      <div className="setting-item">
-                        <label>{t.mushaf.fontSize}</label>
-                        <select
-                          className="setting-select"
-                          value={fontSize}
-                          onChange={(e) => setFontSize(e.target.value)}
-                        >
-                          {t.mushaf.fontSizeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="setting-item">
-                        <label>{t.mushaf.fontType}</label>
-                        <select
-                          className="setting-select"
-                          value={fontType}
-                          onChange={(e) => setFontType(e.target.value)}
-                        >
-                          {t.mushaf.fontTypeOptions.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        className="drawer-item"
-                        onClick={() => {
-                          closeDrawer();
-                          history.push("/settings");
-                        }}
-                      >
-                        <span className="drawer-item-icon" aria-hidden>
-                          ⚙
-                        </span>
-                        <span className="drawer-item-label">
-                          {t.mushaf.moreSettings}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </aside>
-            </>
-          )}
-
-          {/* ── Verse action sheet (long-press) ── */}
+          {/* ── Verse action sheet (long‑press) ── */}
           <VerseActionSheet
             open={!!sheetVerseKey}
             verseKey={sheetVerseKey}
+            pageVerseKeys={verses.map((v) => `${v.sura}:${v.aya}`)}
             page={currentPage}
-            reciter={settings.reciter}
             translationId={settings.translation}
-            audio={audio}
             onClose={closeSheet}
           />
+
+          {/* ── Slide‑up playback sheet ── */}
+          {playbackSheetOpen && (
+            <div
+              className="playback-sheet"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 200,
+              }}
+            >
+              {/* Backdrop – only closes on direct tap, not bubbled events, and not the same gesture that opened it */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.5)",
+                }}
+                onPointerDown={(e) => {
+                  if (
+                    e.target === e.currentTarget &&
+                    Date.now() - sheetOpenTimeRef.current > 300
+                  ) {
+                    setPlaybackSheetOpen(false);
+                  }
+                }}
+              />
+              {/* Sheet content – starts below the toolbar */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "56px", // height of .top-toolbar
+                  bottom: 0,
+                  width: "100%",
+                  background: "var(--color-bg-content, #f7f7f8)",
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  overflow: "hidden",
+                  animation: "slideUp 0.25s ease-out",
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <PlaybackSettings onClose={() => setPlaybackSheetOpen(false)} currentPage={currentPage} />
+              </div>
+            </div>
+          )}
         </div>
       </IonContent>
     </IonPage>

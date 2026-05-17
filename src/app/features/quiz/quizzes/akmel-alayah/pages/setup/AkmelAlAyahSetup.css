@@ -16,20 +16,11 @@ ion-content::part(scroll) {
 
 .aa-setup-page-wrapper {
   width: 100%;
-  /* Bound to the dynamic viewport, NOT 100% of the IonContent — the IonContent
-     ignores the absolute-positioned BottomNavBar in its layout, so a `100%`
-     here would still leak under the bar. `100dvh` reflects the visible
-     viewport (post-soft-keyboard, post-URL-bar collapse) on mobile.       */
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  /* Reserve space for the fixed BottomNavBar (~70px) + its safe-area inset
-     so the card never extends under the nav. */
-  padding: 10px 10px calc(14px + 70px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
   transition:
@@ -42,8 +33,9 @@ ion-content::part(scroll) {
   align-items: stretch;
   justify-content: center;
   width: 100%;
-  /* No explicit height — flex stretch from the wrapper carries the bound. */
+  flex: 1;
   min-height: 0;
+  padding: 10px;
   box-sizing: border-box;
 }
 
@@ -242,11 +234,35 @@ ion-content::part(scroll) {
   border-color: var(--color-quran);
 }
 
+.aa-chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
 .aa-chip-name {
   font-family: var(--font-arabic);
   font-size: 0.92rem;
-  flex: 1;
   text-align: right;
+  line-height: 1.3;
+}
+
+.aa-chip-en {
+  font-family: var(--font-latin, sans-serif);
+  font-size: 0.65rem;
+  opacity: 0.65;
+  text-align: right;
+  direction: ltr;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.aa-surah-chip.active .aa-chip-en {
+  opacity: 0.85;
 }
 
 .aa-chip-num {
@@ -258,6 +274,7 @@ ion-content::part(scroll) {
   padding: 1px 5px;
   flex-shrink: 0;
   line-height: 1.6;
+  align-self: center;
 }
 .aa-surah-chip.active .aa-chip-num {
   color: var(--color-text-on-dark);
@@ -292,17 +309,6 @@ ion-content::part(scroll) {
   font-size: 0.9rem;
   font-family: var(--font-arabic);
   text-align: right;
-}
-.aa-page-input input {
-  padding: 8px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: 8px;
-  font-size: 1rem;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--color-bg-card-alt);
-  color: var(--color-text-primary);
 }
 
 .aa-range-info {
@@ -382,16 +388,32 @@ ion-content::part(scroll) {
   border-color: var(--color-quran);
 }
 
-.aa-count-custom {
-  width: 70px;
+.aa-count-select {
+  flex: 1;
+}
+.aa-count-select .isel__trigger {
   padding: 9px 5px;
   border: 1.5px solid var(--color-input-border);
   border-radius: 10px;
-  font-size: 1rem;
-  text-align: center;
-  direction: ltr;
   background: var(--color-bg-card-alt);
   color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 1.05rem;
+  min-height: unset;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.aa-count-select .isel__trigger:hover {
+  background: var(--color-gold-faint);
+}
+.aa-count-select.active .isel__trigger {
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+  border-color: var(--color-quran);
+}
+.aa-count-select.active .isel__trigger:hover {
+  background: var(--color-quran);
 }
 
 /* ── Start button ───────────────────────────── */
@@ -453,8 +475,5 @@ ion-content::part(scroll) {
   }
   .aa-surah-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  }
-  .aa-count-row {
-    flex-wrap: wrap;
   }
 }

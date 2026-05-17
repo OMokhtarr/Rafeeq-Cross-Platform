@@ -26,7 +26,8 @@ const STORAGE_KEY = "rafiq_hidden_verses_v1";
 
 export type VerseKey = string; // "sura:aya"
 
-export const verseKey = (sura: number, aya: number): VerseKey => `${sura}:${aya}`;
+export const verseKey = (sura: number, aya: number): VerseKey =>
+  `${sura}:${aya}`;
 
 interface VerseVisibilityCtx {
   // Selection (volatile, in-memory only)
@@ -56,14 +57,15 @@ function loadHidden(): Set<VerseKey> {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
-    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === "string"));
+    if (Array.isArray(arr))
+      return new Set(arr.filter((x) => typeof x === "string"));
   } catch (_) {}
   return new Set();
 }
 
-export const VerseVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const VerseVisibilityProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
   const [selected, setSelected] = useState<Set<VerseKey>>(() => new Set());
   const [hidden, setHidden] = useState<Set<VerseKey>>(loadHidden);
 

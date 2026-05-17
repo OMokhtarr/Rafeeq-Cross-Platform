@@ -1,33 +1,39 @@
 /* ═══════════════════════════════════════════════
    SURAH / JUZ SELECTION PAGE
-   Light parchment background · navy gradient header with gold border ·
-   White cards with category-color right edge accent · RTL-first
-   Reference: rafeeq-design-system README + components-cards
    ═══════════════════════════════════════════════ */
 
 .sjs-page {
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: var(--min-width-mobile, 320px);
   height: 100%;
-  background: linear-gradient(160deg, #faf7f0 0%, #f0ead6 100%);
+  background: #ffffff;
   color: var(--color-text-primary, #1c1c1c);
   overflow: hidden;
 }
 
 [data-theme="night"] .sjs-page,
 [data-theme="dark"] .sjs-page {
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-page, #1c1c1c) 0%,
+    var(--color-bg-page, #1c1c1c) 100%
+  );
   color: #fff;
 }
 
-/* ── Header — navy gradient + 3px gold border + back button ── */
+/* ── Header ── */
 .sjs-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.85rem;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-header, #1c1c1c) 0%,
+    var(--color-bg-header, #1c1c1c) 100%
+  );
   border-bottom: 3px solid var(--color-gold, #d4b48c);
   color: #fff;
   flex-shrink: 0;
@@ -46,19 +52,14 @@
   border: 2px solid rgba(212, 180, 140, 0.4);
   color: #fff;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
-
 .sjs-back:hover {
   background: rgba(255, 255, 255, 0.1);
 }
-
 .sjs-back:active {
   transform: scale(0.92);
 }
-
 .sjs-back svg {
   width: 22px;
   height: 22px;
@@ -87,7 +88,7 @@
 .sjs-subtitle {
   font-family: var(--font-latin, Georgia, serif);
   font-size: 0.65rem;
-  color: #c8d6e5;
+  color: var(--color-steel-blue, #c8d6e5);
   letter-spacing: 0.15em;
   text-transform: uppercase;
   margin-top: 2px;
@@ -100,11 +101,11 @@
   text-transform: none;
 }
 
-/* ── Tabs — underline style with gold indicator ── */
+/* ── Tabs ── */
 .sjs-tabs {
   display: flex;
-  background: #fff;
-  border-bottom: 1px solid rgba(212, 180, 140, 0.25);
+  background: var(--color-bg-card, #fff);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(212, 180, 140, 0.25));
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
@@ -131,7 +132,7 @@
 
 [data-theme="night"] .sjs-tab,
 [data-theme="dark"] .sjs-tab {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-tab-inactive, rgba(255, 255, 255, 0.55));
 }
 
 .sjs-tab-ar {
@@ -158,17 +159,6 @@
   color: #fff;
 }
 
-/* .sjs-tab-active::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 18%;
-  right: 18%;
-  height: 3px;
-  background: var(--color-gold, #d4b48c);
-  border-radius: 2px;
-} */
-
 /* ── List ── */
 .sjs-list-wrap {
   flex: 1;
@@ -176,11 +166,14 @@
   padding: 1rem 1rem 1.5rem;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* When the BottomNavBar is rendered as a flex sibling below this wrap,
-   no extra padding is needed — but keep a small breathing gap so the
-   last list row doesn't kiss the nav border. */
+.sjs-list-wrap::-webkit-scrollbar {
+  display: none;
+}
+
 .sjs-list-wrap-with-nav {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
@@ -196,25 +189,21 @@
   margin-inline: auto;
 }
 
+/* ── Row (common) ── */
 .sjs-row {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  background: #fff;
+  background: var(--color-bg-card, #fff);
   border: none;
   border-radius: 14px;
   padding: 0.85rem 1rem;
   cursor: pointer;
   text-align: start;
-  /* Right-edge accent — the design system signature card pattern (RTL means
-     "start" = right-edge in Arabic mode). */
   border-inline-end: 5px solid var(--color-gold, #d4b48c);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease,
-    background 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.15s ease;
   font-family: inherit;
   color: inherit;
 }
@@ -222,7 +211,7 @@
 [data-theme="night"] .sjs-row,
 [data-theme="dark"] .sjs-row {
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(212, 180, 140, 0.25);
+  border: 1px solid var(--color-border-subtle, rgba(212, 180, 140, 0.25));
   border-inline-end: 5px solid var(--color-gold, #d4b48c);
   color: #fff;
 }
@@ -243,7 +232,7 @@
   transform: scale(0.98);
 }
 
-/* Surah/Juz number badge — circle, color reflects revelation type */
+/* ── Number badge ── */
 .sjs-num {
   width: 38px;
   height: 38px;
@@ -255,8 +244,14 @@
   font-family: var(--font-latin, Georgia, serif);
   font-weight: 700;
   font-size: 0.95rem;
-  background: rgba(26, 107, 60, 0.1);
-  color: var(--color-quran, #1a6b3c);
+  background: rgba(180, 134, 11, 0.12);
+  color: #8a6200;
+}
+
+[data-theme="night"] .sjs-num,
+[data-theme="dark"] .sjs-num {
+  background: rgba(212, 180, 140, 0.18);
+  color: var(--color-gold, #d4b48c);
 }
 
 .sjs-num-meccan {
@@ -274,11 +269,56 @@
   color: var(--color-quiz, #8b4513);
 }
 
-[dir="rtl"] .sjs-num {
-  /* In RTL, hindi numerals already render correctly — keep as-is */
+/* Hizb & rub numbers now use gold */
+.sjs-num-hizb {
+  background: rgba(180, 134, 11, 0.12);
+  color: #8a6200;
 }
 
-/* Main column — surah/juz name(s) */
+[data-theme="night"] .sjs-num-hizb,
+[data-theme="dark"] .sjs-num-hizb {
+  background: rgba(212, 180, 140, 0.25);
+  color: var(--color-gold, #d4b48c);
+}
+
+/* Hizb row border (gold, matching surah & juz) */
+.sjs-row-hizb {
+  border-inline-end-color: var(--color-gold, #d4b48c) !important;
+}
+
+[data-theme="night"] .sjs-row-hizb,
+[data-theme="dark"] .sjs-row-hizb {
+  border-inline-end-color: var(--color-gold, #d4b48c) !important;
+}
+
+/* Hizb juz badge */
+.sjs-hizb-juz-badge {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  background: rgba(212, 180, 140, 0.18);
+  color: var(--color-gold, #d4b48c);
+  white-space: nowrap;
+}
+
+[dir="rtl"] .sjs-hizb-juz-badge {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.7rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-theme="night"] .sjs-hizb-juz-badge,
+[data-theme="dark"] .sjs-hizb-juz-badge {
+  background: rgba(212, 180, 140, 0.25);
+  color: var(--color-gold, #d4b48c);
+}
+
+/* ── Main text column ── */
 .sjs-row-main {
   flex: 1;
   display: flex;
@@ -327,7 +367,7 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* Right meta — revelation pill + verse count or page range */
+/* ── Right meta ── */
 .sjs-row-meta {
   display: flex;
   flex-direction: column;
@@ -382,4 +422,168 @@
 [data-theme="night"] .sjs-ayahs,
 [data-theme="dark"] .sjs-ayahs {
   color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Rub' al‑hizb ── */
+.sjs-hizb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sjs-rub-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 2.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-inline-start: 2px solid rgba(212, 180, 140, 0.3);
+  margin-inline-start: 1.2rem;
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+[data-theme="night"] .sjs-rub-list,
+[data-theme="dark"] .sjs-rub-list {
+  border-inline-start-color: rgba(212, 180, 140, 0.35);
+}
+
+.sjs-rub-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: none;
+  border: none;
+  padding: 0.45rem 0.6rem 0.45rem 0;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  color: inherit;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.12s ease;
+  border-radius: 6px;
+}
+
+.sjs-rub-row:last-child {
+  border-bottom: none;
+}
+
+.sjs-rub-row:hover {
+  background: rgba(212, 180, 140, 0.08);
+}
+
+.sjs-rub-row:active {
+  background: rgba(212, 180, 140, 0.15);
+}
+
+[data-theme="night"] .sjs-rub-row:hover,
+[data-theme="dark"] .sjs-rub-row:hover {
+  background: rgba(212, 180, 140, 0.12);
+}
+
+.sjs-rub-icon {
+  font-size: 0.45rem;
+  color: var(--color-gold, #d4b48c);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+[data-theme="night"] .sjs-rub-icon,
+[data-theme="dark"] .sjs-rub-icon {
+  color: var(--color-gold, #d4b48c);
+}
+
+.sjs-rub-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.sjs-rub-label-ar {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-gold, #d4b48c);
+  direction: rtl;
+}
+
+[data-theme="night"] .sjs-rub-label-ar,
+[data-theme="dark"] .sjs-rub-label-ar {
+  color: var(--color-gold, #d4b48c);
+}
+
+.sjs-rub-label-en {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-gold, #d4b48c);
+  opacity: 0.8;
+}
+
+[data-theme="night"] .sjs-rub-label-en,
+[data-theme="dark"] .sjs-rub-label-en {
+  color: var(--color-gold, #d4b48c);
+}
+
+.sjs-rub-verse {
+  flex: 1;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.78rem;
+  color: var(--color-text-muted, #8a7a6a);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[dir="ltr"] .sjs-rub-verse {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.72rem;
+}
+
+[data-theme="night"] .sjs-rub-verse,
+[data-theme="dark"] .sjs-rub-verse {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sjs-rub-page {
+  font-family: var(--font-latin, Georgia, serif);
+  font-size: 0.65rem;
+  color: var(--color-text-muted, #8a7a6a);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .sjs-rub-page {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: 0.75rem;
+}
+
+[data-theme="night"] .sjs-rub-page,
+[data-theme="dark"] .sjs-rub-page {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Highlight rows ── */
+.sjs-rub-row--highlight {
+  background: rgba(212, 180, 140, 0.25);
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+
+[data-theme="night"] .sjs-rub-row--highlight {
+  background: rgba(212, 180, 140, 0.25);
+}
+
+.sjs-row--highlight {
+  background: rgba(212, 180, 140, 0.28) !important;
+  box-shadow: 0 0 0 2px var(--color-gold, #d4b48c);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme="night"] .sjs-row--highlight {
+  background: rgba(212, 180, 140, 0.2) !important;
 }

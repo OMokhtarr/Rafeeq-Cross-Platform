@@ -24,6 +24,7 @@ yarn-error.log*
 # Environment files
 .env
 .env.local
+.env.production
 .env.*.local
 
 # IDE
@@ -43,3 +44,4 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+.env.production

@@ -1,83 +1,123 @@
-/**
- * VERSE ACTION SHEET
- *
- * A bottom-sheet popup that appears when the user long-presses a verse on
- * the Mushaf page. Replaces the always-on inline rail of audio buttons +
- * translations under the page text.
- *
- * Provides three actions for one verse:
- *   - Play / pause its recitation (using the shared useAudioPlayer hook).
- *   - Show its translation (uses the active translation edition from
- *     settings; renders a hint if none is selected).
- *   - Show its tafsir (stubbed — fetchTafsirForAyah returns empty until
- *     the user wires a real source. The UI handles the empty state).
- */
-
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  fetchAudioForAyah,
   fetchTafsirForAyah,
-  fetchTranslationsByPage,
-} from "../../../core/services/api/quran-api.client";
-import type { AudioPlayer } from "../../../core/hooks/useAudioPlayer";
+  getTafsirResources,
+  getPageTranslations,
+  getPage,
+} from "../../../core/services/data/quran.service";
+import type { TafsirResource } from "../../../core/services/data/quran.service";
 import { useLang } from "../../../core/context/LanguageContext";
+import { useTheme } from "../../../core/context/ThemeContext";
+import InlineSelect from "../inline-select/InlineSelect";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
+import {
+  isPageBookmarked,
+  toggleBookmark,
+} from "../../../core/services/api/user-api.client";
+import NoteModal from "../note-modal/NoteModal";
 import "./VerseActionSheet.css";
+
+type Tab = "translation" | "tafsir";
 
 interface Props {
   open: boolean;
-  /** "sura:aya" of the verse the user long-pressed. */
+  /** "sura:aya" of the initially long-pressed verse. */
   verseKey: string | null;
-  /** Page the verse lives on — used for the translation request. */
+  /** Ordered verse keys for the current page — used for prev/next in tafsir. */
+  pageVerseKeys?: string[];
   page: number;
-  /** Reciter slug from settings ("husary", …). */
-  reciter: string;
-  /** Active translation id from settings (e.g. numeric id or slug). */
   translationId: string;
-  /** Tafsir source id from settings. Empty string is fine — stub ignores it. */
   tafsirId?: string;
-  /** Shared audio player so other surfaces stop when the sheet plays. */
-  audio: AudioPlayer;
   onClose: () => void;
 }
+
+const DEFAULT_TAFSIR_ID = "16"; // التفسير الميسر
 
 const VerseActionSheet: React.FC<Props> = ({
   open,
   verseKey,
+  pageVerseKeys = [],
   page,
-  reciter,
   translationId,
   tafsirId,
-  audio,
   onClose,
 }) => {
   const { t, lang, isRTL } = useLang();
+  const { isNight } = useTheme();
 
-  const [audioBusy, setAudioBusy] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const nightClass = isNight ? " vas-sheet--night" : "";
 
+  // ── Bookmark ───────────────────────────────────────────────────────────────
+  const [bookmarked, setBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (open && verseKey) setBookmarked(isPageBookmarked(verseKey));
+  }, [open, verseKey]);
+
+  const handleBookmark = useCallback(() => {
+    if (!verseKey) return;
+    setBookmarked(toggleBookmark(verseKey));
+  }, [verseKey]);
+
+  // ── Notes modal ────────────────────────────────────────────────────────────
+  type NoteView = "list" | "compose";
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteModalView, setNoteModalView] = useState<NoteView>("list");
+
+  const openNoteList = useCallback(() => {
+    setNoteModalView("list");
+    setNoteModalOpen(true);
+  }, []);
+
+  const openNoteCompose = useCallback(() => {
+    setNoteModalView("compose");
+    setNoteModalOpen(true);
+  }, []);
+
+  // ── Tab ────────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<Tab>("tafsir");
+
+  // ── Translation ────────────────────────────────────────────────────────────
   const [translation, setTranslation] = useState<string | null>(null);
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
 
+  // ── Tafsir navigation ──────────────────────────────────────────────────────
+  // currentKey tracks which verse is shown in the tafsir tab (can differ from
+  // the initially pressed verseKey via prev/next).
+  const [currentKey, setCurrentKey] = useState<string | null>(verseKey);
+
+  // ── Tafsir resources ──────────────────────────────────────────────────────
+  const [resources, setResources] = useState<TafsirResource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<string>(
+    tafsirId ?? DEFAULT_TAFSIR_ID,
+  );
+
+  // ── Verse text ────────────────────────────────────────────────────────────
+  const [verseText, setVerseText] = useState<string>("");
+
+  // ── Tafsir text ───────────────────────────────────────────────────────────
   const [tafsir, setTafsir] = useState<string>("");
   const [tafsirLoading, setTafsirLoading] = useState(false);
   const [tafsirError, setTafsirError] = useState<string | null>(null);
 
-  // Reset all per-verse state when the sheet opens for a different verse,
-  // and clear errors on close so reopening starts fresh.
+  const tafsirBodyRef = useRef<HTMLDivElement>(null);
+
+  // ── Reset on open / verse change ──────────────────────────────────────────
   useEffect(() => {
     if (!open) {
-      setAudioError(null);
       setTranslationError(null);
       setTafsirError(null);
       return;
     }
     setTranslation(null);
     setTafsir("");
+    setActiveTab("tafsir");
+    setCurrentKey(verseKey);
   }, [open, verseKey]);
 
-  // Fetch translation for the single verse on this page.
+  // ── Fetch translation ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!open || !verseKey) return;
     if (!translationId) {
@@ -88,7 +128,7 @@ const VerseActionSheet: React.FC<Props> = ({
     let cancelled = false;
     setTranslationLoading(true);
     setTranslationError(null);
-    fetchTranslationsByPage(page, translationId)
+    getPageTranslations(page, translationId)
       .then((rows) => {
         if (cancelled) return;
         const hit = rows.find((r) => r.verseKey === verseKey);
@@ -106,16 +146,63 @@ const VerseActionSheet: React.FC<Props> = ({
     };
   }, [open, verseKey, page, translationId, t]);
 
-  // Fetch tafsir (stubbed for now — returns empty text).
+  // ── Fetch tafsir resource list (once per open) ────────────────────────────
   useEffect(() => {
-    if (!open || !verseKey) return;
-    const [s, a] = verseKey.split(":").map((n) => parseInt(n, 10));
+    if (!open || resources.length > 0) return;
+    let cancelled = false;
+    setResourcesLoading(true);
+    getTafsirResources()
+      .then((list) => {
+        if (cancelled) return;
+        setResources(list);
+        // Keep the tafsirId prop as default if it's in the list, else keep DEFAULT
+        if (tafsirId && list.some((r) => r.id === tafsirId)) {
+          setSelectedResourceId(tafsirId);
+        }
+      })
+      .catch(() => {
+        /* silently ignore — we still have the default id */
+      })
+      .finally(() => {
+        if (!cancelled) setResourcesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]); // intentionally omits `resources` and `tafsirId` — fetch once per open
+
+  // ── Fetch verse text whenever currentKey changes ──────────────────────────
+  useEffect(() => {
+    if (!open || !currentKey) return;
+    let cancelled = false;
+    setVerseText("");
+    getPage(page)
+      .then((verses) => {
+        if (cancelled) return;
+        const [s, a] = currentKey.split(":").map((n) => parseInt(n, 10));
+        const hit = verses.find((v) => v.sura === s && v.aya === a);
+        if (hit) setVerseText(hit.text);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, currentKey, page]);
+
+  // ── Fetch tafsir text whenever key or resource changes ────────────────────
+  useEffect(() => {
+    if (!open || !currentKey) return;
+    const [s, a] = currentKey.split(":").map((n) => parseInt(n, 10));
     let cancelled = false;
     setTafsirLoading(true);
     setTafsirError(null);
-    fetchTafsirForAyah(s, a, tafsirId)
+    setTafsir("");
+    fetchTafsirForAyah(s, a, selectedResourceId)
       .then((res) => {
-        if (!cancelled) setTafsir(res.text);
+        if (!cancelled) {
+          setTafsir(res.text);
+          tafsirBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        }
       })
       .catch(() => {
         if (!cancelled) setTafsirError(t.mushaf.tafsirError);
@@ -126,45 +213,40 @@ const VerseActionSheet: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, verseKey, tafsirId, t]);
+  }, [open, currentKey, selectedResourceId, t]);
+
+  // ── Prev / next helpers ───────────────────────────────────────────────────
+  const currentIdx = currentKey ? pageVerseKeys.indexOf(currentKey) : -1;
+  const hasPrev = currentIdx > 0;
+  const hasNext = currentIdx >= 0 && currentIdx < pageVerseKeys.length - 1;
+
+  const goPrev = useCallback(() => {
+    if (hasPrev) setCurrentKey(pageVerseKeys[currentIdx - 1]);
+  }, [hasPrev, currentIdx, pageVerseKeys]);
+
+  const goNext = useCallback(() => {
+    if (hasNext) setCurrentKey(pageVerseKeys[currentIdx + 1]);
+  }, [hasNext, currentIdx, pageVerseKeys]);
+
+  // ── Derived display values ────────────────────────────────────────────────
+  const displayVerseKey = currentKey ?? verseKey;
+  const [dSuraStr, dAyaStr] = (displayVerseKey ?? "1:1").split(":");
+  const dSura = parseInt(dSuraStr, 10);
+  const dAya = parseInt(dAyaStr, 10);
+  const displayKey =
+    lang === "ar"
+      ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
+      : `${dSura}:${dAya}`;
+
+  const selectedResource = resources.find((r) => r.id === selectedResourceId);
 
   if (!open || !verseKey) return null;
 
-  const [suraStr, ayaStr] = verseKey.split(":");
-  const sura = parseInt(suraStr, 10);
-  const aya = parseInt(ayaStr, 10);
-  const displayKey =
-    lang === "ar"
-      ? `${toHindiNumbers(sura)}:${toHindiNumbers(aya)}`
-      : `${sura}:${aya}`;
-  const isThisPlaying = audio.playingKey === verseKey && audio.isPlaying;
-
-  const handleToggleAudio = async () => {
-    if (isThisPlaying) {
-      audio.stop();
-      return;
-    }
-    setAudioBusy(true);
-    setAudioError(null);
-    try {
-      const url = await fetchAudioForAyah(sura, aya, reciter);
-      await audio.play(verseKey, url);
-    } catch {
-      setAudioError(t.mushaf.audioError);
-    } finally {
-      setAudioBusy(false);
-    }
-  };
-
   return (
     <>
-      <div
-        className="vas-backdrop"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="vas-backdrop" onClick={onClose} aria-hidden="true" />
       <aside
-        className="vas-sheet"
+        className={`vas-sheet${nightClass}`}
         role="dialog"
         aria-label={t.mushaf.actionSheetTitle(displayKey)}
         dir={isRTL ? "rtl" : "ltr"}
@@ -173,83 +255,221 @@ const VerseActionSheet: React.FC<Props> = ({
 
         <header className="vas-header">
           <h3 className="vas-title">{t.mushaf.actionSheetTitle(displayKey)}</h3>
-          <button
-            className="vas-close"
-            onClick={onClose}
-            aria-label={t.mushaf.closeLabel}
-          >
-            ✕
-          </button>
+          <div className="vas-header-actions">
+            {/* Add note */}
+            <button
+              className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
+              onClick={openNoteCompose}
+              disabled={!verseKey}
+              aria-label={lang === "ar" ? "إضافة ملاحظة" : "Add note"}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+            {/* View notes for this verse */}
+            <button
+              className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
+              onClick={openNoteList}
+              disabled={!verseKey}
+              aria-label={lang === "ar" ? "ملاحظات الآية" : "View notes"}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </button>
+            <button
+              className={`vas-bookmark-btn${bookmarked ? " vas-bookmark-btn--active" : ""}${nightClass}`}
+              onClick={handleBookmark}
+              disabled={!verseKey}
+              aria-label={bookmarked
+                ? (lang === "ar" ? "إزالة الإشارة" : "Remove bookmark")
+                : (lang === "ar" ? "إضافة إشارة" : "Bookmark verse")}
+              aria-pressed={bookmarked}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18"
+                fill={bookmarked ? "currentColor" : "none"}
+                stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+            <button
+              className="vas-close"
+              onClick={onClose}
+              aria-label={t.mushaf.closeLabel}
+            >
+              ✕
+            </button>
+          </div>
         </header>
 
-        <div className="vas-body">
-          {/* ── Audio ── */}
-          <section className="vas-section">
-            <button
-              type="button"
-              className={`vas-audio-btn ${isThisPlaying ? "playing" : ""}`}
-              onClick={handleToggleAudio}
-              disabled={audioBusy}
-            >
-              {audioBusy ? (
-                <span className="vas-spinner" aria-hidden="true" />
-              ) : isThisPlaying ? (
-                <span aria-hidden="true">⏸</span>
-              ) : (
-                <span aria-hidden="true">▶</span>
-              )}
-              <span>{isThisPlaying ? t.mushaf.pause : t.mushaf.play}</span>
-            </button>
-            {audioError && (
-              <div className="vas-error" role="alert">
-                {audioError}
-              </div>
-            )}
-          </section>
-
-          {/* ── Translation ── */}
-          <section className="vas-section">
-            <h4 className="vas-section-title">{t.mushaf.translation}</h4>
-            {!translationId ? (
-              <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
-            ) : translationLoading ? (
-              <div className="vas-loading">
-                <span className="vas-spinner" aria-hidden="true" />
-                <span>{t.mushaf.translationLoading}</span>
-              </div>
-            ) : translationError ? (
-              <p className="vas-error" role="alert">
-                {translationError}
-              </p>
-            ) : translation ? (
-              <p className="vas-translation" lang="en" dir="ltr">
-                {translation}
-              </p>
-            ) : (
-              <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
-            )}
-          </section>
-
-          {/* ── Tafsir ── */}
-          <section className="vas-section">
-            <h4 className="vas-section-title">{t.mushaf.tafsir}</h4>
-            {tafsirLoading ? (
-              <div className="vas-loading">
-                <span className="vas-spinner" aria-hidden="true" />
-                <span>{t.mushaf.tafsirLoading}</span>
-              </div>
-            ) : tafsirError ? (
-              <p className="vas-error" role="alert">
-                {tafsirError}
-              </p>
-            ) : tafsir ? (
-              <p className="vas-tafsir">{tafsir}</p>
-            ) : (
-              <p className="vas-empty">{t.mushaf.tafsirUnavailable}</p>
-            )}
-          </section>
+        <div className="vas-tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={activeTab === "tafsir"}
+            className={`vas-tab${
+              activeTab === "tafsir" ? " vas-tab--active" : ""
+            }`}
+            onClick={() => setActiveTab("tafsir")}
+          >
+            {t.mushaf.tafsir}
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === "translation"}
+            className={`vas-tab${
+              activeTab === "translation" ? " vas-tab--active" : ""
+            }`}
+            onClick={() => setActiveTab("translation")}
+          >
+            {t.mushaf.translation}
+          </button>
         </div>
+
+        {/* ── Translation tab ── */}
+        {activeTab === "translation" && (
+          <div className="vas-body">
+            <section className="vas-panel" aria-label={t.mushaf.translation}>
+              {!translationId ? (
+                <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
+              ) : translationLoading ? (
+                <div className="vas-loading">
+                  <span className="vas-spinner" aria-hidden="true" />
+                  <span>{t.mushaf.translationLoading}</span>
+                </div>
+              ) : translationError ? (
+                <p className="vas-error" role="alert">
+                  {translationError}
+                </p>
+              ) : translation ? (
+                <p className="vas-translation" lang="en" dir="ltr">
+                  {translation}
+                </p>
+              ) : (
+                <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ── Tafsir tab ── */}
+        {activeTab === "tafsir" && (
+          <>
+            {/* Resource selector */}
+            <div className={`vas-resource-bar${nightClass}`}>
+              {resourcesLoading ? (
+                <span
+                  className="vas-spinner vas-spinner--sm"
+                  aria-hidden="true"
+                />
+              ) : (
+                <InlineSelect
+                  value={selectedResourceId}
+                  options={
+                    resources.length === 0
+                      ? [{ value: DEFAULT_TAFSIR_ID, label: "Tafsir Muyassar — المیسر" }]
+                      : resources.map((r) => ({
+                          value: r.id,
+                          label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
+                        }))
+                  }
+                  onChange={setSelectedResourceId}
+                  night={isNight}
+                  fullWidth
+                  aria-label={t.mushaf.tafsir}
+                />
+              )}
+            </div>
+
+            {/* Verse + nav row */}
+            <div className={`vas-verse-row${nightClass}`}>
+              <button
+                className={`vas-nav-btn${nightClass}`}
+                onClick={goPrev}
+                disabled={!hasPrev}
+                aria-label={
+                  isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
+                }
+              >
+                {isRTL ? "‹" : "›"}
+              </button>
+
+              <div className="vas-verse-center">
+                <span className={`vas-nav-key${nightClass}`}>
+                  {lang === "ar"
+                    ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
+                    : `${dSura}:${dAya}`}
+                </span>
+                {verseText && (
+                  <p
+                    className={`vas-verse-text${nightClass}`}
+                    dir="rtl"
+                    lang="ar"
+                  >
+                    {verseText}
+                  </p>
+                )}
+              </div>
+
+              <button
+                className={`vas-nav-btn${nightClass}`}
+                onClick={goNext}
+                disabled={!hasNext}
+                aria-label={
+                  isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
+                }
+              >
+                {isRTL ? "›" : "‹"}
+              </button>
+            </div>
+
+            {/* Tafsir body */}
+            <div className="vas-body" ref={tafsirBodyRef}>
+              <section className="vas-panel" aria-label={t.mushaf.tafsir}>
+                {/* Resource name label */}
+                {selectedResource && (
+                  <p className={`vas-resource-label${nightClass}`}>
+                    {selectedResource.name}
+                    {selectedResource.authorName
+                      ? ` — ${selectedResource.authorName}`
+                      : ""}
+                  </p>
+                )}
+
+                {tafsirLoading ? (
+                  <div className="vas-loading">
+                    <span className="vas-spinner" aria-hidden="true" />
+                    <span>{t.mushaf.tafsirLoading}</span>
+                  </div>
+                ) : tafsirError ? (
+                  <p className="vas-error" role="alert">
+                    {tafsirError}
+                  </p>
+                ) : tafsir ? (
+                  <p className="vas-tafsir">{tafsir}</p>
+                ) : (
+                  <p className="vas-empty">{t.mushaf.tafsirUnavailable}</p>
+                )}
+              </section>
+            </div>
+          </>
+        )}
       </aside>
+
+      <NoteModal
+        open={noteModalOpen}
+        initialView={noteModalView}
+        verseKey={verseKey}
+        onClose={() => setNoteModalOpen(false)}
+      />
     </>
   );
 };

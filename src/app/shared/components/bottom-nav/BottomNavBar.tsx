@@ -15,7 +15,14 @@ import { useHistory } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
 import "./BottomNavBar.css";
 
-export type NavTabKey = "home" | "quran" | "quiz" | "azkar" | "ahadith" | "settings";
+export type NavTabKey =
+  | "home"
+  | "quran"
+  | "quiz"
+  | "azkar"
+  | "ahadith"
+  | "account"
+  | "settings";
 
 interface TabDef {
   id: NavTabKey;
@@ -85,9 +92,36 @@ const TABS: TabDef[] = [
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-        <line x1="8" y1="8" x2="16" y2="8" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="8" y1="12" x2="16" y2="12" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="8" y1="16" x2="13" y2="16" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" />
+        <line
+          x1="8"
+          y1="8"
+          x2="16"
+          y2="8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity="0.4"
+        />
+        <line
+          x1="8"
+          y1="12"
+          x2="16"
+          y2="12"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity="0.4"
+        />
+        <line
+          x1="8"
+          y1="16"
+          x2="13"
+          y2="16"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity="0.4"
+        />
       </svg>
     ),
     route: "/ahadith",
@@ -96,9 +130,28 @@ const TABS: TabDef[] = [
     comingSoon: true,
   },
   {
-    id: "settings",
+    id: "account",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+    route: "/account",
+    color: "var(--color-gold, #d4b48c)",
+    filled: false,
+  },
+  {
+    id: "settings",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
@@ -129,12 +182,34 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   const { t, lang } = useLang();
 
   const labels: Record<NavTabKey, { primary: string; secondary: string }> = {
-    home:     { primary: lang === "ar" ? "الرئيسية" : "Home",      secondary: lang === "ar" ? "Home"    : "الرئيسية" },
-    quran:    { primary: t.tabs.quran,    secondary: lang === "ar" ? "Quran"    : "القرآن" },
-    quiz:     { primary: t.tabs.quiz,     secondary: lang === "ar" ? "Quizzes"  : "اختبارات" },
-    azkar:    { primary: t.tabs.azkar,    secondary: lang === "ar" ? "Azkar"    : "أذكار" },
-    ahadith:  { primary: t.tabs.ahadith,  secondary: lang === "ar" ? "Ahadith"  : "أحاديث" },
-    settings: { primary: t.tabs.settings, secondary: lang === "ar" ? "Settings" : "إعدادات" },
+    home: {
+      primary: lang === "ar" ? "الرئيسية" : "Home",
+      secondary: lang === "ar" ? "Home" : "الرئيسية",
+    },
+    quran: {
+      primary: t.tabs.quran,
+      secondary: lang === "ar" ? "Quran" : "القرآن",
+    },
+    quiz: {
+      primary: t.tabs.quiz,
+      secondary: lang === "ar" ? "Quizzes" : "اختبارات",
+    },
+    azkar: {
+      primary: t.tabs.azkar,
+      secondary: lang === "ar" ? "Azkar" : "أذكار",
+    },
+    ahadith: {
+      primary: t.tabs.ahadith,
+      secondary: lang === "ar" ? "Ahadith" : "أحاديث",
+    },
+    account: {
+      primary: lang === "ar" ? "حسابي" : "Account",
+      secondary: lang === "ar" ? "Account" : "حسابي",
+    },
+    settings: {
+      primary: t.tabs.settings,
+      secondary: lang === "ar" ? "Settings" : "إعدادات",
+    },
   };
 
   return (
@@ -158,7 +233,9 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
             onClick={() => !tab.comingSoon && history.push(route)}
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
-            aria-label={tab.comingSoon ? `${l.primary} (${t.tabs.comingSoon})` : l.primary}
+            aria-label={
+              tab.comingSoon ? `${l.primary} (${t.tabs.comingSoon})` : l.primary
+            }
           >
             <span
               className={
@@ -171,7 +248,9 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
             </span>
             <span className="rfq-tab-label-primary">{l.primary}</span>
             <span className="rfq-tab-label-secondary">{l.secondary}</span>
-            {tab.comingSoon && <span className="rfq-tab-soon">{t.tabs.comingSoon}</span>}
+            {tab.comingSoon && (
+              <span className="rfq-tab-soon">{t.tabs.comingSoon}</span>
+            )}
             {isActive && <span className="rfq-tab-dot" aria-hidden="true" />}
           </button>
         );

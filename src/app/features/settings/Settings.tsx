@@ -13,15 +13,12 @@ import { useHistory } from "react-router-dom";
 import { useTheme } from "../../core/context/ThemeContext";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
   MUSHAFS,
   DEFAULT_MUSHAF,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
-import {
-  fetchTranslationEditions,
-  type TranslationEdition,
-} from "../../core/services/api/quran-api.client";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -73,7 +70,12 @@ const STORAGE_KEY = "rafiq_settings_v1";
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    if (raw) {
+      const merged = { ...DEFAULTS, ...JSON.parse(raw) } as AppSettings;
+      // Migrate retired mushaf kinds (e.g. "qpc_v1") to the current default.
+      if (!(merged.mushaf in MUSHAFS)) merged.mushaf = DEFAULT_MUSHAF;
+      return merged;
+    }
   } catch (_) {}
   return { ...DEFAULTS };
 }
@@ -81,6 +83,10 @@ function loadSettings(): AppSettings {
 function saveSettings(s: AppSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    // Notify same-tab listeners (the `storage` event only fires cross-tab).
+    // MushafPage subscribes to this so toggles like "Tajweed colors" take
+    // effect without leaving the Settings screen.
+    window.dispatchEvent(new CustomEvent("rafiq-settings-changed"));
   } catch (_) {}
 }
 
@@ -214,6 +220,199 @@ const ICONS = {
   ),
 };
 
+// ── Tajweed Info Modal ────────────────────────────────────────────────────────
+interface TajweedRule {
+  color: string;
+  titleAr: string;
+  subtitleAr: string;
+  bodyAr: string;
+  titleEn: string;
+  subtitleEn: string;
+  bodyEn: string;
+}
+
+const TAJWEED_RULES: TajweedRule[] = [
+  {
+    color: "#c0392b",
+    titleAr: "مد ٦ حركات",
+    subtitleAr: "مد لازم",
+    bodyAr: 'يشير اللون الأحمر الداكن إلى المد اللازم بمقدار ٦ حركات. مثال: "الضَّالِّين"',
+    titleEn: "Madd: 6",
+    subtitleEn: "Necessary Prolongation",
+    bodyEn: 'The dark red color indicates necessary prolongation, where the elongation is 6 vowels. This applies in cases like مد لازم (Madd Laazim). Example: "الضَّالِّين"',
+  },
+  {
+    color: "#e91e8c",
+    titleAr: "مد ٤ أو ٥ حركات",
+    subtitleAr: "مد واجب",
+    bodyAr: 'يشير اللون الزهري للمد بمقدار ٤ أو ٥ حركات. مثال: "سماء"',
+    titleEn: "Madd: 4 or 5",
+    subtitleEn: "Obligatory Prolongation",
+    bodyEn: 'The pink color signifies obligatory prolongation, typically 4 or 5 vowels, depending on the context. This could include مد واجب متصل (Madd Wajib Muttasil). Example: Words like "سماء"',
+  },
+  {
+    color: "#e67e22",
+    titleAr: "مد ٢ أو ٤ أو ٦ حركات",
+    subtitleAr: "مد جائز",
+    bodyAr: 'اللون البرتقالي يشير لإمكانية المد بمقدار حركتين أو ٤ أو ٦ حركات في حالة المد العارض للسكون. مثال: عند الوقف على كلمة "العالمين"',
+    titleEn: "Madd: 2, 4, or 6",
+    subtitleEn: "Permissible Prolongation",
+    bodyEn: 'The orange color marks elongations that vary between 2, 4, or 6 vowels. This occurs in situations like مد عارض للسكون (Madd \'Aarid Li-Sukoon). Example: At the end of "العالمين" when stopping.',
+  },
+  {
+    color: "#f0c040",
+    titleAr: "مد طبيعي حركتين",
+    subtitleAr: "مد طبيعي",
+    bodyAr: 'اللون الأصفر يمثل المد الطبيعي بمقدار حركتين. مثال: "عَظِيم"',
+    titleEn: "Madd: 2",
+    subtitleEn: "Normal Prolongation",
+    bodyEn: 'The yellow color represents a simple elongation of 2 vowels. This applies to مد طبيعي (Madd Tabee\'i). Example: "عَظِيم"',
+  },
+  {
+    color: "#27ae60",
+    titleAr: "غنة",
+    subtitleAr: "صوت الغنة مع أحكام النون والميم",
+    bodyAr: "يشير اللون الأخضر لصوت الغنة الذي يخرج من الخيشوم عند النطق بحرفي النون والميم. يُقدر زمنها عادة بمقدار حركتين وتحدث مع أحكام النون الساكنة والتنوين وأحكام الميم الساكنة:\n\n• في حالة النون والميم المشددتين، مثل (فَإِنَّهم)\n\n• في حالة الإقلاب عندما تأتي باء (ب) بعد نون ساكنة أو تنوين (نٌ / ـٌ)، يتم تحويل النون الساكنة/ التنوين إلى ميم مع إعطائها زمن للغنة\nأمثلة:\n(مِن بَعد) قلب النون لميم فتنطق (مِمـبَعد)\n(سَمِيعٌ بَصِير) نقلب التنوين لميم فتنطق (سَميعـمـبَصير)\n\n• في حالة الإخفاء الحقيقي عندما يأتي حرف من حروف الإخفاء الخمسة عشر (ص، ذ، ث، ك، ج، ش، ق، س، د، ط، ز، ف، ت، ض، ظ) بعد نون ساكنة أو تنوين (نٌ / ـٌ) يتم إخفاء صوت النون مع الإبقاء على صوت الغنة\nأمثلة:\n(أَن تَخشَوه) تخفى النون مع إعطاء زمن للغنة ثم يتم نطق التاء (أَ ـتَخشَوه)\n(كُتُبٌ قَيِّمَة) تخفى النون مع إعطاء زمن للغنة ثم يتم نطق القاف (كُتُبٌـقَيِّمَة)\n\n• في حالة الإدغام عندما يأتي حرف من حروف الإدغام الجزئي (ينمو) بعد نون ساكنة أو تنوين (ن / ـٌ) فتدغم النون الساكنة بما بعدها إدغاما جزئيًا\nأمثلة:\n(مَن يَقُول) تدغم النون بالياء مع إعطاء زمن للغنة فتنطق (مِيـيَقول)\n(رَحِيمٌ وَدُود) يدغم التنوين في الواو مع إعطاء زمن للغنة فتنطق (رَحِيمُـوَدود)\n\n• في حالة الإخفاء الشفوي عندما تأتي (ب) بعد ميم ساكنة (م) يتم نطقها مع إعطاء زمن للغنة\nأمثلة:\n(وَآمَنتُم بِرَسُلي) يتم إعطاء لغنة الميم فتنطق (وَآمـتُمـبِرَسُلي)",
+    titleEn: "Ghunnah",
+    subtitleEn: "Nasalization",
+    bodyEn: "The green color indicates Ghunnah, a nasal sound that resonates from the nose and lasts for two vowels. Ghunnah occurs in several cases:\n\n• When ن (Noon) or م (Meem) carries shaddah (emphasis), such as in فَإِنَّهُم.\n\n• When Noon Sakinah (نْ) or Tanween (ـٌ) is followed by Baa (ب), a small Meem (م) is added and pronounced with Ghunnah. This is known as Iqlaab (inversion).\nExamples:\nمِن بَعد — Pronounced as \"Mimba'd\", with Ghunnah on the second Meem (م).\nسَمِيعٌ بَصِير — Pronounced as \"Sami'um Basir\", where the Tanween is converted into Meem with Ghunnah.\n\n• When Noon Sakinah (نْ) or Tanween (ـٌ) is followed by one of the fifteen letters of Ikhfaa' (ث، ج، د، ذ، ز، س، ش، ص، ض، ط، ظ، ف، ق، ك، ت). In these cases, the sound of the Noon (ن) or Tanween (ـٌ) is hidden (the tongue does not touch the roof of the mouth) and it is pronounced instead with Ghunnah.\nExamples:\nأَن تَخشَوه\nكُتُبٌ قَيِّمَة\n\n• When the letters of Idghaam with Ghunnah (Yaa ي, Noon ن, Meem م, and Waw و) follow a Noon Sakinah (نْ) or Tanween (ـٌ), they are pronounced with Ghunnah.\nExamples:\nمَن يَقُول — Pronounced as \"Mayyaqool\" (Noon merges into Yaa with Ghunnah).\nرَحِيمٌ وَدُود — Pronounced as \"Rahiimuw-waduud\" (Tanween merges into Waw with Ghunnah).\n\n• When Meem Sakinah (مْ) is followed by a Baa (ب), it is pronounced with a nasalized Meem sound (م). Known as Ikhfaa' Shafawi, an example of this is: وَآمَنتُم بِرَسُلي",
+  },
+  {
+    color: "#5dade2",
+    titleAr: "قلقلة",
+    subtitleAr: "صوت صدى",
+    bodyAr: 'يوضح اللون السماوي حروف القلقلة المجموعة في (قطب جد) عندما تكون ساكنة (مثل، "أحد"). عند النطق بها يصاحبها نبرة قوية، خصوصا عندما تكون في آخر الكلمة ويتم الوقف عليها.',
+    titleEn: "Qalqala",
+    subtitleEn: "Echoing Sound",
+    bodyEn: 'The light blue color identifies the letters of Qalqala (ق ط ب ج د) when they have سكون (e.g., "أحد"). These letters are pronounced with a slight echo or bouncing sound, especially at the end of a verse or pause.',
+  },
+  {
+    color: "#2980b9",
+    titleAr: "تفخيم",
+    subtitleAr: "ثقل في النطق بالحروف المفخمة",
+    bodyAr: 'يوضح اللون الأزرق مواضع تفخيم حرف الراء بالإضافة لجميع حروف الاستعلاء المجموعة في (خص ضغط قظ) والتي دائما ما تكون مفخمة. أمثلة: "المستقيم"، "الصالحات"، "خالدين"، "الحرام".',
+    titleEn: "Tafkhim",
+    subtitleEn: "Emphatic Pronunciation of Heavy Letters",
+    bodyEn: 'The dark blue color highlights ر (Ra\') when pronounced with tafkhim (a heavy, emphatic sound), as well as all other letters of isti\'laa (elevation), which include: خ، ص، ض، غ، ط، ق، ظ. These letters are pronounced with a full, resonant sound. Examples: "الحرام", "خالدين", "الصالحات","المستقيم".',
+  },
+  {
+    color: "#95a5a6",
+    titleAr: "حرف لا ينطق",
+    subtitleAr: "حرف مهمل في النطق",
+    bodyAr: "يوضح اللون الرمادي الحروف والتشكيل الذي لا يُنطق ويتم إدغامه/استيعابه ولا يساهم بصوت أثناء التلاوة. أمثلة: لام الشمس في (الشمس)، ونون كان لم (كان لم يسجد) تُنطق كـ (كاللم).",
+    titleEn: "Silent",
+    subtitleEn: "Unannounced Pronunciation",
+    bodyEn: "The grey color highlights letters that are silent and diacritics that are merged/assimilated and do not contribute any sound during recitation. Examples include the ل in الشمس and the ن in كان لم pronounced as كالّم instead.",
+  },
+];
+
+interface TajweedInfoModalProps {
+  open: boolean;
+  onClose: () => void;
+  isNight: boolean;
+  lang: string;
+  isRTL: boolean;
+}
+
+const TajweedInfoModal: React.FC<TajweedInfoModalProps> = ({
+  open,
+  onClose,
+  isNight,
+  lang,
+  isRTL,
+}) => {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const isAr = lang === "ar";
+
+  return (
+    <div
+      className={"tjm-backdrop" + (isNight ? " tjm--night" : "")}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      dir={isRTL ? "rtl" : "ltr"}
+    >
+      <div
+        className="tjm-sheet"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="tjm-handle" />
+        <div className="tjm-header">
+          <span className="tjm-title">
+            {isAr ? "دليل ألوان التجويد" : "Tajweed Color Guide"}
+          </span>
+          <button className="tjm-close" onClick={onClose} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div className="tjm-body">
+          {TAJWEED_RULES.map((rule, i) => {
+            const isOpen = expanded === i;
+            return (
+              <div key={i} className={"tjm-rule" + (isOpen ? " tjm-rule--open" : "")}>
+                <button
+                  className="tjm-rule-header"
+                  onClick={() => setExpanded(isOpen ? null : i)}
+                >
+                  <span className="tjm-dot" style={{ background: rule.color }} />
+                  <div className="tjm-rule-titles">
+                    <span className="tjm-rule-title">
+                      {isAr ? rule.titleAr : rule.titleEn}
+                    </span>
+                    <span className="tjm-rule-subtitle">
+                      {isAr ? rule.subtitleAr : rule.subtitleEn}
+                    </span>
+                  </div>
+                  <svg
+                    className="tjm-chevron"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div className="tjm-rule-body">
+                    {(isAr ? rule.bodyAr : rule.bodyEn)
+                      .split("\n")
+                      .map((line, j) =>
+                        line === "" ? (
+                          <br key={j} />
+                        ) : (
+                          <p key={j}>{line}</p>
+                        )
+                      )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 interface ToggleRowProps {
   icon: React.ReactNode;
@@ -221,6 +420,7 @@ interface ToggleRowProps {
   desc?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  onInfo?: () => void;
 }
 const ToggleRow: React.FC<ToggleRowProps> = ({
   icon,
@@ -228,6 +428,7 @@ const ToggleRow: React.FC<ToggleRowProps> = ({
   desc,
   checked,
   onChange,
+  onInfo,
 }) => (
   <div className="settings-row">
     <div className="settings-row-info">
@@ -237,14 +438,30 @@ const ToggleRow: React.FC<ToggleRowProps> = ({
         {desc && <p className="settings-row-desc">{desc}</p>}
       </div>
     </div>
-    <label className="settings-toggle">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className="settings-toggle-slider" />
-    </label>
+    <div className="settings-row-controls">
+      {onInfo && (
+        <button
+          type="button"
+          className="settings-info-btn"
+          onClick={onInfo}
+          aria-label="Info"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="8" strokeWidth="3" strokeLinecap="round" />
+            <line x1="12" y1="12" x2="12" y2="16" />
+          </svg>
+        </button>
+      )}
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className="settings-toggle-slider" />
+      </label>
+    </div>
   </div>
 );
 
@@ -255,6 +472,7 @@ interface SelectRowProps {
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
+  night?: boolean;
 }
 const SelectRow: React.FC<SelectRowProps> = ({
   icon,
@@ -263,8 +481,9 @@ const SelectRow: React.FC<SelectRowProps> = ({
   value,
   options,
   onChange,
+  night,
 }) => (
-  <div className="settings-row">
+  <div className="settings-row settings-row--select">
     <div className="settings-row-info">
       <span className="settings-row-icon">{icon}</span>
       <div className="settings-row-text">
@@ -272,17 +491,12 @@ const SelectRow: React.FC<SelectRowProps> = ({
         {desc && <p className="settings-row-desc">{desc}</p>}
       </div>
     </div>
-    <select
-      className="settings-select"
+    <InlineSelect
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+      options={options}
+      onChange={onChange}
+      night={night}
+    />
   </div>
 );
 
@@ -342,27 +556,7 @@ const Settings: React.FC = () => {
   const { lang, setLang, t, isRTL } = useLang();
   const [s, setS] = useState<AppSettings>(loadSettings);
   const [saved, setSaved] = useState(false);
-  const [translations, setTranslations] = useState<TranslationEdition[]>([]);
-  const [translationsLoading, setTranslationsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setTranslationsLoading(true);
-    fetchTranslationEditions("en")
-      .then((rows) => {
-        if (!cancelled) setTranslations(rows);
-      })
-      .catch((err) => {
-        console.error("[Settings] failed to load translation editions", err);
-        if (!cancelled) setTranslations([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTranslationsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [tajweedInfoOpen, setTajweedInfoOpen] = useState(false);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -440,30 +634,6 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Display ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionDisplay}</p>
-              <div className="settings-card">
-                <SliderRow
-                  icon={ICONS.fontSize}
-                  label={ts.fontSize}
-                  desc={ts.fontSizeDesc}
-                  value={s.arabicFontSize}
-                  min={14}
-                  max={32}
-                  unit="px"
-                  onChange={(v) => set("arabicFontSize", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.type}
-                  label={ts.transliteration}
-                  desc={ts.transliterationDesc}
-                  checked={s.showTransliteration}
-                  onChange={(v) => set("showTransliteration", v)}
-                />
-              </div>
-            </div>
-
             {/* ── Quran ── */}
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionQuran}</p>
@@ -478,41 +648,7 @@ const Settings: React.FC = () => {
                     label: lang === "ar" ? m.labelAr : m.labelEn,
                   }))}
                   onChange={(v) => set("mushaf", v as MushafKind)}
-                />
-                <SelectRow
-                  icon={ICONS.globe}
-                  label={lang === "ar" ? "الترجمة" : "Translation"}
-                  desc={
-                    translationsLoading
-                      ? lang === "ar"
-                        ? "جاري التحميل..."
-                        : "Loading editions..."
-                      : lang === "ar"
-                        ? "اختر ترجمة لعرضها أسفل كل آية"
-                        : "Pick a translation to show under each verse"
-                  }
-                  value={s.translation}
-                  options={[
-                    { value: "", label: lang === "ar" ? "بدون ترجمة" : "None" },
-                    ...translations.map((tr) => ({
-                      value: tr.identifier,
-                      label: tr.authorName
-                        ? `${tr.name} — ${tr.authorName}`
-                        : tr.name,
-                    })),
-                  ]}
-                  onChange={(v) => set("translation", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.book}
-                  label={lang === "ar" ? "إظهار الترجمة" : "Show translation"}
-                  desc={
-                    lang === "ar"
-                      ? "عرض نص الترجمة تحت كل آية في القارئ"
-                      : "Render the translation under each verse in the reader"
-                  }
-                  checked={s.showTranslation}
-                  onChange={(v) => set("showTranslation", v)}
+                  night={isNight}
                 />
                 <ToggleRow
                   icon={ICONS.palette}
@@ -520,6 +656,7 @@ const Settings: React.FC = () => {
                   desc={ts.tajweedDesc}
                   checked={s.showTajweedColors}
                   onChange={(v) => set("showTajweedColors", v)}
+                  onInfo={() => setTajweedInfoOpen(true)}
                 />
                 <ToggleRow
                   icon={ICONS.book}
@@ -527,38 +664,6 @@ const Settings: React.FC = () => {
                   desc={ts.autoNextPageDesc}
                   checked={s.autoNextPage}
                   onChange={(v) => set("autoNextPage", v)}
-                />
-              </div>
-            </div>
-
-            {/* ── Quiz ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionQuiz}</p>
-              <div className="settings-card">
-                <SelectRow
-                  icon={ICONS.trophy}
-                  label={ts.quizDifficulty}
-                  desc={ts.quizDifficultyDesc}
-                  value={s.quizDifficulty}
-                  options={ts.difficulties.map((d) => ({
-                    value: d.value,
-                    label: d.label,
-                  }))}
-                  onChange={(v) => set("quizDifficulty", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.bulb}
-                  label={ts.showHints}
-                  desc={ts.showHintsDesc}
-                  checked={s.showHintsDefault}
-                  onChange={(v) => set("showHintsDefault", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.speaker}
-                  label={ts.soundEffects}
-                  desc={ts.soundEffectsDesc}
-                  checked={s.soundEffects}
-                  onChange={(v) => set("soundEffects", v)}
                 />
               </div>
             </div>
@@ -637,9 +742,16 @@ const Settings: React.FC = () => {
               <p>{ts.quote}</p>
             </div>
           </div>
+          <BottomNavBar active="settings" />
         </div>
-        <BottomNavBar active="settings" fixed />
       </IonContent>
+      <TajweedInfoModal
+        open={tajweedInfoOpen}
+        onClose={() => setTajweedInfoOpen(false)}
+        isNight={isNight}
+        lang={lang}
+        isRTL={isRTL}
+      />
     </IonPage>
   );
 };

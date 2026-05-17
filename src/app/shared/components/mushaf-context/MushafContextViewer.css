@@ -8,14 +8,16 @@
   overflow: hidden;
   font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
   box-sizing: border-box;
-  transition:
-    background-color var(--transition-theme, 0.2s),
+  transition: background-color var(--transition-theme, 0.2s),
     color var(--transition-theme, 0.2s);
+  /* Ensure it always participates in flex layout from parent */
+  flex: 1;
+  min-height: 0;
 }
 
 [data-theme="night"] .mcv-container {
-  background: #1c1c1c;
-  color: #f4ecd8;
+  background: var(--color-mushaf-bg, #1c1c1c);
+  color: var(--color-mushaf-text, #ffffff);
 }
 
 .mcv-header {
@@ -23,13 +25,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  border-bottom: 2px solid #d4b48c;
+  background: #1c1c1c;
+  border-bottom: 2px solid var(--color-gold, #d4b48c);
   flex-shrink: 0;
   direction: rtl;
   gap: 6px;
   width: 100%;
   box-sizing: border-box;
+}
+
+[data-theme="day"] .mcv-header {
+  background: #ffffff;
+  border-bottom: 2px solid var(--color-gold, #d4b48c);
 }
 
 .mcv-header-title {
@@ -44,7 +51,7 @@
 .mcv-surah-name {
   font-size: 0.9rem;
   font-weight: bold;
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -62,6 +69,12 @@
   font-family: "Traditional Arabic", "Amiri", serif;
 }
 
+[data-theme="day"] .mcv-hizb-badge {
+  color: #5a4000;
+  background: rgba(180, 134, 11, 0.1);
+  border-color: rgba(180, 134, 11, 0.35);
+}
+
 .mcv-page-nav {
   display: flex;
   align-items: center;
@@ -73,10 +86,15 @@
   overflow: hidden;
 }
 
+[data-theme="day"] .mcv-page-nav {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
 .mcv-nav-btn {
   background: none;
   border: none;
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   width: 26px;
   height: 26px;
   cursor: pointer;
@@ -109,6 +127,12 @@
   line-height: 26px;
 }
 
+[data-theme="day"] .mcv-page-num {
+  color: #1c1c1c;
+  border-right-color: rgba(0, 0, 0, 0.15);
+  border-left-color: rgba(0, 0, 0, 0.15);
+}
+
 .mcv-header-actions {
   display: flex;
   align-items: center;
@@ -123,7 +147,7 @@
   padding: 2px 8px;
   background: rgba(212, 180, 140, 0.18);
   border: 1.5px solid rgba(212, 180, 140, 0.45);
-  color: #d4b48c;
+  color: var(--color-gold, #d4b48c);
   border-radius: 20px;
   cursor: pointer;
   font-family: "Traditional Arabic", "Amiri", serif;
@@ -156,8 +180,15 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* Hint button — sits next to jump/close in the header. Reveals one more
-   word of the masked target verse on each press. */
+[data-theme="day"] .mcv-close-btn {
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #1c1c1c;
+}
+[data-theme="day"] .mcv-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Hint button — sits next to jump/close in the header. */
 .mcv-hint-btn {
   background: rgba(255, 215, 0, 0.18);
   border: 1.5px solid rgba(255, 215, 0, 0.5);
@@ -180,15 +211,53 @@
   transform: scale(0.94);
 }
 
+.mcv-next-verse-btn {
+  background: rgba(76, 175, 125, 0.18);
+  border: 1.5px solid rgba(76, 175, 125, 0.5);
+  color: #6cd699;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.mcv-next-verse-btn:hover {
+  background: rgba(76, 175, 125, 0.32);
+}
+.mcv-next-verse-btn:active {
+  transform: scale(0.94);
+}
+
 .mcv-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 4px 8px 6px;
+  /* Horizontal padding matches PageViewer's .mushaf-page (16px 30px).
+     MushafPage's computeFit reads parentElement padding to derive availW —
+     without enough horizontal inset the font comes out too large for the
+     number of words per line, leaving huge space-between gaps. */
+  padding: 8px 16px 8px;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* MushafPage inside the body must also stretch to fill */
+.mcv-body > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* In the compact context viewer, override the page-level space-between so
+   lines stack from the top without forced vertical gaps between them. */
+.mcv-body .mushaf-page-glyph {
+  justify-content: center;
 }
 
 .mcv-loading {
@@ -198,14 +267,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #8b7355;
+  color: var(--color-text-secondary, #8b7355);
 }
 
 .mcv-spinner {
   width: 26px;
   height: 26px;
-  border: 3px solid #e8dfcc;
-  border-top-color: #8b4513;
+  border: 3px solid var(--color-parchment-mid, #e8dfcc);
+  border-top-color: var(--color-gold, #8b4513);
   border-radius: 50%;
   animation: mcv-spin 0.9s linear infinite;
 }
