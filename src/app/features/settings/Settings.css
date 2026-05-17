@@ -405,6 +405,196 @@ ion-content::part(scroll) {
   opacity: 0.9;
 }
 
+/* ── Info button (next to toggle) ─────────────── */
+.settings-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-info-btn {
+  background: none;
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.settings-info-btn:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+
+/* ── Tajweed Info Modal ────────────────────────── */
+.tjm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.tjm-sheet {
+  background: var(--color-bg-content);
+  width: 100%;
+  max-width: 600px;
+  border-radius: 20px 20px 0 0;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.28);
+}
+
+.tjm--night .tjm-sheet {
+  background: var(--color-bg-content);
+}
+
+.tjm-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-subtle);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.tjm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 10px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.tjm-title {
+  font-family: var(--font-arabic);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.tjm-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: background var(--transition-base);
+  padding: 0;
+}
+
+.tjm-close:hover {
+  background: var(--color-gold-faint);
+  color: var(--color-gold);
+}
+
+.tjm-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0 16px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tjm-rule {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tjm-rule:last-child {
+  border-bottom: none;
+}
+
+.tjm-rule-header {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  text-align: start;
+  transition: background var(--transition-fast);
+}
+
+.tjm-rule-header:hover {
+  background: var(--color-gold-faint);
+}
+
+.tjm-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tjm-rule-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tjm-rule-title {
+  font-family: var(--font-arabic);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.tjm-rule-subtitle {
+  font-family: var(--font-arabic);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.tjm-chevron {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-base);
+  transform: rotate(180deg);
+}
+
+.tjm-rule--open .tjm-chevron {
+  transform: rotate(0deg);
+}
+
+.tjm-rule-body {
+  padding: 0 18px 14px;
+  font-family: var(--font-arabic);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.75;
+}
+
+.tjm-rule-body p {
+  margin: 0 0 4px;
+}
+
 /* ── Version footer ────────────────────────────── */
 .settings-version {
   margin: 28px 16px 0;

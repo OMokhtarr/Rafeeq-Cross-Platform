@@ -49,6 +49,10 @@ interface Props {
   page: number;
   verses: Verse[];
   showBismillah?: boolean;
+  /** Suppress the auto-rendered top-of-page surah header (previous page shows it as trailing). */
+  suppressTopHeader?: boolean;
+  /** Surah header to render at the bottom of this page (next page starts this surah). No bismillah — that stays on the next page. */
+  trailingSurahStart?: { sura: number };
   target?: { sura: number; aya: number };
   flash?: { sura: number; aya: number };
   selected?: Set<string>;
@@ -78,6 +82,8 @@ const MushafPage: React.FC<Props> = ({
   page,
   verses,
   showBismillah,
+  suppressTopHeader = false,
+  trailingSurahStart,
   target,
   flash,
   selected,
@@ -219,9 +225,10 @@ const MushafPage: React.FC<Props> = ({
       ).length;
       const chromeLines =
         (showBismillah ? BISMILLAH_LINES : 0) +
-        (verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0) +
+        (!suppressTopHeader && verses.length > 0 && verses[0].aya === 1 ? SURAH_HEADER_LINES : 0) +
         midPageSurahStarts.length * SURAH_HEADER_LINES +
-        midBismillahCount * BISMILLAH_LINES;
+        midBismillahCount * BISMILLAH_LINES +
+        (trailingSurahStart ? SURAH_HEADER_LINES : 0);
 
       const emPerPx =
         (chromeLines + lineCount) * LINE_HEIGHT_RATIO +
@@ -265,6 +272,8 @@ const MushafPage: React.FC<Props> = ({
     fontReady,
     verses,
     showBismillah,
+    suppressTopHeader,
+    trailingSurahStart,
     midPageSurahStarts,
     fittedFontPx, // keep so we re-run after first pass sets a value
     bigTextMode,
@@ -361,7 +370,7 @@ const MushafPage: React.FC<Props> = ({
   };
 
   const surahStartVerse =
-    verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
+    !suppressTopHeader && verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
   const surahHeaderName = surahStartVerse
     ? getSurahNameArabic(surahStartVerse.sura)
     : null;
@@ -521,6 +530,8 @@ const MushafPage: React.FC<Props> = ({
           </React.Fragment>
         );
       })}
+      {trailingSurahStart &&
+        renderSurahHeader(trailingSurahStart.sura, "trailing-header")}
     </>
   );
 
@@ -574,6 +585,10 @@ const MushafPage: React.FC<Props> = ({
           key: `${line.lineNumber}-${wordIdx++}`,
         });
       }
+    }
+
+    if (trailingSurahStart) {
+      flowItems.push({ type: "header", sura: trailingSurahStart.sura, key: "trailing-header" });
     }
 
     return (

@@ -89,6 +89,46 @@
   gap: 6px;
 }
 
+/* ── Note buttons (add + view) ───────────────────────────────────────────── */
+
+.vas-note-btn {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  color: var(--color-text-secondary, #3a3a3a);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast, 0.15s),
+              color var(--transition-fast, 0.15s),
+              border-color var(--transition-fast, 0.15s);
+}
+
+.vas-note-btn:hover {
+  background: rgba(212, 180, 140, 0.12);
+  color: var(--color-gold, #b8860b);
+  border-color: var(--color-gold, #b8860b);
+}
+
+.vas-note-btn--night {
+  color: var(--color-text-secondary, #b0a898);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vas-note-btn--night:hover {
+  color: var(--color-gold, #d4b48c);
+  border-color: var(--color-gold, #d4b48c);
+  background: rgba(212, 180, 140, 0.1);
+}
+
+.vas-note-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .vas-bookmark-btn {
   background: transparent;
   border: 1px solid rgba(128, 128, 128, 0.25);
