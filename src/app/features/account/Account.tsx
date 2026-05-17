@@ -140,7 +140,7 @@ const Account: React.FC = () => {
         return [];
       }),
       fetchUserProfile().catch(() => null),
-      fetchAllNotes(100).catch(() => []),
+      fetchAllNotes().catch(() => []),
     ]).then(([streaksData, profileData, notesData]) => {
       setStreaks(streaksData as Streak[]);
       setUserProfile(profileData as UserProfile | null);
@@ -442,7 +442,7 @@ const Account: React.FC = () => {
                           <li key={note.id} className="ac-note-row">
                             <div className="ac-note-row-info">
                               <span className="ac-note-row-verse">
-                                {t.noteVerse} {note.verseKey}
+                                {t.noteVerse} {note.ranges?.[0] ?? ""}
                               </span>
                               <p className="ac-note-row-body">{note.body}</p>
                               <span className="ac-note-row-date">

@@ -5,7 +5,6 @@ import {
   fetchGoalTimeline,
   fetchTodayGoalPlan,
   type Goal,
-  type GoalDuration,
   type GoalTimeline,
   type TodayGoalPlan,
   updateGoal,
@@ -19,13 +18,21 @@ interface Props {
 
 type ViewState = "summary" | "form";
 
-const DURATION_OPTIONS: GoalDuration[] = ["DAILY", "WEEKLY", "MONTHLY"];
+// duration in days: 1=daily, 7=weekly, 30=monthly
+const DURATION_OPTIONS = [
+  { value: 1,  label: { ar: "يومي",   en: "Daily"   } },
+  { value: 7,  label: { ar: "أسبوعي", en: "Weekly"  } },
+  { value: 30, label: { ar: "شهري",   en: "Monthly" } },
+] as const;
+
+type DurationDays = 1 | 7 | 30;
 
 const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ViewState>("summary");
 
   const [plan, setPlan] = useState<TodayGoalPlan | null>(null);
+  const [goal, setGoal] = useState<Goal | null>(null); // populated from create/update response
   const [timeline, setTimeline] = useState<GoalTimeline[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,7 +40,7 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
   const [error, setError] = useState<string | null>(null);
 
   const [formAmount, setFormAmount] = useState("5");
-  const [formDuration, setFormDuration] = useState<GoalDuration>("DAILY");
+  const [formDuration, setFormDuration] = useState<DurationDays>(1);
 
   const loadingRef = useRef(false);
 
@@ -62,10 +69,10 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     errDel:       lang === "ar" ? "فشل الحذف، حاول مجدداً"        : "Delete failed, try again",
   };
 
-  const durationLabel = (d: GoalDuration) => {
-    if (d === "DAILY") return t.daily;
-    if (d === "WEEKLY") return t.weekly;
-    return t.monthly;
+  const durationLabel = (d?: number) => {
+    if (d === 7) return lang === "ar" ? "أسبوعي" : "Weekly";
+    if (d === 30) return lang === "ar" ? "شهري" : "Monthly";
+    return lang === "ar" ? "يومي" : "Daily";
   };
 
   const load = useCallback(async () => {
@@ -76,14 +83,7 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     try {
       const todayPlan = await fetchTodayGoalPlan();
       setPlan(todayPlan);
-      if (todayPlan?.goal) {
-        const tl = await fetchGoalTimeline(
-          todayPlan.goal.amount,
-          todayPlan.goal.duration,
-          todayPlan.goal.category,
-        ).catch(() => []);
-        setTimeline(tl);
-      }
+      // goal details come from create/update responses; plan gives us progress data
     } catch (err) {
       if (err instanceof UserApiError && (err.status === 401 || err.status === 403)) {
         setError(lang === "ar" ? "يرجى تسجيل الدخول" : "Please sign in");
@@ -103,13 +103,13 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     }
   }, [open, loaded, load]);
 
-  const openForm = (goal?: Goal) => {
-    if (goal) {
-      setFormAmount(String(goal.amount));
-      setFormDuration(goal.duration);
+  const openForm = (g?: Goal) => {
+    if (g) {
+      setFormAmount(String(g.amount));
+      setFormDuration((g.duration ?? 1) as DurationDays);
     } else {
       setFormAmount("5");
-      setFormDuration("DAILY");
+      setFormDuration(1);
     }
     setError(null);
     setView("form");
@@ -121,14 +121,24 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     setSaving(true);
     setError(null);
     try {
-      if (plan?.goalId) {
-        await updateGoal(plan.goalId, amount, formDuration);
+      if (plan?.hasGoal && plan.goalId) {
+        await updateGoal(plan.goalId, amount, formDuration, 2);
       } else {
-        await createGoal(amount, formDuration);
+        await createGoal("QURAN_PAGES", amount, "QURAN", formDuration, 2);
       }
-      setLoaded(false);
-      setTimeline([]);
+      const localGoal: Goal = {
+        id: plan?.goalId ?? "",
+        type: "QURAN_PAGES",
+        amount,
+        duration: formDuration,
+        category: "QURAN",
+      };
+      setGoal(localGoal);
+      const tl = await fetchGoalTimeline(amount, formDuration, "QURAN_PAGES").catch(() => []);
+      setTimeline(tl);
       setView("summary");
+      setLoaded(false);
+      loadingRef.current = false;
       await load();
     } catch {
       setError(t.errSave);
@@ -143,8 +153,10 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     setSaving(true);
     setError(null);
     try {
-      await deleteGoal(plan.goalId, plan.goal?.category);
-      setPlan({ goalId: null, id: null });
+      await deleteGoal(plan.goalId);
+      setPlan({ hasGoal: false, goalId: null, id: null });
+      setGoal(null);
+      setLoaded(false);
       setTimeline([]);
       setView("summary");
     } catch {
@@ -154,8 +166,7 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     }
   };
 
-  const hasGoal = !!(plan?.goalId);
-  const goal = plan?.goal;
+  const hasGoal = !!(plan?.hasGoal && plan.goalId);
 
   return (
     <div className="ac-card ac-goals-card" dir={isRTL ? "rtl" : "ltr"}>
@@ -171,8 +182,10 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
             <p className="ac-goals-title">{t.title}</p>
             {!open && !loading && (
               <p className="ac-goals-summary">
-                {hasGoal && goal
-                  ? `${goal.amount} ${t.pages} · ${durationLabel(goal.duration)}`
+                {hasGoal
+                  ? goal
+                    ? `${goal.amount} ${t.pages} · ${durationLabel(goal.duration)}`
+                    : `${plan?.dailyTargetPages?.toFixed(1) ?? "—"} ${t.pagesPerDay}`
                   : t.noGoal}
               </p>
             )}
@@ -215,12 +228,12 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
               <div className="ac-goals-period-row">
                 {DURATION_OPTIONS.map((d) => (
                   <button
-                    key={d}
-                    className={`ac-goals-period-btn ${formDuration === d ? "ac-goals-period-btn--active" : ""}`}
-                    onClick={() => setFormDuration(d)}
+                    key={d.value}
+                    className={`ac-goals-period-btn ${formDuration === d.value ? "ac-goals-period-btn--active" : ""}`}
+                    onClick={() => setFormDuration(d.value as DurationDays)}
                     type="button"
                   >
-                    {durationLabel(d)}
+                    {d.label[lang]}
                   </button>
                 ))}
               </div>
@@ -246,6 +259,34 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
             </div>
           ) : error ? (
             <p className="ac-error">{error}</p>
+          ) : hasGoal && !goal ? (
+            <div className="ac-goals-stats">
+              <div className="ac-goals-stat">
+                <span className="ac-goals-stat-val">{plan?.dailyTargetPages?.toFixed(1) ?? "—"}</span>
+                <span className="ac-goals-stat-lbl">{t.pagesPerDay}</span>
+              </div>
+              <div className="ac-goals-actions" style={{ marginTop: 12 }}>
+                <button className="ac-goals-btn ac-goals-btn--secondary" onClick={handleDelete} disabled={saving}>
+                  {saving ? t.deleting : t.delete}
+                </button>
+                <button
+                  className="ac-goals-btn ac-goals-btn--primary"
+                  onClick={() => {
+                    if (plan?.dailyTargetPages) {
+                      setFormAmount(String(Math.ceil(plan.dailyTargetPages)));
+                      setFormDuration(1);
+                      setError(null);
+                      setView("form");
+                    } else {
+                      openForm();
+                    }
+                  }}
+                  disabled={saving}
+                >
+                  {t.edit}
+                </button>
+              </div>
+            </div>
           ) : hasGoal && goal ? (
             <>
               <div className="ac-goals-stats">

@@ -168,7 +168,7 @@ export async function signIn(): Promise<string> {
     redirect_uri: redirectUri,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
-    scope: "openid profile offline_access streak streak.read",
+    scope: "openid profile offline_access streak streak.read goal goal.read goal.create goal.update goal.delete goal.estimate note note.read note.create note.update note.delete activity_day activity_day.read activity_day.create",
     state: crypto.randomUUID(),
   });
 

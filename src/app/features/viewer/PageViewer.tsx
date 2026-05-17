@@ -102,6 +102,7 @@ const PageViewer: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
+  const [nextPageFirstVerse, setNextPageFirstVerse] = useState<{ sura: number; aya: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Activity tracking: record time spent on each page for streak purposes
@@ -208,7 +209,7 @@ const PageViewer: React.FC = () => {
         const last  = prevVerses[prevVerses.length - 1];
         const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
         const mushafKind = readSelectedMushaf();
-        const mushafId = QF_MUSHAF_IDS[mushafKind] ?? "qpc-v4-tajweed";
+        const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
         recordActivityDay([range], elapsed, mushafId);
       }
     };
@@ -228,12 +229,12 @@ const PageViewer: React.FC = () => {
     }
   }, [location.search]);
 
-  // Maps our internal mushaf kind to the QF activity-days mushafId value
-  const QF_MUSHAF_IDS: Record<string, string> = {
-    qpc_v4_tajweed: "qpc-v4-tajweed",
-    uthmani:        "uthmani-hafs",
-    indopak:        "indopak",
-    imlaei:         "imlaei-hafs",
+  // Maps our internal mushaf kind to the QF numeric mushafId (integers only)
+  const QF_MUSHAF_IDS: Record<string, number> = {
+    qpc_v4_tajweed: 2,
+    uthmani:        1,
+    indopak:        4,
+    imlaei:         3,
   };
 
   useEffect(() => {
@@ -245,7 +246,7 @@ const PageViewer: React.FC = () => {
       const last  = prevVerses[prevVerses.length - 1];
       const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
       const mushafKind = readSelectedMushaf();
-      const mushafId = QF_MUSHAF_IDS[mushafKind] ?? "qpc-v4-tajweed";
+      const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
       recordActivityDay([range], elapsed, mushafId);
     }
 
@@ -279,6 +280,15 @@ const PageViewer: React.FC = () => {
       }
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
+      if (currentPage < totalPages) {
+        getPage(currentPage + 1).then((nextVerses) => {
+          if (cancelled) return;
+          const first = nextVerses[0] ?? null;
+          setNextPageFirstVerse(first ? { sura: first.sura, aya: first.aya } : null);
+        }).catch(() => {});
+      } else {
+        setNextPageFirstVerse(null);
+      }
     });
     return () => {
       cancelled = true;
@@ -336,6 +346,15 @@ const PageViewer: React.FC = () => {
   };
 
   const pageInfo = getPageInfo();
+  // True when the next page begins a new surah — show its header at the bottom
+  // of this page (as in the printed Mushaf) instead of the top of the next.
+  const trailingSurahStart =
+    nextPageFirstVerse?.aya === 1 && nextPageFirstVerse.sura !== 9
+      ? { sura: nextPageFirstVerse.sura }
+      : null;
+
+  // Show bismillah at top when this page starts a surah (header was on prev page,
+  // bismillah stays here — matching the printed Mushaf layout).
   const isSurahStart =
     verses.length > 0 &&
     verses[0].aya === 1 &&
@@ -758,6 +777,12 @@ const PageViewer: React.FC = () => {
                   page={currentPage}
                   verses={verses}
                   showBismillah={isSurahStart}
+                  suppressTopHeader={
+                    verses.length > 0 &&
+                    verses[0].aya === 1 &&
+                    currentPage !== 1
+                  }
+                  trailingSurahStart={trailingSurahStart ?? undefined}
                   selected={selected}
                   hidden={hidden}
                   green={greenVerse ? new Set([greenVerse]) : undefined}

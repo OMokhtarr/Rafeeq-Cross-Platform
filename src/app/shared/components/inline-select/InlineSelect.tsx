@@ -70,7 +70,17 @@ const InlineSelect: React.FC<Props> = ({
       ) return;
       setOpen(false);
     };
+    // Track whether the touch started inside the list so we can
+    // ignore scroll events that are part of scrolling within it.
+    let touchInsideList = false;
+    const onTouchStart = (e: TouchEvent) => {
+      touchInsideList = !!listRef.current?.contains(e.target as Node);
+    };
     const closeOnScroll = (e: Event) => {
+      // On mobile the scroll event target is often window/document, not the
+      // list element, so we use the touchstart tracking to guard against
+      // closing while the user is scrolling inside the dropdown.
+      if (touchInsideList) return;
       if (listRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
@@ -79,12 +89,14 @@ const InlineSelect: React.FC<Props> = ({
     const tid = setTimeout(() => {
       document.addEventListener("mousedown", close);
       document.addEventListener("touchend", close);
+      document.addEventListener("touchstart", onTouchStart, true);
       window.addEventListener("scroll", closeOnScroll, true);
     }, 0);
     return () => {
       clearTimeout(tid);
       document.removeEventListener("mousedown", close);
       document.removeEventListener("touchend", close);
+      document.removeEventListener("touchstart", onTouchStart, true);
       window.removeEventListener("scroll", closeOnScroll, true);
     };
   }, [open]);

@@ -31,7 +31,7 @@ interface Props {
   onClose: () => void;
 }
 
-const DEFAULT_TAFSIR_ID = "91"; // التفسير الميسر
+const DEFAULT_TAFSIR_ID = "16"; // التفسير الميسر
 
 const VerseActionSheet: React.FC<Props> = ({
   open,
@@ -75,7 +75,7 @@ const VerseActionSheet: React.FC<Props> = ({
   }, []);
 
   // ── Tab ────────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<Tab>("translation");
+  const [activeTab, setActiveTab] = useState<Tab>("tafsir");
 
   // ── Translation ────────────────────────────────────────────────────────────
   const [translation, setTranslation] = useState<string | null>(null);
@@ -113,7 +113,7 @@ const VerseActionSheet: React.FC<Props> = ({
     }
     setTranslation(null);
     setTafsir("");
-    setActiveTab("translation");
+    setActiveTab("tafsir");
     setCurrentKey(verseKey);
   }, [open, verseKey]);
 
@@ -314,16 +314,6 @@ const VerseActionSheet: React.FC<Props> = ({
         <div className="vas-tabs" role="tablist">
           <button
             role="tab"
-            aria-selected={activeTab === "translation"}
-            className={`vas-tab${
-              activeTab === "translation" ? " vas-tab--active" : ""
-            }`}
-            onClick={() => setActiveTab("translation")}
-          >
-            {t.mushaf.translation}
-          </button>
-          <button
-            role="tab"
             aria-selected={activeTab === "tafsir"}
             className={`vas-tab${
               activeTab === "tafsir" ? " vas-tab--active" : ""
@@ -331,6 +321,16 @@ const VerseActionSheet: React.FC<Props> = ({
             onClick={() => setActiveTab("tafsir")}
           >
             {t.mushaf.tafsir}
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === "translation"}
+            className={`vas-tab${
+              activeTab === "translation" ? " vas-tab--active" : ""
+            }`}
+            onClick={() => setActiveTab("translation")}
+          >
+            {t.mushaf.translation}
           </button>
         </div>
 

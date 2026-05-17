@@ -54,6 +54,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
     loginRequired: lang === "ar" ? "سجّل الدخول لإضافة ملاحظات" : "Sign in to add notes",
     errorLoad:     lang === "ar" ? "تعذر تحميل الملاحظات" : "Could not load notes",
     errorSave:     lang === "ar" ? "تعذر حفظ الملاحظة" : "Could not save note",
+    errorMinLen:   lang === "ar" ? "يجب أن تتكون الملاحظة من 6 أحرف على الأقل" : "Note must be at least 6 characters",
     errorDelete:   lang === "ar" ? "تعذر حذف الملاحظة" : "Could not delete note",
     back:          lang === "ar" ? "رجوع" : "Back",
   };
@@ -93,6 +94,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
 
   const handleSave = useCallback(async () => {
     if (!verseKey || !draftText.trim()) return;
+    if (draftText.trim().length < 6) { setError(t.errorMinLen); return; }
     setSaving(true);
     setError(null);
     try {
@@ -111,7 +113,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
     } finally {
       setSaving(false);
     }
-  }, [verseKey, draftText, editingNote, t.errorSave]);
+  }, [verseKey, draftText, editingNote, t.errorSave, t.errorMinLen]);
 
   const handleDelete = useCallback(async (note: Note) => {
     setError(null);
