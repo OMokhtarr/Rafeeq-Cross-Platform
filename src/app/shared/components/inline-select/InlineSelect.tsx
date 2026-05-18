@@ -124,9 +124,19 @@ const InlineSelect: React.FC<Props> = ({
               aria-selected={o.value === value}
               data-selected={o.value === value ? "true" : undefined}
               className={`isel__option${nightCls}${o.value === value ? " isel__option--active" : ""}`}
-              onPointerDown={() => {
-                onChange(o.value);
-                setOpen(false);
+              onPointerDown={(e) => {
+                (e.currentTarget as HTMLLIElement).dataset.ptrX = String(e.clientX);
+                (e.currentTarget as HTMLLIElement).dataset.ptrY = String(e.clientY);
+              }}
+              onPointerUp={(e) => {
+                const startX = parseFloat((e.currentTarget as HTMLLIElement).dataset.ptrX ?? "0");
+                const startY = parseFloat((e.currentTarget as HTMLLIElement).dataset.ptrY ?? "0");
+                const dx = Math.abs(e.clientX - startX);
+                const dy = Math.abs(e.clientY - startY);
+                if (dx < 8 && dy < 8) {
+                  onChange(o.value);
+                  setOpen(false);
+                }
               }}
             >
               {o.label}

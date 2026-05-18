@@ -37,7 +37,6 @@ export interface AppStrings {
     resetTitle: string;
     zikr: string;
     allDone: string;
-    quote: string;
   };
 
   quiz: {
@@ -272,7 +271,6 @@ export interface AppStrings {
     arabic: string;
     english: string;
     version: string;
-    quote: string;
     difficulties: { value: string; label: string }[];
     reciters: { value: string; label: string }[];
   };
@@ -306,8 +304,6 @@ const ar: AppStrings = {
     resetTitle: "إعادة العداد",
     zikr: "ذِكر",
     allDone: "✅ اكتملت الأذكار",
-    quote:
-      "«مَنْ سَبَّحَ اللَّهَ فِي دُبُرِ كُلِّ صَلَاةٍ ثَلَاثًا وَثَلَاثِينَ»",
   },
   quiz: {
     title: "الاختبارات",
@@ -550,8 +546,7 @@ const ar: AppStrings = {
     languageDesc: "اختر لغة واجهة التطبيق",
     arabic: "العربية",
     english: "English",
-    version: "الإصدار 1.0.0 • جميع البيانات محلية",
-    quote: "«وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ»",
+    version: "الإصدار 1.0.0",
     difficulties: [
       { value: "easy", label: "سهل" },
       { value: "medium", label: "متوسط" },
@@ -597,7 +592,6 @@ const en: AppStrings = {
     resetTitle: "Reset counter",
     zikr: "dhikr",
     allDone: "✅ All complete",
-    quote: '"Glorify Allah after every prayer thirty-three times"',
   },
   quiz: {
     title: "Quizzes",
@@ -840,15 +834,17 @@ const en: AppStrings = {
     languageDesc: "Choose interface language",
     arabic: "العربية",
     english: "English",
-    version: "Version 1.0.0 • All data stored locally",
-    quote: "«وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ»",
+    version: "Version 1.0.0",
     difficulties: [
       { value: "easy", label: "Easy" },
       { value: "medium", label: "Medium" },
       { value: "hard", label: "Hard" },
     ],
     reciters: [
-      { value: "minshawi-murattal", label: "Muhammad Siddiq Al-Minshawi — Murattal" },
+      {
+        value: "minshawi-murattal",
+        label: "Muhammad Siddiq Al-Minshawi — Murattal",
+      },
       { value: "husary", label: "Mahmoud Khalil Al-Husary" },
       { value: "minshawi", label: "Muhammad Siddiq Al-Minshawi — Mujawwad" },
       { value: "sudais", label: "Abdul Rahman Al-Sudais" },
