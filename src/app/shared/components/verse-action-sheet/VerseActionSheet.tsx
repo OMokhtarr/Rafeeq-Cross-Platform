@@ -391,23 +391,34 @@ const VerseActionSheet: React.FC<Props> = ({
 
             {/* Verse + nav row */}
             <div className={`vas-verse-row${nightClass}`}>
-              <button
-                className={`vas-nav-btn${nightClass}`}
-                onClick={goPrev}
-                disabled={!hasPrev}
-                aria-label={
-                  isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
-                }
-              >
-                {isRTL ? "‹" : "›"}
-              </button>
-
               <div className="vas-verse-center">
-                <span className={`vas-nav-key${nightClass}`}>
-                  {lang === "ar"
-                    ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
-                    : `${dSura}:${dAya}`}
-                </span>
+                <div className="vas-nav-inline">
+                  <button
+                    className={`vas-nav-btn${nightClass}`}
+                    onClick={goPrev}
+                    disabled={!hasPrev}
+                    aria-label={
+                      isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
+                    }
+                  >
+                    {isRTL ? "›" : "‹"}
+                  </button>
+                  <span className={`vas-nav-key${nightClass}`}>
+                    {lang === "ar"
+                      ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
+                      : `${dSura}:${dAya}`}
+                  </span>
+                  <button
+                    className={`vas-nav-btn${nightClass}`}
+                    onClick={goNext}
+                    disabled={!hasNext}
+                    aria-label={
+                      isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
+                    }
+                  >
+                    {isRTL ? "‹" : "›"}
+                  </button>
+                </div>
                 {verseText && (
                   <p
                     className={`vas-verse-text${nightClass}`}
@@ -418,17 +429,6 @@ const VerseActionSheet: React.FC<Props> = ({
                   </p>
                 )}
               </div>
-
-              <button
-                className={`vas-nav-btn${nightClass}`}
-                onClick={goNext}
-                disabled={!hasNext}
-                aria-label={
-                  isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
-                }
-              >
-                {isRTL ? "›" : "‹"}
-              </button>
             </div>
 
             {/* Tafsir body */}

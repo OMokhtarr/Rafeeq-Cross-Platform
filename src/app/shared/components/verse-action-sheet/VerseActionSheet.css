@@ -26,7 +26,8 @@
   border-top: 2px solid var(--color-gold, #b8860b);
   border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
   box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
-  max-height: 72vh;
+  max-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
   display: flex;
   flex-direction: column;
   font-family: var(--font-arabic, "Scheherazade New", serif);
@@ -306,7 +307,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2, 0.5rem);
-  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
   border-bottom: 1px solid rgba(212, 180, 140, 0.3);
   flex-shrink: 0;
 }
@@ -366,14 +367,21 @@
 
 /* ── Prev / Next buttons (live in the header on tafsir tab) ──────────────── */
 
+.vas-nav-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
 .vas-nav-btn {
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   border-radius: var(--radius-full, 9999px);
-  border: 1.5px solid var(--color-gold, #b8860b);
+  border: 1px solid var(--color-gold, #b8860b);
   background: transparent;
   color: var(--color-gold, #b8860b);
-  font-size: 1.2rem;
+  font-size: 0.75rem;
   line-height: 1;
   cursor: pointer;
   display: flex;
