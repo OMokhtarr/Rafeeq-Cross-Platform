@@ -19,6 +19,10 @@ import {
   estimatePageForVerse,
 } from "../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
+import {
+  fetchRecitations,
+  type ApiRecitation,
+} from "../../core/services/api/quran-api.client";
 import "./Bookmarks.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,19 +68,46 @@ function verseKeyToPageAndName(
   return { sura, aya, surahName, page };
 }
 
-const RECITER_LABELS: Record<string, { ar: string; en: string }> = {
-  husary: { ar: "الحصري", en: "Al-Husary" },
-  "minshawi-murattal": { ar: "المنشاوي — مرتل", en: "Al-Minshawi (Murattal)" },
-  minshawi: { ar: "المنشاوي — مجود", en: "Al-Minshawi (Mujawwad)" },
-  sudais: { ar: "السديس", en: "Al-Sudais" },
-  afasy: { ar: "العفاسي", en: "Al-Afasy" },
-  ghamdi: { ar: "الغامدي", en: "Al-Ghamdi" },
-};
+function reciterLabel(
+  id: string,
+  recitations: ApiRecitation[],
+): string {
+  const match = recitations.find((r) => String(r.id) === id);
+  if (!match) return id;
+  return match.translated_name?.name ?? match.reciter_name;
+}
 
-function reciterLabel(slug: string, lang: string): string {
-  const entry = RECITER_LABELS[slug];
-  if (!entry) return slug;
-  return lang === "ar" ? entry.ar : entry.en;
+function formatRange(
+  queue: { sura: number; aya: number }[] | undefined,
+  lang: string,
+): string | null {
+  if (!queue || queue.length === 0) return null;
+  const first = queue[0];
+  const last = queue[queue.length - 1];
+  const firstName =
+    lang === "ar"
+      ? getSurahNameArabic(first.sura)
+      : getSurahNameEnglish(first.sura);
+  const firstAya =
+    lang === "ar" ? toHindiNumbers(first.aya) : String(first.aya);
+  if (queue.length === 1) {
+    return lang === "ar"
+      ? `${firstName} • آية ${firstAya}`
+      : `${firstName} • Verse ${firstAya}`;
+  }
+  const lastAya = lang === "ar" ? toHindiNumbers(last.aya) : String(last.aya);
+  if (first.sura === last.sura) {
+    return lang === "ar"
+      ? `${firstName} • ${firstAya}–${lastAya}`
+      : `${firstName} • ${firstAya}–${lastAya}`;
+  }
+  const lastName =
+    lang === "ar"
+      ? getSurahNameArabic(last.sura)
+      : getSurahNameEnglish(last.sura);
+  return lang === "ar"
+    ? `${firstName} ${firstAya} ← ${lastName} ${lastAya}`
+    : `${firstName} ${firstAya} → ${lastName} ${lastAya}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -89,6 +120,7 @@ const Bookmarks: React.FC = () => {
   const [bookmarkedKeys, setBookmarkedKeys] = useState<string[]>([]);
   const [sessions, setSessions] = useState<RecitationSession[]>([]);
   const [activeTab, setActiveTab] = useState<"verses" | "sessions">("verses");
+  const [recitations, setRecitations] = useState<ApiRecitation[]>([]);
 
   const reload = useCallback(() => {
     setBookmarkedKeys(getLocalBookmarkedVerseKeys().reverse());
@@ -98,6 +130,10 @@ const Bookmarks: React.FC = () => {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    fetchRecitations().then(setRecitations).catch(() => {});
+  }, []);
 
   // ── Bookmark removal ──
   const handleRemoveBookmark = useCallback(
@@ -358,6 +394,7 @@ const Bookmarks: React.FC = () => {
                     {sessions.map((session) => {
                       const { sura, aya, surahName, page } =
                         verseKeyToPageAndName(session.verseKey, lang);
+                      const range = formatRange(session.queue, lang);
                       return (
                         <li key={session.id} className="bm-row">
                           <button
@@ -400,8 +437,16 @@ const Bookmarks: React.FC = () => {
                                       lang,
                                     )}`}
                               </span>
+                              {range && (
+                                <span
+                                  className="bm-row-secondary"
+                                  lang={lang === "ar" ? "ar" : undefined}
+                                >
+                                  {range}
+                                </span>
+                              )}
                               <span className="bm-row-meta">
-                                {reciterLabel(session.reciter, lang)}
+                                {reciterLabel(session.reciter, recitations)}
                                 {" · "}
                                 {formatRecordedAt(session.recordedAt, lang)}
                               </span>
