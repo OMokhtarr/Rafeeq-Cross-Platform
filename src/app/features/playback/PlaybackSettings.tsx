@@ -652,6 +652,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
           <h2 className={`pb-section-title${nightCls}`}>{tp.quickSelect}</h2>
           <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "page" ? " is-active" : ""
               }`}
@@ -660,6 +661,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               {tp.quickPage(String(currentPage))}
             </button>
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "fromPage" ? " is-active" : ""
               }`}
@@ -670,6 +672,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             {surahsOnPage.map((s) => (
               <button
                 key={s}
+                type="button"
                 className={`pb-seg-btn${nightCls}${
                   activeQuick === `surah-${s}` ? " is-active" : ""
                 }`}
@@ -686,6 +689,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               </button>
             ))}
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "juz" ? " is-active" : ""
               }`}
@@ -694,6 +698,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               {tp.quickJuz(String(currentJuz))}
             </button>
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "hizb" ? " is-active" : ""
               }`}
@@ -702,6 +707,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               {tp.quickHizb(String(currentHizb))}
             </button>
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "rub" ? " is-active" : ""
               }`}
@@ -712,6 +718,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
                 : `Rub‛ ${currentRub}`}
             </button>
             <button
+              type="button"
               className={`pb-seg-btn${nightCls}${
                 activeQuick === "all" ? " is-active" : ""
               }`}

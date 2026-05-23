@@ -123,7 +123,6 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  margin-inline-start: 4px;
 }
 
 .toolbar-button.hide-toggle-button:disabled {
@@ -139,6 +138,84 @@
 [data-theme="night"] .toolbar-button.hide-toggle-button.active {
   background-color: rgba(212, 180, 140, 0.25);
   color: var(--color-gold, #d4b48c);
+}
+
+/* Hide button group: wraps the eye toggle + the slide-out reveal bar.
+   The group has a shared pill background so the bar looks like it
+   grows directly out of the eye button. */
+.hide-button-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-radius: 10px;
+  transition: background-color 0.18s ease;
+}
+
+.hide-button-group--active {
+  background-color: rgba(212, 180, 140, 0.22);
+}
+
+[data-theme="night"] .hide-button-group--active {
+  background-color: rgba(212, 180, 140, 0.16);
+}
+
+/* Reveal bar — horizontal row that slides out from the eye button.
+   Direction (left/right) is set via inline style order by isRTL in TSX. */
+.hide-reveal-sidebar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  overflow: hidden;
+  animation: reveal-bar-in 0.2s ease-out;
+}
+
+[data-theme="night"] .hide-reveal-sidebar {
+  /* inherits group background */
+}
+
+@keyframes reveal-bar-in {
+  from { opacity: 0; max-width: 0; padding: 0; }
+  to   { opacity: 1; max-width: 80px; padding: 0 4px 0 2px; }
+}
+
+.hide-reveal-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--color-gold, #8b4513);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hide-reveal-btn:hover:not(:disabled) {
+  background-color: rgba(212, 180, 140, 0.35);
+}
+
+.hide-reveal-btn:active:not(:disabled) {
+  transform: scale(0.88);
+}
+
+.hide-reveal-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+[data-theme="night"] .hide-reveal-btn {
+  color: var(--color-gold, #d4b48c);
+}
+
+[data-theme="night"] .hide-reveal-btn:hover:not(:disabled) {
+  background-color: rgba(212, 180, 140, 0.25);
 }
 
 /* Next-verse button — same compact size as hide-toggle, green accent on hover. */
