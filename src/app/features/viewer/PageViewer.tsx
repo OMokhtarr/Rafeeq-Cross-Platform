@@ -32,7 +32,10 @@ import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import { useWakeLock } from "../../core/hooks/useWakeLock";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
-import { isPageBookmarked, recordActivityDay } from "../../core/services/api/user-api.client";
+import {
+  isPageBookmarked,
+  recordActivityDay,
+} from "../../core/services/api/user-api.client";
 import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
@@ -41,14 +44,18 @@ import "./PageViewer.css";
 // ─── Last-page persistence ────────────────────────────────────────────────────
 const LAST_PAGE_KEY = "rafiq_last_page_v1";
 function saveLastPage(page: number) {
-  try { localStorage.setItem(LAST_PAGE_KEY, String(page)); } catch {}
+  try {
+    localStorage.setItem(LAST_PAGE_KEY, String(page));
+  } catch {}
 }
 function loadLastPage(): number | null {
   try {
     const raw = localStorage.getItem(LAST_PAGE_KEY);
     const n = raw ? parseInt(raw, 10) : NaN;
     return Number.isFinite(n) && n >= 1 && n <= 604 ? n : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ─── Settings helpers ─────────────────────────────────────────────────────────
@@ -102,7 +109,10 @@ const PageViewer: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
-  const [nextPageFirstVerse, setNextPageFirstVerse] = useState<{ sura: number; aya: number } | null>(null);
+  const [nextPageFirstVerse, setNextPageFirstVerse] = useState<{
+    sura: number;
+    aya: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Activity tracking: record time spent on each page for streak purposes
@@ -132,7 +142,11 @@ const PageViewer: React.FC = () => {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
       if (reciteMode) {
-        presentToast({ message: t.tabs.comingSoon, duration: 2000, position: "bottom" });
+        presentToast({
+          message: t.tabs.comingSoon,
+          duration: 2000,
+          position: "bottom",
+        });
       } else {
         sheetOpenTimeRef.current = Date.now();
         setPlaybackSheetOpen(true);
@@ -163,7 +177,10 @@ const PageViewer: React.FC = () => {
     setPlaybackVerse(v);
     setPlaybackSheetOpen(false);
     const [suraStr, ayaStr] = v.split(":");
-    const targetPage = estimatePageForVerse(parseInt(suraStr, 10), parseInt(ayaStr, 10));
+    const targetPage = estimatePageForVerse(
+      parseInt(suraStr, 10),
+      parseInt(ayaStr, 10),
+    );
     if (targetPage && targetPage !== currentPage) {
       setCurrentPage(targetPage);
     }
@@ -206,7 +223,7 @@ const PageViewer: React.FC = () => {
       const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
       if (prevVerses.length > 0 && elapsed >= 10) {
         const first = prevVerses[0];
-        const last  = prevVerses[prevVerses.length - 1];
+        const last = prevVerses[prevVerses.length - 1];
         const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
         const mushafKind = readSelectedMushaf();
         const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
@@ -232,9 +249,9 @@ const PageViewer: React.FC = () => {
   // Maps our internal mushaf kind to the QF numeric mushafId (integers only)
   const QF_MUSHAF_IDS: Record<string, number> = {
     qpc_v4_tajweed: 2,
-    uthmani:        1,
-    indopak:        4,
-    imlaei:         3,
+    uthmani: 1,
+    indopak: 4,
+    imlaei: 3,
   };
 
   useEffect(() => {
@@ -243,7 +260,7 @@ const PageViewer: React.FC = () => {
     const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
     if (prevVerses.length > 0 && elapsed >= 10) {
       const first = prevVerses[0];
-      const last  = prevVerses[prevVerses.length - 1];
+      const last = prevVerses[prevVerses.length - 1];
       const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
       const mushafKind = readSelectedMushaf();
       const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
@@ -281,11 +298,15 @@ const PageViewer: React.FC = () => {
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
       if (currentPage < totalPages) {
-        getPage(currentPage + 1).then((nextVerses) => {
-          if (cancelled) return;
-          const first = nextVerses[0] ?? null;
-          setNextPageFirstVerse(first ? { sura: first.sura, aya: first.aya } : null);
-        }).catch(() => {});
+        getPage(currentPage + 1)
+          .then((nextVerses) => {
+            if (cancelled) return;
+            const first = nextVerses[0] ?? null;
+            setNextPageFirstVerse(
+              first ? { sura: first.sura, aya: first.aya } : null,
+            );
+          })
+          .catch(() => {});
       } else {
         setNextPageFirstVerse(null);
       }
@@ -376,6 +397,209 @@ const PageViewer: React.FC = () => {
     }
     if (keys.length > 0) hideMany(keys);
   }, [anyPageHidden, hiddenCount, hideMany, showAll]);
+
+  // Index into hiddenOnPage: which hidden verse we're currently revealing word-by-word.
+  // hintCount: how many words revealed in that verse.
+  // revealedNextCount: how many verses revealed wholesale by the double-arrow.
+  const [hintVerseIndex, setHintVerseIndex] = useState(0);
+  const [hintCount, setHintCount] = useState(0);
+  const [revealedNextCount, setRevealedNextCount] = useState(0);
+  // When true, the next reset (on page flip) should pre-reveal the first verse fully.
+  const preRevealFirstRef = useRef(false);
+
+  // Ordered list of hidden verse keys on this page (stable, derived from raw hidden set)
+  const hiddenOnPage = React.useMemo(
+    () => pageVerseKeys.filter((k) => hidden.has(k)),
+    [pageVerseKeys.join(","), hidden],
+  );
+
+  const firstHiddenPageKey = hiddenOnPage[0] ?? null;
+  const firstHiddenVerse = React.useMemo(() => {
+    if (!firstHiddenPageKey) return null;
+    const [s, a] = firstHiddenPageKey.split(":");
+    return (
+      verses.find(
+        (v) => v.sura === parseInt(s, 10) && v.aya === parseInt(a, 10),
+      ) ?? null
+    );
+  }, [firstHiddenPageKey, verses]);
+
+  // Reset all hint state when the first hidden verse changes (page nav, hide toggle).
+  // If preRevealFirstRef is set (page flipped via double-arrow), pre-reveal the first verse.
+  // Only consume the flag when firstHiddenPageKey is non-null (ignore the null→key transition).
+  useEffect(() => {
+    setHintVerseIndex(0);
+    if (firstHiddenPageKey && preRevealFirstRef.current) {
+      preRevealFirstRef.current = false;
+      // Skip past verse 1 (already revealed); both arrows start directly at verse 2
+      setHintVerseIndex(1);
+      setHintCount(0);
+      setRevealedNextCount(1);
+    } else {
+      setHintCount(0);
+      setRevealedNextCount(0);
+    }
+  }, [firstHiddenPageKey]);
+
+  // The verse currently being revealed word-by-word
+  const activeHintKey = hiddenOnPage[hintVerseIndex] ?? null;
+  const activeHintVerse = React.useMemo(() => {
+    if (!activeHintKey) return null;
+    const [s, a] = activeHintKey.split(":");
+    return (
+      verses.find(
+        (v) => v.sura === parseInt(s, 10) && v.aya === parseInt(a, 10),
+      ) ?? null
+    );
+  }, [activeHintKey, verses]);
+  const activeWordCount =
+    activeHintVerse?.words?.filter((w) => w.charType === "end").length ?? 0;
+
+  // partialTarget: controls word-level hiding for the active hint verse in MushafPage.
+  // Verses before hintVerseIndex are fully revealed (removed from hiddenForPage below).
+  // When hintCount === 0 for the active verse, no partialTarget is needed yet.
+  const partialTargetForPage = React.useMemo(() => {
+    if (!activeHintVerse || hintCount === 0) return undefined;
+    const wordEntries = (activeHintVerse.words ?? []).filter(
+      (w) => w.charType === "end",
+    );
+    const hiddenPositions = new Set<number>();
+    for (let i = 0; i < wordEntries.length; i++) {
+      if (i >= hintCount) hiddenPositions.add(wordEntries[i].position);
+    }
+    return {
+      sura: activeHintVerse.sura,
+      aya: activeHintVerse.aya,
+      revealedWordCount: hintCount,
+      hiddenPositions,
+    };
+  }, [activeHintVerse, hintCount]);
+
+  // Returns the verse at offset n from firstHiddenVerse (n=0 → firstHiddenVerse itself).
+  const nthVerseFromFirst = useCallback(
+    (n: number): { sura: number; aya: number } | null => {
+      if (!firstHiddenVerse) return null;
+      const chapters = getChapters();
+      let s = firstHiddenVerse.sura;
+      let a = firstHiddenVerse.aya;
+      let remaining = n;
+      while (remaining > 0) {
+        const ch = chapters.find((c: any) => c.id === s);
+        const count: number = ch?.verses_count ?? 0;
+        if (a < count) {
+          a += 1;
+        } else {
+          if (s >= 114) return null;
+          s += 1;
+          a = 1;
+        }
+        remaining -= 1;
+      }
+      return { sura: s, aya: a };
+    },
+    [firstHiddenVerse],
+  );
+
+  // revealedNextCount=1 means firstHiddenVerse is revealed; =2 means first two; etc.
+  // lastRevealedVerse is the furthest verse revealed by the double-arrow.
+  const lastRevealedVerse = React.useMemo(
+    () =>
+      revealedNextCount > 0 ? nthVerseFromFirst(revealedNextCount - 1) : null,
+    [revealedNextCount, nthVerseFromFirst],
+  );
+
+  // Build the hidden set for MushafPage.
+  // - Verses at index < hintVerseIndex in hiddenOnPage are fully revealed by single-arrow.
+  // - The active hint verse is removed so partialTarget's word-level hiding takes over.
+  // - Verses up to lastRevealedVerse (double-arrow) are removed.
+  const hiddenForPage = React.useMemo(() => {
+    if (!firstHiddenPageKey || !firstHiddenVerse) return hidden;
+    const set = new Set<string>(hidden);
+
+    // Remove all verses the single-arrow has fully traversed
+    for (let i = 0; i < hintVerseIndex && i < hiddenOnPage.length; i++) {
+      set.delete(hiddenOnPage[i]);
+    }
+
+    // Remove the active hint verse so partialTarget controls its display
+    if (activeHintKey && hintCount > 0) {
+      set.delete(activeHintKey);
+    }
+
+    // Un-hide all verses up to and including lastRevealedVerse (double-arrow)
+    if (lastRevealedVerse) {
+      const cutoff = lastRevealedVerse;
+      for (const v of verses) {
+        const key = `${v.sura}:${v.aya}`;
+        const isAtOrAfterFirst =
+          v.sura > firstHiddenVerse.sura ||
+          (v.sura === firstHiddenVerse.sura && v.aya >= firstHiddenVerse.aya);
+        const isWithinRevealed =
+          v.sura < cutoff.sura ||
+          (v.sura === cutoff.sura && v.aya <= cutoff.aya);
+        if (isAtOrAfterFirst && isWithinRevealed) set.delete(key);
+      }
+    }
+
+    return set;
+  }, [
+    hidden,
+    firstHiddenPageKey,
+    firstHiddenVerse,
+    hiddenOnPage,
+    hintVerseIndex,
+    activeHintKey,
+    hintCount,
+    lastRevealedVerse,
+    verses,
+  ]);
+
+  const canHint = anyPageHidden;
+  const canRevealNextVerse = !!firstHiddenPageKey;
+
+  const handleRevealNextWord = useCallback(() => {
+    if (!anyPageHidden) return;
+    if (hintCount < activeWordCount) {
+      // Reveal next word in active verse
+      setHintCount((n) => n + 1);
+    } else if (activeWordCount > 0) {
+      // Active verse fully revealed — advance to next verse and reveal its first word immediately
+      setHintVerseIndex((i) => i + 1);
+      setHintCount(1);
+    }
+  }, [anyPageHidden, hintCount, activeWordCount]);
+
+  const handleRevealNextVerse = useCallback(() => {
+    if (!firstHiddenPageKey) return;
+
+    // If the active verse is partially revealed, finish showing all its words first
+    if (hintCount > 0 && hintCount < activeWordCount) {
+      setHintCount(activeWordCount);
+      return;
+    }
+
+    // The verse that double-arrow would reveal next is at offset revealedNextCount from firstHiddenVerse
+    // (since revealedNextCount=1 means first verse already revealed, next is offset 1, etc.)
+    // If that verse is on the next page (or beyond), flip the page instead.
+    const nextToReveal = nthVerseFromFirst(revealedNextCount);
+    const isOnNextPage =
+      nextToReveal !== null &&
+      nextPageFirstVerse !== null &&
+      (nextToReveal.sura > nextPageFirstVerse.sura ||
+        (nextToReveal.sura === nextPageFirstVerse.sura &&
+          nextToReveal.aya >= nextPageFirstVerse.aya));
+    const isOffQuran = nextToReveal === null;
+
+    if ((isOnNextPage || isOffQuran) && currentPage < totalPages) {
+      preRevealFirstRef.current = true;
+      setCurrentPage((p) => p + 1);
+      return;
+    }
+
+    setHintVerseIndex(0);
+    setHintCount(0);
+    setRevealedNextCount((n) => n + 1);
+  }, [firstHiddenPageKey, hintCount, activeWordCount, nthVerseFromFirst, revealedNextCount, nextPageFirstVerse, currentPage, totalPages]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const x = e.touches[0].clientX;
@@ -477,59 +701,121 @@ const PageViewer: React.FC = () => {
                   )}
                 </button>
               )}
-              <button
-                type="button"
-                className={`toolbar-button hide-toggle-button ${
-                  anyPageHidden ? "active" : ""
+              <div
+                className={`hide-button-group${
+                  anyPageHidden ? " hide-button-group--active" : ""
                 }`}
-                onClick={togglePageHidden}
-                disabled={verses.length === 0}
-                title={
-                  anyPageHidden
-                    ? t.mushaf.toggleShowTitle
-                    : t.mushaf.toggleHideTitle
-                }
-                aria-label={
-                  anyPageHidden
-                    ? t.mushaf.toggleShowTitle
-                    : t.mushaf.toggleHideTitle
-                }
-                aria-pressed={anyPageHidden}
               >
-                {anyPageHidden ? (
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                <button
+                  type="button"
+                  className={`toolbar-button hide-toggle-button ${
+                    anyPageHidden ? "active" : ""
+                  }`}
+                  onClick={togglePageHidden}
+                  disabled={verses.length === 0}
+                  title={
+                    anyPageHidden
+                      ? t.mushaf.toggleShowTitle
+                      : t.mushaf.toggleHideTitle
+                  }
+                  aria-label={
+                    anyPageHidden
+                      ? t.mushaf.toggleShowTitle
+                      : t.mushaf.toggleHideTitle
+                  }
+                  aria-pressed={anyPageHidden}
+                >
+                  {anyPageHidden ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 3l18 18" />
+                      <path d="M10.58 10.58a2 2 0 002.83 2.83" />
+                      <path d="M9.88 4.62A10.94 10.94 0 0112 4.5c5 0 9 4.5 10 7.5a13.16 13.16 0 01-3.05 4.36" />
+                      <path d="M6.61 6.61C4.13 8.13 2.4 10.62 2 12c1 3 5 7.5 10 7.5a10.94 10.94 0 005.39-1.39" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M2 12s4-7.5 10-7.5S22 12 22 12s-4 7.5-10 7.5S2 12 2 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+
+                {anyPageHidden && (
+                  <div
+                    className="hide-reveal-sidebar"
+                    aria-label="Reveal controls"
+                    style={{ order: isRTL ? -1 : 1 }}
                   >
-                    <path d="M3 3l18 18" />
-                    <path d="M10.58 10.58a2 2 0 002.83 2.83" />
-                    <path d="M9.88 4.62A10.94 10.94 0 0112 4.5c5 0 9 4.5 10 7.5a13.16 13.16 0 01-3.05 4.36" />
-                    <path d="M6.61 6.61C4.13 8.13 2.4 10.62 2 12c1 3 5 7.5 10 7.5a10.94 10.94 0 005.39-1.39" />
-                  </svg>
-                ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M2 12s4-7.5 10-7.5S22 12 22 12s-4 7.5-10 7.5S2 12 2 12z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
+                    <button
+                      type="button"
+                      className="hide-reveal-btn"
+                      onClick={handleRevealNextWord}
+                      disabled={!canHint}
+                      aria-label="Reveal next word"
+                      title="Reveal next word"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        style={isRTL ? { transform: "scaleX(-1)" } : undefined}
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="hide-reveal-btn"
+                      onClick={handleRevealNextVerse}
+                      disabled={!canRevealNextVerse}
+                      aria-label="Reveal next verse"
+                      title="Reveal next verse"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        style={isRTL ? { transform: "scaleX(-1)" } : undefined}
+                      >
+                        <polyline points="5 18 11 12 5 6" />
+                        <polyline points="13 18 19 12 13 6" />
+                      </svg>
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
 
             {/* Center: playback bar when active, else surah info pill */}
@@ -559,10 +845,14 @@ const PageViewer: React.FC = () => {
                   className="toolbar-button playback-play"
                   onClick={handlePlayPause}
                   aria-label={
-                    queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? t.mushaf.pause : t.mushaf.play
+                    queue.state.isPlaying ||
+                    (!userPaused && !!queue.state.currentVerse)
+                      ? t.mushaf.pause
+                      : t.mushaf.play
                   }
                 >
-                  {queue.state.isPlaying || (!userPaused && !!queue.state.currentVerse) ? (
+                  {queue.state.isPlaying ||
+                  (!userPaused && !!queue.state.currentVerse) ? (
                     <svg
                       viewBox="0 0 24 24"
                       width="22"
@@ -771,7 +1061,8 @@ const PageViewer: React.FC = () => {
                   verses={verses}
                   nextPageFirstVerse={nextPageFirstVerse}
                   selected={selected}
-                  hidden={hidden}
+                  hidden={hiddenForPage}
+                  partialTarget={partialTargetForPage}
                   green={greenVerse ? new Set([greenVerse]) : undefined}
                   onVerseLongPress={handleVerseLongPress}
                   target={
@@ -861,7 +1152,10 @@ const PageViewer: React.FC = () => {
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
-                <PlaybackSettings onClose={() => setPlaybackSheetOpen(false)} currentPage={currentPage} />
+                <PlaybackSettings
+                  onClose={() => setPlaybackSheetOpen(false)}
+                  currentPage={currentPage}
+                />
               </div>
             </div>
           )}
