@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import React, { useRef, useState } from "react";
+import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
@@ -109,16 +109,8 @@ const Account: React.FC = () => {
   const [notesError, setNotesError] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
 
-  // Check login state once on mount (and whenever lang changes for error strings)
-  useEffect(() => {
-    getStoredAccessToken().then((token) => {
-      setLoggedIn(!!token);
-    });
-  }, []);
-
-  // Load all user data whenever the user becomes logged in
-  useEffect(() => {
-    if (!loggedIn) return;
+  const loadUserData = (isLoggedIn: boolean) => {
+    if (!isLoggedIn) return;
     setLoading(true);
     setError(null);
     Promise.all([
@@ -147,7 +139,16 @@ const Account: React.FC = () => {
       setNotes(notesData as Note[]);
       setLoading(false);
     });
-  }, [loggedIn, lang]);
+  };
+
+  // Refresh streak and user data every time this page becomes visible
+  useIonViewWillEnter(() => {
+    getStoredAccessToken().then((token) => {
+      const isLoggedIn = !!token;
+      setLoggedIn(isLoggedIn);
+      loadUserData(isLoggedIn);
+    });
+  });
 
   const handleLogin = () => signIn();
   const handleLogout = async () => {
