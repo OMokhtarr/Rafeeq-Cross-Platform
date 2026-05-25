@@ -400,12 +400,14 @@ const PageViewer: React.FC = () => {
 
   // Index into hiddenOnPage: which hidden verse we're currently revealing word-by-word.
   // hintCount: how many words revealed in that verse.
-  // revealedNextCount: how many verses revealed wholesale by the double-arrow.
+  // revealedUpToIndex: the double-arrow has revealed all verses in hiddenOnPage up to (but not including) this index.
   const [hintVerseIndex, setHintVerseIndex] = useState(0);
   const [hintCount, setHintCount] = useState(0);
-  const [revealedNextCount, setRevealedNextCount] = useState(0);
-  // When true, the next reset (on page flip) should pre-reveal the first verse fully.
+  const [revealedUpToIndex, setRevealedUpToIndex] = useState(0);
+  // When true, the next reset (on page flip) should pre-reveal the first verse fully (double-arrow).
   const preRevealFirstRef = useRef(false);
+  // When true, the next reset (on page flip) should start with word 1 revealed (single-arrow).
+  const preRevealFirstWordRef = useRef(false);
 
   // Ordered list of hidden verse keys on this page (stable, derived from raw hidden set)
   const hiddenOnPage = React.useMemo(
@@ -414,15 +416,6 @@ const PageViewer: React.FC = () => {
   );
 
   const firstHiddenPageKey = hiddenOnPage[0] ?? null;
-  const firstHiddenVerse = React.useMemo(() => {
-    if (!firstHiddenPageKey) return null;
-    const [s, a] = firstHiddenPageKey.split(":");
-    return (
-      verses.find(
-        (v) => v.sura === parseInt(s, 10) && v.aya === parseInt(a, 10),
-      ) ?? null
-    );
-  }, [firstHiddenPageKey, verses]);
 
   // Reset all hint state when the first hidden verse changes (page nav, hide toggle).
   // If preRevealFirstRef is set (page flipped via double-arrow), pre-reveal the first verse.
@@ -431,13 +424,20 @@ const PageViewer: React.FC = () => {
     setHintVerseIndex(0);
     if (firstHiddenPageKey && preRevealFirstRef.current) {
       preRevealFirstRef.current = false;
-      // Skip past verse 1 (already revealed); both arrows start directly at verse 2
+      preRevealFirstWordRef.current = false;
+      // Double-arrow page flip: skip past verse 1 (already revealed)
       setHintVerseIndex(1);
       setHintCount(0);
-      setRevealedNextCount(1);
+      setRevealedUpToIndex(1);
+    } else if (firstHiddenPageKey && preRevealFirstWordRef.current) {
+      preRevealFirstWordRef.current = false;
+      // Single-arrow page flip: start at verse 0 with word 1 already visible
+      setHintVerseIndex(0);
+      setHintCount(1);
+      setRevealedUpToIndex(0);
     } else {
       setHintCount(0);
-      setRevealedNextCount(0);
+      setRevealedUpToIndex(0);
     }
   }, [firstHiddenPageKey]);
 
@@ -475,83 +475,34 @@ const PageViewer: React.FC = () => {
     };
   }, [activeHintVerse, hintCount]);
 
-  // Returns the verse at offset n from firstHiddenVerse (n=0 → firstHiddenVerse itself).
-  const nthVerseFromFirst = useCallback(
-    (n: number): { sura: number; aya: number } | null => {
-      if (!firstHiddenVerse) return null;
-      const chapters = getChapters();
-      let s = firstHiddenVerse.sura;
-      let a = firstHiddenVerse.aya;
-      let remaining = n;
-      while (remaining > 0) {
-        const ch = chapters.find((c: any) => c.id === s);
-        const count: number = ch?.verses_count ?? 0;
-        if (a < count) {
-          a += 1;
-        } else {
-          if (s >= 114) return null;
-          s += 1;
-          a = 1;
-        }
-        remaining -= 1;
-      }
-      return { sura: s, aya: a };
-    },
-    [firstHiddenVerse],
-  );
-
-  // revealedNextCount=1 means firstHiddenVerse is revealed; =2 means first two; etc.
-  // lastRevealedVerse is the furthest verse revealed by the double-arrow.
-  const lastRevealedVerse = React.useMemo(
-    () =>
-      revealedNextCount > 0 ? nthVerseFromFirst(revealedNextCount - 1) : null,
-    [revealedNextCount, nthVerseFromFirst],
-  );
 
   // Build the hidden set for MushafPage.
-  // - Verses at index < hintVerseIndex in hiddenOnPage are fully revealed by single-arrow.
-  // - The active hint verse is removed so partialTarget's word-level hiding takes over.
-  // - Verses up to lastRevealedVerse (double-arrow) are removed.
+  // Both arrows share a unified view: all verses at index < max(hintVerseIndex, revealedUpToIndex)
+  // are fully revealed. The active hint verse (if being word-revealed) is handled by partialTarget.
   const hiddenForPage = React.useMemo(() => {
-    if (!firstHiddenPageKey || !firstHiddenVerse) return hidden;
+    if (!firstHiddenPageKey) return hidden;
     const set = new Set<string>(hidden);
+    const revealedCount = Math.max(hintVerseIndex, revealedUpToIndex);
 
-    // Remove all verses the single-arrow has fully traversed
-    for (let i = 0; i < hintVerseIndex && i < hiddenOnPage.length; i++) {
+    // Remove all verses fully revealed by either arrow
+    for (let i = 0; i < revealedCount && i < hiddenOnPage.length; i++) {
       set.delete(hiddenOnPage[i]);
     }
 
-    // Remove the active hint verse so partialTarget controls its display
+    // Remove the active hint verse so partialTarget controls its word-level display
     if (activeHintKey && hintCount > 0) {
       set.delete(activeHintKey);
-    }
-
-    // Un-hide all verses up to and including lastRevealedVerse (double-arrow)
-    if (lastRevealedVerse) {
-      const cutoff = lastRevealedVerse;
-      for (const v of verses) {
-        const key = `${v.sura}:${v.aya}`;
-        const isAtOrAfterFirst =
-          v.sura > firstHiddenVerse.sura ||
-          (v.sura === firstHiddenVerse.sura && v.aya >= firstHiddenVerse.aya);
-        const isWithinRevealed =
-          v.sura < cutoff.sura ||
-          (v.sura === cutoff.sura && v.aya <= cutoff.aya);
-        if (isAtOrAfterFirst && isWithinRevealed) set.delete(key);
-      }
     }
 
     return set;
   }, [
     hidden,
     firstHiddenPageKey,
-    firstHiddenVerse,
     hiddenOnPage,
     hintVerseIndex,
+    revealedUpToIndex,
     activeHintKey,
     hintCount,
-    lastRevealedVerse,
-    verses,
   ]);
 
   const canHint = anyPageHidden;
@@ -563,11 +514,22 @@ const PageViewer: React.FC = () => {
       // Reveal next word in active verse
       setHintCount((n) => n + 1);
     } else if (activeWordCount > 0) {
-      // Active verse fully revealed — advance to next verse and reveal its first word immediately
-      setHintVerseIndex((i) => i + 1);
-      setHintCount(1);
+      // Active verse fully revealed — advance to next hidden verse
+      const nextIndex = hintVerseIndex + 1;
+      if (nextIndex < hiddenOnPage.length) {
+        setHintVerseIndex(nextIndex);
+        setRevealedUpToIndex(nextIndex);
+        setHintCount(1);
+      } else if (currentPage < totalPages) {
+        preRevealFirstWordRef.current = true;
+        setCurrentPage((p) => p + 1);
+      }
+    } else if (currentPage < totalPages) {
+      // activeWordCount === 0: no more hidden verses left on this page — flip to next page
+      preRevealFirstWordRef.current = true;
+      setCurrentPage((p) => p + 1);
     }
-  }, [anyPageHidden, hintCount, activeWordCount]);
+  }, [anyPageHidden, hintCount, activeWordCount, hintVerseIndex, hiddenOnPage.length, currentPage, totalPages]);
 
   const handleRevealNextVerse = useCallback(() => {
     if (!firstHiddenPageKey) return;
@@ -578,28 +540,31 @@ const PageViewer: React.FC = () => {
       return;
     }
 
-    // The verse that double-arrow would reveal next is at offset revealedNextCount from firstHiddenVerse
-    // (since revealedNextCount=1 means first verse already revealed, next is offset 1, etc.)
-    // If that verse is on the next page (or beyond), flip the page instead.
-    const nextToReveal = nthVerseFromFirst(revealedNextCount);
-    const isOnNextPage =
-      nextToReveal !== null &&
-      nextPageFirstVerse !== null &&
-      (nextToReveal.sura > nextPageFirstVerse.sura ||
-        (nextToReveal.sura === nextPageFirstVerse.sura &&
-          nextToReveal.aya >= nextPageFirstVerse.aya));
-    const isOffQuran = nextToReveal === null;
+    // The next verse to reveal is whichever is further ahead between both arrows
+    const nextIndex = Math.max(hintVerseIndex, revealedUpToIndex) + 1;
 
-    if ((isOnNextPage || isOffQuran) && currentPage < totalPages) {
-      preRevealFirstRef.current = true;
-      setCurrentPage((p) => p + 1);
+    if (nextIndex > hiddenOnPage.length) {
+      // All verses on this page revealed — flip to next page
+      if (currentPage < totalPages) {
+        preRevealFirstRef.current = true;
+        setCurrentPage((p) => p + 1);
+      }
       return;
     }
 
-    setHintVerseIndex(0);
+    if (nextIndex === hiddenOnPage.length) {
+      // Last verse on this page just revealed — flip to next page on next press
+      setRevealedUpToIndex(nextIndex);
+      setHintVerseIndex(nextIndex);
+      setHintCount(0);
+      return;
+    }
+
+    // Reveal the next verse and advance both pointers together
+    setRevealedUpToIndex(nextIndex);
+    setHintVerseIndex(nextIndex);
     setHintCount(0);
-    setRevealedNextCount((n) => n + 1);
-  }, [firstHiddenPageKey, hintCount, activeWordCount, nthVerseFromFirst, revealedNextCount, nextPageFirstVerse, currentPage, totalPages]);
+  }, [firstHiddenPageKey, hintCount, activeWordCount, hintVerseIndex, revealedUpToIndex, hiddenOnPage.length, currentPage, totalPages]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const x = e.touches[0].clientX;
@@ -776,8 +741,8 @@ const PageViewer: React.FC = () => {
                     >
                       <svg
                         viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
+                        width="14"
+                        height="14"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
@@ -799,8 +764,8 @@ const PageViewer: React.FC = () => {
                     >
                       <svg
                         viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
+                        width="14"
+                        height="14"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
@@ -1104,6 +1069,7 @@ const PageViewer: React.FC = () => {
             pageVerseKeys={verses.map((v) => `${v.sura}:${v.aya}`)}
             page={currentPage}
             translationId={settings.translation}
+            reciter={settings.reciter}
             onClose={closeSheet}
           />
 
