@@ -131,12 +131,10 @@
 }
 
 .toolbar-button.hide-toggle-button.active {
-  background-color: rgba(212, 180, 140, 0.35);
   color: var(--color-gold, #8b4513);
 }
 
 [data-theme="night"] .toolbar-button.hide-toggle-button.active {
-  background-color: rgba(212, 180, 140, 0.25);
   color: var(--color-gold, #d4b48c);
 }
 
@@ -152,15 +150,14 @@
 }
 
 .hide-button-group--active {
-  background-color: rgba(212, 180, 140, 0.22);
+  background-color: rgba(212, 180, 140, 0.35);
 }
 
 [data-theme="night"] .hide-button-group--active {
-  background-color: rgba(212, 180, 140, 0.16);
+  background-color: rgba(212, 180, 140, 0.25);
 }
 
-/* Reveal bar — horizontal row that slides out from the eye button.
-   Direction (left/right) is set via inline style order by isRTL in TSX. */
+/* Reveal bar — horizontal row that slides out from the eye button. */
 .hide-reveal-sidebar {
   display: flex;
   flex-direction: row;
@@ -171,23 +168,19 @@
   animation: reveal-bar-in 0.2s ease-out;
 }
 
-[data-theme="night"] .hide-reveal-sidebar {
-  /* inherits group background */
-}
-
 @keyframes reveal-bar-in {
   from { opacity: 0; max-width: 0; padding: 0; }
-  to   { opacity: 1; max-width: 80px; padding: 0 4px 0 2px; }
+  to   { opacity: 1; max-width: 64px; padding: 0 4px; }
 }
 
 .hide-reveal-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border: none;
-  border-radius: 7px;
+  border-radius: 6px;
   background: none;
   color: var(--color-gold, #8b4513);
   cursor: pointer;
