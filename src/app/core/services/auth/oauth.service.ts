@@ -240,7 +240,12 @@ export async function refreshAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    await clearTokens();
+    // Only clear stored tokens when the server explicitly rejects the refresh
+    // token (invalid/expired). Network errors or server faults (5xx) should
+    // not sign the user out.
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      await clearTokens();
+    }
     throw new Error(`Token refresh failed: ${res.status}`);
   }
 
