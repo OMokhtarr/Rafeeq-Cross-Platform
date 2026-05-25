@@ -14,6 +14,8 @@ workflows:
       node: 18
       xcode: latest
       cocoapods: default
+      vars:
+        CI: "false"  # prevents CRA treating warnings as errors
 
     scripts:
       - name: Install dependencies
@@ -21,8 +23,6 @@ workflows:
 
       - name: Build web assets
         script: npm run build:prod
-        environment_variables:
-          CI: "false" # prevents CRA treating warnings as errors
 
       - name: Sync Capacitor iOS
         script: npx cap sync ios
