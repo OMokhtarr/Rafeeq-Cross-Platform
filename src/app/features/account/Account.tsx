@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
@@ -17,6 +17,7 @@ import {
   signIn,
   signOut,
   getStoredAccessToken,
+  getStoredAccessTokenSync,
 } from "../../core/services/auth/oauth.service";
 import AccountModal from "./AccountModal";
 import GoalsCard from "./GoalsCard";
@@ -97,7 +98,7 @@ const Account: React.FC = () => {
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(() => !!getStoredAccessTokenSync());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [streakOpen, setStreakOpen] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
@@ -141,7 +142,16 @@ const Account: React.FC = () => {
     });
   };
 
-  // Refresh streak and user data every time this page becomes visible
+  // Load data on first mount (useIonViewWillEnter doesn't fire on initial render)
+  useEffect(() => {
+    getStoredAccessToken().then((token) => {
+      const isLoggedIn = !!token;
+      setLoggedIn(isLoggedIn);
+      loadUserData(isLoggedIn);
+    });
+  }, []);
+
+  // Refresh data every time this page becomes visible after navigating back
   useIonViewWillEnter(() => {
     getStoredAccessToken().then((token) => {
       const isLoggedIn = !!token;
@@ -149,6 +159,19 @@ const Account: React.FC = () => {
       loadUserData(isLoggedIn);
     });
   });
+
+  // When the OAuth callback tab writes the token to localStorage, a storage
+  // event fires in this tab — use it to pick up the login without a page reload.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "rafiq_oauth_token_v1" && e.newValue) {
+        setLoggedIn(true);
+        loadUserData(true);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const handleLogin = () => signIn();
   const handleLogout = async () => {

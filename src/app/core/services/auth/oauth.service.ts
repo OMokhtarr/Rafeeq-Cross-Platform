@@ -53,6 +53,14 @@ async function storeTokens(
   }
 }
 
+// Synchronous check — only works on web (localStorage). Returns null on native.
+export function getStoredAccessTokenSync(): string | null {
+  if (Capacitor.getPlatform() === "web") {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+  return null;
+}
+
 export async function getStoredAccessToken(): Promise<string | null> {
   if (Capacitor.getPlatform() === "web") {
     return localStorage.getItem(TOKEN_KEY);

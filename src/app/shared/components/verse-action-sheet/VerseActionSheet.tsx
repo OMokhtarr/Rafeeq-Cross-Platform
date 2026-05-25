@@ -14,6 +14,8 @@ import {
   isPageBookmarked,
   toggleBookmark,
 } from "../../../core/services/api/user-api.client";
+import { getPlayableUrl } from "../../../core/services/audio/audio-cache.service";
+import { useAudioPlayer } from "../../../core/hooks/useAudioPlayer";
 import NoteModal from "../note-modal/NoteModal";
 import "./VerseActionSheet.css";
 
@@ -28,10 +30,14 @@ interface Props {
   page: number;
   translationId: string;
   tafsirId?: string;
+  /** Reciter ID used for audio playback (numeric string, e.g. "4"). */
+  reciter?: string;
   onClose: () => void;
 }
 
 const DEFAULT_TAFSIR_ID = "16"; // التفسير الميسر
+
+const DEFAULT_RECITER = "4";
 
 const VerseActionSheet: React.FC<Props> = ({
   open,
@@ -40,6 +46,7 @@ const VerseActionSheet: React.FC<Props> = ({
   page,
   translationId,
   tafsirId,
+  reciter = DEFAULT_RECITER,
   onClose,
 }) => {
   const { t, lang, isRTL } = useLang();
@@ -58,6 +65,39 @@ const VerseActionSheet: React.FC<Props> = ({
     if (!verseKey) return;
     setBookmarked(toggleBookmark(verseKey));
   }, [verseKey]);
+
+  // ── Audio ─────────────────────────────────────────────────────────────────
+  const audio = useAudioPlayer();
+  const [audioLoading, setAudioLoading] = useState(false);
+
+  const isThisVersePlayingKey = verseKey;
+  const isPlaying =
+    audio.isPlaying && audio.playingKey === isThisVersePlayingKey;
+
+  const handlePlay = useCallback(async () => {
+    if (!verseKey) return;
+    if (isPlaying) {
+      audio.stop();
+      return;
+    }
+    const [sStr, aStr] = verseKey.split(":");
+    const sura = parseInt(sStr, 10);
+    const aya = parseInt(aStr, 10);
+    setAudioLoading(true);
+    try {
+      const { url } = await getPlayableUrl(reciter, sura, aya);
+      await audio.play(verseKey, url);
+    } catch {
+      /* silently fail — network or decode error */
+    } finally {
+      setAudioLoading(false);
+    }
+  }, [verseKey, isPlaying, reciter, audio]);
+
+  // Stop audio when sheet closes
+  useEffect(() => {
+    if (!open) audio.stop();
+  }, [open]);
 
   // ── Notes modal ────────────────────────────────────────────────────────────
   type NoteView = "list" | "compose";
@@ -256,6 +296,32 @@ const VerseActionSheet: React.FC<Props> = ({
         <header className="vas-header">
           <h3 className="vas-title">{t.mushaf.actionSheetTitle(displayKey)}</h3>
           <div className="vas-header-actions">
+            {/* Play verse */}
+            <button
+              className={`vas-play-btn${isPlaying ? " vas-play-btn--active" : ""}${isNight ? " vas-play-btn--night" : ""}`}
+              onClick={handlePlay}
+              disabled={!verseKey || audioLoading}
+              aria-label={
+                isPlaying
+                  ? (lang === "ar" ? "إيقاف" : "Stop")
+                  : (lang === "ar" ? "تشغيل الآية" : "Play verse")
+              }
+              aria-pressed={isPlaying}
+            >
+              {audioLoading ? (
+                <span className="vas-spinner vas-spinner--sm" aria-hidden="true" />
+              ) : isPlaying ? (
+                /* Stop icon */
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="1" />
+                </svg>
+              ) : (
+                /* Play icon */
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <polygon points="5,3 19,12 5,21" />
+                </svg>
+              )}
+            </button>
             {/* Add note */}
             <button
               className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
