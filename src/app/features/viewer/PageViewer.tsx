@@ -190,6 +190,17 @@ const PageViewer: React.FC = () => {
 
   const audio = useAudioPlayer();
   const [sheetVerseKey, setSheetVerseKey] = useState<string | null>(null);
+
+  // Reopen sheet when returning from TafsirSettings with a verse key in state
+  useEffect(() => {
+    const state = location.state as { openVerseKey?: string } | undefined;
+    if (state?.openVerseKey) {
+      setSheetVerseKey(state.openVerseKey);
+      // Clear the state so a refresh doesn't re-trigger
+      history.replace(location.pathname + location.search, {});
+    }
+  }, [location.state]);
+
   const immersive = useImmersiveMode();
   useWakeLock();
 

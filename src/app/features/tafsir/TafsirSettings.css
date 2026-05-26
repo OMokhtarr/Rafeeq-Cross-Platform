@@ -1,0 +1,283 @@
+ion-content {
+  --background: var(--color-bg-content);
+}
+
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ── Page wrapper ─────────────────────────────────────────────────────────── */
+.tfs-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+/* ── Scrollable inner container (owns max-width + scroll) ─────────────────── */
+.tfs-inner {
+  width: 100%;
+  max-width: 600px;
+  min-width: var(--min-width-mobile, 320px);
+  flex: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tfs-inner::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.tfs-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.tfs-back-btn {
+  background: none;
+  border: 2px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+}
+
+.tfs-back-btn:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+
+.tfs-header-text h1 {
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-2xl);
+  color: var(--color-gold);
+  margin: 0 0 2px;
+}
+
+.tfs-header-text p {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Content ─────────────────────────────────────────────────────────────── */
+.tfs-content {
+  width: 100%;
+  flex: 1;
+  padding-bottom: 40px;
+  box-sizing: border-box;
+}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+.tfs-section {
+  margin: 18px 16px 0;
+}
+
+.tfs-section-title {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px 4px;
+  opacity: 0.85;
+}
+
+/* ── Language group ───────────────────────────────────────────────────────── */
+.tfs-lang-group {
+  margin-bottom: 14px;
+}
+
+.tfs-lang-label {
+  font-family: var(--font-arabic);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+  margin: 0 0 6px 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+.tfs-card {
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition:
+    background var(--transition-theme),
+    border-color var(--transition-theme);
+}
+
+/* ── Row ─────────────────────────────────────────────────────────────────── */
+.tfs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  gap: 10px;
+}
+
+.tfs-row--border {
+  border-bottom: 1px solid var(--color-row-border);
+}
+
+.tfs-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tfs-row-name {
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  margin: 0 0 2px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tfs-row-author {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tfs-row-lang {
+  font-size: 0.65rem;
+  color: var(--color-gold);
+  background: var(--color-gold-faint);
+  border-radius: 4px;
+  padding: 1px 6px;
+  display: inline-block;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.tfs-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-base),
+    opacity var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.tfs-btn--save {
+  background: color-mix(in srgb, var(--color-quran) 12%, transparent);
+  border: 1.5px solid var(--color-quran);
+  color: var(--color-quran);
+}
+
+.tfs-btn--save:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-quran) 22%, transparent);
+}
+
+.tfs-btn--save.tfs-btn--saving {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tfs-btn--remove {
+  background: none;
+  border: 1.5px solid var(--color-input-border);
+  color: #c0392b;
+}
+
+.tfs-btn--remove:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.tfs-empty {
+  padding: 22px 16px;
+  text-align: center;
+}
+
+.tfs-empty-title {
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.tfs-empty-hint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Loading / error ─────────────────────────────────────────────────────── */
+.tfs-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.tfs-error {
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  color: #c0392b;
+  text-align: center;
+  padding: 16px;
+}
+
+/* Spinner — reuse vas-spinner keyframe convention */
+.tfs-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-gold-subtle);
+  border-top-color: var(--color-gold);
+  border-radius: 50%;
+  animation: tfs-spin 0.7s linear infinite;
+}
+
+@keyframes tfs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
