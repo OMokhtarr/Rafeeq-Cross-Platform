@@ -500,7 +500,7 @@ export async function fetchTafsirResources(): Promise<TafsirResource[]> {
     id: String(r.id ?? ""),
     name: r.translated_name?.name ?? r.name ?? String(r.id ?? ""),
     authorName: r.author_name,
-    languageName: r.translated_name?.language_name ?? r.language_name,
+    languageName: r.language_name ?? r.translated_name?.language_name,
   }));
 }
 
