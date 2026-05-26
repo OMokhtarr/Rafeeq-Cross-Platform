@@ -35,6 +35,7 @@ import Settings from "app/features/settings/Settings";
 import PlaybackSettings from "./app/features/playback/PlaybackSettings";
 import Account from "./app/features/account/Account";
 import Bookmarks from "./app/features/bookmarks/Bookmarks";
+import TafsirSettings from "./app/features/tafsir/TafsirSettings";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -170,6 +171,7 @@ const App: React.FC = () => {
                   <Route exact path="/bookmarks" component={Bookmarks} />
                   <Route exact path="/settings" component={Settings} />
                   <Route exact path="/playback" component={PlaybackSettings} />
+                  <Route exact path="/tafsir-settings" component={TafsirSettings} />
                   <Redirect exact from="/home" to="/" />
                 </IonRouterOutlet>
               </IonReactRouter>

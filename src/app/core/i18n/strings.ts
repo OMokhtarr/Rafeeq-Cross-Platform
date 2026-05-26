@@ -274,6 +274,21 @@ export interface AppStrings {
     difficulties: { value: string; label: string }[];
     reciters: { value: string; label: string }[];
   };
+
+  tafsirSettings: {
+    title: string;
+    subtitle: string;
+    backLabel: string;
+    sectionDownloaded: string;
+    sectionAvailable: string;
+    noDownloads: string;
+    noDownloadsHint: string;
+    remove: string;
+    download: string;
+    downloading: string;
+    downloaded: string;
+    languageGroup: (lang: string) => string;
+  };
 }
 
 const ar: AppStrings = {
@@ -560,6 +575,21 @@ const ar: AppStrings = {
       { value: "afasy", label: "مشاري راشد العفاسي" },
       { value: "ghamdi", label: "سعد الغامدي" },
     ],
+  },
+
+  tafsirSettings: {
+    title: "التفاسير",
+    subtitle: "إدارة التفاسير المحفوظة",
+    backLabel: "رجوع",
+    sectionDownloaded: "التفاسير المحفوظة",
+    sectionAvailable: "التفاسير المتاحة",
+    noDownloads: "لا توجد تفاسير محفوظة بعد",
+    noDownloadsHint: "احفظ تفسيراً من القائمة أدناه لاستخدامه بدون إنترنت",
+    remove: "إزالة",
+    download: "حفظ",
+    downloading: "جارٍ الحفظ…",
+    downloaded: "محفوظ",
+    languageGroup: (lang: string) => lang,
   },
 };
 
@@ -851,6 +881,21 @@ const en: AppStrings = {
       { value: "afasy", label: "Mishary Rashid Al-Afasy" },
       { value: "ghamdi", label: "Sa'd Al-Ghamdi" },
     ],
+  },
+
+  tafsirSettings: {
+    title: "Tafsir Library",
+    subtitle: "Manage saved tafsirs",
+    backLabel: "Back",
+    sectionDownloaded: "Saved Tafsirs",
+    sectionAvailable: "Available Tafsirs",
+    noDownloads: "No tafsirs saved yet",
+    noDownloadsHint: "Save a tafsir from the list below to use it offline",
+    remove: "Remove",
+    download: "Save",
+    downloading: "Saving…",
+    downloaded: "Saved",
+    languageGroup: (lang: string) => lang,
   },
 };
 

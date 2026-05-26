@@ -181,35 +181,14 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   const history = useHistory();
   const { t, lang } = useLang();
 
-  const labels: Record<NavTabKey, { primary: string; secondary: string }> = {
-    home: {
-      primary: lang === "ar" ? "الرئيسية" : "Home",
-      secondary: lang === "ar" ? "Home" : "الرئيسية",
-    },
-    quran: {
-      primary: t.tabs.quran,
-      secondary: lang === "ar" ? "Quran" : "القرآن",
-    },
-    quiz: {
-      primary: t.tabs.quiz,
-      secondary: lang === "ar" ? "Quizzes" : "اختبارات",
-    },
-    azkar: {
-      primary: t.tabs.azkar,
-      secondary: lang === "ar" ? "Azkar" : "أذكار",
-    },
-    ahadith: {
-      primary: t.tabs.ahadith,
-      secondary: lang === "ar" ? "Ahadith" : "أحاديث",
-    },
-    account: {
-      primary: lang === "ar" ? "حسابي" : "Account",
-      secondary: lang === "ar" ? "Account" : "حسابي",
-    },
-    settings: {
-      primary: t.tabs.settings,
-      secondary: lang === "ar" ? "Settings" : "إعدادات",
-    },
+  const labels: Record<NavTabKey, string> = {
+    home: lang === "ar" ? "الرئيسية" : "Home",
+    quran: t.tabs.quran,
+    quiz: t.tabs.quiz,
+    azkar: t.tabs.azkar,
+    ahadith: t.tabs.ahadith,
+    account: lang === "ar" ? "حسابي" : "Account",
+    settings: t.tabs.settings,
   };
 
   return (
@@ -234,7 +213,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
             aria-label={
-              tab.comingSoon ? `${l.primary} (${t.tabs.comingSoon})` : l.primary
+              tab.comingSoon ? `${l} (${t.tabs.comingSoon})` : l
             }
           >
             <span
@@ -246,12 +225,10 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
             >
               {tab.icon}
             </span>
-            <span className="rfq-tab-label-primary">{l.primary}</span>
-            <span className="rfq-tab-label-secondary">{l.secondary}</span>
+            <span className="rfq-tab-label-primary">{l}</span>
             {tab.comingSoon && (
               <span className="rfq-tab-soon">{t.tabs.comingSoon}</span>
             )}
-            {isActive && <span className="rfq-tab-dot" aria-hidden="true" />}
           </button>
         );
       })}

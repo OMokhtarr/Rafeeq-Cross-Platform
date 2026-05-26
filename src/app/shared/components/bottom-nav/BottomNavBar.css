@@ -107,19 +107,7 @@
   );
 }
 
-/* Active indicator dot — design system marker beneath the active tab */
-.rfq-tab-dot {
-  position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--tab-color, var(--color-gold, #d4b48c));
-}
-
-/* Labels — Arabic primary (Scheherazade) + tiny Latin secondary (Georgia) */
+/* Labels */
 .rfq-tab-label-primary {
   font-family: var(--font-arabic, "Scheherazade New", "Amiri", serif);
   font-size: 0.7rem;
@@ -134,21 +122,6 @@
   letter-spacing: 0.3px;
 }
 
-.rfq-tab-label-secondary {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 0.5rem;
-  color: inherit;
-  opacity: 0.6;
-  line-height: 1;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
-[dir="ltr"] .rfq-tab-label-secondary {
-  font-family: var(--font-arabic, "Scheherazade New", "Amiri", serif);
-  font-size: 0.6rem;
-  letter-spacing: 0;
-}
 
 .rfq-tab-soon {
   position: absolute;
@@ -177,9 +150,6 @@
   }
   [dir="ltr"] .rfq-tab-label-primary {
     font-size: 0.66rem;
-  }
-  .rfq-tab-label-secondary {
-    font-size: 0.55rem;
   }
   .rfq-tab {
     padding: 4px 4px;

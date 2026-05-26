@@ -547,3 +547,73 @@
 @keyframes vas-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Resource bar inner layout (select + gear) ──────────────────────────── */
+
+.vas-resource-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ── Gear icon button beside the tafsir selector ────────────────────────── */
+
+.vas-tafsir-gear {
+  background: none;
+  border: 1.5px solid rgba(212, 180, 140, 0.4);
+  color: var(--color-gold, #b8860b);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition-fast, 0.15s),
+              border-color var(--transition-fast, 0.15s);
+  padding: 0;
+}
+
+.vas-tafsir-gear:hover {
+  background: rgba(212, 180, 140, 0.12);
+  border-color: var(--color-gold, #b8860b);
+}
+
+.vas-tafsir-gear--night {
+  border-color: rgba(212, 180, 140, 0.3);
+  color: var(--color-gold, #d4b48c);
+}
+
+.vas-tafsir-gear--night:hover {
+  background: rgba(212, 180, 140, 0.08);
+}
+
+/* ── "No downloads" prompt link ─────────────────────────────────────────── */
+
+.vas-tafsir-settings-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1.5px dashed rgba(212, 180, 140, 0.45);
+  border-radius: 8px;
+  color: var(--color-gold, #b8860b);
+  font-family: var(--font-arabic, serif);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 6px 12px;
+  width: 100%;
+  text-align: start;
+  transition: background var(--transition-fast, 0.15s);
+}
+
+.vas-tafsir-settings-link:hover {
+  background: rgba(212, 180, 140, 0.1);
+}
+
+.vas-tafsir-settings-link--night {
+  border-color: rgba(212, 180, 140, 0.3);
+  color: var(--color-gold, #d4b48c);
+}

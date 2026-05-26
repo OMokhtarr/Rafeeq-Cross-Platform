@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useHistory } from "react-router-dom";
 import {
   fetchTafsirForAyah,
   getTafsirResources,
@@ -6,6 +7,9 @@ import {
   getPage,
 } from "../../../core/services/data/quran.service";
 import type { TafsirResource } from "../../../core/services/data/quran.service";
+import {
+  getDownloadedTafsirIds,
+} from "../../../core/services/data/tafsir-cache.service";
 import { useLang } from "../../../core/context/LanguageContext";
 import { useTheme } from "../../../core/context/ThemeContext";
 import InlineSelect from "../inline-select/InlineSelect";
@@ -51,6 +55,7 @@ const VerseActionSheet: React.FC<Props> = ({
 }) => {
   const { t, lang, isRTL } = useLang();
   const { isNight } = useTheme();
+  const history = useHistory();
 
   const nightClass = isNight ? " vas-sheet--night" : "";
 
@@ -133,6 +138,9 @@ const VerseActionSheet: React.FC<Props> = ({
   const [selectedResourceId, setSelectedResourceId] = useState<string>(
     tafsirId ?? DEFAULT_TAFSIR_ID,
   );
+  const [downloadedIds, setDownloadedIds] = useState<string[]>(
+    getDownloadedTafsirIds,
+  );
 
   // ── Verse text ────────────────────────────────────────────────────────────
   const [verseText, setVerseText] = useState<string>("");
@@ -143,6 +151,13 @@ const VerseActionSheet: React.FC<Props> = ({
   const [tafsirError, setTafsirError] = useState<string | null>(null);
 
   const tafsirBodyRef = useRef<HTMLDivElement>(null);
+
+  // Keep downloaded IDs in sync with TafsirSettings page changes
+  useEffect(() => {
+    const handler = () => setDownloadedIds(getDownloadedTafsirIds());
+    window.addEventListener("rafiq-tafsir-downloads-changed", handler);
+    return () => window.removeEventListener("rafiq-tafsir-downloads-changed", handler);
+  }, []);
 
   // ── Reset on open / verse change ──────────────────────────────────────────
   useEffect(() => {
@@ -229,6 +244,16 @@ const VerseActionSheet: React.FC<Props> = ({
     };
   }, [open, currentKey, page]);
 
+  // ── Derived: filter resources to downloaded only ──────────────────────────
+  const downloadedResources = resources.filter((r) =>
+    downloadedIds.includes(r.id),
+  );
+
+  const effectiveResourceId =
+    downloadedIds.includes(selectedResourceId) || downloadedIds.length === 0
+      ? selectedResourceId
+      : downloadedResources[0]?.id ?? DEFAULT_TAFSIR_ID;
+
   // ── Fetch tafsir text whenever key or resource changes ────────────────────
   useEffect(() => {
     if (!open || !currentKey) return;
@@ -237,7 +262,7 @@ const VerseActionSheet: React.FC<Props> = ({
     setTafsirLoading(true);
     setTafsirError(null);
     setTafsir("");
-    fetchTafsirForAyah(s, a, selectedResourceId)
+    fetchTafsirForAyah(s, a, effectiveResourceId)
       .then((res) => {
         if (!cancelled) {
           setTafsir(res.text);
@@ -253,7 +278,7 @@ const VerseActionSheet: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, currentKey, selectedResourceId, t]);
+  }, [open, currentKey, effectiveResourceId, t]);
 
   // ── Prev / next helpers ───────────────────────────────────────────────────
   const currentIdx = currentKey ? pageVerseKeys.indexOf(currentKey) : -1;
@@ -278,7 +303,7 @@ const VerseActionSheet: React.FC<Props> = ({
       ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
       : `${dSura}:${dAya}`;
 
-  const selectedResource = resources.find((r) => r.id === selectedResourceId);
+  const selectedResource = resources.find((r) => r.id === effectiveResourceId);
 
   if (!open || !verseKey) return null;
 
@@ -429,29 +454,51 @@ const VerseActionSheet: React.FC<Props> = ({
         {/* ── Tafsir tab ── */}
         {activeTab === "tafsir" && (
           <>
-            {/* Resource selector */}
+            {/* Resource selector — shows only downloaded tafsirs */}
             <div className={`vas-resource-bar${nightClass}`}>
               {resourcesLoading ? (
                 <span
                   className="vas-spinner vas-spinner--sm"
                   aria-hidden="true"
                 />
+              ) : downloadedResources.length === 0 ? (
+                /* No downloads yet — show a prompt to go to settings */
+                <button
+                  className={`vas-tafsir-settings-link${nightClass}`}
+                  onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                  <span>
+                    {lang === "ar" ? "احفظ تفسيراً من مكتبة التفاسير" : "Save a tafsir from the library"}
+                  </span>
+                </button>
               ) : (
-                <InlineSelect
-                  value={selectedResourceId}
-                  options={
-                    resources.length === 0
-                      ? [{ value: DEFAULT_TAFSIR_ID, label: "Tafsir Muyassar — المیسر" }]
-                      : resources.map((r) => ({
-                          value: r.id,
-                          label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
-                        }))
-                  }
-                  onChange={setSelectedResourceId}
-                  night={isNight}
-                  fullWidth
-                  aria-label={t.mushaf.tafsir}
-                />
+                <div className="vas-resource-bar-inner">
+                  <InlineSelect
+                    value={effectiveResourceId}
+                    options={downloadedResources.map((r) => ({
+                      value: r.id,
+                      label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
+                    }))}
+                    onChange={setSelectedResourceId}
+                    night={isNight}
+                    fullWidth
+                    aria-label={t.mushaf.tafsir}
+                  />
+                  <button
+                    className={`vas-tafsir-gear${nightClass}`}
+                    onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+                    aria-label={lang === "ar" ? "إعدادات التفاسير" : "Tafsir settings"}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
 
