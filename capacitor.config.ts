@@ -28,12 +28,8 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      // Matches the splash image at public/images/starter_page.png
-      launchShowDuration: 2000,
+      launchShowDuration: 0,
       launchAutoHide: true,
-      backgroundColor: "#1A7A4A", // Rafeeq emerald green
-      androidSplashResourceName: "splash",
-      androidScaleType: "CENTER_CROP",
       showSpinner: false,
     },
 

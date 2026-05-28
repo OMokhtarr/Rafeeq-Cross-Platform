@@ -16,7 +16,7 @@
      first-render overshoot worse, causing lines to wrap before the second
      pass shrinks the font. */
   font-size: clamp(20px, 4.6vw, 34px);
-  line-height: 1.8;
+  line-height: 2.0;
   color: var(--color-mushaf-text, #1a1a1a);
   overflow: hidden;
   transition: color var(--transition-theme, 0.25s ease);
