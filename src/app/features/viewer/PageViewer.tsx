@@ -175,7 +175,6 @@ const PageViewer: React.FC = () => {
     if (v === lastPlaybackVerse.current) return;
     lastPlaybackVerse.current = v;
     setPlaybackVerse(v);
-    setPlaybackSheetOpen(false);
     const [suraStr, ayaStr] = v.split(":");
     const targetPage = estimatePageForVerse(
       parseInt(suraStr, 10),
@@ -800,111 +799,135 @@ const PageViewer: React.FC = () => {
                 className="toolbar-playback-bar"
                 aria-label="Playback controls"
               >
-                <button
-                  className="toolbar-button playback-nav"
-                  onClick={isRTL ? handleNext : handlePrev}
-                  aria-label="Previous"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
+                <div className="playback-bar-buttons">
+                  {/* Prev (LTR: left; RTL: right) — disabled at start of queue */}
+                  <button
+                    className="toolbar-button playback-nav"
+                    onClick={isRTL ? handleNext : handlePrev}
+                    disabled={isRTL ? queue.state.currentIndex >= queue.queue.length - 1 : queue.state.currentIndex <= 0}
+                    aria-label={isRTL ? "Next verse" : "Previous verse"}
                   >
-                    <polygon points="19 5 9 12 19 19" />
-                    <line x1="5" y1="5" x2="5" y2="19" />
-                  </svg>
-                </button>
-                <button
-                  className="toolbar-button playback-play"
-                  onClick={handlePlayPause}
-                  aria-label={
-                    queue.state.isPlaying ||
-                    (!userPaused && !!queue.state.currentVerse)
-                      ? t.mushaf.pause
-                      : t.mushaf.play
-                  }
-                >
-                  {queue.state.isPlaying ||
-                  (!userPaused && !!queue.state.currentVerse) ? (
                     <svg
                       viewBox="0 0 24 24"
-                      width="22"
-                      height="22"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <polygon points="19 5 9 12 19 19" />
+                      <line x1="5" y1="5" x2="5" y2="19" />
+                    </svg>
+                  </button>
+                  <button
+                    className="toolbar-button playback-play"
+                    onClick={handlePlayPause}
+                    aria-label={
+                      queue.state.isPlaying ||
+                      (!userPaused && !!queue.state.currentVerse)
+                        ? t.mushaf.pause
+                        : t.mushaf.play
+                    }
+                  >
+                    {queue.state.isPlaying ||
+                    (!userPaused && !!queue.state.currentVerse) ? (
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="18"
+                        height="18"
+                        fill="currentColor"
+                        stroke="none"
+                      >
+                        <rect x="6" y="4" width="4" height="16" rx="1" />
+                        <rect x="14" y="4" width="4" height="16" rx="1" />
+                      </svg>
+                    ) : (
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="18"
+                        height="18"
+                        fill="currentColor"
+                        stroke="none"
+                      >
+                        <polygon points="6 4 20 12 6 20" />
+                      </svg>
+                    )}
+                  </button>
+                  {/* Next (LTR: right; RTL: left) — disabled at end of queue */}
+                  <button
+                    className="toolbar-button playback-nav"
+                    onClick={isRTL ? handlePrev : handleNext}
+                    disabled={isRTL ? queue.state.currentIndex <= 0 : queue.state.currentIndex >= queue.queue.length - 1}
+                    aria-label={isRTL ? "Previous verse" : "Next verse"}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <polygon points="5 19 15 12 5 5" />
+                      <line x1="19" y1="5" x2="19" y2="19" />
+                    </svg>
+                  </button>
+                  <button
+                    className="toolbar-button playback-stop"
+                    onClick={handleStop}
+                    aria-label={t.mushaf.stopLabel}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
                       fill="currentColor"
                       stroke="none"
                     >
-                      <rect x="6" y="4" width="4" height="16" rx="1" />
-                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                      <rect x="5" y="5" width="14" height="14" rx="2" />
                     </svg>
-                  ) : (
+                  </button>
+                  <div className="playback-bar-divider" aria-hidden="true" />
+                  <button
+                    className="toolbar-button playback-settings"
+                    onClick={() => {
+                      sheetOpenTimeRef.current = Date.now();
+                      setPlaybackSheetOpen(true);
+                    }}
+                    aria-label={t.playback.title}
+                  >
                     <svg
                       viewBox="0 0 24 24"
-                      width="22"
-                      height="22"
-                      fill="currentColor"
-                      stroke="none"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <polygon points="6 4 20 12 6 20" />
+                      <polyline points="5 15 12 8 19 15" />
                     </svg>
-                  )}
-                </button>
-                <button
-                  className="toolbar-button playback-nav"
-                  onClick={isRTL ? handlePrev : handleNext}
-                  aria-label="Next"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
+                  </button>
+                </div>
+                {/* Progress bar — spans full width below buttons */}
+                {queue.state.durationMs > 0 && (
+                  <div
+                    className="playback-progress-track"
+                    aria-label="Playback progress"
+                    role="progressbar"
+                    aria-valuenow={queue.state.positionMs}
+                    aria-valuemin={0}
+                    aria-valuemax={queue.state.durationMs}
                   >
-                    <polygon points="5 19 15 12 5 5" />
-                    <line x1="19" y1="5" x2="19" y2="19" />
-                  </svg>
-                </button>
-                <button
-                  className="toolbar-button playback-stop"
-                  onClick={handleStop}
-                  aria-label={t.mushaf.stopLabel}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="18"
-                    height="18"
-                    fill="currentColor"
-                    stroke="none"
-                  >
-                    <rect x="5" y="5" width="14" height="14" rx="2" />
-                  </svg>
-                </button>
-                <div className="playback-bar-divider" aria-hidden="true" />
-                <button
-                  className="toolbar-button playback-settings"
-                  onClick={() => {
-                    sheetOpenTimeRef.current = Date.now();
-                    setPlaybackSheetOpen(true);
-                  }}
-                  aria-label={t.playback.title}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="18"
-                    height="18"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="5 15 12 8 19 15" />
-                  </svg>
-                </button>
+                    <div
+                      className="playback-progress-fill"
+                      style={{
+                        width: `${Math.min(100, (queue.state.positionMs / queue.state.durationMs) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <button

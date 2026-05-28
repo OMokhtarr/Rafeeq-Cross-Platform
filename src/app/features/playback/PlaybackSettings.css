@@ -449,6 +449,11 @@
 .pb-seg-btn.pb--night:hover {
   background: rgba(255, 255, 255, 0.06);
 }
+.pb-seg-btn.pb--night.is-active {
+  background: var(--color-quran, #1f8f6b);
+  color: #fff;
+  border-color: var(--color-quran, #1f8f6b);
+}
 .pb-link-row.pb--night {
   color: var(--color-text-primary, #e9e9ea);
   border-top-color: rgba(255, 255, 255, 0.06);

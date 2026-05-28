@@ -42,16 +42,20 @@ export interface PlaybackState {
   error: string | null;
   verseRepeatCount: number;
   rangePassCount: number;
+  positionMs: number;
+  durationMs: number;
 }
 
 export interface PlaybackControls {
   state: PlaybackState;
+  queue: VerseKey[];
   start: (queue: VerseKey[]) => Promise<void>;
   pause: () => void;
   resume: () => Promise<void>;
   stop: () => void;
   next: () => void;
   prev: () => void;
+  jumpToIndex: (index: number) => void;
   setPlaybackRate: (rate: number) => void;
   setReciter: (reciter: string) => void;
   setRepeatVerse: (mode: RepeatMode) => void;
@@ -79,7 +83,29 @@ const INITIAL_STATE: PlaybackState = {
   error: null,
   verseRepeatCount: 0,
   rangePassCount: 0,
+  positionMs: 0,
+  durationMs: 0,
 };
+
+/** Load a blob URL into a temporary Audio element just long enough to read its duration. */
+function probeDuration(blobUrl: string): Promise<number> {
+  return new Promise((resolve) => {
+    const el = new Audio(blobUrl);
+    const cleanup = () => {
+      el.removeEventListener("durationchange", onDuration);
+      el.removeEventListener("error", onError);
+      el.src = "";
+    };
+    const onDuration = () => {
+      const d = el.duration;
+      cleanup();
+      resolve(isFinite(d) && d > 0 ? d : 0);
+    };
+    const onError = () => { cleanup(); resolve(0); };
+    el.addEventListener("durationchange", onDuration);
+    el.addEventListener("error", onError);
+  });
+}
 
 export function usePlaybackQueue(
   initial: UsePlaybackQueueOptions,
@@ -90,6 +116,7 @@ export function usePlaybackQueue(
   const verseRepeatCountRef = useRef(0);
   const rangePassCountRef = useRef(0);
 
+  const isLoadingRef = useRef(false);
   const reciterRef = useRef(initial.reciter);
   const currentVerseKeyRef = useRef<string | null>(null);
   const playbackRateRef = useRef(initial.playbackRate ?? 1);
@@ -99,7 +126,15 @@ export function usePlaybackQueue(
   const currentBlobUrlRef = useRef<string | null>(null);
   const prefetchAbortRef = useRef<AbortController | null>(null);
 
+  // Accumulated elapsed seconds from all completed verses in the current range pass
+  const elapsedBeforeCurrentVerseRef = useRef(0);
+  // Known durations per verse index, filled as each verse loads
+  const verseDurationsRef = useRef<Record<number, number>>({});
+  // Estimated total duration of the range (sum of known verse durations)
+  const totalRangeDurationRef = useRef(0);
+
   const [state, setState] = useState<PlaybackState>(INITIAL_STATE);
+  const [activeQueue, setActiveQueue] = useState<VerseKey[]>([]);
 
   // Ref to store the playIndex function to break circular dependency
   const playIndexRef = useRef<(idx: number) => Promise<void>>(async () => {});
@@ -127,6 +162,23 @@ export function usePlaybackQueue(
         error: "audio error",
       })),
     );
+    el.addEventListener("durationchange", () => {
+      const dur = el.duration;
+      if (!isFinite(dur) || dur <= 0) return;
+      const idx = indexRef.current;
+      const prev = verseDurationsRef.current[idx] ?? 0;
+      // Only update the total if the duration changed (e.g. first time, or correction).
+      // The prefetch probe may have already stored this verse's duration; avoid double-counting.
+      if (Math.abs(dur - prev) < 0.01) return;
+      verseDurationsRef.current[idx] = dur;
+      totalRangeDurationRef.current = Math.max(0, totalRangeDurationRef.current - prev + dur);
+      setState((s) => ({ ...s, durationMs: Math.round(totalRangeDurationRef.current * 1000) }));
+    });
+    el.addEventListener("timeupdate", () => {
+      if (isLoadingRef.current) return;
+      const rangePos = elapsedBeforeCurrentVerseRef.current + el.currentTime;
+      setState((s) => ({ ...s, positionMs: Math.round(rangePos * 1000) }));
+    });
 
     audioRef.current = el;
     return el;
@@ -146,6 +198,16 @@ export function usePlaybackQueue(
         ],
       });
       navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+      const el = audioRef.current;
+      const totalDuration = totalRangeDurationRef.current;
+      if (el && isFinite(el.duration) && el.duration > 0 && totalDuration > 0) {
+        const rangePosition = elapsedBeforeCurrentVerseRef.current + el.currentTime;
+        navigator.mediaSession.setPositionState({
+          duration: totalDuration,
+          playbackRate: el.playbackRate,
+          position: Math.min(rangePosition, totalDuration),
+        });
+      }
     } catch {
       /* ignore */
     }
@@ -180,11 +242,15 @@ export function usePlaybackQueue(
     indexRef.current = 0;
     verseRepeatCountRef.current = 0;
     rangePassCountRef.current = 0;
+    elapsedBeforeCurrentVerseRef.current = 0;
+    verseDurationsRef.current = {};
+    totalRangeDurationRef.current = 0;
     try {
       if ("mediaSession" in navigator)
         navigator.mediaSession.playbackState = "none";
     } catch {}
-    setState(INITIAL_STATE);
+    setState({ ...INITIAL_STATE, positionMs: 0, durationMs: 0 });
+    setActiveQueue([]);
   }, [releaseCurrentBlob]);
 
   // advance logic – defined before playIndex, using the ref
@@ -206,6 +272,9 @@ export function usePlaybackQueue(
     verseRepeatCountRef.current = 0;
     const nextIdx = indexRef.current + 1;
     if (nextIdx < queue.length) {
+      // Advance elapsed by the completed verse's known duration
+      elapsedBeforeCurrentVerseRef.current +=
+        verseDurationsRef.current[indexRef.current] ?? 0;
       void playIndexRef.current(nextIdx);
       return;
     }
@@ -216,6 +285,8 @@ export function usePlaybackQueue(
         ? Number.POSITIVE_INFINITY
         : Math.max(1, repeatRange);
     if (rangePassCountRef.current < rangeTarget) {
+      // Loop back to start — reset position to beginning of range
+      elapsedBeforeCurrentVerseRef.current = 0;
       void playIndexRef.current(0);
       return;
     }
@@ -247,6 +318,14 @@ export function usePlaybackQueue(
       indexRef.current = idx;
       currentVerseKeyRef.current = verseKey;
 
+      // Keep Media Session in "playing" state throughout verse transitions
+      // so the notification never shows a paused state between verses
+      try {
+        if ("mediaSession" in navigator)
+          navigator.mediaSession.playbackState = "playing";
+      } catch {}
+
+      isLoadingRef.current = true;
       setState((s) => ({
         ...s,
         currentIndex: idx,
@@ -293,6 +372,7 @@ export function usePlaybackQueue(
         // Re‑bind ended after every successful play
         bindEnded();
 
+        isLoadingRef.current = false;
         updateMediaSession(verseKey, true);
         setState((s) => ({
           ...s,
@@ -308,6 +388,7 @@ export function usePlaybackQueue(
           downloadAndCache(reciterRef.current, ns, na).catch(() => {});
         }
       } catch (err) {
+        isLoadingRef.current = false;
         const message = err instanceof Error ? err.message : "playback failed";
         setState((s) => ({
           ...s,
@@ -394,9 +475,13 @@ export function usePlaybackQueue(
 
       prefetchAbortRef.current?.abort();
       queueRef.current = queue.slice();
+      setActiveQueue(queue.slice());
       indexRef.current = 0;
       verseRepeatCountRef.current = 0;
       rangePassCountRef.current = 0;
+      elapsedBeforeCurrentVerseRef.current = 0;
+      verseDurationsRef.current = {};
+      totalRangeDurationRef.current = 0;
 
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
@@ -419,15 +504,26 @@ export function usePlaybackQueue(
       const reciter = reciterRef.current;
       const signal = controller.signal;
       const prefetchAll = async () => {
-        for (const verse of queue) {
+        for (let i = 0; i < queue.length; i++) {
           if (signal.aborted) break;
-          const { sura, aya } = verse;
-          if (!(await hasCached(reciter, sura, aya))) {
-            try {
-              await downloadAndCache(reciter, sura, aya, signal);
-            } catch {
-              // continue on abort or network error
+          const { sura, aya } = queue[i];
+          try {
+            // Probe duration for verses we haven't timed yet.
+            // Skip the verse currently loaded in the audio element — its duration
+            // arrives via the durationchange event and its blob URL is owned by playIndex.
+            if (!(i in verseDurationsRef.current) && i !== indexRef.current) {
+              const blobUrl = await getCachedOrDownload(reciter, sura, aya, signal);
+              const dur = await probeDuration(blobUrl);
+              URL.revokeObjectURL(blobUrl);
+              if (dur > 0 && !signal.aborted) {
+                const prev = verseDurationsRef.current[i] ?? 0;
+                verseDurationsRef.current[i] = dur;
+                totalRangeDurationRef.current = Math.max(0, totalRangeDurationRef.current - prev + dur);
+                setState((s) => ({ ...s, durationMs: Math.round(totalRangeDurationRef.current * 1000) }));
+              }
             }
+          } catch {
+            // continue on abort or network error
           }
         }
       };
@@ -467,14 +563,40 @@ export function usePlaybackQueue(
   const next = useCallback(() => {
     verseRepeatCountRef.current = 0;
     const target = indexRef.current + 1;
-    if (target < queueRef.current.length) void playIndexRef.current(target);
-    else stop();
+    if (target < queueRef.current.length) {
+      // Accumulate elapsed for the verse we're leaving
+      elapsedBeforeCurrentVerseRef.current +=
+        verseDurationsRef.current[indexRef.current] ?? 0;
+      void playIndexRef.current(target);
+    } else {
+      stop();
+    }
   }, [stop]);
 
   const prev = useCallback(() => {
     verseRepeatCountRef.current = 0;
     const target = indexRef.current - 1;
-    if (target >= 0) void playIndexRef.current(target);
+    if (target >= 0) {
+      // Subtract the duration of the verse we're going back to
+      elapsedBeforeCurrentVerseRef.current = Math.max(
+        0,
+        elapsedBeforeCurrentVerseRef.current -
+          (verseDurationsRef.current[target] ?? 0),
+      );
+      void playIndexRef.current(target);
+    }
+  }, []);
+
+  const jumpToIndex = useCallback((index: number) => {
+    if (index < 0 || index >= queueRef.current.length) return;
+    verseRepeatCountRef.current = 0;
+    // Recalculate elapsed position from known verse durations up to this index
+    let elapsed = 0;
+    for (let i = 0; i < index; i++) {
+      elapsed += verseDurationsRef.current[i] ?? 0;
+    }
+    elapsedBeforeCurrentVerseRef.current = elapsed;
+    void playIndexRef.current(index);
   }, []);
 
   // ─── resumeSession ─────────────────────────────────────────────────────────
@@ -503,6 +625,9 @@ export function usePlaybackQueue(
       }
       verseRepeatCountRef.current = 0;
       rangePassCountRef.current = 0;
+      elapsedBeforeCurrentVerseRef.current = 0;
+      verseDurationsRef.current = {};
+      totalRangeDurationRef.current = 0;
 
       // Prefetch like normal start does
       prefetchAbortRef.current?.abort();
@@ -551,12 +676,14 @@ export function usePlaybackQueue(
 
   return {
     state,
+    queue: activeQueue,
     start,
     pause,
     resume,
     stop,
     next,
     prev,
+    jumpToIndex,
     setPlaybackRate,
     setReciter,
     setRepeatVerse,
