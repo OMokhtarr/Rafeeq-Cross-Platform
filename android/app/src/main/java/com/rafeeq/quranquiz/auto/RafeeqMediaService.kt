@@ -301,6 +301,25 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         val largeIcon = BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
 
+        Log.d("RafeeqMedia", "buildNotification: markers=${markers.size} activePage=$activePage")
+
+        // Compute page-nav markers.
+        var prevMarker: PageMarker? = null
+        var nextMarker: PageMarker? = null
+        if (markers.size > 1) {
+            val currentIdx = markers.indexOfFirst { it.page == activePage }
+                .let { if (it < 0) markers.indexOfFirst { it.page >= activePage }.let { i -> if (i < 0) markers.lastIndex else i } else it }
+            prevMarker = if (currentIdx > 0) markers[currentIdx - 1] else null
+            nextMarker = if (currentIdx < markers.lastIndex) markers[currentIdx + 1] else null
+        }
+
+        // Layout when on first page:  [prev-verse, play/pause, next-verse, next-page]   → compact 0,1,2
+        // Layout when on middle page: [prev-page, prev-verse, play/pause, next-verse, next-page] → compact 1,2,3
+        // Layout when on last page:   [prev-page, prev-verse, play/pause, next-verse]   → compact 1,2,3
+        // Layout when single-page:    [prev-verse, play/pause, next-verse]              → compact 0,1,2
+        val hasPrev = prevMarker != null
+        val hasNext = nextMarker != null
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(subtitle)
@@ -308,73 +327,44 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             .setLargeIcon(largeIcon)
             .setContentIntent(openAppIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(
-                NotificationCompat.Action(
-                    android.R.drawable.ic_media_previous, "Previous",
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                    )
-                )
-            )
-            .addAction(playPauseAction)
-            .addAction(
-                NotificationCompat.Action(
-                    android.R.drawable.ic_media_next, "Next",
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                    )
-                )
-            )
 
-        Log.d("RafeeqMedia", "buildNotification: markers=${markers.size} activePage=$activePage")
-
-        // Add prev-page / next-page actions when the surah spans multiple pages.
-        // Prev = jump to start of previous page. Next = jump to start of next page.
-        // Compact view (indices 0,1,2) stays as prev-verse / pause / next-verse.
-        if (markers.size > 1) {
-            val currentIdx = markers.indexOfFirst { it.page == activePage }
-                .let { if (it < 0) markers.indexOfFirst { it.page >= activePage }.let { i -> if (i < 0) markers.lastIndex else i } else it }
-
-            val prevMarker = if (currentIdx > 0) markers[currentIdx - 1] else null
-            val nextMarker = if (currentIdx < markers.lastIndex) markers[currentIdx + 1] else null
-
-            // Always show both page-nav buttons so their positions never shift.
-            // Disabled = no-op intent (null PendingIntent), greyed icon.
-            val prevPi = if (prevMarker != null) PendingIntent.getService(
-                this, 100,
+        if (hasPrev) {
+            val pi = PendingIntent.getService(this, 100,
                 Intent(this, RafeeqMediaService::class.java).apply {
                     action = ACTION_JUMP_TO_PAGE
-                    putExtra(EXTRA_AYA, prevMarker.aya)
+                    putExtra(EXTRA_AYA, prevMarker!!.aya)
                     putExtra(EXTRA_PAGE, prevMarker.page)
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            ) else null
-            builder.addAction(NotificationCompat.Action(
-                android.R.drawable.ic_media_rew,
-                if (prevMarker != null) "◀ ص ${prevMarker.page}" else "◀",
-                prevPi
-            ))
-
-            val nextPi = if (nextMarker != null) PendingIntent.getService(
-                this, 101,
-                Intent(this, RafeeqMediaService::class.java).apply {
-                    action = ACTION_JUMP_TO_PAGE
-                    putExtra(EXTRA_AYA, nextMarker.aya)
-                    putExtra(EXTRA_PAGE, nextMarker.page)
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            ) else null
-            builder.addAction(NotificationCompat.Action(
-                android.R.drawable.ic_media_ff,
-                if (nextMarker != null) "ص ${nextMarker.page} ▶" else "▶",
-                nextPi
-            ))
+                }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            builder.addAction(NotificationCompat.Action(android.R.drawable.ic_media_rew, "◀ ص ${prevMarker!!.page}", pi))
         }
 
+        builder.addAction(NotificationCompat.Action(
+            android.R.drawable.ic_media_previous, "Previous",
+            MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+        ))
+        builder.addAction(playPauseAction)
+        builder.addAction(NotificationCompat.Action(
+            android.R.drawable.ic_media_next, "Next",
+            MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+        ))
+
+        if (hasNext) {
+            val pi = PendingIntent.getService(this, 101,
+                Intent(this, RafeeqMediaService::class.java).apply {
+                    action = ACTION_JUMP_TO_PAGE
+                    putExtra(EXTRA_AYA, nextMarker!!.aya)
+                    putExtra(EXTRA_PAGE, nextMarker.page)
+                }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            builder.addAction(NotificationCompat.Action(android.R.drawable.ic_media_ff, "ص ${nextMarker!!.page} ▶", pi))
+        }
+
+        // Compact view always shows prev-verse / play / next-verse.
+        // Their indices shift by 1 when a prev-page button precedes them.
+        val offset = if (hasPrev) 1 else 0
         builder.setStyle(
             androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(session.sessionToken)
-                .setShowActionsInCompactView(0, 1, 2)
+                .setShowActionsInCompactView(offset, offset + 1, offset + 2)
         )
 
         return builder.build()

@@ -1,6 +1,6 @@
 {
   "appId": "com.rafeeq.quranquiz",
-  "appName": "Rafeeq رفيق",
+  "appName": "Rafeeq",
   "electron": {
     "customUrlScheme": "rafeeq",
     "deepLinkingEnabled": false,

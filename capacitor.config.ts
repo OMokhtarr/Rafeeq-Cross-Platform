@@ -13,7 +13,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.rafeeq.quranquiz",
-  appName: "Rafeeq رفيق",
+  appName: "Rafeeq",
   webDir: "build",
 
   // // ADD THIS SECTION for Android 15+ edge-to-edge support
