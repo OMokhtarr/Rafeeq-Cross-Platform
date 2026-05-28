@@ -45,8 +45,6 @@ const Home: React.FC = () => {
               <div className="home-brand">
                 <div className="home-brand-line">
                   <span className="home-brand-ar">{t.appName}</span>
-                  <span className="home-brand-sep">·</span>
-                  <span className="home-brand-en">RAFEEQ</span>
                 </div>
               </div>
 
