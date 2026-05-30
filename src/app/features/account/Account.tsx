@@ -18,6 +18,7 @@ import {
   signOut,
   getStoredAccessToken,
   getStoredAccessTokenSync,
+  NetworkError,
 } from "../../core/services/auth/oauth.service";
 import AccountModal from "./AccountModal";
 import GoalsCard from "./GoalsCard";
@@ -116,7 +117,13 @@ const Account: React.FC = () => {
     setError(null);
     Promise.all([
       fetchStreaks(10).catch((err) => {
-        if (
+        if (err instanceof NetworkError) {
+          setError(
+            lang === "ar"
+              ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
+              : "No internet connection. Connect and try again.",
+          );
+        } else if (
           err instanceof UserApiError &&
           (err.status === 401 || err.status === 403)
         ) {
@@ -234,6 +241,7 @@ const Account: React.FC = () => {
     terms:          lang === "ar" ? "شروط الخدمة"                        : "Terms of Service",
     privacy:        lang === "ar" ? "سياسة الخصوصية"                     : "Privacy Policy",
     deleteAccount:  lang === "ar" ? "حذف الحساب"                         : "Delete Account",
+    retry:          lang === "ar" ? "حاول مجدداً"                        : "Try again",
     notes:          lang === "ar" ? "ملاحظاتي"                           : "My Notes",
     noNotes:        lang === "ar" ? "لا توجد ملاحظات بعد"                : "No notes yet",
     noteVerse:      lang === "ar" ? "الآية"                              : "Verse",
@@ -370,7 +378,10 @@ const Account: React.FC = () => {
                     {loading ? (
                       <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
                     ) : error ? (
-                      <p className="ac-error">{error}</p>
+                      <div className="ac-error-block">
+                        <p className="ac-error">{error}</p>
+                        <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                      </div>
                     ) : (
                       <>
                         <div className="ac-streak-stats">
@@ -457,7 +468,10 @@ const Account: React.FC = () => {
                     {loading ? (
                       <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
                     ) : notesError ? (
-                      <p className="ac-error">{notesError}</p>
+                      <div className="ac-error-block">
+                        <p className="ac-error">{notesError}</p>
+                        <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                      </div>
                     ) : notes.length === 0 ? (
                       <p className="ac-streak-empty">{t.noNotes}</p>
                     ) : (

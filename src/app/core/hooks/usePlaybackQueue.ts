@@ -101,7 +101,10 @@ function probeDuration(blobUrl: string): Promise<number> {
       cleanup();
       resolve(isFinite(d) && d > 0 ? d : 0);
     };
-    const onError = () => { cleanup(); resolve(0); };
+    const onError = () => {
+      cleanup();
+      resolve(0);
+    };
     el.addEventListener("durationchange", onDuration);
     el.addEventListener("error", onError);
   });
@@ -149,7 +152,9 @@ export function usePlaybackQueue(
     // Attach state‑updating listeners — ignore events that fire during
     // verse transitions (isLoading true) to prevent play/pause icon flicker.
     el.addEventListener("pause", () =>
-      setState((s) => (s.isPlaying && !s.isLoading ? { ...s, isPlaying: false } : s)),
+      setState((s) =>
+        s.isPlaying && !s.isLoading ? { ...s, isPlaying: false } : s,
+      ),
     );
     el.addEventListener("play", () =>
       setState((s) => (s.isPlaying ? s : { ...s, isPlaying: true })),
@@ -171,8 +176,14 @@ export function usePlaybackQueue(
       // The prefetch probe may have already stored this verse's duration; avoid double-counting.
       if (Math.abs(dur - prev) < 0.01) return;
       verseDurationsRef.current[idx] = dur;
-      totalRangeDurationRef.current = Math.max(0, totalRangeDurationRef.current - prev + dur);
-      setState((s) => ({ ...s, durationMs: Math.round(totalRangeDurationRef.current * 1000) }));
+      totalRangeDurationRef.current = Math.max(
+        0,
+        totalRangeDurationRef.current - prev + dur,
+      );
+      setState((s) => ({
+        ...s,
+        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+      }));
     });
     el.addEventListener("timeupdate", () => {
       if (isLoadingRef.current) return;
@@ -184,34 +195,43 @@ export function usePlaybackQueue(
     return el;
   }, []);
 
-  const updateMediaSession = useCallback((verseKey: string, playing: boolean) => {
-    if (typeof navigator === "undefined" || !("mediaSession" in navigator))
-      return;
-    const [s, a] = verseKey.split(":");
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: `سورة ${s} — آية ${a}`,
-        artist: "رفيق",
-        album: "القرآن الكريم",
-        artwork: [
-          { src: "/images/rafeeq.png", sizes: "512x512", type: "image/png" },
-        ],
-      });
-      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
-      const el = audioRef.current;
-      const totalDuration = totalRangeDurationRef.current;
-      if (el && isFinite(el.duration) && el.duration > 0 && totalDuration > 0) {
-        const rangePosition = elapsedBeforeCurrentVerseRef.current + el.currentTime;
-        navigator.mediaSession.setPositionState({
-          duration: totalDuration,
-          playbackRate: el.playbackRate,
-          position: Math.min(rangePosition, totalDuration),
+  const updateMediaSession = useCallback(
+    (verseKey: string, playing: boolean) => {
+      if (typeof navigator === "undefined" || !("mediaSession" in navigator))
+        return;
+      const [s, a] = verseKey.split(":");
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: `سورة ${s} — آية ${a}`,
+          artist: "رفيق",
+          album: "القرآن الكريم",
+          artwork: [
+            { src: "/images/rafeeq.png", sizes: "512x512", type: "image/png" },
+          ],
         });
+        navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+        const el = audioRef.current;
+        const totalDuration = totalRangeDurationRef.current;
+        if (
+          el &&
+          isFinite(el.duration) &&
+          el.duration > 0 &&
+          totalDuration > 0
+        ) {
+          const rangePosition =
+            elapsedBeforeCurrentVerseRef.current + el.currentTime;
+          navigator.mediaSession.setPositionState({
+            duration: totalDuration,
+            playbackRate: el.playbackRate,
+            position: Math.min(rangePosition, totalDuration),
+          });
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    },
+    [],
+  );
 
   const releaseCurrentBlob = useCallback(() => {
     if (currentBlobUrlRef.current) {
@@ -420,13 +440,25 @@ export function usePlaybackQueue(
     const onNext = () => {
       verseRepeatCountRef.current = 0;
       const next = indexRef.current + 1;
-      if (next < queueRef.current.length) void playIndexRef.current(next);
-      else stop();
+      if (next < queueRef.current.length) {
+        elapsedBeforeCurrentVerseRef.current +=
+          verseDurationsRef.current[indexRef.current] ?? 0;
+        void playIndexRef.current(next);
+      } else {
+        stop();
+      }
     };
     const onPrev = () => {
       verseRepeatCountRef.current = 0;
-      const prev = indexRef.current - 1;
-      if (prev >= 0) void playIndexRef.current(prev);
+      const target = indexRef.current - 1;
+      if (target >= 0) {
+        let elapsed = 0;
+        for (let i = 0; i < target; i++) {
+          elapsed += verseDurationsRef.current[i] ?? 0;
+        }
+        elapsedBeforeCurrentVerseRef.current = elapsed;
+        void playIndexRef.current(target);
+      }
     };
     try {
       ms.setActionHandler("play", onPlay);
@@ -493,7 +525,11 @@ export function usePlaybackQueue(
       // and At-Tawbah (sura 9, which has no bismillah by tradition).
       const first = queue[0];
       if (first.aya === 1 && first.sura !== 1 && first.sura !== 9) {
-        setState((s) => ({ ...s, currentVerse: `${first.sura}:${first.aya}`, isLoading: true }));
+        setState((s) => ({
+          ...s,
+          currentVerse: `${first.sura}:${first.aya}`,
+          isLoading: true,
+        }));
         await playBismillahIntro();
         // If stop() was called while bismillah was playing, bail out
         if (queueRef.current.length === 0) return;
@@ -504,27 +540,38 @@ export function usePlaybackQueue(
       const reciter = reciterRef.current;
       const signal = controller.signal;
       const prefetchAll = async () => {
-        for (let i = 0; i < queue.length; i++) {
-          if (signal.aborted) break;
-          const { sura, aya } = queue[i];
-          try {
-            // Probe duration for verses we haven't timed yet.
-            // Skip the verse currently loaded in the audio element — its duration
-            // arrives via the durationchange event and its blob URL is owned by playIndex.
-            if (!(i in verseDurationsRef.current) && i !== indexRef.current) {
-              const blobUrl = await getCachedOrDownload(reciter, sura, aya, signal);
+        // Fetch all verse durations in parallel so the total is ready at once.
+        await Promise.all(
+          queue.map(async ({ sura, aya }, i) => {
+            if (signal.aborted) return;
+            try {
+              const blobUrl = await getCachedOrDownload(
+                reciter,
+                sura,
+                aya,
+                signal,
+              );
               const dur = await probeDuration(blobUrl);
               URL.revokeObjectURL(blobUrl);
               if (dur > 0 && !signal.aborted) {
                 const prev = verseDurationsRef.current[i] ?? 0;
                 verseDurationsRef.current[i] = dur;
-                totalRangeDurationRef.current = Math.max(0, totalRangeDurationRef.current - prev + dur);
-                setState((s) => ({ ...s, durationMs: Math.round(totalRangeDurationRef.current * 1000) }));
+                totalRangeDurationRef.current = Math.max(
+                  0,
+                  totalRangeDurationRef.current - prev + dur,
+                );
               }
+            } catch {
+              // continue on network error or abort
             }
-          } catch {
-            // continue on abort or network error
-          }
+          }),
+        );
+        // All probes done — push the settled total once.
+        if (!signal.aborted) {
+          setState((s) => ({
+            ...s,
+            durationMs: Math.round(totalRangeDurationRef.current * 1000),
+          }));
         }
       };
       prefetchAll();
@@ -564,9 +611,13 @@ export function usePlaybackQueue(
     verseRepeatCountRef.current = 0;
     const target = indexRef.current + 1;
     if (target < queueRef.current.length) {
-      // Accumulate elapsed for the verse we're leaving
       elapsedBeforeCurrentVerseRef.current +=
         verseDurationsRef.current[indexRef.current] ?? 0;
+      setState((s) => ({
+        ...s,
+        positionMs: Math.round(elapsedBeforeCurrentVerseRef.current * 1000),
+        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+      }));
       void playIndexRef.current(target);
     } else {
       stop();
@@ -577,12 +628,16 @@ export function usePlaybackQueue(
     verseRepeatCountRef.current = 0;
     const target = indexRef.current - 1;
     if (target >= 0) {
-      // Subtract the duration of the verse we're going back to
-      elapsedBeforeCurrentVerseRef.current = Math.max(
-        0,
-        elapsedBeforeCurrentVerseRef.current -
-          (verseDurationsRef.current[target] ?? 0),
-      );
+      let elapsed = 0;
+      for (let i = 0; i < target; i++) {
+        elapsed += verseDurationsRef.current[i] ?? 0;
+      }
+      elapsedBeforeCurrentVerseRef.current = elapsed;
+      setState((s) => ({
+        ...s,
+        positionMs: Math.round(elapsed * 1000),
+        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+      }));
       void playIndexRef.current(target);
     }
   }, []);
@@ -590,12 +645,18 @@ export function usePlaybackQueue(
   const jumpToIndex = useCallback((index: number) => {
     if (index < 0 || index >= queueRef.current.length) return;
     verseRepeatCountRef.current = 0;
-    // Recalculate elapsed position from known verse durations up to this index
     let elapsed = 0;
     for (let i = 0; i < index; i++) {
       elapsed += verseDurationsRef.current[i] ?? 0;
     }
     elapsedBeforeCurrentVerseRef.current = elapsed;
+    // Immediately reflect the new position in state so the UI updates before
+    // the first timeupdate fires from the newly loaded verse.
+    setState((s) => ({
+      ...s,
+      positionMs: Math.round(elapsed * 1000),
+      durationMs: Math.round(totalRangeDurationRef.current * 1000),
+    }));
     void playIndexRef.current(index);
   }, []);
 
