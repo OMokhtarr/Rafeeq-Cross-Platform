@@ -233,19 +233,32 @@ export async function exchangeCodeForToken(
   return { accessToken, refreshToken, idToken };
 }
 
+export class NetworkError extends Error {
+  constructor() {
+    super("network_unavailable");
+    this.name = "NetworkError";
+  }
+}
+
 export async function refreshAccessToken(): Promise<string> {
   const refreshToken = await getStoredRefreshToken();
   if (!refreshToken) throw new Error("No refresh token available");
 
-  const res = await fetch(`${TOKEN_BROKER_URL}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "refresh_token",
-      client_id: CLIENT_ID,
-      refresh_token: refreshToken,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${TOKEN_BROKER_URL}/oauth2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        client_id: CLIENT_ID,
+        refresh_token: refreshToken,
+      }),
+    });
+  } catch {
+    // fetch itself threw — no network, don't touch stored tokens
+    throw new NetworkError();
+  }
 
   if (!res.ok) {
     // Only clear stored tokens when the server explicitly rejects the refresh
