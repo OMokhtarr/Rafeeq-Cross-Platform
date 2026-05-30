@@ -14,6 +14,7 @@ import {
   refreshAccessToken,
   getStoredRefreshToken,
   getUserProfileFromIdTokenAsync,
+  NetworkError,
 } from "../auth/oauth.service";
 
 const USER_API_BASE =
@@ -46,8 +47,9 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
     try {
       const newToken = await refreshAccessToken();
       return newToken;
-    } catch {
-      // refresh failed, fall through
+    } catch (err) {
+      if (err instanceof NetworkError) throw err; // offline — don't touch session
+      // server rejected refresh token — fall through to broker
     }
   }
 
@@ -126,8 +128,9 @@ async function userApiFetch<T>(
 
       if ((res.status === 401 || res.status === 403) && attempt === 1) {
         tokenState = null;
-        // Force a token refresh before retrying
-        try { await refreshAccessToken(); } catch {}
+        try { await refreshAccessToken(); } catch (err) {
+          if (err instanceof NetworkError) throw err;
+        }
         continue;
       }
       if (res.status === 204) return {} as T;
