@@ -41,19 +41,14 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
     return userToken;
   }
 
-  // 2. Silent refresh of user token
+  // 2. Silent refresh of user token — if signed in, never fall back to broker
   const refreshToken = await getStoredRefreshToken();
   if (refreshToken) {
-    try {
-      const newToken = await refreshAccessToken();
-      return newToken;
-    } catch (err) {
-      if (err instanceof NetworkError) throw err; // offline — don't touch session
-      // server rejected refresh token — fall through to broker
-    }
+    const newToken = await refreshAccessToken(); // throws NetworkError or server error — caller handles it
+    return newToken;
   }
 
-  // 3. Fallback to machine‑to‑machine broker token
+  // 3. Fallback to machine‑to‑machine broker token (unauthenticated users only)
   const nowSec = Math.floor(Date.now() / 1000);
   if (!forceRefresh && tokenState && tokenState.expiresAt - 60 > nowSec) {
     return tokenState.accessToken;
@@ -128,9 +123,7 @@ async function userApiFetch<T>(
 
       if ((res.status === 401 || res.status === 403) && attempt === 1) {
         tokenState = null;
-        try { await refreshAccessToken(); } catch (err) {
-          if (err instanceof NetworkError) throw err;
-        }
+        await refreshAccessToken(); // throws on any failure — no silent swallow
         continue;
       }
       if (res.status === 204) return {} as T;

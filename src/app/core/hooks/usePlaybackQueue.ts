@@ -56,6 +56,7 @@ export interface PlaybackControls {
   next: () => void;
   prev: () => void;
   jumpToIndex: (index: number) => void;
+  seekToMs: (positionMs: number) => void;
   setPlaybackRate: (rate: number) => void;
   setReciter: (reciter: string) => void;
   setRepeatVerse: (mode: RepeatMode) => void;
@@ -387,7 +388,28 @@ export function usePlaybackQueue(
         });
 
         verseRepeatCountRef.current += 1;
-        await el.play();
+
+        try {
+          await el.play();
+        } catch (playErr) {
+          isLoadingRef.current = false;
+          // NotAllowedError means the WebView blocked autoplay (no user gesture).
+          // Leave the audio element loaded and ready — the next resume() or play
+          // attempt triggered by a user tap will succeed immediately.
+          if (
+            playErr instanceof DOMException &&
+            playErr.name === "NotAllowedError"
+          ) {
+            setState((s) => ({
+              ...s,
+              isPlaying: false,
+              isLoading: false,
+              currentVerse: verseKey,
+            }));
+            return;
+          }
+          throw playErr;
+        }
 
         // Re‑bind ended after every successful play
         bindEnded();
@@ -660,6 +682,47 @@ export function usePlaybackQueue(
     void playIndexRef.current(index);
   }, []);
 
+  // Seek to an absolute position (ms) within the range. Finds the verse containing
+  // that position, loads it if needed, and seeks within it.
+  const seekToMs = useCallback((positionMs: number) => {
+    const queue = queueRef.current;
+    if (queue.length === 0) return;
+    const targetSec = positionMs / 1000;
+    let elapsed = 0;
+    let targetIndex = queue.length - 1;
+    for (let i = 0; i < queue.length; i++) {
+      const dur = verseDurationsRef.current[i] ?? 0;
+      if (elapsed + dur > targetSec || i === queue.length - 1) {
+        targetIndex = i;
+        break;
+      }
+      elapsed += dur;
+    }
+    const offsetSec = Math.max(0, targetSec - elapsed);
+    if (targetIndex === indexRef.current) {
+      // Same verse — just seek within it
+      const el = audioRef.current;
+      if (el) {
+        el.currentTime = offsetSec;
+        elapsedBeforeCurrentVerseRef.current = elapsed;
+      }
+    } else {
+      // Different verse — jump to it then seek
+      verseRepeatCountRef.current = 0;
+      elapsedBeforeCurrentVerseRef.current = elapsed;
+      setState((s) => ({
+        ...s,
+        positionMs: Math.round(elapsed * 1000),
+        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+      }));
+      void (async () => {
+        await playIndexRef.current(targetIndex);
+        const el = audioRef.current;
+        if (el && offsetSec > 0) el.currentTime = offsetSec;
+      })();
+    }
+  }, []);
+
   // ─── resumeSession ─────────────────────────────────────────────────────────
   const resumeSession = useCallback(
     async (session: {
@@ -745,6 +808,7 @@ export function usePlaybackQueue(
     next,
     prev,
     jumpToIndex,
+    seekToMs,
     setPlaybackRate,
     setReciter,
     setRepeatVerse,
