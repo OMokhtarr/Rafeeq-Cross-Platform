@@ -1,0 +1,6616 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "cefe54ac923a518d5c8a3914eaa37023e2bcaf2b",
+  "generatedAt": "2026-06-02T19:46:44.612Z",
+  "files": {
+    ".understand-anything/.understandignore": {
+      "filePath": ".understand-anything/.understandignore",
+      "contentHash": "b158ccf234adbf918826d33fa7f0df90fd051fc089980487383d1de45a140ece",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 43,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/build.gradle": {
+      "filePath": "android/app/build.gradle",
+      "contentHash": "9e1c62428803e1e465c2f31b88c6646817243a749fbdd1c7eebeffeee75e5676",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/capacitor.build.gradle": {
+      "filePath": "android/app/capacitor.build.gradle",
+      "contentHash": "c0a3bdf93f00fd70fba70d1581073f76c0bd97bb258ffdb562086634c20af646",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/proguard-rules.pro": {
+      "filePath": "android/app/proguard-rules.pro",
+      "contentHash": "1cf8c57e8f79c250b0af9c1a5a4edad71a5c348a79ab70243b6bae086c150ad2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 22,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java": {
+      "filePath": "android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java",
+      "contentHash": "ff50b4c110a7434312f9af54171f9e8523b015836f707c9b387b76d4c38a97f8",
+      "functions": [
+        {
+          "name": "useAppContext",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [
+        {
+          "name": "ExampleInstrumentedTest",
+          "methods": [
+            "useAppContext"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "imports": [
+        {
+          "source": "org.junit.Assert",
+          "specifiers": [
+            "*"
+          ]
+        },
+        {
+          "source": "android.content.Context",
+          "specifiers": [
+            "Context"
+          ]
+        },
+        {
+          "source": "androidx.test.ext.junit.runners.AndroidJUnit4",
+          "specifiers": [
+            "AndroidJUnit4"
+          ]
+        },
+        {
+          "source": "androidx.test.platform.app.InstrumentationRegistry",
+          "specifiers": [
+            "InstrumentationRegistry"
+          ]
+        },
+        {
+          "source": "org.junit.Test",
+          "specifiers": [
+            "Test"
+          ]
+        },
+        {
+          "source": "org.junit.runner.RunWith",
+          "specifiers": [
+            "RunWith"
+          ]
+        }
+      ],
+      "exports": [
+        "useAppContext",
+        "ExampleInstrumentedTest"
+      ],
+      "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
+    "android/app/src/main/AndroidManifest.xml": {
+      "filePath": "android/app/src/main/AndroidManifest.xml",
+      "contentHash": "e103f7b0fde2fb056a50eb2d796bdcbec930769c53e12a3995a3f9766453ea0e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqAutoPlugin.kt": {
+      "filePath": "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqAutoPlugin.kt",
+      "contentHash": "903da42f5847c2cddc5820ca43224a8da99aa5b015d8f5e08325916b4ab3468c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 125,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqMediaService.kt": {
+      "filePath": "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqMediaService.kt",
+      "contentHash": "f27a37ef31fec92322a3644748580fe0ab59b7386bc05adf8354bd65beb4f205",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 466,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/java/com/rafeeq/quranquiz/MainActivity.kt": {
+      "filePath": "android/app/src/main/java/com/rafeeq/quranquiz/MainActivity.kt",
+      "contentHash": "e256474b13ec5127472a751a46762ab94a1fc3abaf0535cc1c0d82f62c2b76e1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml": {
+      "filePath": "android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml",
+      "contentHash": "a8514094f754b099d3e55ce1d6e0b2de79db418b2eeacb0fc2a6bb0bfadef221",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable/ic_launcher_background.xml": {
+      "filePath": "android/app/src/main/res/drawable/ic_launcher_background.xml",
+      "contentHash": "718ba51adf166bb55c3e9936bb8199a0148457f7f0191aaa2f37a94f3159d6ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 171,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable/ic_notification.xml": {
+      "filePath": "android/app/src/main/res/drawable/ic_notification.xml",
+      "contentHash": "3c4c28431951c71aac9d1474f1bd4841a504d50e1a1f53d433e75db1d341473f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable/ic_transparent.xml": {
+      "filePath": "android/app/src/main/res/drawable/ic_transparent.xml",
+      "contentHash": "6785f3b036bd4885a7d9f5945e8020068e716d6e388f8513779fb242a6f7df7e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/layout/activity_main.xml": {
+      "filePath": "android/app/src/main/res/layout/activity_main.xml",
+      "contentHash": "5d770feb791313b947020cbfc57e5c733c556dac5e9e49261a1190e527073253",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml": {
+      "filePath": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "contentHash": "9df7f1f1fb647e45268dcc3d481a845b7b32e064f05c7ba78e76c3f0125a7c76",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 9,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": {
+      "filePath": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "contentHash": "9df7f1f1fb647e45268dcc3d481a845b7b32e064f05c7ba78e76c3f0125a7c76",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 9,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/values/ic_launcher_background.xml": {
+      "filePath": "android/app/src/main/res/values/ic_launcher_background.xml",
+      "contentHash": "cd40bafe618ff506f4088778b135cb4faa15f25e0c9b475e22d730c74b7be115",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/values/strings.xml": {
+      "filePath": "android/app/src/main/res/values/strings.xml",
+      "contentHash": "3fcb975099bea55cd08b208c142cd49433d09ea9731dbfb2ccc2298d38de07a6",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 8,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/values/styles.xml": {
+      "filePath": "android/app/src/main/res/values/styles.xml",
+      "contentHash": "8675817dfc6a5fc58d39757d79cb85586996a21dc3737ef11d90563ec4616c94",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 23,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/xml/automotive_app_desc.xml": {
+      "filePath": "android/app/src/main/res/xml/automotive_app_desc.xml",
+      "contentHash": "53b1a0387cf703345857f636571e2126e5dd19c2a82f9aa850c178549807834e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/xml/file_paths.xml": {
+      "filePath": "android/app/src/main/res/xml/file_paths.xml",
+      "contentHash": "a46ed43ef65c90cb6778f4581decf3556e3f0055aad8f36d69dae16f9a0e99aa",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java": {
+      "filePath": "android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java",
+      "contentHash": "d4045ae8fac1f0807e6b24eb34e68409a9a235df9d1a3f896fb8c9a49424363d",
+      "functions": [
+        {
+          "name": "addition_isCorrect",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [
+        {
+          "name": "ExampleUnitTest",
+          "methods": [
+            "addition_isCorrect"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "imports": [
+        {
+          "source": "org.junit.Assert",
+          "specifiers": [
+            "*"
+          ]
+        },
+        {
+          "source": "org.junit.Test",
+          "specifiers": [
+            "Test"
+          ]
+        }
+      ],
+      "exports": [
+        "addition_isCorrect",
+        "ExampleUnitTest"
+      ],
+      "totalLines": 19,
+      "hasStructuralAnalysis": true
+    },
+    "android/build.gradle": {
+      "filePath": "android/build.gradle",
+      "contentHash": "e7a604d1d2f381daff90df2873515b740792946f4ef3e13b8a564cb59dc45e39",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 31,
+      "hasStructuralAnalysis": false
+    },
+    "android/capacitor.settings.gradle": {
+      "filePath": "android/capacitor.settings.gradle",
+      "contentHash": "f1146944fff3154b80b09c19629e56904b732ca2bb7eb183cebbdc8b57721b2c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 22,
+      "hasStructuralAnalysis": false
+    },
+    "android/gradle.properties": {
+      "filePath": "android/gradle.properties",
+      "contentHash": "8587c617c184c7eb8e1ac15bed51c1df60b0a0a03d7fcbe96d6e5eba76fff695",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": false
+    },
+    "android/gradle/wrapper/gradle-wrapper.jar": {
+      "filePath": "android/gradle/wrapper/gradle-wrapper.jar",
+      "contentHash": "94664c6bfed8d1811502b225a5dacb2f01f19f2414559b0ec15a308fcbcdd02e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 247,
+      "hasStructuralAnalysis": false
+    },
+    "android/gradle/wrapper/gradle-wrapper.properties": {
+      "filePath": "android/gradle/wrapper/gradle-wrapper.properties",
+      "contentHash": "cb9ee29e7b9114a1b175d3337d65cfa7edc9461010c98b0fe89d2d7f4fb196ea",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 7,
+      "hasStructuralAnalysis": false
+    },
+    "android/gradlew": {
+      "filePath": "android/gradlew",
+      "contentHash": "ba0d4be61d16df11ed576f2e2f094eb0535d9bbfec28d82ad4d07036764642e8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 245,
+      "hasStructuralAnalysis": false
+    },
+    "android/gradlew.bat": {
+      "filePath": "android/gradlew.bat",
+      "contentHash": "8e327fcb99d29ce0fe3ee2fec6e6a25de815a2df83a6a44a553dea89ffc92955",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": false
+    },
+    "android/settings.gradle": {
+      "filePath": "android/settings.gradle",
+      "contentHash": "e174734f07af3e9ed9528a21e46cdf4ae45a57775d01cc39a647b63b6aa88eb9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 8,
+      "hasStructuralAnalysis": false
+    },
+    "android/variables.gradle": {
+      "filePath": "android/variables.gradle",
+      "contentHash": "0ef5fb52bc31fa02c5c561045df7a042512feabbe6991734763266624bb830db",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": false
+    },
+    "capacitor-electron.config.json": {
+      "filePath": "capacitor-electron.config.json",
+      "contentHash": "4281f301332cc0419e5e2c175c0c9a4ed3e408737390eb174e35b01e364dd894",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "capacitor.config.ts": {
+      "filePath": "capacitor.config.ts",
+      "contentHash": "744dba2985e15d71dac59aa2425ac3afce5e178ea40d771ae4077340151ed88c",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@capacitor/cli",
+          "specifiers": [
+            "CapacitorConfig"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 49,
+      "hasStructuralAnalysis": true
+    },
+    "codemagic.yaml": {
+      "filePath": "codemagic.yaml",
+      "contentHash": "91e5dfce874d961c1a710bdec3ad1954bc2dbe294b6766a68d173d999b8c24c4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 63,
+      "hasStructuralAnalysis": true
+    },
+    "electron/capacitor.config.ts": {
+      "filePath": "electron/capacitor.config.ts",
+      "contentHash": "a35693025296fe47921860d70f5b3fcdd97b4d943b799c2c17330d43b038dd9a",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@capacitor/cli",
+          "specifiers": [
+            "CapacitorConfig"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "electron/electron-builder.config.json": {
+      "filePath": "electron/electron-builder.config.json",
+      "contentHash": "fdd8e91a8fffc9675a084533d723d2c9c4d1321a1f897615e1f49dfb96c2e82c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "electron/live-runner.js": {
+      "filePath": "electron/live-runner.js",
+      "contentHash": "a238a97c9e8debcb41bf2a27ac06c1852e6ac820ed337f9c39448028ad28496d",
+      "functions": [
+        {
+          "name": "runBuild",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "spawnElectron",
+          "params": [],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "setupReloadWatcher",
+          "params": [],
+          "exported": false,
+          "lineCount": 26
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "electron/package.json": {
+      "filePath": "electron/package.json",
+      "contentHash": "131e80d8dc3a62039ee040bcc40c9e43ec29984a39ee8b01701d13d6b80ab8ad",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "electron/resources/electron-publisher-custom.js": {
+      "filePath": "electron/resources/electron-publisher-custom.js",
+      "contentHash": "b2fe307c895b396d517f9eb2af80625d73d89ca835679e88d0487683841fafdc",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Publisher",
+          "methods": [
+            "upload"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "electron/src/index.ts": {
+      "filePath": "electron/src/index.ts",
+      "contentHash": "ddb781d078b64d4202b5b5db198a1709c03bf0b3b3a066ea92127c6ec85af995",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@capacitor-community/electron",
+          "specifiers": [
+            "CapacitorElectronConfig"
+          ]
+        },
+        {
+          "source": "@capacitor-community/electron",
+          "specifiers": [
+            "getCapacitorElectronConfig",
+            "setupElectronDeepLinking"
+          ]
+        },
+        {
+          "source": "electron",
+          "specifiers": [
+            "MenuItemConstructorOptions"
+          ]
+        },
+        {
+          "source": "electron",
+          "specifiers": [
+            "app",
+            "MenuItem"
+          ]
+        },
+        {
+          "source": "electron-is-dev",
+          "specifiers": [
+            "electronIsDev"
+          ]
+        },
+        {
+          "source": "electron-unhandled",
+          "specifiers": [
+            "unhandled"
+          ]
+        },
+        {
+          "source": "electron-updater",
+          "specifiers": [
+            "autoUpdater"
+          ]
+        },
+        {
+          "source": "./setup",
+          "specifiers": [
+            "ElectronCapacitorApp",
+            "setupContentSecurityPolicy",
+            "setupReloadWatcher"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 71,
+      "hasStructuralAnalysis": true
+    },
+    "electron/src/preload.ts": {
+      "filePath": "electron/src/preload.ts",
+      "contentHash": "29650b032f95ede697ad9a56e32cf5fb74f41ae7c303e0ff2238c9885587bdb7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": true
+    },
+    "electron/src/rt/electron-plugins.js": {
+      "filePath": "electron/src/rt/electron-plugins.js",
+      "contentHash": "7b86777755caa411db8448e3d7f1cf438c0f7fc521654cff5f00731e9dba3443",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": true
+    },
+    "electron/src/rt/electron-rt.ts": {
+      "filePath": "electron/src/rt/electron-rt.ts",
+      "contentHash": "e5dc73b1502b72ed193d5954b3cee9777557e1981d92905d0e3090b447493e10",
+      "functions": [
+        {
+          "name": "randomId",
+          "params": [
+            "length"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "crypto",
+          "specifiers": [
+            "randomBytes"
+          ]
+        },
+        {
+          "source": "electron",
+          "specifiers": [
+            "ipcRenderer",
+            "contextBridge"
+          ]
+        },
+        {
+          "source": "events",
+          "specifiers": [
+            "EventEmitter"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 89,
+      "hasStructuralAnalysis": true
+    },
+    "electron/src/setup.ts": {
+      "filePath": "electron/src/setup.ts",
+      "contentHash": "86ec5179c83a705bb831939e37e6df917cd926283f1777ea6c2bc7c95f58281e",
+      "functions": [
+        {
+          "name": "setupReloadWatcher",
+          "params": [
+            "electronCapacitorApp"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "setupContentSecurityPolicy",
+          "params": [
+            "customScheme"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [
+        {
+          "name": "ElectronCapacitorApp",
+          "methods": [
+            "constructor",
+            "loadMainWindow",
+            "getMainWindow",
+            "getCustomURLScheme",
+            "init"
+          ],
+          "properties": [
+            "MainWindow",
+            "SplashScreen",
+            "TrayIcon",
+            "CapacitorFileConfig",
+            "TrayMenuTemplate",
+            "AppMenuBarMenuTemplate",
+            "mainWindowState",
+            "loadWebApp",
+            "customScheme"
+          ],
+          "exported": true,
+          "lineCount": 172
+        }
+      ],
+      "imports": [
+        {
+          "source": "@capacitor-community/electron",
+          "specifiers": [
+            "CapacitorElectronConfig"
+          ]
+        },
+        {
+          "source": "@capacitor-community/electron",
+          "specifiers": [
+            "CapElectronEventEmitter",
+            "CapacitorSplashScreen",
+            "setupCapacitorElectronPlugins"
+          ]
+        },
+        {
+          "source": "chokidar",
+          "specifiers": [
+            "chokidar"
+          ]
+        },
+        {
+          "source": "electron",
+          "specifiers": [
+            "MenuItemConstructorOptions"
+          ]
+        },
+        {
+          "source": "electron",
+          "specifiers": [
+            "app",
+            "BrowserWindow",
+            "Menu",
+            "MenuItem",
+            "nativeImage",
+            "Tray",
+            "session"
+          ]
+        },
+        {
+          "source": "electron-is-dev",
+          "specifiers": [
+            "electronIsDev"
+          ]
+        },
+        {
+          "source": "electron-serve",
+          "specifiers": [
+            "electronServe"
+          ]
+        },
+        {
+          "source": "electron-window-state",
+          "specifiers": [
+            "windowStateKeeper"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "join"
+          ]
+        }
+      ],
+      "exports": [
+        "setupReloadWatcher",
+        "ElectronCapacitorApp",
+        "setupContentSecurityPolicy"
+      ],
+      "totalLines": 234,
+      "hasStructuralAnalysis": true
+    },
+    "electron/tsconfig.json": {
+      "filePath": "electron/tsconfig.json",
+      "contentHash": "e1bd5c472b4ec35497f6bff4be4aa9b47e80a6014463172d03006067c39e6197",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": true
+    },
+    "icons/icon-128.webp": {
+      "filePath": "icons/icon-128.webp",
+      "contentHash": "415beac48079399e1560ddae51828aff157103ea2ffaf9b6d5c0c79c073be81b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 68,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-192.webp": {
+      "filePath": "icons/icon-192.webp",
+      "contentHash": "bcbf920e1d98fcb34f58acc644ae88646e857154afe238ea64217534a59ff977",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 150,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-256.webp": {
+      "filePath": "icons/icon-256.webp",
+      "contentHash": "97eafb1989a8f192445e73b069b3e006710172f82424afde5f338e154e9f2960",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 267,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-48.webp": {
+      "filePath": "icons/icon-48.webp",
+      "contentHash": "a197ee90b23ad55e20918048ff2cf19099bd699e455c284ef0a2d76bac5ceb8a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-512.webp": {
+      "filePath": "icons/icon-512.webp",
+      "contentHash": "6f6c32b8e7f041bf834d9de7eb99a4b70ac22fa2f2a7df3e16904904e76a8bbb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 993,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-72.webp": {
+      "filePath": "icons/icon-72.webp",
+      "contentHash": "ba6b6d87278d5ea711f0bc787d3f02d5953d9b1ff5086f0682d53449341bd853",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": false
+    },
+    "icons/icon-96.webp": {
+      "filePath": "icons/icon-96.webp",
+      "contentHash": "287b73296be697f2e0b2baf840b3e9986fdce2ab4f60375e729a07aa2bfb6579",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 46,
+      "hasStructuralAnalysis": false
+    },
+    "index.html": {
+      "filePath": "index.html",
+      "contentHash": "e6c9465939773309f3737a4b97d457c97d97fd92c90da70618c92304b10a2220",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 26,
+      "hasStructuralAnalysis": false
+    },
+    "install.ps1": {
+      "filePath": "install.ps1",
+      "contentHash": "507cd27d361e1c7ac4148a83b2e5d647d5fe6da157cbb07877792500080e64eb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": false
+    },
+    "ionic.config.json": {
+      "filePath": "ionic.config.json",
+      "contentHash": "f6ea17768e1e74d02f743e36a22381bcfb420ae625658ec67ed029fa28064f2e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    "package.json": {
+      "filePath": "package.json",
+      "contentHash": "acd3072f2050c4f0e69b1b67a6d087d24d5e829240709b33ca7fbd5fe411c343",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 74,
+      "hasStructuralAnalysis": true
+    },
+    "privacy.html": {
+      "filePath": "privacy.html",
+      "contentHash": "5201cc9e26e5055e3964105932f1c0cec72ec287e5ed4632847a7fc27e4c25e4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": false
+    },
+    "public/data/quran-text.json": {
+      "filePath": "public/data/quran-text.json",
+      "contentHash": "673795d5ead541bac03334bfd76c54a1c1c22fc8e015f9dcee2c7439f751e227",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 27397,
+      "hasStructuralAnalysis": true
+    },
+    "public/index.html": {
+      "filePath": "public/index.html",
+      "contentHash": "fdec6b01a925c91e5b36a02cfc776e36989fe6df9b1f5f209bdc548fa9a4624f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": false
+    },
+    "public/manifest.webmanifest": {
+      "filePath": "public/manifest.webmanifest",
+      "contentHash": "40830d1b1f05e3b0d3cc2961c89c3cdb5a33369fdc99dc4ce52a279a5794c52f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 47,
+      "hasStructuralAnalysis": false
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "649b0117b477651ad52a1f8323dd840772c76d143c746c0c0cd99923a84d5191",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 247,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/build-quran-corpus.mjs": {
+      "filePath": "scripts/build-quran-corpus.mjs",
+      "contentHash": "73b43923e63f70f848d32d343ba19d7b87531ea5309489cca66f55b3d555fdf5",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "node:fs",
+          "specifiers": [
+            "readFileSync",
+            "writeFileSync",
+            "mkdirSync"
+          ]
+        },
+        {
+          "source": "node:path",
+          "specifiers": [
+            "dirname",
+            "resolve"
+          ]
+        },
+        {
+          "source": "node:url",
+          "specifiers": [
+            "fileURLToPath"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "SETUP.md": {
+      "filePath": "SETUP.md",
+      "contentHash": "974bfbd490141f99bb7f95704216d57f205afc4b0a1f4fccb566dedd304638f5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "src/App.css": {
+      "filePath": "src/App.css",
+      "contentHash": "e066d7a468b99763f6a8f3b4cb48e9616fbb5bae1a4837923e82421cb07be558",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": false
+    },
+    "src/App.tsx": {
+      "filePath": "src/App.tsx",
+      "contentHash": "5bea6db72322cc7a52604c76a0c39dbed433cb2a94fb209165d2ecf057117364",
+      "functions": [
+        {
+          "name": "App",
+          "params": [],
+          "exported": false,
+          "lineCount": 136
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonApp",
+            "IonRouterOutlet",
+            "setupIonicReact"
+          ]
+        },
+        {
+          "source": "@ionic/react-router",
+          "specifiers": [
+            "IonReactRouter"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "Route",
+            "Redirect"
+          ]
+        },
+        {
+          "source": "./app/core/services/data/metadata.service",
+          "specifiers": [
+            "initMetadata"
+          ]
+        },
+        {
+          "source": "./app/core/services/data/quran.service",
+          "specifiers": [
+            "preloadAllPages",
+            "seedTextCorpus"
+          ]
+        },
+        {
+          "source": "./app/core/services/api/font.loader",
+          "specifiers": [
+            "preloadAllPageFonts"
+          ]
+        },
+        {
+          "source": "@capacitor/core",
+          "specifiers": [
+            "Capacitor"
+          ]
+        },
+        {
+          "source": "@capacitor/app",
+          "specifiers": [
+            "CapApp"
+          ]
+        },
+        {
+          "source": "@ionic/react/css/core.css",
+          "specifiers": []
+        },
+        {
+          "source": "@ionic/react/css/normalize.css",
+          "specifiers": []
+        },
+        {
+          "source": "@ionic/react/css/structure.css",
+          "specifiers": []
+        },
+        {
+          "source": "@ionic/react/css/typography.css",
+          "specifiers": []
+        },
+        {
+          "source": "./App.css",
+          "specifiers": []
+        },
+        {
+          "source": "./app/features/home/pages/Home",
+          "specifiers": [
+            "Home"
+          ]
+        },
+        {
+          "source": "./app/features/azkar/Azkar",
+          "specifiers": [
+            "Azkar"
+          ]
+        },
+        {
+          "source": "./app/features/viewer/PageViewer",
+          "specifiers": [
+            "PageViewer"
+          ]
+        },
+        {
+          "source": "./app/features/viewer/pages/SurahJuzSelection",
+          "specifiers": [
+            "SurahJuzSelection"
+          ]
+        },
+        {
+          "source": "./app/features/viewer/pages/Search",
+          "specifiers": [
+            "Search"
+          ]
+        },
+        {
+          "source": "./app/features/viewer/pages/SearchResults",
+          "specifiers": [
+            "SearchResults"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/pages/quiz-list/QuizList",
+          "specifiers": [
+            "QuizList"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup",
+          "specifiers": [
+            "AkmelAlAyahSetup"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah",
+          "specifiers": [
+            "AkmelAlAyah"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup",
+          "specifiers": [
+            "MutashabihatSetup"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest",
+          "specifiers": [
+            "MutashabihatTest"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup",
+          "specifiers": [
+            "AkmelAlNehayatSetup"
+          ]
+        },
+        {
+          "source": "./app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat",
+          "specifiers": [
+            "AkmelAlNehayat"
+          ]
+        },
+        {
+          "source": "app/features/settings/Settings",
+          "specifiers": [
+            "Settings"
+          ]
+        },
+        {
+          "source": "./app/features/playback/PlaybackSettings",
+          "specifiers": [
+            "PlaybackSettings"
+          ]
+        },
+        {
+          "source": "./app/features/account/Account",
+          "specifiers": [
+            "Account"
+          ]
+        },
+        {
+          "source": "./app/features/bookmarks/Bookmarks",
+          "specifiers": [
+            "Bookmarks"
+          ]
+        },
+        {
+          "source": "./app/features/tafsir/TafsirSettings",
+          "specifiers": [
+            "TafsirSettings"
+          ]
+        },
+        {
+          "source": "./app/core/context/ThemeContext",
+          "specifiers": [
+            "ThemeProvider"
+          ]
+        },
+        {
+          "source": "./app/core/context/LanguageContext",
+          "specifiers": [
+            "LanguageProvider"
+          ]
+        },
+        {
+          "source": "./app/core/context/VerseVisibilityContext",
+          "specifiers": [
+            "VerseVisibilityProvider"
+          ]
+        },
+        {
+          "source": "./app/core/context/PlaybackContext",
+          "specifiers": [
+            "PlaybackProvider"
+          ]
+        },
+        {
+          "source": "./app/core/services/auth/AuthCallback",
+          "specifiers": [
+            "AuthCallback"
+          ]
+        },
+        {
+          "source": "./app/core/services/auth/oauth.service",
+          "specifiers": [
+            "exchangeCodeForToken"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 187,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/context/LanguageContext.tsx": {
+      "filePath": "src/app/core/context/LanguageContext.tsx",
+      "contentHash": "6880366bc191d69e7a970f3bf3f5ceda9a19dfe0769d372dbec670ad7f73a4aa",
+      "functions": [
+        {
+          "name": "loadLang",
+          "params": [],
+          "returnType": "Lang",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "LanguageProvider",
+          "params": [
+            "{ children }"
+          ],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "useLang",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "createContext",
+            "useContext",
+            "useEffect",
+            "useState",
+            "useCallback",
+            "useMemo"
+          ]
+        },
+        {
+          "source": "../i18n/strings",
+          "specifiers": [
+            "STRINGS",
+            "Lang",
+            "AppStrings"
+          ]
+        }
+      ],
+      "exports": [
+        "LanguageProvider",
+        "useLang"
+      ],
+      "totalLines": 55,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/context/PlaybackContext.tsx": {
+      "filePath": "src/app/core/context/PlaybackContext.tsx",
+      "contentHash": "d7e28509f7db4221b9a9b08ea6c62191ade6cfad79fe963223c2d5e5d63b86cb",
+      "functions": [
+        {
+          "name": "getQueuePageMarkers",
+          "params": [
+            "queue"
+          ],
+          "returnType": "Array<{ page: number; aya: number }>",
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "PlaybackProvider",
+          "params": [
+            "{\r\n  children,\r\n}"
+          ],
+          "exported": true,
+          "lineCount": 188
+        },
+        {
+          "name": "usePlayback",
+          "params": [],
+          "returnType": "PlaybackControls",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "createContext",
+            "useContext",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "../hooks/usePlaybackQueue",
+          "specifiers": [
+            "usePlaybackQueue",
+            "PlaybackControls",
+            "UsePlaybackQueueOptions",
+            "VerseKey"
+          ]
+        },
+        {
+          "source": "../services/native/driving-mode.plugin",
+          "specifiers": [
+            "DrivingMode"
+          ]
+        },
+        {
+          "source": "../services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish",
+            "estimatePageForVerse"
+          ]
+        },
+        {
+          "source": "@capacitor/core",
+          "specifiers": [
+            "Capacitor"
+          ]
+        }
+      ],
+      "exports": [
+        "PlaybackProvider",
+        "usePlayback"
+      ],
+      "totalLines": 406,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/context/ThemeContext.tsx": {
+      "filePath": "src/app/core/context/ThemeContext.tsx",
+      "contentHash": "00cd74aa768742c891ad849b32ca5bbd09d04deec7f5f0e51d9d856d9f2aaa5f",
+      "functions": [
+        {
+          "name": "loadTheme",
+          "params": [],
+          "returnType": "Theme",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "ThemeProvider",
+          "params": [
+            "{ children }"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "useTheme",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "createContext",
+            "useContext",
+            "useEffect",
+            "useState",
+            "useCallback",
+            "useMemo"
+          ]
+        }
+      ],
+      "exports": [
+        "ThemeProvider",
+        "useTheme"
+      ],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/context/VerseVisibilityContext.tsx": {
+      "filePath": "src/app/core/context/VerseVisibilityContext.tsx",
+      "contentHash": "eeddbf3f04b721fa6e5a3cbd9bba575f496114873a858a613ae8bfece0070e60",
+      "functions": [
+        {
+          "name": "verseKey",
+          "params": [
+            "sura",
+            "aya"
+          ],
+          "returnType": "VerseKey",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "loadHidden",
+          "params": [],
+          "returnType": "Set<VerseKey>",
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "VerseVisibilityProvider",
+          "params": [
+            "{ children }"
+          ],
+          "exported": true,
+          "lineCount": 103
+        },
+        {
+          "name": "useVerseVisibility",
+          "params": [],
+          "returnType": "VerseVisibilityCtx",
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "createContext",
+            "useCallback",
+            "useContext",
+            "useEffect",
+            "useMemo",
+            "useState"
+          ]
+        }
+      ],
+      "exports": [
+        "verseKey",
+        "VerseVisibilityProvider",
+        "useVerseVisibility"
+      ],
+      "totalLines": 179,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/hooks/useAudioPlayer.ts": {
+      "filePath": "src/app/core/hooks/useAudioPlayer.ts",
+      "contentHash": "c6ca696eab15cae7be88fb3fd1bb01a0f61d04217e790f1b008f512d257ae135",
+      "functions": [
+        {
+          "name": "useAudioPlayer",
+          "params": [],
+          "returnType": "AudioPlayer",
+          "exported": true,
+          "lineCount": 70
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        }
+      ],
+      "exports": [
+        "useAudioPlayer"
+      ],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/hooks/useFeedbackBeep.ts": {
+      "filePath": "src/app/core/hooks/useFeedbackBeep.ts",
+      "contentHash": "87176fdd62ad1af719a635ca72c2c0e2c9745f41bcb1ec9a65c2067b090b9c97",
+      "functions": [
+        {
+          "name": "useFeedbackBeep",
+          "params": [],
+          "exported": true,
+          "lineCount": 49
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useRef"
+          ]
+        }
+      ],
+      "exports": [
+        "useFeedbackBeep"
+      ],
+      "totalLines": 63,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/hooks/useImmersiveMode.ts": {
+      "filePath": "src/app/core/hooks/useImmersiveMode.ts",
+      "contentHash": "b137738a2a06835401ab74f3fe755c0bc7cd88f8dd6418e7ac0e43291670710a",
+      "functions": [
+        {
+          "name": "isInteractiveTarget",
+          "params": [
+            "target"
+          ],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "useImmersiveMode",
+          "params": [],
+          "returnType": "ImmersiveMode",
+          "exported": true,
+          "lineCount": 98
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        }
+      ],
+      "exports": [
+        "useImmersiveMode"
+      ],
+      "totalLines": 161,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/hooks/usePlaybackQueue.ts": {
+      "filePath": "src/app/core/hooks/usePlaybackQueue.ts",
+      "contentHash": "73cac63256589bb71652d1423ef158fde71b57ae0b50be564c9301bd69d28564",
+      "functions": [
+        {
+          "name": "probeDuration",
+          "params": [
+            "blobUrl"
+          ],
+          "returnType": "Promise<number>",
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "usePlaybackQueue",
+          "params": [
+            "initial"
+          ],
+          "returnType": "PlaybackControls",
+          "exported": true,
+          "lineCount": 663
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "../services/audio/audio-cache.service",
+          "specifiers": [
+            "getCachedOrDownload",
+            "downloadAndCache",
+            "hasCached"
+          ]
+        },
+        {
+          "source": "../services/storage/recitation-history.service",
+          "specifiers": [
+            "recordRecitationSession"
+          ]
+        }
+      ],
+      "exports": [
+        "usePlaybackQueue"
+      ],
+      "totalLines": 776,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/hooks/useWakeLock.ts": {
+      "filePath": "src/app/core/hooks/useWakeLock.ts",
+      "contentHash": "82efeeaf02760b97506df0c8b6bf8c148188b427500a506323449c3a77546211",
+      "functions": [
+        {
+          "name": "useWakeLock",
+          "params": [
+            "enabled"
+          ],
+          "exported": true,
+          "lineCount": 28
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect"
+          ]
+        }
+      ],
+      "exports": [
+        "useWakeLock"
+      ],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/i18n/strings.ts": {
+      "filePath": "src/app/core/i18n/strings.ts",
+      "contentHash": "d63563575e988c666e29a5c1bfa4aafa3d2a077c1cef0e95b4ac2191bea1e07c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "STRINGS"
+      ],
+      "totalLines": 903,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/font.loader.ts": {
+      "filePath": "src/app/core/services/api/font.loader.ts",
+      "contentHash": "40ee5b1e6f783043786017508cfb4dceaf841904fc285bc348e8fbf596cee784",
+      "functions": [
+        {
+          "name": "fontFamilyForPage",
+          "params": [
+            "page"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "paletteNameForPage",
+          "params": [
+            "page",
+            "variant"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "ensurePageFont",
+          "params": [
+            "page"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "ensureBismillahFont",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "loadOrFetchBismillahFont",
+          "params": [],
+          "returnType": "Promise<Blob>",
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "loadOrFetchFont",
+          "params": [
+            "page"
+          ],
+          "returnType": "Promise<Blob>",
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "injectFontFace",
+          "params": [
+            "family",
+            "blob"
+          ],
+          "returnType": "Promise<void>",
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "injectPalettesForPage",
+          "params": [
+            "page",
+            "family"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "setMonoPaletteColor",
+          "params": [
+            "color"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "appendMonoRule",
+          "params": [
+            "page",
+            "family",
+            "color"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "ensurePaletteStyleEl",
+          "params": [
+            "id"
+          ],
+          "returnType": "HTMLStyleElement",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "pad3",
+          "params": [
+            "n"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "preloadAllPageFonts",
+          "params": [
+            "onProgress"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 27
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../storage/idb.service",
+          "specifiers": [
+            "idb"
+          ]
+        }
+      ],
+      "exports": [
+        "fontFamilyForPage",
+        "paletteNameForPage",
+        "BISMILLAH_FONT_FAMILY",
+        "ensurePageFont",
+        "ensureBismillahFont",
+        "setMonoPaletteColor",
+        "preloadAllPageFonts"
+      ],
+      "totalLines": 258,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/mushaf.config.ts": {
+      "filePath": "src/app/core/services/api/mushaf.config.ts",
+      "contentHash": "ae7cdd238f9f54ca0f6faccffa13d80e69f9bcf094c8b8448b5430b8b5d7ffed",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "MUSHAFS",
+        "DEFAULT_MUSHAF"
+      ],
+      "totalLines": 55,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/quran-api.client.ts": {
+      "filePath": "src/app/core/services/api/quran-api.client.ts",
+      "contentHash": "5ac772f2271cc87f80cd0ce2f1c6f1f1381e7a6715c051d40d65a8579a2ad4b6",
+      "functions": [
+        {
+          "name": "getAccessToken",
+          "params": [
+            "forceRefresh"
+          ],
+          "returnType": "Promise<string>",
+          "exported": false,
+          "lineCount": 32
+        },
+        {
+          "name": "apiFetch",
+          "params": [
+            "path",
+            "query"
+          ],
+          "returnType": "Promise<T>",
+          "exported": false,
+          "lineCount": 65
+        },
+        {
+          "name": "sleep",
+          "params": [
+            "ms"
+          ],
+          "returnType": "Promise<void>",
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchVersesByPage",
+          "params": [
+            "page",
+            "wordFields"
+          ],
+          "returnType": "Promise<PageVerseDTO[]>",
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "fetchVersesByJuz",
+          "params": [
+            "juz",
+            "wordFields"
+          ],
+          "returnType": "Promise<PageVerseDTO[]>",
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "fetchChapters",
+          "params": [],
+          "returnType": "Promise<any[]>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fetchJuzs",
+          "params": [],
+          "returnType": "Promise<any[]>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fetchAudioForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "reciter"
+          ],
+          "returnType": "Promise<string>",
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "pickAudioUrl",
+          "params": [
+            "d"
+          ],
+          "returnType": "string | null",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "absoluteAudioUrl",
+          "params": [
+            "u"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "fetchTranslationEditions",
+          "params": [
+            "language"
+          ],
+          "returnType": "Promise<TranslationEdition[]>",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "toEdition",
+          "params": [
+            "e"
+          ],
+          "returnType": "TranslationEdition",
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "fetchTranslationsByPage",
+          "params": [
+            "page",
+            "translationId"
+          ],
+          "returnType": "Promise<PageTranslation[]>",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "stripHtml",
+          "params": [
+            "s"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "fetchTafsirResources",
+          "params": [],
+          "returnType": "Promise<TafsirResource[]>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "fetchTafsirForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "tafsirId"
+          ],
+          "returnType": "Promise<TafsirText>",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "fetchRecitations",
+          "params": [
+            "language"
+          ],
+          "returnType": "Promise<ApiRecitation[]>",
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "fetchHizbs",
+          "params": [],
+          "returnType": "Promise<ApiHizb[]>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fetchHizb",
+          "params": [
+            "hizbNumber"
+          ],
+          "returnType": "Promise<ApiHizb | null>",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "fetchRubElHizbs",
+          "params": [],
+          "returnType": "Promise<ApiRub[]>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fetchRubElHizb",
+          "params": [
+            "rubNumber"
+          ],
+          "returnType": "Promise<ApiRub | null>",
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [
+        {
+          "name": "QuranApiError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "QuranApiNotFound",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "imports": [
+        {
+          "source": "../../../shared/models/verse.model",
+          "specifiers": [
+            "VerseWord"
+          ]
+        },
+        {
+          "source": "../storage/idb.service",
+          "specifiers": [
+            "idb"
+          ]
+        }
+      ],
+      "exports": [
+        "QuranApiError",
+        "QuranApiNotFound",
+        "fetchVersesByPage",
+        "fetchVersesByJuz",
+        "fetchChapters",
+        "fetchJuzs",
+        "fetchAudioForAyah",
+        "fetchTranslationEditions",
+        "fetchTranslationsByPage",
+        "fetchTafsirResources",
+        "fetchTafsirForAyah",
+        "fetchRecitations",
+        "fetchHizbs",
+        "fetchHizb",
+        "fetchRubElHizbs",
+        "fetchRubElHizb"
+      ],
+      "totalLines": 641,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/quran-data-provider.ts": {
+      "filePath": "src/app/core/services/api/quran-data-provider.ts",
+      "contentHash": "03218a1bc711cf8acf71bf30abbf0bfe2d4a79e89f8ba35f16d3ba1cc495a5d7",
+      "functions": [
+        {
+          "name": "trySdkOrFallback",
+          "params": [
+            "methodName",
+            "...args"
+          ],
+          "returnType": "Promise<Return>",
+          "exported": false,
+          "lineCount": 24
+        },
+        {
+          "name": "fetchVersesByPage",
+          "params": [
+            "page",
+            "wordFields"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchVersesByJuz",
+          "params": [
+            "juz",
+            "wordFields"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchAudioForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "reciter"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "fetchChapters",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchJuzs",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchTranslationsByPage",
+          "params": [
+            "page",
+            "translationId"
+          ],
+          "returnType": "Promise<PageTranslation[]>",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "fetchTafsirForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "tafsirId"
+          ],
+          "returnType": "Promise<TafsirText>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "fetchTafsirResources",
+          "params": [],
+          "returnType": "Promise<TafsirResource[]>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchRecitations",
+          "params": [
+            "language"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchHizbs",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchHizb",
+          "params": [
+            "hizbNumber"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchRubElHizbs",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchRubElHizb",
+          "params": [
+            "rubNumber"
+          ],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./quran-sdk-client",
+          "specifiers": [
+            "quranClient",
+            "isSdkAvailable"
+          ]
+        },
+        {
+          "source": "./quran-api.client",
+          "specifiers": [
+            "* as fallback"
+          ]
+        },
+        {
+          "source": "./quran-api.client",
+          "specifiers": [
+            "PageTranslation",
+            "TafsirText",
+            "TafsirResource"
+          ]
+        }
+      ],
+      "exports": [
+        "fetchVersesByPage",
+        "fetchVersesByJuz",
+        "fetchAudioForAyah",
+        "fetchChapters",
+        "fetchJuzs",
+        "fetchTranslationsByPage",
+        "fetchTafsirForAyah",
+        "fetchTafsirResources",
+        "fetchRecitations",
+        "fetchHizbs",
+        "fetchHizb",
+        "fetchRubElHizbs",
+        "fetchRubElHizb"
+      ],
+      "totalLines": 105,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/quran-sdk-client.ts": {
+      "filePath": "src/app/core/services/api/quran-sdk-client.ts",
+      "contentHash": "2f65c8d01cdecfe0b1349d22b1ce1e4a886044ac1ae32c4330072a1e4a794401",
+      "functions": [
+        {
+          "name": "createClient",
+          "params": [],
+          "returnType": "QuranClient",
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "isSdkAvailable",
+          "params": [],
+          "returnType": "boolean",
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@quranjs/api",
+          "specifiers": [
+            "QuranClient",
+            "Language"
+          ]
+        }
+      ],
+      "exports": [
+        "isSdkAvailable",
+        "quranClient"
+      ],
+      "totalLines": 60,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/api/user-api.client.ts": {
+      "filePath": "src/app/core/services/api/user-api.client.ts",
+      "contentHash": "a85c6c88bf54eb2482980403d8d5aad5cf43bb23cbcd5dd2d3e199b129a8667c",
+      "functions": [
+        {
+          "name": "getAccessToken",
+          "params": [
+            "forceRefresh"
+          ],
+          "returnType": "Promise<string>",
+          "exported": false,
+          "lineCount": 45
+        },
+        {
+          "name": "userApiFetch",
+          "params": [
+            "path",
+            "options"
+          ],
+          "returnType": "Promise<T>",
+          "exported": false,
+          "lineCount": 57
+        },
+        {
+          "name": "fetchStreaks",
+          "params": [
+            "first"
+          ],
+          "returnType": "Promise<Streak[]>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "recordActivityDay",
+          "params": [
+            "ranges",
+            "seconds",
+            "mushafId"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "fetchUserProfile",
+          "params": [],
+          "returnType": "Promise<UserProfile | null>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "fetchAllNotes",
+          "params": [],
+          "returnType": "Promise<Note[]>",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "fetchNotesForVerse",
+          "params": [
+            "verseKey"
+          ],
+          "returnType": "Promise<Note[]>",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "addNote",
+          "params": [
+            "verseKey",
+            "body"
+          ],
+          "returnType": "Promise<Note>",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "updateNote",
+          "params": [
+            "noteId",
+            "body"
+          ],
+          "returnType": "Promise<Note>",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "deleteNote",
+          "params": [
+            "noteId"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchTodayGoalPlan",
+          "params": [
+            "type",
+            "mushafId"
+          ],
+          "returnType": "Promise<TodayGoalPlan | null>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "createGoal",
+          "params": [
+            "type",
+            "amount",
+            "category",
+            "duration",
+            "mushafId"
+          ],
+          "returnType": "Promise<Goal>",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "updateGoal",
+          "params": [
+            "goalId",
+            "amount",
+            "duration",
+            "mushafId"
+          ],
+          "returnType": "Promise<Goal>",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "deleteGoal",
+          "params": [
+            "goalId",
+            "category"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetchGoalTimeline",
+          "params": [
+            "amount",
+            "duration",
+            "type",
+            "mushafId"
+          ],
+          "returnType": "Promise<GoalTimeline[]>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "loadLocalBookmarks",
+          "params": [],
+          "returnType": "LocalBookmarkMap",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "saveLocalBookmarks",
+          "params": [
+            "map"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "isPageBookmarked",
+          "params": [
+            "verseKey"
+          ],
+          "returnType": "boolean",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "getLocalBookmarkedVerseKeys",
+          "params": [],
+          "returnType": "string[]",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "toggleBookmark",
+          "params": [
+            "verseKey"
+          ],
+          "returnType": "boolean",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "removeLocalBookmark",
+          "params": [
+            "verseKey"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [
+        {
+          "name": "UserApiError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "imports": [
+        {
+          "source": "../auth/oauth.service",
+          "specifiers": [
+            "getStoredAccessToken",
+            "refreshAccessToken",
+            "getStoredRefreshToken",
+            "getUserProfileFromIdTokenAsync",
+            "NetworkError"
+          ]
+        }
+      ],
+      "exports": [
+        "UserApiError",
+        "fetchStreaks",
+        "recordActivityDay",
+        "fetchUserProfile",
+        "fetchAllNotes",
+        "fetchNotesForVerse",
+        "addNote",
+        "updateNote",
+        "deleteNote",
+        "fetchTodayGoalPlan",
+        "createGoal",
+        "updateGoal",
+        "deleteGoal",
+        "fetchGoalTimeline",
+        "isPageBookmarked",
+        "getLocalBookmarkedVerseKeys",
+        "toggleBookmark",
+        "removeLocalBookmark"
+      ],
+      "totalLines": 459,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/audio/audio-cache.service.ts": {
+      "filePath": "src/app/core/services/audio/audio-cache.service.ts",
+      "contentHash": "61b9c2a117e9bd8eed8ef36e9a661e8930dbf0e83b9b9641310653dc822155c6",
+      "functions": [
+        {
+          "name": "key",
+          "params": [
+            "reciter",
+            "sura",
+            "aya"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "hasCached",
+          "params": [
+            "reciter",
+            "sura",
+            "aya"
+          ],
+          "returnType": "Promise<boolean>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "getCachedBlob",
+          "params": [
+            "reciter",
+            "sura",
+            "aya"
+          ],
+          "returnType": "Promise<Blob | null>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "getPlayableUrl",
+          "params": [
+            "reciter",
+            "sura",
+            "aya"
+          ],
+          "returnType": "Promise<{ url: string; cached: boolean }>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "downloadAndCache",
+          "params": [
+            "reciter",
+            "sura",
+            "aya",
+            "signal"
+          ],
+          "returnType": "Promise<boolean>",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "clearAllCachedAudio",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "countCachedAudio",
+          "params": [],
+          "returnType": "Promise<number>",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "getCachedCountsPerSurah",
+          "params": [
+            "reciter"
+          ],
+          "returnType": "Promise<Record<number, number>>",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "deleteCached",
+          "params": [
+            "reciter",
+            "sura",
+            "aya"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "getCachedOrDownload",
+          "params": [
+            "reciter",
+            "sura",
+            "aya",
+            "signal"
+          ],
+          "returnType": "Promise<string>",
+          "exported": true,
+          "lineCount": 22
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../storage/idb.service",
+          "specifiers": [
+            "idb"
+          ]
+        },
+        {
+          "source": "../data/quran.service",
+          "specifiers": [
+            "fetchAudioForAyah"
+          ]
+        }
+      ],
+      "exports": [
+        "hasCached",
+        "getCachedBlob",
+        "getPlayableUrl",
+        "downloadAndCache",
+        "clearAllCachedAudio",
+        "countCachedAudio",
+        "getCachedCountsPerSurah",
+        "deleteCached",
+        "getCachedOrDownload"
+      ],
+      "totalLines": 151,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/auth/AuthCallback.tsx": {
+      "filePath": "src/app/core/services/auth/AuthCallback.tsx",
+      "contentHash": "d4b5150da6aeaa384f485f423a878421bf6da8ec983fcfcc1ddfc94f04600fff",
+      "functions": [
+        {
+          "name": "AuthCallback",
+          "params": [],
+          "exported": false,
+          "lineCount": 55
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "./oauth.service",
+          "specifiers": [
+            "exchangeCodeForToken"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/auth/oauth.service.ts": {
+      "filePath": "src/app/core/services/auth/oauth.service.ts",
+      "contentHash": "b5322ee655a5944039b6232d7b0ffc49efec0b6db02bf886ea33f1add9013835",
+      "functions": [
+        {
+          "name": "generateCodeVerifier",
+          "params": [],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "generateCodeChallenge",
+          "params": [
+            "verifier"
+          ],
+          "returnType": "Promise<string>",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "storeTokens",
+          "params": [
+            "accessToken",
+            "refreshToken",
+            "idToken"
+          ],
+          "returnType": "Promise<void>",
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "getStoredAccessTokenSync",
+          "params": [],
+          "returnType": "string | null",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "getStoredAccessToken",
+          "params": [],
+          "returnType": "Promise<string | null>",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "getStoredRefreshToken",
+          "params": [],
+          "returnType": "Promise<string | null>",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "getStoredIdToken",
+          "params": [],
+          "returnType": "Promise<string | null>",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "clearTokens",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "getUserProfileFromIdToken",
+          "params": [],
+          "returnType": "OAuthUserProfile | null",
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "getUserProfileFromIdTokenAsync",
+          "params": [],
+          "returnType": "Promise<OAuthUserProfile | null>",
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "signIn",
+          "params": [],
+          "returnType": "Promise<string>",
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "exchangeCodeForToken",
+          "params": [
+            "code"
+          ],
+          "returnType": "Promise<{ accessToken: string; refreshToken?: string; idToken?: string }>",
+          "exported": true,
+          "lineCount": 47
+        },
+        {
+          "name": "refreshAccessToken",
+          "params": [],
+          "returnType": "Promise<string>",
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "signOut",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [
+        {
+          "name": "NetworkError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "imports": [
+        {
+          "source": "@capacitor/core",
+          "specifiers": [
+            "Capacitor"
+          ]
+        }
+      ],
+      "exports": [
+        "getStoredAccessTokenSync",
+        "getStoredAccessToken",
+        "getStoredRefreshToken",
+        "getStoredIdToken",
+        "clearTokens",
+        "getUserProfileFromIdToken",
+        "getUserProfileFromIdTokenAsync",
+        "signIn",
+        "exchangeCodeForToken",
+        "NetworkError",
+        "refreshAccessToken",
+        "signOut"
+      ],
+      "totalLines": 275,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/data/metadata.service.ts": {
+      "filePath": "src/app/core/services/data/metadata.service.ts",
+      "contentHash": "25fc9008bd672b1dcf4eb708548ef73ca9162f1a1234c1ef0360c727e8a0b77e",
+      "functions": [
+        {
+          "name": "initMetadata",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 85
+        },
+        {
+          "name": "getChapters",
+          "params": [],
+          "returnType": "any[]",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "getSuraForPage",
+          "params": [
+            "page"
+          ],
+          "returnType": "number | undefined",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "getSurahNameArabic",
+          "params": [
+            "suraId"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getSurahNameEnglish",
+          "params": [
+            "suraId"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getSurahStartPage",
+          "params": [
+            "suraId"
+          ],
+          "returnType": "number",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getPageStart",
+          "params": [
+            "page"
+          ],
+          "returnType": "PageStart | null",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "estimatePageForVerse",
+          "params": [
+            "sura",
+            "aya"
+          ],
+          "returnType": "number",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "verseLessThanOrEqual",
+          "params": [
+            "v1",
+            "v2"
+          ],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "getJuzStart",
+          "params": [
+            "juzNumber"
+          ],
+          "returnType": "{ sura: number; aya: number }",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "getJuzEnd",
+          "params": [
+            "juzNumber"
+          ],
+          "returnType": "{ sura: number; aya: number }",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "getStartFromMapping",
+          "params": [
+            "mapping"
+          ],
+          "returnType": "{\r\n  sura: number;\r\n  aya: number;\r\n}",
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "getEndFromMapping",
+          "params": [
+            "mapping"
+          ],
+          "returnType": "{\r\n  sura: number;\r\n  aya: number;\r\n}",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "getHizbStart",
+          "params": [
+            "hizbNumber"
+          ],
+          "returnType": "{\r\n  sura: number;\r\n  aya: number;\r\n}",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "getHizbEnd",
+          "params": [
+            "hizbNumber"
+          ],
+          "returnType": "{ sura: number; aya: number }",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "getRubStart",
+          "params": [
+            "rubNumber"
+          ],
+          "returnType": "{ sura: number; aya: number }",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "getRubEnd",
+          "params": [
+            "rubNumber"
+          ],
+          "returnType": "{ sura: number; aya: number }",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "getRubNumberForPage",
+          "params": [
+            "page"
+          ],
+          "returnType": "number",
+          "exported": true,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../api/quran-data-provider",
+          "specifiers": [
+            "fetchChapters",
+            "fetchJuzs",
+            "fetchHizbs",
+            "fetchRubElHizbs"
+          ]
+        },
+        {
+          "source": "../storage/idb.service",
+          "specifiers": [
+            "idb"
+          ]
+        }
+      ],
+      "exports": [
+        "JUZ_START_PAGES",
+        "initMetadata",
+        "getChapters",
+        "getSuraForPage",
+        "getSurahNameArabic",
+        "getSurahNameEnglish",
+        "getSurahStartPage",
+        "getPageStart",
+        "estimatePageForVerse",
+        "getJuzStart",
+        "getJuzEnd",
+        "getHizbStart",
+        "getHizbEnd",
+        "getRubStart",
+        "getRubEnd",
+        "getRubNumberForPage"
+      ],
+      "totalLines": 904,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/data/quran.service.ts": {
+      "filePath": "src/app/core/services/data/quran.service.ts",
+      "contentHash": "794f6cf82033d257173e88cdc6f265f6ffda2ecc2624f1a748651203f6723bf6",
+      "functions": [
+        {
+          "name": "normalizeForSearch",
+          "params": [
+            "s"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "mapApiVerseToVerse",
+          "params": [
+            "av"
+          ],
+          "returnType": "Verse",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "mapApiWord",
+          "params": [
+            "w"
+          ],
+          "returnType": "VerseWord",
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "memGet",
+          "params": [
+            "page"
+          ],
+          "returnType": "Verse[] | null",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "memSet",
+          "params": [
+            "page",
+            "verses"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "getPage",
+          "params": [
+            "page"
+          ],
+          "returnType": "Promise<Verse[]>",
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "prefetchPage",
+          "params": [
+            "page"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "getAllVerses",
+          "params": [],
+          "returnType": "Promise<Verse[]>",
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "getAllVersesAsMap",
+          "params": [],
+          "returnType": "Promise<Record<string, string>>",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "getSurahVersesList",
+          "params": [
+            "suraIndex"
+          ],
+          "returnType": "Promise<Verse[]>",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "getJuzVerses",
+          "params": [
+            "juzNumbers"
+          ],
+          "returnType": "Promise<Verse[]>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "getPageRangeVerses",
+          "params": [
+            "pageFrom",
+            "pageTo"
+          ],
+          "returnType": "Promise<Verse[]>",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "repairPagesCache",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "preloadAllPages",
+          "params": [
+            "onProgress"
+          ],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "fetchTafsirForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "tafsirId"
+          ],
+          "returnType": "Promise<{ verseKey: string; text: string }>",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "getTafsirResources",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "getPageTranslations",
+          "params": [
+            "page",
+            "editionId"
+          ],
+          "returnType": "Promise<{ verseKey: string; text: string }[]>",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "fetchAudioForAyah",
+          "params": [
+            "sura",
+            "aya",
+            "reciter"
+          ],
+          "returnType": "Promise<string>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "seedTextCorpus",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 52
+        },
+        {
+          "name": "searchQuran",
+          "params": [
+            "query"
+          ],
+          "returnType": "Promise<SearchResult[]>",
+          "exported": true,
+          "lineCount": 59
+        },
+        {
+          "name": "findVerseByKey",
+          "params": [
+            "sura",
+            "aya"
+          ],
+          "returnType": "Promise<VerseRow | null>",
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "searchFromPagesCache",
+          "params": [
+            "q"
+          ],
+          "returnType": "Promise<SearchResult[]>",
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "readSelectedMushaf",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "getChaptersFromMeta",
+          "params": [],
+          "returnType": "Promise<any[]>",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "ensureSeeded",
+          "params": [],
+          "returnType": "Promise<void>",
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../api/quran-data-provider",
+          "specifiers": [
+            "fetchVersesByPage",
+            "fetchVersesByJuz",
+            "providerAudioForAyah",
+            "apiFetchTranslationsByPage",
+            "apiFetchTafsirForAyah",
+            "apiFetchTafsirResources"
+          ]
+        },
+        {
+          "source": "../storage/idb.service",
+          "specifiers": [
+            "idb"
+          ]
+        },
+        {
+          "source": "../../../shared/models/verse.model",
+          "specifiers": [
+            "Verse",
+            "VerseWord"
+          ]
+        },
+        {
+          "source": "./metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish",
+            "estimatePageForVerse"
+          ]
+        },
+        {
+          "source": "../api/mushaf.config",
+          "specifiers": [
+            "MUSHAFS",
+            "DEFAULT_MUSHAF"
+          ]
+        },
+        {
+          "source": "../../utils/arabic.util",
+          "specifiers": [
+            "removeDiacritics"
+          ]
+        }
+      ],
+      "exports": [
+        "TafsirResource",
+        "getPage",
+        "prefetchPage",
+        "getAllVerses",
+        "getAllVersesAsMap",
+        "getSurahVersesList",
+        "getJuzVerses",
+        "getPageRangeVerses",
+        "repairPagesCache",
+        "preloadAllPages",
+        "fetchTafsirForAyah",
+        "getTafsirResources",
+        "getPageTranslations",
+        "fetchAudioForAyah",
+        "seedTextCorpus",
+        "searchQuran",
+        "readSelectedMushaf",
+        "ensureSeeded"
+      ],
+      "totalLines": 547,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/data/tafsir-cache.service.ts": {
+      "filePath": "src/app/core/services/data/tafsir-cache.service.ts",
+      "contentHash": "f597e4d6d787ed689e7b62b617eba7db5bce373f36c19ef039b44fd3131158c3",
+      "functions": [
+        {
+          "name": "getDownloadedTafsirIds",
+          "params": [],
+          "returnType": "string[]",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "setDownloadedTafsirIds",
+          "params": [
+            "ids"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "addDownloadedTafsir",
+          "params": [
+            "id"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "removeDownloadedTafsir",
+          "params": [
+            "id"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "isTafsirDownloaded",
+          "params": [
+            "id"
+          ],
+          "returnType": "boolean",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "getCachedTafsirResources",
+          "params": [],
+          "returnType": "TafsirResource[] | null",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "fetchAndCacheTafsirResources",
+          "params": [],
+          "returnType": "Promise<TafsirResource[]>",
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../api/quran-api.client",
+          "specifiers": [
+            "TafsirResource"
+          ]
+        },
+        {
+          "source": "../api/quran-api.client",
+          "specifiers": [
+            "fetchTafsirResources"
+          ]
+        }
+      ],
+      "exports": [
+        "getDownloadedTafsirIds",
+        "setDownloadedTafsirIds",
+        "addDownloadedTafsir",
+        "removeDownloadedTafsir",
+        "isTafsirDownloaded",
+        "getCachedTafsirResources",
+        "fetchAndCacheTafsirResources"
+      ],
+      "totalLines": 53,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/native/driving-mode.plugin.ts": {
+      "filePath": "src/app/core/services/native/driving-mode.plugin.ts",
+      "contentHash": "e0486bb6536bd8ed33444e65f7905ed52df899737b822e802956c6043cd7fbd4",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@capacitor/core",
+          "specifiers": [
+            "registerPlugin"
+          ]
+        }
+      ],
+      "exports": [
+        "DrivingMode"
+      ],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/storage/idb.service.ts": {
+      "filePath": "src/app/core/services/storage/idb.service.ts",
+      "contentHash": "7225194407b7d6f8d95d273e968bbda6ba4026c471fa356139386380c035cd98",
+      "functions": [],
+      "classes": [
+        {
+          "name": "IDBService",
+          "methods": [
+            "open",
+            "get",
+            "getAll",
+            "count",
+            "getAllKeys",
+            "put",
+            "bulkPut",
+            "delete",
+            "clear",
+            "_putChunk"
+          ],
+          "properties": [
+            "db"
+          ],
+          "exported": true,
+          "lineCount": 169
+        }
+      ],
+      "imports": [],
+      "exports": [
+        "IDBService",
+        "idb"
+      ],
+      "totalLines": 192,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/services/storage/recitation-history.service.ts": {
+      "filePath": "src/app/core/services/storage/recitation-history.service.ts",
+      "contentHash": "eb52c28272be61daec9c1cb2d284ce450699a5ca8121666fe238241340e52a7f",
+      "functions": [
+        {
+          "name": "loadSessions",
+          "params": [],
+          "returnType": "RecitationSession[]",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "saveSessions",
+          "params": [
+            "sessions"
+          ],
+          "returnType": "void",
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "recordRecitationSession",
+          "params": [
+            "verseKey",
+            "elapsedSeconds",
+            "reciter",
+            "queue"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 52
+        },
+        {
+          "name": "getRecitationHistory",
+          "params": [],
+          "returnType": "RecitationSession[]",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "deleteRecitationSession",
+          "params": [
+            "id"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "clearRecitationHistory",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "recordRecitationSession",
+        "getRecitationHistory",
+        "deleteRecitationSession",
+        "clearRecitationHistory"
+      ],
+      "totalLines": 112,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/utils/arabic.util.ts": {
+      "filePath": "src/app/core/utils/arabic.util.ts",
+      "contentHash": "40acfbb21bc83f7cd5a6b04141734098ef9b46b7a3fb8f7438d5f1958b31716a",
+      "functions": [
+        {
+          "name": "toHindiNumbers",
+          "params": [
+            "number"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "removeDiacritics",
+          "params": [
+            "text"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "normaliseAnswer",
+          "params": [
+            "text"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "toHindiNumbers",
+        "removeDiacritics",
+        "stripDiacritics",
+        "normaliseAnswer"
+      ],
+      "totalLines": 55,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/core/utils/platform.util.ts": {
+      "filePath": "src/app/core/utils/platform.util.ts",
+      "contentHash": "60f72b214f73c63dd8fa2a3aa505a3fbaf138cefcd6888aec6a2fd4ee0c7dd09",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "platform"
+      ],
+      "totalLines": 74,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/account/Account.css": {
+      "filePath": "src/app/features/account/Account.css",
+      "contentHash": "d63303907a155072c89aa124ee6b1886f5f7418b3ec1bc32372220dca005dae8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 778,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/account/Account.tsx": {
+      "filePath": "src/app/features/account/Account.tsx",
+      "contentHash": "f4f163cd25fcbe6b441ff44335d438ff9422b1366c8bbec9038c0e2a638c244e",
+      "functions": [
+        {
+          "name": "Account",
+          "params": [],
+          "exported": false,
+          "lineCount": 549
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent",
+            "useIonViewWillEnter"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../core/services/api/user-api.client",
+          "specifiers": [
+            "fetchStreaks",
+            "fetchUserProfile",
+            "fetchAllNotes",
+            "deleteNote",
+            "Streak",
+            "UserProfile",
+            "Note",
+            "UserApiError"
+          ]
+        },
+        {
+          "source": "../../core/services/auth/oauth.service",
+          "specifiers": [
+            "signIn",
+            "signOut",
+            "getStoredAccessToken",
+            "getStoredAccessTokenSync",
+            "NetworkError"
+          ]
+        },
+        {
+          "source": "./AccountModal",
+          "specifiers": [
+            "AccountModal"
+          ]
+        },
+        {
+          "source": "./GoalsCard",
+          "specifiers": [
+            "GoalsCard"
+          ]
+        },
+        {
+          "source": "./Account.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 646,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/account/AccountModal.css": {
+      "filePath": "src/app/features/account/AccountModal.css",
+      "contentHash": "cf69d99855d37c3752f5a4919edecea1d7b0de39d2caba67cc0f7aaa7e97f7ab",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 240,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/account/AccountModal.tsx": {
+      "filePath": "src/app/features/account/AccountModal.tsx",
+      "contentHash": "fd977d7dbe66235988089274e0ec28e4abe848651b47a19ce19918ca97c3d889",
+      "functions": [
+        {
+          "name": "AccountModal",
+          "params": [
+            "{ title, onClose, children }"
+          ],
+          "exported": false,
+          "lineCount": 34
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useRef"
+          ]
+        },
+        {
+          "source": "./AccountModal.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/account/GoalsCard.tsx": {
+      "filePath": "src/app/features/account/GoalsCard.tsx",
+      "contentHash": "7a2dc48c1abb096e69a782e0d3b3dc5c772e3132a098bbdad17085c153b866a8",
+      "functions": [
+        {
+          "name": "GoalsCard",
+          "params": [
+            "{ lang, isRTL }"
+          ],
+          "exported": false,
+          "lineCount": 329
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "../../core/services/api/user-api.client",
+          "specifiers": [
+            "createGoal",
+            "deleteGoal",
+            "fetchGoalTimeline",
+            "fetchTodayGoalPlan",
+            "Goal",
+            "GoalTimeline",
+            "TodayGoalPlan",
+            "updateGoal",
+            "UserApiError"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 361,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/azkar/Azkar.css": {
+      "filePath": "src/app/features/azkar/Azkar.css",
+      "contentHash": "1d513d9ab6458347d3ccbf053c6776301578037ac935658b53cadd9d2bab9a27",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 495,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/azkar/Azkar.tsx": {
+      "filePath": "src/app/features/azkar/Azkar.tsx",
+      "contentHash": "e37a0337585161faef73838e8ba8818458dd145895d89bfc21a7881d853792d6",
+      "functions": [
+        {
+          "name": "readAzkarFlags",
+          "params": [],
+          "returnType": "{ vibrate: boolean; sound: boolean }",
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "haptic",
+          "params": [
+            "kind"
+          ],
+          "exported": false,
+          "lineCount": 38
+        },
+        {
+          "name": "stateKey",
+          "params": [
+            "catId"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "loadCatState",
+          "params": [
+            "catId"
+          ],
+          "returnType": "{\r\n  counters: Record<string, number>;\r\n  completed: Record<string, boolean>;\r\n}",
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "saveCatState",
+          "params": [
+            "catId",
+            "counters",
+            "completed"
+          ],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "Azkar",
+          "params": [],
+          "exported": false,
+          "lineCount": 257
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect",
+            "useRef"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/haptics",
+          "specifiers": [
+            "Haptics",
+            "ImpactStyle"
+          ]
+        },
+        {
+          "source": "@capacitor/core",
+          "specifiers": [
+            "Capacitor"
+          ]
+        },
+        {
+          "source": "../../../data/azkarData",
+          "specifiers": [
+            "azkarData"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "./Azkar.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 378,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/bookmarks/Bookmarks.css": {
+      "filePath": "src/app/features/bookmarks/Bookmarks.css",
+      "contentHash": "79a1c6e92ff150bb4f649952400e6cd6ef27a3f53961f174d72281504f34c962",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 356,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/bookmarks/Bookmarks.tsx": {
+      "filePath": "src/app/features/bookmarks/Bookmarks.tsx",
+      "contentHash": "7fda604d1d6941cc346aa0e50e25e7b2c478ff115ef059e56b9e828e2e606658",
+      "functions": [
+        {
+          "name": "formatElapsed",
+          "params": [
+            "seconds",
+            "lang"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "formatRecordedAt",
+          "params": [
+            "iso",
+            "lang"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "verseKeyToPageAndName",
+          "params": [
+            "verseKey",
+            "lang"
+          ],
+          "returnType": "{ sura: number; aya: number; surahName: string; page: number }",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "reciterLabel",
+          "params": [
+            "id",
+            "recitations"
+          ],
+          "returnType": "string",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "formatRange",
+          "params": [
+            "queue",
+            "lang"
+          ],
+          "returnType": "string | null",
+          "exported": false,
+          "lineCount": 32
+        },
+        {
+          "name": "Bookmarks",
+          "params": [],
+          "exported": false,
+          "lineCount": 387
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useCallback",
+            "useEffect",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../core/context/PlaybackContext",
+          "specifiers": [
+            "usePlayback"
+          ]
+        },
+        {
+          "source": "../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../core/services/api/user-api.client",
+          "specifiers": [
+            "getLocalBookmarkedVerseKeys",
+            "removeLocalBookmark"
+          ]
+        },
+        {
+          "source": "../../core/services/storage/recitation-history.service",
+          "specifiers": [
+            "getRecitationHistory",
+            "deleteRecitationSession",
+            "RecitationSession"
+          ]
+        },
+        {
+          "source": "../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish",
+            "estimatePageForVerse"
+          ]
+        },
+        {
+          "source": "../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../core/services/api/quran-api.client",
+          "specifiers": [
+            "fetchRecitations",
+            "ApiRecitation"
+          ]
+        },
+        {
+          "source": "./Bookmarks.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 504,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/home/pages/Home.css": {
+      "filePath": "src/app/features/home/pages/Home.css",
+      "contentHash": "0044f1aac669f18db99ebf0c82e4b58437aadc6e37afcb29dc0cfd968d71b0b4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 226,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/home/pages/Home.tsx": {
+      "filePath": "src/app/features/home/pages/Home.tsx",
+      "contentHash": "c48b26e41a7902e3bd853f3fb88fb49fc37d258366850ac76d95251b65f92beb",
+      "functions": [
+        {
+          "name": "Home",
+          "params": [],
+          "exported": false,
+          "lineCount": 37
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "./Home.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 63,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/playback/PlaybackSettings.css": {
+      "filePath": "src/app/features/playback/PlaybackSettings.css",
+      "contentHash": "dfdb390a8945466bbf3eca22934125b7881ea428c9ea327055d29788ae917ed8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 478,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/playback/PlaybackSettings.tsx": {
+      "filePath": "src/app/features/playback/PlaybackSettings.tsx",
+      "contentHash": "951531ab7d87070d84facaf71daff9902edc2d5af09359a9afa2f85a4b911f19",
+      "functions": [
+        {
+          "name": "loadPrefs",
+          "params": [],
+          "returnType": "StoredPlaybackPrefs",
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "savePrefs",
+          "params": [
+            "p"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "expandRange",
+          "params": [
+            "start",
+            "end"
+          ],
+          "returnType": "VerseKeyLocal[]",
+          "exported": false,
+          "lineCount": 29
+        },
+        {
+          "name": "pageStart",
+          "params": [
+            "page"
+          ],
+          "returnType": "VerseKeyLocal",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "pageEnd",
+          "params": [
+            "page"
+          ],
+          "returnType": "VerseKeyLocal",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "PlaybackSettings",
+          "params": [
+            "{ onClose, currentPage: currentPageProp }"
+          ],
+          "exported": false,
+          "lineCount": 610
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useMemo",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "../../core/context/PlaybackContext",
+          "specifiers": [
+            "usePlayback"
+          ]
+        },
+        {
+          "source": "../../shared/components/inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../core/hooks/usePlaybackQueue",
+          "specifiers": [
+            "RepeatMode",
+            "VerseKey"
+          ]
+        },
+        {
+          "source": "../../core/services/audio/audio-cache.service",
+          "specifiers": [
+            "countCachedAudio",
+            "clearAllCachedAudio",
+            "downloadAndCache",
+            "getCachedCountsPerSurah"
+          ]
+        },
+        {
+          "source": "../../core/services/data/metadata.service",
+          "specifiers": [
+            "getJuzStart",
+            "getJuzEnd",
+            "getPageStart",
+            "getChapters",
+            "getSurahNameArabic",
+            "getSurahNameEnglish",
+            "getHizbStart",
+            "getHizbEnd",
+            "getRubStart",
+            "getRubEnd",
+            "getRubNumberForPage",
+            "estimatePageForVerse"
+          ]
+        },
+        {
+          "source": "../../core/services/api/quran-api.client",
+          "specifiers": [
+            "fetchRecitations"
+          ]
+        },
+        {
+          "source": "../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "./PlaybackSettings.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 754,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/components/QuizExitModal.css": {
+      "filePath": "src/app/features/quiz/components/QuizExitModal.css",
+      "contentHash": "ba7863bf74f73a91fd64dd760643e8209444b6c46adead696fa0924fc792050d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/components/QuizExitModal.tsx": {
+      "filePath": "src/app/features/quiz/components/QuizExitModal.tsx",
+      "contentHash": "49629595a9bbbb7ba24931c35aed6d9c691c688bc4f97677ec26645e21dc6dd1",
+      "functions": [
+        {
+          "name": "QuizExitModal",
+          "params": [
+            "{ isOpen, onCancel, onConfirm }"
+          ],
+          "exported": false,
+          "lineCount": 22
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "./QuizExitModal.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/pages/quiz-list/QuizList.css": {
+      "filePath": "src/app/features/quiz/pages/quiz-list/QuizList.css",
+      "contentHash": "eaa33493065f60c460a316fc65fdabfdbaec0200c4a6a550ffd823f466db5a3e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 180,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/pages/quiz-list/QuizList.tsx": {
+      "filePath": "src/app/features/quiz/pages/quiz-list/QuizList.tsx",
+      "contentHash": "67584fa6294b8f8dd28bcc7b9d3d2b0bcfead8d06c102c77dc0fd6d08129a285",
+      "functions": [
+        {
+          "name": "QuizList",
+          "params": [],
+          "exported": false,
+          "lineCount": 56
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "./QuizList.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.css": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.css",
+      "contentHash": "730ae5b799ed10a5641610ef4dbe47129375ee6716c26dbf2fcc3533b015547b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 480,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.tsx",
+      "contentHash": "04bc7d36d9752ea2f0a10d91fa1ff0dbec29ea44b2bef82b332cff1bc5112715",
+      "functions": [
+        {
+          "name": "AkmelAlAyahSetup",
+          "params": [],
+          "exported": false,
+          "lineCount": 261
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useMemo"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getChapters",
+            "getSurahNameArabic",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "QuizConfig"
+          ]
+        },
+        {
+          "source": "./AkmelAlAyahSetup.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 282,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.css": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.css",
+      "contentHash": "7b41a9baeb9f7d8e703fada4e311c397dd2f279257b7d7f0a670518c60287ca1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 605,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.tsx",
+      "contentHash": "834256876bbf1d820a7f89699e91617a6353c167b4e6e92a4a67ae30d6e80a5b",
+      "functions": [
+        {
+          "name": "isSoundOn",
+          "params": [],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "splitVerse",
+          "params": [
+            "text"
+          ],
+          "returnType": "{ displayed: string; hidden: string }",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "buildQuestion",
+          "params": [
+            "verse"
+          ],
+          "returnType": "QuizQuestion",
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "AkmelAlAyah",
+          "params": [],
+          "exported": false,
+          "lineCount": 514
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect",
+            "useRef",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent",
+            "useIonToast"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/mushaf-context/MushafContextViewer",
+          "specifiers": [
+            "MushafContextViewer"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "removeDiacritics"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/quran.service",
+          "specifiers": [
+            "ensureSeeded"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/quran.service",
+          "specifiers": [
+            "getSurahVersesList",
+            "getJuzVerses",
+            "getPageRangeVerses"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/VerseVisibilityContext",
+          "specifiers": [
+            "useVerseVisibility"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useFeedbackBeep",
+          "specifiers": [
+            "useFeedbackBeep"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useWakeLock",
+          "specifiers": [
+            "useWakeLock"
+          ]
+        },
+        {
+          "source": "../../../../components/QuizExitModal",
+          "specifiers": [
+            "QuizExitModal"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "QuizConfig",
+            "QuizQuestion"
+          ]
+        },
+        {
+          "source": "./AkmelAlAyah.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 594,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.css": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.css",
+      "contentHash": "a8f47a96d1c03231838ee529cf09694bd3a0fc0c591acdae6bb90ccd71013d94",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 403,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.tsx",
+      "contentHash": "f66c2ec8b258981ea7413285a6a8d2c51bf71740c5b1f90c422dfddb768a77ba",
+      "functions": [
+        {
+          "name": "AkmelAlNehayatSetup",
+          "params": [],
+          "exported": false,
+          "lineCount": 254
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useMemo"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getChapters",
+            "getSurahNameArabic",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "QuizConfig"
+          ]
+        },
+        {
+          "source": "./AkmelAlNehayatSetup.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 275,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat.css": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat.css",
+      "contentHash": "f74f04bdf37ce8b3561ef8b26eae994d8028d45b97d24b75536211208416ed56",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 540,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat.tsx",
+      "contentHash": "9fde66f4d32202161f8e41b8771fb0b63042544c55fafa8e5a71821974694561",
+      "functions": [
+        {
+          "name": "splitAtLastWaqf",
+          "params": [
+            "text"
+          ],
+          "returnType": "{\r\n  displayed: string;\r\n  hidden: string;\r\n  found: boolean;\r\n}",
+          "exported": false,
+          "lineCount": 34
+        },
+        {
+          "name": "shuffleArray",
+          "params": [
+            "arr"
+          ],
+          "returnType": "T[]",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "scoreDistractor",
+          "params": [
+            "candidate",
+            "correct"
+          ],
+          "returnType": "number",
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "buildQuestion",
+          "params": [
+            "verse",
+            "pool"
+          ],
+          "returnType": "NehayatQuestion",
+          "exported": false,
+          "lineCount": 50
+        },
+        {
+          "name": "isSoundOn",
+          "params": [],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "AkmelAlNehayat",
+          "params": [],
+          "exported": false,
+          "lineCount": 401
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/mushaf-context/MushafContextViewer",
+          "specifiers": [
+            "MushafContextViewer"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi",
+            "removeDiacritics"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/quran.service",
+          "specifiers": [
+            "ensureSeeded"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/quran.service",
+          "specifiers": [
+            "getSurahVersesList",
+            "getJuzVerses",
+            "getPageRangeVerses",
+            "getAllVerses"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/VerseVisibilityContext",
+          "specifiers": [
+            "useVerseVisibility"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useFeedbackBeep",
+          "specifiers": [
+            "useFeedbackBeep"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useWakeLock",
+          "specifiers": [
+            "useWakeLock"
+          ]
+        },
+        {
+          "source": "../../../../components/QuizExitModal",
+          "specifiers": [
+            "QuizExitModal"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "QuizConfig",
+            "QuizQuestion"
+          ]
+        },
+        {
+          "source": "./AkmelAlNehayat.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 605,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.css": {
+      "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.css",
+      "contentHash": "ded7ee633721b14a9c3c991fad6ed65a7e2315eb1f2eae295d3eb43d55709f1e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 476,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.tsx",
+      "contentHash": "7fb2500cf56734fec3d9ed531b41f96a526b18b6da7433db3c1f139955b5914c",
+      "functions": [
+        {
+          "name": "MutashabihatSetup",
+          "params": [],
+          "exported": false,
+          "lineCount": 267
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useMemo"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getChapters",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "MutashabihatConfig"
+          ]
+        },
+        {
+          "source": "./MutashabihatSetup.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 287,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest.css": {
+      "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest.css",
+      "contentHash": "2f5cdcf6a2274621f59c561da54a5d981ade3716e30d1ee55e71b7f66546f482",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 956,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest.tsx": {
+      "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest.tsx",
+      "contentHash": "73c4156af6d2738b092e1bb2d12e41ab0249717e378a2429abf64e5a6f6141c2",
+      "functions": [
+        {
+          "name": "isSoundOn",
+          "params": [],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "MutashabihatTest",
+          "params": [],
+          "exported": false,
+          "lineCount": 563
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect",
+            "useRef",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent",
+            "useIonToast"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "@capacitor/preferences",
+          "specifiers": [
+            "Preferences"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/mushaf-context/MushafContextViewer",
+          "specifiers": [
+            "MushafContextViewer"
+          ]
+        },
+        {
+          "source": "../../services/mutashabihat.service",
+          "specifiers": [
+            "getAllMutashabihatGroups",
+            "filterGroupsBySurahs",
+            "filterGroupsByPages",
+            "filterGroupsByJuzs",
+            "buildMutashabihatQuestion",
+            "checkMutashabihatAnswer"
+          ]
+        },
+        {
+          "source": "../../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindi"
+          ]
+        },
+        {
+          "source": "../../../../../../core/services/data/quran.service",
+          "specifiers": [
+            "ensureSeeded",
+            "getAllVerses"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../../../../core/context/VerseVisibilityContext",
+          "specifiers": [
+            "useVerseVisibility"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useFeedbackBeep",
+          "specifiers": [
+            "useFeedbackBeep"
+          ]
+        },
+        {
+          "source": "../../../../../../core/hooks/useWakeLock",
+          "specifiers": [
+            "useWakeLock"
+          ]
+        },
+        {
+          "source": "../../../../components/QuizExitModal",
+          "specifiers": [
+            "QuizExitModal"
+          ]
+        },
+        {
+          "source": "../../../../../../shared/models/verse.model",
+          "specifiers": [
+            "MutashabihatConfig"
+          ]
+        },
+        {
+          "source": "./MutashabihatTest.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 611,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/quiz/quizzes/mutashabihat/services/mutashabihat.service.ts": {
+      "filePath": "src/app/features/quiz/quizzes/mutashabihat/services/mutashabihat.service.ts",
+      "contentHash": "a81866c1067f1c88fcd140bc72b066ae75c7a53add19c1f9e9d76a5932c4695b",
+      "functions": [
+        {
+          "name": "getAllMutashabihatGroups",
+          "params": [
+            "verses"
+          ],
+          "returnType": "MutashabihatGroup[]",
+          "exported": true,
+          "lineCount": 76
+        },
+        {
+          "name": "filterGroupsBySurahs",
+          "params": [
+            "groups",
+            "surahs"
+          ],
+          "returnType": "MutashabihatGroup[]",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "filterGroupsByPages",
+          "params": [
+            "groups",
+            "pageFrom",
+            "pageTo"
+          ],
+          "returnType": "MutashabihatGroup[]",
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "filterGroupsByJuzs",
+          "params": [
+            "groups",
+            "juzs"
+          ],
+          "returnType": "MutashabihatGroup[]",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "buildMutashabihatQuestion",
+          "params": [
+            "group"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "checkMutashabihatAnswer",
+          "params": [
+            "userAnswer",
+            "question"
+          ],
+          "returnType": "boolean",
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../../../../../core/utils/arabic.util",
+          "specifiers": [
+            "stripDiacritics"
+          ]
+        },
+        {
+          "source": "../../../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../../../../shared/models/verse.model",
+          "specifiers": [
+            "Verse"
+          ]
+        }
+      ],
+      "exports": [
+        "getAllMutashabihatGroups",
+        "filterGroupsBySurahs",
+        "filterGroupsByPages",
+        "filterGroupsByJuzs",
+        "buildMutashabihatQuestion",
+        "checkMutashabihatAnswer"
+      ],
+      "totalLines": 209,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/settings/Settings.css": {
+      "filePath": "src/app/features/settings/Settings.css",
+      "contentHash": "f469cff7ef18b6eafe94075c74ce3bd1c26fba7b4641f3bb6307b38d04944f24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 613,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/settings/Settings.tsx": {
+      "filePath": "src/app/features/settings/Settings.tsx",
+      "contentHash": "8074a8d60638fcf53d9ab424c439c9d72a673a6cfd368c09967815d43ec6612f",
+      "functions": [
+        {
+          "name": "loadSettings",
+          "params": [],
+          "returnType": "AppSettings",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "saveSettings",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "SvgIcon",
+          "params": [
+            "{ children }"
+          ],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "TajweedInfoModal",
+          "params": [
+            "{\r\n  open,\r\n  onClose,\r\n  isNight,\r\n  lang,\r\n  isRTL,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 105
+        },
+        {
+          "name": "ToggleRow",
+          "params": [
+            "{\r\n  icon,\r\n  label,\r\n  desc,\r\n  checked,\r\n  onChange,\r\n  onInfo,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 58
+        },
+        {
+          "name": "SelectRow",
+          "params": [
+            "{\r\n  icon,\r\n  label,\r\n  desc,\r\n  value,\r\n  options,\r\n  onChange,\r\n  night,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "SliderRow",
+          "params": [
+            "{\r\n  icon,\r\n  label,\r\n  desc,\r\n  value,\r\n  min,\r\n  max,\r\n  unit,\r\n  onChange,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 38
+        },
+        {
+          "name": "Settings",
+          "params": [],
+          "exported": false,
+          "lineCount": 204
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../shared/components/inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../core/services/api/mushaf.config",
+          "specifiers": [
+            "MUSHAFS",
+            "DEFAULT_MUSHAF",
+            "MushafKind"
+          ]
+        },
+        {
+          "source": "./Settings.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 796,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/tafsir/TafsirSettings.css": {
+      "filePath": "src/app/features/tafsir/TafsirSettings.css",
+      "contentHash": "289272eb67aa76d6276cb0aeedc1d18f74ee3fa0cbb091457fa7ec6bf021322e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 284,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/tafsir/TafsirSettings.tsx": {
+      "filePath": "src/app/features/tafsir/TafsirSettings.tsx",
+      "contentHash": "8582fc53e668e0d9cad852628ae426705b111308ce9459c0f61f85dca29906ad",
+      "functions": [
+        {
+          "name": "TafsirSettings",
+          "params": [],
+          "exported": false,
+          "lineCount": 209
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "../../core/services/api/quran-api.client",
+          "specifiers": [
+            "TafsirResource"
+          ]
+        },
+        {
+          "source": "../../core/services/data/tafsir-cache.service",
+          "specifiers": [
+            "getDownloadedTafsirIds",
+            "addDownloadedTafsir",
+            "removeDownloadedTafsir",
+            "getCachedTafsirResources",
+            "fetchAndCacheTafsirResources"
+          ]
+        },
+        {
+          "source": "./TafsirSettings.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 227,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/viewer/pages/Search.css": {
+      "filePath": "src/app/features/viewer/pages/Search.css",
+      "contentHash": "3468948a467d916b542c856d21579a1cea879d4de579bcbde4381a0a0bdac4d4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 283,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/viewer/pages/Search.tsx": {
+      "filePath": "src/app/features/viewer/pages/Search.tsx",
+      "contentHash": "9db8bbfc5c3ae5c94ac58f05c2e242e76911fbec50b732f6d0090b62e3313e5e",
+      "functions": [
+        {
+          "name": "readRecents",
+          "params": [],
+          "returnType": "RecentSearch[]",
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "writeRecents",
+          "params": [
+            "list"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "pushRecent",
+          "params": [
+            "query",
+            "count"
+          ],
+          "returnType": "RecentSearch[]",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "Search",
+          "params": [],
+          "exported": false,
+          "lineCount": 316
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent",
+            "useIonToast"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/quran.service",
+          "specifiers": [
+            "searchQuran",
+            "SearchResult"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "./Search.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "readRecents",
+        "writeRecents",
+        "pushRecent"
+      ],
+      "totalLines": 402,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/viewer/pages/SearchResults.css": {
+      "filePath": "src/app/features/viewer/pages/SearchResults.css",
+      "contentHash": "0c57da6c53ec623ad607dae74cc8710f4d88007f2e3cfc4bbde81601dc7412f9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 287,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/viewer/pages/SearchResults.tsx": {
+      "filePath": "src/app/features/viewer/pages/SearchResults.tsx",
+      "contentHash": "bd8bb439f45f80583d1208a9d7df3ce143689ab40995734530c4a09413996d3d",
+      "functions": [
+        {
+          "name": "SearchResults",
+          "params": [],
+          "exported": false,
+          "lineCount": 307
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useMemo",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/quran.service",
+          "specifiers": [
+            "searchQuran",
+            "SearchResult"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "./Search",
+          "specifiers": [
+            "pushRecent"
+          ]
+        },
+        {
+          "source": "../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "./SearchResults.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 340,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/viewer/pages/SurahJuzSelection.css": {
+      "filePath": "src/app/features/viewer/pages/SurahJuzSelection.css",
+      "contentHash": "7648783dd0df478ec471498964a139adbfb29ce06df3bf1ec5a0835d7c89e034",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 590,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/viewer/pages/SurahJuzSelection.tsx": {
+      "filePath": "src/app/features/viewer/pages/SurahJuzSelection.tsx",
+      "contentHash": "29d1be525524588d527a0f7a09d5edf4c35e00cd48a8ae350063bdafebfafc79",
+      "functions": [
+        {
+          "name": "SurahJuzSelection",
+          "params": [],
+          "exported": false,
+          "lineCount": 473
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useMemo",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getChapters",
+            "getSurahNameArabic",
+            "getSurahNameEnglish",
+            "getHizbStart",
+            "getHizbEnd",
+            "estimatePageForVerse",
+            "getSuraForPage"
+          ]
+        },
+        {
+          "source": "./SurahJuzSelection.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 521,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/features/viewer/PageViewer.css": {
+      "filePath": "src/app/features/viewer/PageViewer.css",
+      "contentHash": "06018343c3bddee2211ed82b712405b8db5c0595e14ab7dc038747405696f883",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1671,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/features/viewer/PageViewer.tsx": {
+      "filePath": "src/app/features/viewer/PageViewer.tsx",
+      "contentHash": "2fea81a517563b4212619744b7a784a4f60006b73320e8a06f6141425a2816a0",
+      "functions": [
+        {
+          "name": "saveLastPage",
+          "params": [
+            "page"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "loadLastPage",
+          "params": [],
+          "returnType": "number | null",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "readSettings",
+          "params": [],
+          "returnType": "ReadSettings",
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "PageViewer",
+          "params": [],
+          "exported": false,
+          "lineCount": 1073
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useState",
+            "useEffect",
+            "useRef",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "@ionic/react",
+          "specifiers": [
+            "IonPage",
+            "IonContent",
+            "useIonToast"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory",
+            "useLocation"
+          ]
+        },
+        {
+          "source": "../../shared/components/bottom-nav/BottomNavBar",
+          "specifiers": [
+            "BottomNavBar"
+          ]
+        },
+        {
+          "source": "../../shared/components/mushaf-page/MushafPage",
+          "specifiers": [
+            "MushafPage"
+          ]
+        },
+        {
+          "source": "../../core/services/data/quran.service",
+          "specifiers": [
+            "getPage",
+            "prefetchPage"
+          ]
+        },
+        {
+          "source": "../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSuraForPage",
+            "getSurahNameArabic",
+            "getChapters",
+            "estimatePageForVerse",
+            "getSurahStartPage",
+            "getSurahNameEnglish"
+          ]
+        },
+        {
+          "source": "../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../core/context/VerseVisibilityContext",
+          "specifiers": [
+            "useVerseVisibility"
+          ]
+        },
+        {
+          "source": "../../core/context/PlaybackContext",
+          "specifiers": [
+            "usePlayback"
+          ]
+        },
+        {
+          "source": "../../core/hooks/useAudioPlayer",
+          "specifiers": [
+            "useAudioPlayer"
+          ]
+        },
+        {
+          "source": "../../core/hooks/useImmersiveMode",
+          "specifiers": [
+            "useImmersiveMode"
+          ]
+        },
+        {
+          "source": "../../core/hooks/useWakeLock",
+          "specifiers": [
+            "useWakeLock"
+          ]
+        },
+        {
+          "source": "../../shared/components/verse-action-sheet/VerseActionSheet",
+          "specifiers": [
+            "VerseActionSheet"
+          ]
+        },
+        {
+          "source": "../../core/services/api/user-api.client",
+          "specifiers": [
+            "isPageBookmarked",
+            "recordActivityDay"
+          ]
+        },
+        {
+          "source": "../../core/services/data/quran.service",
+          "specifiers": [
+            "readSelectedMushaf"
+          ]
+        },
+        {
+          "source": "../playback/PlaybackSettings",
+          "specifiers": [
+            "PlaybackSettings"
+          ]
+        },
+        {
+          "source": "../../shared/models/verse.model",
+          "specifiers": [
+            "Verse"
+          ]
+        },
+        {
+          "source": "./PageViewer.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 1169,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/bottom-nav/BottomNavBar.css": {
+      "filePath": "src/app/shared/components/bottom-nav/BottomNavBar.css",
+      "contentHash": "439089ef452e67b0ff805645119b649b6bac081d13a965e9dadcf9e89c5c574a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 184,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/bottom-nav/BottomNavBar.tsx": {
+      "filePath": "src/app/shared/components/bottom-nav/BottomNavBar.tsx",
+      "contentHash": "4f0cf6cc726096d5b33ea02bcdc8782acee91cccf8bd67542a85979d2b3984e4",
+      "functions": [
+        {
+          "name": "BottomNavBar",
+          "params": [
+            "{ active, quranHref, fixed }"
+          ],
+          "exported": false,
+          "lineCount": 58
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "./BottomNavBar.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 240,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/inline-select/InlineSelect.css": {
+      "filePath": "src/app/shared/components/inline-select/InlineSelect.css",
+      "contentHash": "657e97599bd88234fa45d4002ae7548dddf7cf28c05a2d7d11dee66a17bba61e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 115,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/inline-select/InlineSelect.tsx": {
+      "filePath": "src/app/shared/components/inline-select/InlineSelect.tsx",
+      "contentHash": "002409e4d3cabff104cca9aa60003b2de980f0f074df52025008710d52eff78f",
+      "functions": [
+        {
+          "name": "InlineSelect",
+          "params": [
+            "{\r\n  value,\r\n  options,\r\n  onChange,\r\n  night = false,\r\n  fullWidth = false,\r\n  \"aria-label\": ariaLabel,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 176
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useLayoutEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "react-dom",
+          "specifiers": [
+            "createPortal"
+          ]
+        },
+        {
+          "source": "./InlineSelect.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 197,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/mushaf-context/MushafContextViewer.css": {
+      "filePath": "src/app/shared/components/mushaf-context/MushafContextViewer.css",
+      "contentHash": "d5b01b9e86533205e27a110551daa0c7b0bf59b535485f722258c0d050534046",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 292,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/mushaf-context/MushafContextViewer.tsx": {
+      "filePath": "src/app/shared/components/mushaf-context/MushafContextViewer.tsx",
+      "contentHash": "a6cfa1d3128ab7b390f4a8a78966d295144fbfbef6b5a1863e7834b94794814c",
+      "functions": [
+        {
+          "name": "MushafContextViewer",
+          "params": [
+            "{\r\n  verse,\r\n  snippet,\r\n  hintLevel: externalHintLevel,\r\n  showAnswer,\r\n  isOpen,\r\n  onClose,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 299
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useCallback",
+            "useEffect",
+            "useMemo",
+            "useState",
+            "useRef"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/quran.service",
+          "specifiers": [
+            "getPage"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic",
+            "getSuraForPage",
+            "getChapters",
+            "estimatePageForVerse"
+          ]
+        },
+        {
+          "source": "../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers",
+            "removeDiacritics"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../mushaf-page/MushafPage",
+          "specifiers": [
+            "MushafPage"
+          ]
+        },
+        {
+          "source": "../../models/verse.model",
+          "specifiers": [
+            "Verse"
+          ]
+        },
+        {
+          "source": "../../../core/context/VerseVisibilityContext",
+          "specifiers": [
+            "useVerseVisibility"
+          ]
+        },
+        {
+          "source": "./MushafContextViewer.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 348,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/mushaf-page/MushafPage.css": {
+      "filePath": "src/app/shared/components/mushaf-page/MushafPage.css",
+      "contentHash": "94f8f81bdc8cfabf4a4fd3bb3993ab593b79f1e9f731b34eca1469ba04dad6c9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 300,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/mushaf-page/MushafPage.tsx": {
+      "filePath": "src/app/shared/components/mushaf-page/MushafPage.tsx",
+      "contentHash": "9a118a0c93c91a673d90725fde1ec86cba766b550aad1cf5661d471c3985dea2",
+      "functions": [
+        {
+          "name": "MushafPage",
+          "params": [
+            "{\r\n  page,\r\n  verses,\r\n  nextPageFirstVerse,\r\n  target,\r\n  flash,\r\n  selected,\r\n  hidden,\r\n  green,\r\n  grey,\r\n  partialTarget,\r\n  onVerseTap,\r\n  onVerseLongPress,\r\n  bigTextMode = false,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 549
+        },
+        {
+          "name": "readTajweedSetting",
+          "params": [],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "groupByLine",
+          "params": [
+            "verses"
+          ],
+          "returnType": "Line[]",
+          "exported": false,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useEffect",
+            "useLayoutEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "../../models/verse.model",
+          "specifiers": [
+            "Verse",
+            "VerseWord"
+          ]
+        },
+        {
+          "source": "../../../core/services/api/font.loader",
+          "specifiers": [
+            "ensurePageFont",
+            "ensureBismillahFont",
+            "fontFamilyForPage",
+            "paletteNameForPage",
+            "setMonoPaletteColor",
+            "BISMILLAH_FONT_FAMILY"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/metadata.service",
+          "specifiers": [
+            "getSurahNameArabic"
+          ]
+        },
+        {
+          "source": "../../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "./MushafPage.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 666,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/note-modal/NoteModal.css": {
+      "filePath": "src/app/shared/components/note-modal/NoteModal.css",
+      "contentHash": "ac74ad8ca4cc4f4c3faff150a1dcd9988f6c0d1429f9b2bef571489966a48b21",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 408,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/note-modal/NoteModal.tsx": {
+      "filePath": "src/app/shared/components/note-modal/NoteModal.tsx",
+      "contentHash": "2464f69975605b9d718c4aa60ac90d419967c024ac10385b0a42e812a6138b57",
+      "functions": [
+        {
+          "name": "NoteModal",
+          "params": [
+            "{ initialView, open, verseKey, onClose }"
+          ],
+          "exported": false,
+          "lineCount": 255
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "../../../core/services/api/user-api.client",
+          "specifiers": [
+            "addNote",
+            "deleteNote",
+            "fetchNotesForVerse",
+            "updateNote",
+            "Note"
+          ]
+        },
+        {
+          "source": "../../../core/services/auth/oauth.service",
+          "specifiers": [
+            "getStoredAccessToken"
+          ]
+        },
+        {
+          "source": "./NoteModal.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 281,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/components/verse-action-sheet/VerseActionSheet.css": {
+      "filePath": "src/app/shared/components/verse-action-sheet/VerseActionSheet.css",
+      "contentHash": "305651352812723976bbfb74ee19474b898f9d0ecfdde20328bc2690187c815f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 620,
+      "hasStructuralAnalysis": false
+    },
+    "src/app/shared/components/verse-action-sheet/VerseActionSheet.tsx": {
+      "filePath": "src/app/shared/components/verse-action-sheet/VerseActionSheet.tsx",
+      "contentHash": "a6193106a035bf0eb6e67c16c9c4e0d2e6268940058b2045067984b4586e192d",
+      "functions": [
+        {
+          "name": "VerseActionSheet",
+          "params": [
+            "{\r\n  open,\r\n  verseKey,\r\n  pageVerseKeys = [],\r\n  page,\r\n  translationId,\r\n  tafsirId,\r\n  reciter = DEFAULT_RECITER,\r\n  onClose,\r\n}"
+          ],
+          "exported": false,
+          "lineCount": 543
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React",
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "react-router-dom",
+          "specifiers": [
+            "useHistory"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/quran.service",
+          "specifiers": [
+            "fetchTafsirForAyah",
+            "getTafsirResources",
+            "getPageTranslations",
+            "getPage"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/quran.service",
+          "specifiers": [
+            "TafsirResource"
+          ]
+        },
+        {
+          "source": "../../../core/services/data/tafsir-cache.service",
+          "specifiers": [
+            "getDownloadedTafsirIds"
+          ]
+        },
+        {
+          "source": "../../../core/context/LanguageContext",
+          "specifiers": [
+            "useLang"
+          ]
+        },
+        {
+          "source": "../../../core/context/ThemeContext",
+          "specifiers": [
+            "useTheme"
+          ]
+        },
+        {
+          "source": "../inline-select/InlineSelect",
+          "specifiers": [
+            "InlineSelect"
+          ]
+        },
+        {
+          "source": "../../../core/utils/arabic.util",
+          "specifiers": [
+            "toHindiNumbers"
+          ]
+        },
+        {
+          "source": "../../../core/services/api/user-api.client",
+          "specifiers": [
+            "isPageBookmarked",
+            "toggleBookmark"
+          ]
+        },
+        {
+          "source": "../../../core/services/audio/audio-cache.service",
+          "specifiers": [
+            "getPlayableUrl"
+          ]
+        },
+        {
+          "source": "../../../core/hooks/useAudioPlayer",
+          "specifiers": [
+            "useAudioPlayer"
+          ]
+        },
+        {
+          "source": "../note-modal/NoteModal",
+          "specifiers": [
+            "NoteModal"
+          ]
+        },
+        {
+          "source": "./VerseActionSheet.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 591,
+      "hasStructuralAnalysis": true
+    },
+    "src/app/shared/models/verse.model.ts": {
+      "filePath": "src/app/shared/models/verse.model.ts",
+      "contentHash": "d0b00ed7437283a5659d8551b62d47486c3af2b5204da1da436c9036e2cdda5f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": true
+    },
+    "src/data/azkarData.ts": {
+      "filePath": "src/data/azkarData.ts",
+      "contentHash": "98715f7d914ceef1b1480b4c54034f79b733c89823c6b2874a6d91a9cb3731d2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 790,
+      "hasStructuralAnalysis": true
+    },
+    "src/index.css": {
+      "filePath": "src/index.css",
+      "contentHash": "73ce58a0f0e6e8791c6f6dd8a6ea4d64321b7af6038b778287f5d79f2402380d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": false
+    },
+    "src/index.tsx": {
+      "filePath": "src/index.tsx",
+      "contentHash": "ef81518fb9bfdd2f9d4d69c41d702d415813216dcfe6a5ceea97fa30b0dcb8d5",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "React"
+          ]
+        },
+        {
+          "source": "react-dom/client",
+          "specifiers": [
+            "ReactDOM"
+          ]
+        },
+        {
+          "source": "./App",
+          "specifiers": [
+            "App"
+          ]
+        },
+        {
+          "source": "./index.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "src/styles/tokens.css": {
+      "filePath": "src/styles/tokens.css",
+      "contentHash": "9c47f29a9391b58de7f7960cecac12a21c47b03e389ff410145793728671e988",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 305,
+      "hasStructuralAnalysis": false
+    },
+    "src/types.d.ts": {
+      "filePath": "src/types.d.ts",
+      "contentHash": "82b915f2c0f0bdedcfc73f7b251d53ed32d5a4c53641e727fec3e400d488e634",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "terms.html": {
+      "filePath": "terms.html",
+      "contentHash": "a20aadb7b474b1d0d77138450e529b9ad3084231b2a6b3066ed15bf02fa869d4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 60,
+      "hasStructuralAnalysis": false
+    },
+    "token-broker/package.json": {
+      "filePath": "token-broker/package.json",
+      "contentHash": "6b6746a3008447c60abdd006f40807a654e618cf4d735e23a42bcd21be074307",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "token-broker/README.md": {
+      "filePath": "token-broker/README.md",
+      "contentHash": "f043f2e26b2cc79fe12a9e5e85e1f0edc7e19846b7fc676f67f7396b67071e24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 48,
+      "hasStructuralAnalysis": true
+    },
+    "token-broker/src/index.ts": {
+      "filePath": "token-broker/src/index.ts",
+      "contentHash": "270bb01139d003232b8ab905c0d5c2773b6aeee9e799c79c3aa318bff68244c3",
+      "functions": [
+        {
+          "name": "handleOAuthToken",
+          "params": [
+            "req",
+            "env",
+            "corsHeaders"
+          ],
+          "returnType": "Promise<Response>",
+          "exported": false,
+          "lineCount": 62
+        },
+        {
+          "name": "json",
+          "params": [
+            "data",
+            "extra"
+          ],
+          "returnType": "Response",
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 185,
+      "hasStructuralAnalysis": true
+    },
+    "token-broker/wrangler.toml": {
+      "filePath": "token-broker/wrangler.toml",
+      "contentHash": "b64b0ad5b54e5909ffed71faa42b5ad4d2c92edf0184faa0ed7cc3271bd03fa1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 10,
+      "hasStructuralAnalysis": true
+    },
+    "tsconfig.json": {
+      "filePath": "tsconfig.json",
+      "contentHash": "c7715b20b3f2fc3215eeb8f11d19a22c4805fefa5b77bfcf4d33815dccae7064",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 23,
+      "hasStructuralAnalysis": true
+    }
+  }
+}

@@ -29,13 +29,14 @@ export interface DrivingModePlaybackState {
   currentPage?: number;
 }
 
-export type CarActionType = "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "jumpToAya";
+export type CarActionType = "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "jumpToAya" | "replayPage" | "seekTo";
 
 export interface CarActionEvent {
   action: CarActionType;
   reciter?: string;
   surah?: number;
   aya?: number;
+  positionMs?: number;
 }
 
 export interface DrivingModePlugin {

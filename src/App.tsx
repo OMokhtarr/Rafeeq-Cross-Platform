@@ -97,7 +97,7 @@ const App: React.FC = () => {
         try {
           await exchangeCodeForToken(code);
           console.log("[appUrlOpen] token exchange success");
-          window.location.replace("https://localhost/account");
+          window.location.hash = "/account";
         } catch (e) {
           console.error("[appUrlOpen] token exchange failed:", e);
         }
