@@ -109,6 +109,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   } | null>(null);
   // Always-current ref to the active queue for use inside event listener closures
   const activeQueueRef = useRef<VerseKey[]>([]);
+  // Tracks whether anything is currently loaded so "play" from a cold car start falls back to start()
+  const currentVerseRef = useRef<string | null>(null);
   // Stable ref to queue controls so the car listener effect doesn't re-register on every render
   const queueRef = useRef(queue);
   const setCurrentReciterIdRef = useRef(setCurrentReciterId);
@@ -119,10 +121,13 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentReciterIdRef.current = setCurrentReciterId;
   });
 
-  // Keep activeQueueRef current so jumpToAya closures always see the latest queue
+  // Keep activeQueueRef and currentVerseRef current so listener closures always see the latest state
   useEffect(() => {
     activeQueueRef.current = queue.queue;
   }, [queue.queue]);
+  useEffect(() => {
+    currentVerseRef.current = queue.state.currentVerse;
+  }, [queue.state.currentVerse]);
 
   // Push content tree once on mount so Android Auto can browse reciters/surahs
   useEffect(() => {
@@ -203,7 +208,18 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
       const q = queueRef.current;
       switch (event.action) {
         case "play":
-          q.resume().catch(() => {});
+          if (currentVerseRef.current) {
+            // Something is already loaded — just resume
+            q.resume().catch(() => {});
+          } else {
+            // Cold start from Android Auto: nothing loaded yet, start the queue.
+            // If no queue exists either (e.g. app just opened), default to Al-Fatiha.
+            const coldQueue =
+              activeQueueRef.current.length > 0
+                ? activeQueueRef.current
+                : Array.from({ length: 7 }, (_, i) => ({ sura: 1, aya: i + 1 }));
+            q.start(coldQueue).catch(() => {});
+          }
           break;
         case "pause":
           q.pause();
@@ -242,6 +258,21 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
             (v) => v.aya === targetAya,
           );
           if (targetIndex !== -1) q.jumpToIndex(targetIndex);
+          break;
+        }
+        case "replayPage": {
+          // Jump to the first verse of the current page
+          if (event.aya == null) break;
+          const replayAya = event.aya;
+          const replayIndex = activeQueueRef.current.findIndex(
+            (v) => v.aya === replayAya,
+          );
+          if (replayIndex !== -1) q.jumpToIndex(replayIndex);
+          break;
+        }
+        case "seekTo": {
+          if (event.positionMs == null) break;
+          q.seekToMs(event.positionMs);
           break;
         }
       }

@@ -110,14 +110,15 @@ class RafeeqAutoPlugin : Plugin() {
 
     /**
      * Called by RafeeqMediaService.SessionCallback to push car events to JS.
-     * action: "play" | "pause" | "next" | "prev" | "stop" | "selectSurah"
+     * action: "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "seekTo" | "replayPage"
      */
-    fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null) {
+    fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null, positionMs: Long? = null) {
         val data = JSObject().apply {
             put("action", action)
             if (reciter != null) put("reciter", reciter)
             if (surah != null) put("surah", surah)
             if (aya != null) put("aya", aya)
+            if (positionMs != null) put("positionMs", positionMs)
         }
         notifyListeners("carAction", data)
     }

@@ -1,6 +1,7 @@
 package com.rafeeq.quranquiz
 
 import android.os.Bundle
+import android.webkit.WebSettings
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -12,6 +13,10 @@ class MainActivity : BridgeActivity() {
         installSplashScreen()
         registerPlugin(RafeeqAutoPlugin::class.java)
         super.onCreate(savedInstanceState)
+        // Allow the WebView to autoplay audio without a user gesture.
+        // Required so Android Auto car controls (which are not user gestures
+        // from the WebView's perspective) can trigger el.play() successfully.
+        bridge.webView.settings.mediaPlaybackRequiresUserGesture = false
         enableEdgeToEdge()
     }
 

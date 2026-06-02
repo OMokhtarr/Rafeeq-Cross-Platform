@@ -20,7 +20,8 @@
     "analyze": "npm run build:prod -- --stats-json && npx webpack-bundle-analyzer build/stats.json",
     "lighthouse": "npx lighthouse http://localhost:8100 --view",
     "test": "react-scripts test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "understand": "set GRAPH_DIR=%CD%&& \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard/node_modules/.bin/vite.cmd\" \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard\" --host 127.0.0.1 --config \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard/vite.config.ts\""
   },
   "dependencies": {
     "@capacitor/android": "^5.7.8",

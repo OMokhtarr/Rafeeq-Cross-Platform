@@ -117,24 +117,15 @@ const Account: React.FC = () => {
     setError(null);
     Promise.all([
       fetchStreaks(10).catch((err) => {
-        if (err instanceof NetworkError) {
+        if (err instanceof NetworkError || (err instanceof Error && err.message === "network_unavailable")) {
           setError(
             lang === "ar"
               ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
               : "No internet connection. Connect and try again.",
           );
-        } else if (
-          err instanceof UserApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
-          setError(
-            lang === "ar"
-              ? "يرجى تسجيل الدخول لعرض بياناتك"
-              : "Please sign in to view your data",
-          );
         } else {
           setError(
-            lang === "ar" ? "تعذر تحميل البيانات" : "Could not load data",
+            lang === "ar" ? "تعذر تحميل البيانات. حاول مجدداً." : "Could not load data. Try again.",
           );
         }
         return [];

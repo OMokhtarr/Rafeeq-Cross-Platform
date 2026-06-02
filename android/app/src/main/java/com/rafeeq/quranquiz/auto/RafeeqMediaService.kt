@@ -193,7 +193,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 PlaybackStateCompat.ACTION_PAUSE or
                 PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
                 PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_STOP
+                PlaybackStateCompat.ACTION_STOP or
+                PlaybackStateCompat.ACTION_SEEK_TO
             )
             .setState(
                 if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
@@ -233,7 +234,30 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 )
             }
 
-            // Slot 1 — next-page (always present; no-op when on the last page)
+            // Slot 1 — replay-page (always present; jumps to first aya of current page)
+            val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
+            if (currentMarker != null) {
+                stateBuilder.addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder(
+                        "replayPage",
+                        "↺ ص ${currentMarker.page}",
+                        android.R.drawable.ic_menu_rotate
+                    ).setExtras(Bundle().apply {
+                        putInt("aya", currentMarker.aya)
+                        putInt("page", currentMarker.page)
+                    }).build()
+                )
+            } else {
+                stateBuilder.addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder(
+                        "replayPage_noop",
+                        "↺",
+                        android.R.drawable.ic_menu_rotate
+                    ).build()
+                )
+            }
+
+            // Slot 2 — next-page (always present; no-op when on the last page)
             if (nextMarker != null) {
                 stateBuilder.addCustomAction(
                     PlaybackStateCompat.CustomAction.Builder(
@@ -428,6 +452,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             RafeeqAutoPlugin.instance?.sendCarEvent("stop", null, null)
         }
 
+        override fun onSeekTo(pos: Long) {
+            RafeeqAutoPlugin.instance?.sendCarEvent("seekTo", null, null, positionMs = pos)
+        }
+
         override fun onCustomAction(action: String?, extras: Bundle?) {
             if (action == null) return
             if (action == "prevPage" || action == "nextPage") {
@@ -436,6 +464,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 if (aya > 0) {
                     currentPage = page
                     RafeeqAutoPlugin.instance?.sendCarEvent("jumpToAya", null, null, aya)
+                }
+            }
+            if (action == "replayPage") {
+                val aya = extras?.getInt("aya", -1) ?: -1
+                val page = extras?.getInt("page", -1) ?: -1
+                if (aya > 0) {
+                    currentPage = page
+                    RafeeqAutoPlugin.instance?.sendCarEvent("replayPage", null, null, aya)
                 }
             }
         }
