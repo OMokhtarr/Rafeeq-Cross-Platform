@@ -103,7 +103,7 @@ async function userApiFetch<T>(
   while (attempt < 3) {
     attempt++;
     try {
-      const token = await getAccessToken(attempt > 1);
+      const token = await getAccessToken(false);
       if (attempt === 1) {
         const userTok = await getStoredAccessToken();
         console.debug(`[userApi] ${path} — token source: ${userTok ? "user" : "broker"}, length: ${token.length}`);

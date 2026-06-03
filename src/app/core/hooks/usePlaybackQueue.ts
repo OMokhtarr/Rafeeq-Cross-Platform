@@ -44,6 +44,7 @@ export interface PlaybackState {
   rangePassCount: number;
   positionMs: number;
   durationMs: number;
+  repeatPageActive: boolean;
 }
 
 export interface PlaybackControls {
@@ -57,6 +58,7 @@ export interface PlaybackControls {
   prev: () => void;
   jumpToIndex: (index: number) => void;
   seekToMs: (positionMs: number) => void;
+  setRepeatPageRange: (range: { first: number; last: number } | null) => void;
   setPlaybackRate: (rate: number) => void;
   setReciter: (reciter: string) => void;
   setRepeatVerse: (mode: RepeatMode) => void;
@@ -86,6 +88,7 @@ const INITIAL_STATE: PlaybackState = {
   rangePassCount: 0,
   positionMs: 0,
   durationMs: 0,
+  repeatPageActive: false,
 };
 
 /** Load a blob URL into a temporary Audio element just long enough to read its duration. */
@@ -126,6 +129,7 @@ export function usePlaybackQueue(
   const playbackRateRef = useRef(initial.playbackRate ?? 1);
   const repeatVerseRef = useRef<RepeatMode>(initial.repeatVerse ?? 1);
   const repeatRangeRef = useRef<RepeatMode>(initial.repeatRange ?? 1);
+  const repeatPageRangeRef = useRef<{ first: number; last: number } | null>(null);
 
   const currentBlobUrlRef = useRef<string | null>(null);
   const prefetchAbortRef = useRef<AbortController | null>(null);
@@ -292,6 +296,20 @@ export function usePlaybackQueue(
     }
     verseRepeatCountRef.current = 0;
     const nextIdx = indexRef.current + 1;
+
+    // If repeat-page is active and we just finished the last verse of the page,
+    // loop back to the first verse of the page.
+    const pageRange = repeatPageRangeRef.current;
+    if (pageRange !== null && indexRef.current >= pageRange.last) {
+      let elapsed = 0;
+      for (let i = 0; i < pageRange.first; i++) {
+        elapsed += verseDurationsRef.current[i] ?? 0;
+      }
+      elapsedBeforeCurrentVerseRef.current = elapsed;
+      void playIndexRef.current(pageRange.first);
+      return;
+    }
+
     if (nextIdx < queue.length) {
       // Advance elapsed by the completed verse's known duration
       elapsedBeforeCurrentVerseRef.current +=
@@ -784,6 +802,14 @@ export function usePlaybackQueue(
     [stop, playIndex],
   );
 
+  const setRepeatPageRange = useCallback(
+    (range: { first: number; last: number } | null) => {
+      repeatPageRangeRef.current = range;
+      setState((s) => ({ ...s, repeatPageActive: range !== null }));
+    },
+    [],
+  );
+
   const setPlaybackRate = useCallback((rate: number) => {
     playbackRateRef.current = rate;
     if (audioRef.current) audioRef.current.playbackRate = rate;
@@ -809,6 +835,7 @@ export function usePlaybackQueue(
     prev,
     jumpToIndex,
     seekToMs,
+    setRepeatPageRange,
     setPlaybackRate,
     setReciter,
     setRepeatVerse,

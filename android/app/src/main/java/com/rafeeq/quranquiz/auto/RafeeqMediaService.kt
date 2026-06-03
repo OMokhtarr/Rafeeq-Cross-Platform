@@ -59,6 +59,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private var currentReciter: String = ""
     private var pageMarkers: List<PageMarker> = emptyList()
     private var currentPage: Int = 0
+    private var repeatPageActive: Boolean = false
+
+    // Pending detached results waiting for content to arrive from JS
+    private val pendingReciters = mutableListOf<Result<List<MediaBrowserCompat.MediaItem>>>()
+    private val pendingSurahs = mutableMapOf<String, Result<List<MediaBrowserCompat.MediaItem>>>()
 
     data class ReciterItem(val id: String, val name: String)
     data class SurahItem(val number: Int, val name: String, val arabicName: String)
@@ -124,34 +129,21 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 result.sendResult(listOf(item))
             }
             parentId == RECITERS_LIST_ID -> {
-                // Second level: scrollable list of reciters
-                val items = reciters.map { reciter ->
-                    val desc = MediaDescriptionCompat.Builder()
-                        .setMediaId("$RECITER_PREFIX${reciter.id}")
-                        .setTitle(reciter.name)
-                        .build()
-                    MediaBrowserCompat.MediaItem(
-                        desc,
-                        MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                    )
+                if (reciters.isEmpty()) {
+                    result.detach()
+                    pendingReciters.add(result)
+                } else {
+                    result.sendResult(buildReciterItems())
                 }
-                result.sendResult(items)
             }
             parentId.startsWith(RECITER_PREFIX) -> {
-                // Third level: list surahs for the selected reciter
                 currentReciter = parentId.removePrefix(RECITER_PREFIX)
-                val items = surahs.map { surah ->
-                    val desc = MediaDescriptionCompat.Builder()
-                        .setMediaId("$SURAH_PREFIX${surah.number}")
-                        .setTitle(surah.arabicName)
-                        .setSubtitle(surah.name)
-                        .build()
-                    MediaBrowserCompat.MediaItem(
-                        desc,
-                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
-                    )
+                if (surahs.isEmpty()) {
+                    result.detach()
+                    pendingSurahs[parentId] = result
+                } else {
+                    result.sendResult(buildSurahItems())
                 }
-                result.sendResult(items)
             }
             else -> result.sendResult(emptyList())
         }
@@ -162,13 +154,37 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     fun setReciters(list: List<ReciterItem>) {
         reciters = list
         notifyChildrenChanged(RECITERS_LIST_ID)
+        val items = buildReciterItems()
+        pendingReciters.forEach { it.sendResult(items) }
+        pendingReciters.clear()
     }
 
     fun setSurahs(list: List<SurahItem>) {
         surahs = list
-        // Invalidate all reciter sub-trees
         reciters.forEach { notifyChildrenChanged("$RECITER_PREFIX${it.id}") }
+        val items = buildSurahItems()
+        pendingSurahs.values.forEach { it.sendResult(items) }
+        pendingSurahs.clear()
     }
+
+    private fun buildReciterItems(): List<MediaBrowserCompat.MediaItem> =
+        reciters.map { reciter ->
+            val desc = MediaDescriptionCompat.Builder()
+                .setMediaId("$RECITER_PREFIX${reciter.id}")
+                .setTitle(reciter.name)
+                .build()
+            MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE)
+        }
+
+    private fun buildSurahItems(): List<MediaBrowserCompat.MediaItem> =
+        surahs.map { surah ->
+            val desc = MediaDescriptionCompat.Builder()
+                .setMediaId("$SURAH_PREFIX${surah.number}")
+                .setTitle(surah.arabicName)
+                .setSubtitle(surah.name)
+                .build()
+            MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE)
+        }
 
     // ── Playback state updates from JS ─────────────────────────────────────────
 
@@ -180,12 +196,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         positionMs: Long,
         durationMs: Long,
         newPageMarkers: List<PageMarker>?,
-        newCurrentPage: Int
+        newCurrentPage: Int,
+        repeatPageActive: Boolean = false
     ) {
         if (newPageMarkers != null) pageMarkers = newPageMarkers
         if (newCurrentPage > 0) currentPage = newCurrentPage
+        this.repeatPageActive = repeatPageActive
 
-        Log.d("RafeeqMedia", "updateState: isPlaying=$isPlaying surah=$surahName verse=$verseKey page=$currentPage markers=${pageMarkers.size} -> ${pageMarkers.map { "p${it.page}a${it.aya}" }}")
+        Log.d("RafeeqMedia", "updateState: isPlaying=$isPlaying surah=$surahName verse=$verseKey page=$currentPage markers=${pageMarkers.size} -> ${pageMarkers.map { "p${it.page}a${it.aya}" }} repeatPage=$repeatPageActive")
 
         val stateBuilder = PlaybackStateCompat.Builder()
             .setActions(
@@ -234,14 +252,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 )
             }
 
-            // Slot 1 — replay-page (always present; jumps to first aya of current page)
+            // Slot 1 — replay-page toggle; green filled icon when active, white outline when off
             val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
+            val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
+            val replayLabel = "↺ ص ${currentMarker?.page ?: ""}"
             if (currentMarker != null) {
                 stateBuilder.addCustomAction(
                     PlaybackStateCompat.CustomAction.Builder(
                         "replayPage",
-                        "↺ ص ${currentMarker.page}",
-                        android.R.drawable.ic_menu_rotate
+                        replayLabel,
+                        replayIcon
                     ).setExtras(Bundle().apply {
                         putInt("aya", currentMarker.aya)
                         putInt("page", currentMarker.page)
@@ -252,7 +272,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.CustomAction.Builder(
                         "replayPage_noop",
                         "↺",
-                        android.R.drawable.ic_menu_rotate
+                        R.drawable.ic_repeat_page
                     ).build()
                 )
             }
