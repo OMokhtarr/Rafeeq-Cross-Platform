@@ -100,6 +100,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentReciterId, setCurrentReciterId] = useState(
     DEFAULT_OPTS.reciter,
   );
+  // Whether repeat-page mode is toggled on by the user
+  const [repeatPageEnabled, setRepeatPageEnabled] = useState(false);
+  const repeatPageEnabledRef = useRef(false);
   // Cached page markers for the current queue (recomputed only when queue identity changes)
   const pageMarkersCache = useRef<{
     firstAya: number;
@@ -120,6 +123,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     setCurrentReciterIdRef.current = setCurrentReciterId;
   });
+  useEffect(() => {
+    repeatPageEnabledRef.current = repeatPageEnabled;
+  }, [repeatPageEnabled]);
 
   // Keep activeQueueRef and currentVerseRef current so listener closures always see the latest state
   useEffect(() => {
@@ -138,13 +144,46 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     }).catch(() => {});
   }, [isNative]);
 
+  // When repeat-page is enabled and the current verse changes, recompute the page
+  // range (first..last queue index for the current page) and push it to the hook.
+  // Also clears the range when the toggle is turned off.
+  useEffect(() => {
+    const q = activeQueueRef.current;
+    const currentVerse = currentVerseRef.current;
+    if (!repeatPageEnabled || q.length === 0 || !currentVerse) {
+      queueRef.current.setRepeatPageRange(null);
+      return;
+    }
+    const suraNum = parseInt(currentVerse.split(":")[0], 10);
+    const ayaNum = parseInt(currentVerse.split(":")[1], 10);
+    if (isNaN(suraNum) || isNaN(ayaNum)) {
+      queueRef.current.setRepeatPageRange(null);
+      return;
+    }
+    const currentPage = estimatePageForVerse(suraNum, ayaNum);
+    let first = -1;
+    let last = -1;
+    for (let i = 0; i < q.length; i++) {
+      const p = estimatePageForVerse(q[i].sura, q[i].aya);
+      if (p === currentPage) {
+        if (first === -1) first = i;
+        last = i;
+      } else if (first !== -1) {
+        break;
+      }
+    }
+    if (first !== -1) {
+      queueRef.current.setRepeatPageRange({ first, last });
+    }
+  }, [repeatPageEnabled, queue.state.currentVerse, queue.queue]);
+
   // Keep Android Auto display in sync with playback state.
   // positionMs is intentionally omitted from deps — PlaybackStateCompat interpolates
   // position automatically when STATE_PLAYING + speed=1f is set. We only re-sync on
   // verse change (which carries a fresh durationMs), play/pause transitions, and queue changes.
   useEffect(() => {
     if (!isNative) return;
-    const { currentVerse, isPlaying, positionMs, durationMs } = queue.state;
+    const { currentVerse, isPlaying, positionMs, durationMs, repeatPageActive } = queue.state;
     const verseKey = currentVerse ?? "";
     let surahName = "";
     let suraNum = NaN;
@@ -188,6 +227,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
       durationMs,
       pageMarkers,
       currentPage,
+      repeatPageActive,
     }).catch(() => {});
   }, [
     isNative,
@@ -196,6 +236,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     queue.state.isPlaying,
     queue.state.currentVerse,
     queue.state.durationMs,
+    queue.state.repeatPageActive,
   ]);
 
   // Listen for car control events (play/pause/next/prev/selectSurah).
@@ -261,13 +302,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           break;
         }
         case "replayPage": {
-          // Jump to the first verse of the current page
-          if (event.aya == null) break;
-          const replayAya = event.aya;
-          const replayIndex = activeQueueRef.current.findIndex(
-            (v) => v.aya === replayAya,
-          );
-          if (replayIndex !== -1) q.jumpToIndex(replayIndex);
+          // Toggle repeat-page mode on/off
+          const next = !repeatPageEnabledRef.current;
+          setRepeatPageEnabled(next);
           break;
         }
         case "seekTo": {

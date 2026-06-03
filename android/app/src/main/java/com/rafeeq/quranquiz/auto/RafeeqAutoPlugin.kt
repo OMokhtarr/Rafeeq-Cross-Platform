@@ -100,9 +100,11 @@ class RafeeqAutoPlugin : Plugin() {
             }
         } else null
 
-        Log.d("RafeeqAuto", "updatePlaybackState: markersArr=${markersArr?.length() ?: "null"} parsed=${pageMarkers?.size ?: "null"} page=$currentPage surah=$surahName")
+        val repeatPageActive = call.getBoolean("repeatPageActive") ?: false
 
-        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage)
+        Log.d("RafeeqAuto", "updatePlaybackState: markersArr=${markersArr?.length() ?: "null"} parsed=${pageMarkers?.size ?: "null"} page=$currentPage surah=$surahName repeatPage=$repeatPageActive")
+
+        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage, repeatPageActive)
         call.resolve()
     }
 
@@ -113,6 +115,16 @@ class RafeeqAutoPlugin : Plugin() {
      * action: "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "seekTo" | "replayPage"
      */
     fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null, positionMs: Long? = null) {
+        // Bring MainActivity to the foreground before firing the JS event.
+        // When Android Auto is active and the phone screen is off, the WebView
+        // may be suspended — notifyListeners() will be silently dropped.
+        // Starting MainActivity (singleTask) wakes the WebView without creating
+        // a new instance, so the JS carAction listener receives the event.
+        val launchIntent = Intent(context, com.rafeeq.quranquiz.MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        context.startActivity(launchIntent)
+
         val data = JSObject().apply {
             put("action", action)
             if (reciter != null) put("reciter", reciter)
@@ -120,6 +132,9 @@ class RafeeqAutoPlugin : Plugin() {
             if (aya != null) put("aya", aya)
             if (positionMs != null) put("positionMs", positionMs)
         }
-        notifyListeners("carAction", data)
+        // Small delay to give the activity/WebView time to resume before the event fires.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            notifyListeners("carAction", data)
+        }, 400)
     }
 }
