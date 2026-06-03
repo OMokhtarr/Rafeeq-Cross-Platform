@@ -27,6 +27,8 @@ export interface DrivingModePlaybackState {
   pageMarkers?: PageMarker[];
   /** 1-based page number currently playing (used to highlight active page button). */
   currentPage?: number;
+  /** Whether repeat-page mode is active (loop current page indefinitely). */
+  repeatPageActive?: boolean;
 }
 
 export type CarActionType = "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "jumpToAya" | "replayPage" | "seekTo";
