@@ -8,8 +8,8 @@ import {
   type GoalTimeline,
   type TodayGoalPlan,
   updateGoal,
-  UserApiError,
 } from "../../core/services/api/user-api.client";
+import { NetworkError } from "../../core/services/auth/oauth.service";
 
 interface Props {
   lang: "ar" | "en";
@@ -83,16 +83,16 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
     try {
       const todayPlan = await fetchTodayGoalPlan();
       setPlan(todayPlan);
-      // goal details come from create/update responses; plan gives us progress data
+      setLoaded(true);
     } catch (err) {
-      if (err instanceof UserApiError && (err.status === 401 || err.status === 403)) {
-        setError(lang === "ar" ? "يرجى تسجيل الدخول" : "Please sign in");
+      if (err instanceof NetworkError || err instanceof TypeError) {
+        setError(lang === "ar" ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً." : "No internet connection. Connect and try again.");
       } else {
         setError(t.errLoad);
       }
+      // don't set loaded=true on error so retry is possible
     } finally {
       setLoading(false);
-      setLoaded(true);
       loadingRef.current = false;
     }
   }, [lang, t.errLoad]);
@@ -258,7 +258,12 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
               </div>
             </div>
           ) : error ? (
-            <p className="ac-error">{error}</p>
+            <div className="ac-error-block">
+              <p className="ac-error">{error}</p>
+              <button className="ac-retry-btn" onClick={load}>
+                {lang === "ar" ? "حاول مجدداً" : "Try again"}
+              </button>
+            </div>
           ) : hasGoal && !goal ? (
             <div className="ac-goals-stats">
               <div className="ac-goals-stat">

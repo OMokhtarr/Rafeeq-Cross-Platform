@@ -91,62 +91,75 @@ export class UserApiError extends Error {
 
 // ─── Generic fetch helper ─────────────────────────────────────────────────────
 
+function isNetworkFailure(err: unknown): boolean {
+  if (err instanceof NetworkError) return true;
+  if (err instanceof TypeError) return true; // fetch() throws TypeError when offline
+  if (err instanceof Error && err.message === "network_unavailable") return true;
+  return false;
+}
+
 async function userApiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const url = USER_API_BASE + path;
 
-  let attempt = 0;
-  let lastErr: unknown = null;
-
-  while (attempt < 3) {
-    attempt++;
-    try {
-      const token = await getAccessToken(false);
-      if (attempt === 1) {
-        const userTok = await getStoredAccessToken();
-        console.debug(`[userApi] ${path} — token source: ${userTok ? "user" : "broker"}, length: ${token.length}`);
-      }
-      const headers: Record<string, string> = {
-        accept: "application/json",
-        "content-type": "application/json",
-        "x-auth-token": token,
-        ...(CLIENT_ID_HEADER ? { "x-client-id": CLIENT_ID_HEADER } : {}),
-        ...((options.headers as Record<string, string>) ?? {}),
-      };
-
-      const res = await fetch(url, {
-        ...options,
-        headers,
-      });
-
-      if ((res.status === 401 || res.status === 403) && attempt === 1) {
-        tokenState = null;
-        await refreshAccessToken(); // throws on any failure — no silent swallow
-        continue;
-      }
-      if (res.status === 204) return {} as T;
-      if (res.status >= 500 || res.status === 429) {
-        await new Promise((r) => setTimeout(r, 250 * attempt * attempt));
-        continue;
-      }
-      if (!res.ok) {
-        const body = await res.text();
-        console.error(`[userApi] ${res.status} ${options.method ?? "GET"} ${path}:`, body);
-        throw new UserApiError(res.status, body);
-      }
-      return (await res.json()) as T;
-    } catch (err) {
-      lastErr = err;
-      if (err instanceof UserApiError && err.status < 500) throw err;
-      await new Promise((r) => setTimeout(r, 250 * attempt * attempt));
-    }
+  // Step 1: get a valid token, refreshing if needed
+  let token: string;
+  try {
+    token = await getAccessToken(false);
+  } catch (err) {
+    if (isNetworkFailure(err)) throw new NetworkError();
+    throw err;
   }
 
-  throw lastErr instanceof Error
-    ? lastErr
-    : new UserApiError(0, "network failure");
+  // Step 2: if the stored token is expired the server will 401 — refresh first then retry once
+  let refreshed = false;
+  const attempt = async (): Promise<T> => {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        ...options,
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "x-auth-token": token,
+          ...(CLIENT_ID_HEADER ? { "x-client-id": CLIENT_ID_HEADER } : {}),
+          ...((options.headers as Record<string, string>) ?? {}),
+        },
+      });
+    } catch (err) {
+      throw new NetworkError();
+    }
+
+    if ((res.status === 401 || res.status === 403) && !refreshed) {
+      refreshed = true;
+      tokenState = null;
+      try {
+        token = await refreshAccessToken();
+      } catch (err) {
+        if (isNetworkFailure(err)) throw new NetworkError();
+        throw err;
+      }
+      return attempt();
+    }
+
+    if (res.status === 204) return {} as T;
+
+    if (res.status >= 500 || res.status === 429) {
+      throw new UserApiError(res.status, `server error ${res.status}`);
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[userApi] ${res.status} ${options.method ?? "GET"} ${path}:`, body);
+      throw new UserApiError(res.status, body);
+    }
+
+    return (await res.json()) as T;
+  };
+
+  return attempt();
 }
 
 // ─── Streak types & API ───────────────────────────────────────────────────────
