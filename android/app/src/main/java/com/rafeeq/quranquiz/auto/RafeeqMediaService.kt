@@ -230,7 +230,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             val prevMarker = if (currentIdx > 0) pageMarkers[currentIdx - 1] else null
             val nextMarker = if (currentIdx < pageMarkers.lastIndex) pageMarkers[currentIdx + 1] else null
 
+            val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
+
             // Slot 0 — prev-page (always present; no-op when on the first page)
+            // Slot 1 — next-page (always present; no-op when on the last page)
+            // Slot 2 — replay-page toggle
+            // Android 13+ media widget shows only 2 custom actions; keeping page nav
+            // in slots 0/1 ensures both prev/next are visible and repeat stays accessible
+            // in Android Auto (which shows all 3).
             if (prevMarker != null) {
                 stateBuilder.addCustomAction(
                     PlaybackStateCompat.CustomAction.Builder(
@@ -252,8 +259,29 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 )
             }
 
-            // Slot 1 — replay-page toggle; green filled icon when active, white outline when off
-            val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
+            // Slot 1 — next-page
+            if (nextMarker != null) {
+                stateBuilder.addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder(
+                        "nextPage",
+                        "ص ${nextMarker.page} ▶",
+                        android.R.drawable.ic_media_next
+                    ).setExtras(Bundle().apply {
+                        putInt("aya", nextMarker.aya)
+                        putInt("page", nextMarker.page)
+                    }).build()
+                )
+            } else {
+                stateBuilder.addCustomAction(
+                    PlaybackStateCompat.CustomAction.Builder(
+                        "nextPage_noop",
+                        "▶",
+                        android.R.drawable.ic_media_next
+                    ).build()
+                )
+            }
+
+            // Slot 2 — replay-page toggle (3rd; hidden on phone media widget, visible in Android Auto)
             val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
             val replayLabel = "↺ ص ${currentMarker?.page ?: ""}"
             if (currentMarker != null) {
@@ -273,28 +301,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                         "replayPage_noop",
                         "↺",
                         R.drawable.ic_repeat_page
-                    ).build()
-                )
-            }
-
-            // Slot 2 — next-page (always present; no-op when on the last page)
-            if (nextMarker != null) {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "nextPage",
-                        "ص ${nextMarker.page} ▶",
-                        android.R.drawable.ic_media_next
-                    ).setExtras(Bundle().apply {
-                        putInt("aya", nextMarker.aya)
-                        putInt("page", nextMarker.page)
-                    }).build()
-                )
-            } else {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "nextPage_noop",
-                        "▶",
-                        android.R.drawable.ic_media_next
                     ).build()
                 )
             }
