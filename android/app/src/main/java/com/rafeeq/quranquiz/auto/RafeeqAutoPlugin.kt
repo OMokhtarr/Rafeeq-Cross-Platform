@@ -15,6 +15,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
  * JS → Native:
  *   setContentTree(reciters, surahs)   — push browsable content to Android Auto
  *   updatePlaybackState(state)         — sync car display (title, playing/paused)
+ *   jsReady()                         — JS signals listener is registered; flushes pending events
  *
  * Native → JS:
  *   'carAction' events fired by RafeeqMediaService.SessionCallback when the
@@ -29,8 +30,15 @@ class RafeeqAutoPlugin : Plugin() {
         var instance: RafeeqAutoPlugin? = null
     }
 
+    // Holds at most one pending event while JS is not yet ready (cold launch).
+    // Only the latest event is kept — intermediate ones (e.g. double-tap) are dropped.
+    @Volatile private var pendingEvent: JSObject? = null
+    @Volatile private var jsReady = false
+
     override fun load() {
         instance = this
+        jsReady = false
+        pendingEvent = null
         // Start the media service so Android Auto can discover it
         val intent = Intent(context, RafeeqMediaService::class.java)
         context.startForegroundService(intent)
@@ -38,10 +46,28 @@ class RafeeqAutoPlugin : Plugin() {
 
     override fun handleOnDestroy() {
         instance = null
+        jsReady = false
+        pendingEvent = null
         super.handleOnDestroy()
     }
 
     // ── JS → Native ────────────────────────────────────────────────────────────
+
+    /**
+     * Called by JS (PlaybackContext) as soon as the carAction listener is registered.
+     * Flushes any event that arrived before JS was ready.
+     */
+    @PluginMethod
+    fun jsReady(call: PluginCall) {
+        jsReady = true
+        val pending = pendingEvent
+        if (pending != null) {
+            pendingEvent = null
+            Log.d("RafeeqAuto", "jsReady: flushing pending event: ${pending.getString("action")}")
+            notifyListeners("carAction", pending)
+        }
+        call.resolve()
+    }
 
     @PluginMethod
     fun setContentTree(call: PluginCall) {
@@ -113,18 +139,13 @@ class RafeeqAutoPlugin : Plugin() {
     /**
      * Called by RafeeqMediaService.SessionCallback to push car events to JS.
      * action: "play" | "pause" | "next" | "prev" | "stop" | "selectSurah" | "seekTo" | "replayPage"
+     *
+     * If JS is not yet ready (cold launch), we:
+     *  1. Wake MainActivity so the WebView initialises.
+     *  2. Store the event — jsReady() will flush it once the listener is registered.
+     * If JS is already ready, fire immediately (app was already in foreground/background-alive).
      */
     fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null, positionMs: Long? = null) {
-        // Bring MainActivity to the foreground before firing the JS event.
-        // When Android Auto is active and the phone screen is off, the WebView
-        // may be suspended — notifyListeners() will be silently dropped.
-        // Starting MainActivity (singleTask) wakes the WebView without creating
-        // a new instance, so the JS carAction listener receives the event.
-        val launchIntent = Intent(context, com.rafeeq.quranquiz.MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-        }
-        context.startActivity(launchIntent)
-
         val data = JSObject().apply {
             put("action", action)
             if (reciter != null) put("reciter", reciter)
@@ -132,9 +153,26 @@ class RafeeqAutoPlugin : Plugin() {
             if (aya != null) put("aya", aya)
             if (positionMs != null) put("positionMs", positionMs)
         }
-        // Small delay to give the activity/WebView time to resume before the event fires.
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            notifyListeners("carAction", data)
-        }, 400)
+
+        if (jsReady) {
+            // WebView is alive — bring activity to front (in case screen was off) then fire.
+            wakeActivity()
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                notifyListeners("carAction", data)
+            }, 150)
+        } else {
+            // Cold launch — wake the activity and queue the event.
+            // jsReady() called from JS will flush it once the listener is registered.
+            Log.d("RafeeqAuto", "sendCarEvent: JS not ready, queuing '$action'")
+            pendingEvent = data
+            wakeActivity()
+        }
+    }
+
+    private fun wakeActivity() {
+        val launchIntent = Intent(context, com.rafeeq.quranquiz.MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        context.startActivity(launchIntent)
     }
 }

@@ -316,6 +316,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     })
       .then((handle) => {
         listenerRef.current = handle;
+        // Tell native the listener is live. If a car event arrived before JS was
+        // ready (cold launch), native queued it — jsReady() flushes it now.
+        DrivingMode.jsReady().catch(() => {});
       })
       .catch(() => {});
 

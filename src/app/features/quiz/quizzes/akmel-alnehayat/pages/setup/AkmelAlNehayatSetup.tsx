@@ -6,6 +6,8 @@ import {
   getChapters,
   getSurahNameArabic,
   getSurahNameEnglish,
+  getSurahStartPage,
+  getSurahEndPage,
 } from "../../../../../../core/services/data/metadata.service";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { useLang } from "../../../../../../core/context/LanguageContext";
@@ -25,10 +27,11 @@ const AkmelAlNehayatSetup: React.FC = () => {
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
+  const [pageFilterSurah, setPageFilterSurah] = useState<number | null>(null);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
   const [questionCount, setQuestionCount] = useState(5);
 
-  const pageOptions = useMemo(
+  const allPageOptions = useMemo(
     () =>
       Array.from({ length: 604 }, (_, i) => ({
         value: String(i + 1),
@@ -36,6 +39,16 @@ const AkmelAlNehayatSetup: React.FC = () => {
       })),
     [isRTL],
   );
+
+  const pageOptions = useMemo(() => {
+    if (pageFilterSurah === null) return allPageOptions;
+    const start = getSurahStartPage(pageFilterSurah);
+    const end = getSurahEndPage(pageFilterSurah);
+    return allPageOptions.filter((o) => {
+      const n = Number(o.value);
+      return n >= start && n <= end;
+    });
+  }, [allPageOptions, pageFilterSurah]);
 
   const countOptions = useMemo(
     () =>
@@ -61,6 +74,19 @@ const AkmelAlNehayatSetup: React.FC = () => {
     setSelectedJuzs((prev) =>
       prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j],
     );
+
+  const handlePageFilterSurahChange = (surahNum: number | null) => {
+    setPageFilterSurah(surahNum);
+    if (surahNum !== null) {
+      const start = getSurahStartPage(surahNum);
+      const end = getSurahEndPage(surahNum);
+      setPageFrom(start);
+      setPageTo(end);
+    } else {
+      setPageFrom(1);
+      setPageTo(10);
+    }
+  };
 
   const handleStart = async () => {
     const quizConfig: QuizConfig = {
@@ -165,8 +191,45 @@ const AkmelAlNehayatSetup: React.FC = () => {
 
               {/* ── Page range ── */}
               {scopeType === "page" && (
-                <div className="an-section">
+                <div className="an-section an-section-scrollable">
                   <label className="an-label">{tq.pageRange}</label>
+                  {/* Surah filter */}
+                  <div className="an-surah-filter-row">
+                    <button
+                      className={`an-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
+                      onClick={() => handlePageFilterSurahChange(null)}
+                    >
+                      {tq.allPages}
+                    </button>
+                  </div>
+                  <div className="an-surah-grid an-surah-grid-compact">
+                    {surahNames.slice(1, 115).map((entry, i) => {
+                      const num = i + 1;
+                      return (
+                        <button
+                          key={num}
+                          className={`an-surah-chip${pageFilterSurah === num ? " active" : ""}`}
+                          onClick={() => handlePageFilterSurahChange(num)}
+                        >
+                          <span className="an-chip-text">
+                            {isRTL ? (
+                              <>
+                                <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                <span className="an-chip-en">{entry!.english}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="an-chip-en">{entry!.english}</span>
+                                <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                              </>
+                            )}
+                          </span>
+                          <span className="an-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Page pickers */}
                   <div className="an-page-row">
                     <div className="an-page-input">
                       <span>{tq.to}</span>

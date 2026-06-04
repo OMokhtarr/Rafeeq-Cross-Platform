@@ -5,6 +5,8 @@ import { Preferences } from "@capacitor/preferences";
 import {
   getChapters,
   getSurahNameEnglish,
+  getSurahStartPage,
+  getSurahEndPage,
 } from "../../../../../../core/services/data/metadata.service";
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { useLang } from "../../../../../../core/context/LanguageContext";
@@ -25,10 +27,11 @@ const MutashabihatSetup: React.FC = () => {
   const [selectedSurahs, setSelectedSurahs] = useState<number[]>([]);
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
+  const [pageFilterSurah, setPageFilterSurah] = useState<number | null>(null);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
   const [questionCount, setQuestionCount] = useState(5);
 
-  const pageOptions = useMemo(
+  const allPageOptions = useMemo(
     () =>
       Array.from({ length: 604 }, (_, i) => ({
         value: String(i + 1),
@@ -36,6 +39,16 @@ const MutashabihatSetup: React.FC = () => {
       })),
     [isRTL],
   );
+
+  const pageOptions = useMemo(() => {
+    if (pageFilterSurah === null) return allPageOptions;
+    const start = getSurahStartPage(pageFilterSurah);
+    const end = getSurahEndPage(pageFilterSurah);
+    return allPageOptions.filter((o) => {
+      const n = Number(o.value);
+      return n >= start && n <= end;
+    });
+  }, [allPageOptions, pageFilterSurah]);
 
   const countOptions = useMemo(
     () =>
@@ -67,6 +80,19 @@ const MutashabihatSetup: React.FC = () => {
     setSelectedJuzs((prev) =>
       prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j],
     );
+
+  const handlePageFilterSurahChange = (surahNum: number | null) => {
+    setPageFilterSurah(surahNum);
+    if (surahNum !== null) {
+      const start = getSurahStartPage(surahNum);
+      const end = getSurahEndPage(surahNum);
+      setPageFrom(start);
+      setPageTo(end);
+    } else {
+      setPageFrom(1);
+      setPageTo(10);
+    }
+  };
 
   const handleStart = async () => {
     const config: MutashabihatConfig = {
@@ -175,8 +201,45 @@ const MutashabihatSetup: React.FC = () => {
 
               {/* ── Page range ── */}
               {scopeType === "page" && (
-                <div className="ms-section">
+                <div className="ms-section ms-section-scrollable">
                   <label className="ms-label">{tq.pageRange}</label>
+                  {/* Surah filter */}
+                  <div className="ms-surah-filter-row">
+                    <button
+                      className={`ms-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
+                      onClick={() => handlePageFilterSurahChange(null)}
+                    >
+                      {tq.allPages}
+                    </button>
+                  </div>
+                  <div className="ms-surah-grid ms-surah-grid-compact">
+                    {surahNames.slice(1, 115).map((entry, i) => {
+                      const num = i + 1;
+                      return (
+                        <button
+                          key={num}
+                          className={`ms-surah-chip${pageFilterSurah === num ? " active" : ""}`}
+                          onClick={() => handlePageFilterSurahChange(num)}
+                        >
+                          <span className="ms-chip-text">
+                            {isRTL ? (
+                              <>
+                                <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                <span className="ms-chip-en">{entry!.english}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="ms-chip-en">{entry!.english}</span>
+                                <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                              </>
+                            )}
+                          </span>
+                          <span className="ms-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Page pickers */}
                   <div className="ms-page-row">
                     <div className="ms-page-input">
                       <span>{tq.to}</span>

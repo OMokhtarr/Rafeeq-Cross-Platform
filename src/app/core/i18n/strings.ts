@@ -78,6 +78,8 @@ export interface AppStrings {
     selectSurahs: string;
     selectJuzs: string;
     pageRange: string;
+    filterBySurah: string;
+    allPages: string;
     from: string;
     to: string;
     pageCount: string;
@@ -360,6 +362,8 @@ const ar: AppStrings = {
     selectSurahs: "اختر السور",
     selectJuzs: "اختر الأجزاء",
     pageRange: "نطاق الصفحات",
+    filterBySurah: "تصفية بسورة",
+    allPages: "كل الصفحات",
     from: "من",
     to: "إلى",
     pageCount: "عدد الصفحات",
@@ -663,6 +667,8 @@ const en: AppStrings = {
     selectSurahs: "Select Surahs",
     selectJuzs: "Select Juzs",
     pageRange: "Page Range",
+    filterBySurah: "Filter by Surah",
+    allPages: "All Pages",
     from: "From",
     to: "To",
     pageCount: "Page count",
