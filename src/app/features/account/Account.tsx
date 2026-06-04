@@ -117,7 +117,7 @@ const Account: React.FC = () => {
     setError(null);
     Promise.all([
       fetchStreaks(10).catch((err) => {
-        if (err instanceof NetworkError || (err instanceof Error && err.message === "network_unavailable")) {
+        if (err instanceof NetworkError || err instanceof TypeError) {
           setError(
             lang === "ar"
               ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."

@@ -777,6 +777,11 @@ export function getSurahStartPage(suraId: number): number {
   return ch ? ch.pages?.[0] ?? 1 : 1;
 }
 
+export function getSurahEndPage(suraId: number): number {
+  const ch = chaptersCache.find((c: any) => c.id === suraId);
+  return ch ? ch.pages?.[1] ?? ch.pages?.[0] ?? 604 : 604;
+}
+
 export function getPageStart(page: number): PageStart | null {
   if (page < 1 || page > 604) return null;
   return PAGE_STARTS[page];

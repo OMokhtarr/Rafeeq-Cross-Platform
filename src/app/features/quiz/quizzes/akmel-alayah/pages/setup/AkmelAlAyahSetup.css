@@ -290,6 +290,36 @@ ion-content::part(scroll) {
   font-family: var(--font-arabic);
 }
 
+/* ── Page surah filter ──────────────────────── */
+.aa-surah-filter-row {
+  margin-bottom: 8px;
+}
+
+.aa-filter-all-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-input-border);
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font-arabic);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.aa-filter-all-btn.active {
+  border-color: var(--color-gold);
+  background: var(--color-gold-light, rgba(180, 140, 60, 0.12));
+  color: var(--color-gold);
+  font-weight: bold;
+}
+
+.aa-surah-grid-compact {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
 /* ── Page range ─────────────────────────────── */
 .aa-page-row {
   display: flex;

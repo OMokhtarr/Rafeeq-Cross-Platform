@@ -42,6 +42,9 @@ export interface CarActionEvent {
 }
 
 export interface DrivingModePlugin {
+  /** Signal to native that the JS carAction listener is registered and ready to receive events. */
+  jsReady(): Promise<void>;
+
   setContentTree(options: {
     reciters: ReciterItem[];
     surahs: SurahItem[];
@@ -60,6 +63,7 @@ export interface DrivingModePlugin {
 export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
   // On web/Electron: no-op stub so the app doesn't crash
   web: {
+    jsReady: async () => {},
     setContentTree: async () => {},
     updatePlaybackState: async () => {},
     addListener: async (_event: string, _handler: () => void) => ({ remove: () => {} }),
