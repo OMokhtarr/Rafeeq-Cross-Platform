@@ -456,30 +456,52 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
     // ── SessionCallback — hardware button events → JS via plugin ──────────────
 
+    /**
+     * Dispatches a car action to the plugin.
+     * If the plugin is already live (MainActivity running), delegates immediately.
+     * If the plugin is null (cold launch — MainActivity not started yet), stores the
+     * event in the plugin's companion pending slot and wakes MainActivity so it
+     * initialises the plugin and flushes the event via jsReady().
+     */
+    private fun dispatchCarEvent(action: String, reciter: String? = null, surah: Int? = null, aya: Int? = null, positionMs: Long? = null) {
+        val plugin = RafeeqAutoPlugin.instance
+        if (plugin != null) {
+            plugin.sendCarEvent(action, reciter, surah, aya, positionMs)
+        } else {
+            // Plugin not loaded yet — store as pending and wake the activity.
+            Log.d("RafeeqMedia", "dispatchCarEvent: plugin null, storing pending '$action' and waking MainActivity")
+            RafeeqAutoPlugin.storePendingEvent(action, reciter, surah, aya, positionMs)
+            val launchIntent = android.content.Intent(this, com.rafeeq.quranquiz.MainActivity::class.java).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            startActivity(launchIntent)
+        }
+    }
+
     inner class SessionCallback : MediaSessionCompat.Callback() {
 
         override fun onPlay() {
-            RafeeqAutoPlugin.instance?.sendCarEvent("play", null, null)
+            dispatchCarEvent("play")
         }
 
         override fun onPause() {
-            RafeeqAutoPlugin.instance?.sendCarEvent("pause", null, null)
+            dispatchCarEvent("pause")
         }
 
         override fun onSkipToNext() {
-            RafeeqAutoPlugin.instance?.sendCarEvent("next", null, null)
+            dispatchCarEvent("next")
         }
 
         override fun onSkipToPrevious() {
-            RafeeqAutoPlugin.instance?.sendCarEvent("prev", null, null)
+            dispatchCarEvent("prev")
         }
 
         override fun onStop() {
-            RafeeqAutoPlugin.instance?.sendCarEvent("stop", null, null)
+            dispatchCarEvent("stop")
         }
 
         override fun onSeekTo(pos: Long) {
-            RafeeqAutoPlugin.instance?.sendCarEvent("seekTo", null, null, positionMs = pos)
+            dispatchCarEvent("seekTo", positionMs = pos)
         }
 
         override fun onCustomAction(action: String?, extras: Bundle?) {
@@ -489,7 +511,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 val page = extras?.getInt("page", -1) ?: -1
                 if (aya > 0) {
                     currentPage = page
-                    RafeeqAutoPlugin.instance?.sendCarEvent("jumpToAya", null, null, aya)
+                    dispatchCarEvent("jumpToAya", aya = aya)
                 }
             }
             if (action == "replayPage") {
@@ -497,7 +519,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 val page = extras?.getInt("page", -1) ?: -1
                 if (aya > 0) {
                     currentPage = page
-                    RafeeqAutoPlugin.instance?.sendCarEvent("replayPage", null, null, aya)
+                    dispatchCarEvent("replayPage", aya = aya)
                 }
             }
         }
@@ -520,7 +542,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     .build()
                 session.setPlaybackState(bufferingState)
 
-                RafeeqAutoPlugin.instance?.sendCarEvent("selectSurah", currentReciter, surahNumber)
+                dispatchCarEvent("selectSurah", reciter = currentReciter, surah = surahNumber)
             }
         }
     }

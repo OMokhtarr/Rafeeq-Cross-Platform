@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
@@ -11,13 +11,11 @@ import {
   type Streak,
   type UserProfile,
   type Note,
-  UserApiError,
 } from "../../core/services/api/user-api.client";
 import {
   signIn,
   signOut,
   getStoredAccessToken,
-  getStoredAccessTokenSync,
   NetworkError,
 } from "../../core/services/auth/oauth.service";
 import AccountModal from "./AccountModal";
@@ -99,7 +97,8 @@ const Account: React.FC = () => {
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loggedIn, setLoggedIn] = useState(() => !!getStoredAccessTokenSync());
+  // Start as null — we resolve the real value async on mount (getStoredAccessTokenSync returns null on native)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [streakOpen, setStreakOpen] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
@@ -111,46 +110,54 @@ const Account: React.FC = () => {
   const [notesError, setNotesError] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
 
-  const loadUserData = (isLoggedIn: boolean) => {
+  // Track whether initial load has been done so useIonViewWillEnter doesn't double-fire on first mount
+  const initialLoadDone = useRef(false);
+
+  const loadUserData = useCallback(async (isLoggedIn: boolean) => {
     if (!isLoggedIn) return;
     setLoading(true);
     setError(null);
-    Promise.all([
-      fetchStreaks(10).catch((err) => {
-        if (err instanceof NetworkError || err instanceof TypeError) {
-          setError(
-            lang === "ar"
-              ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
-              : "No internet connection. Connect and try again.",
-          );
-        } else {
-          setError(
-            lang === "ar" ? "تعذر تحميل البيانات. حاول مجدداً." : "Could not load data. Try again.",
-          );
-        }
-        return [];
-      }),
-      fetchUserProfile().catch(() => null),
-      fetchAllNotes().catch(() => []),
-    ]).then(([streaksData, profileData, notesData]) => {
-      setStreaks(streaksData as Streak[]);
-      setUserProfile(profileData as UserProfile | null);
+    setNotesError(null);
+    try {
+      const [streaksData, profileData, notesData] = await Promise.all([
+        fetchStreaks(10),
+        fetchUserProfile().catch(() => null),
+        fetchAllNotes().catch(() => []),
+      ]);
+      setStreaks(streaksData);
+      setUserProfile(profileData);
       setNotes(notesData as Note[]);
+    } catch (err) {
+      if (err instanceof NetworkError || err instanceof TypeError) {
+        setError(
+          lang === "ar"
+            ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
+            : "No internet connection. Connect and try again.",
+        );
+      } else {
+        setError(
+          lang === "ar" ? "تعذر تحميل البيانات. حاول مجدداً." : "Could not load data. Try again.",
+        );
+      }
+    } finally {
       setLoading(false);
-    });
-  };
+    }
+  }, [lang]);
 
-  // Load data on first mount (useIonViewWillEnter doesn't fire on initial render)
+  // Load data on first mount — resolves login state async so it works on native too
   useEffect(() => {
     getStoredAccessToken().then((token) => {
       const isLoggedIn = !!token;
       setLoggedIn(isLoggedIn);
+      initialLoadDone.current = true;
       loadUserData(isLoggedIn);
     });
   }, []);
 
-  // Refresh data every time this page becomes visible after navigating back
+  // Refresh data when page becomes visible after navigating back, but skip the first mount
+  // (the useEffect above already handles that)
   useIonViewWillEnter(() => {
+    if (!initialLoadDone.current) return;
     getStoredAccessToken().then((token) => {
       const isLoggedIn = !!token;
       setLoggedIn(isLoggedIn);
@@ -158,8 +165,9 @@ const Account: React.FC = () => {
     });
   });
 
-  // When the OAuth callback tab writes the token to localStorage, a storage
+  // Web: when the OAuth callback tab writes the token to localStorage, a storage
   // event fires in this tab — use it to pick up the login without a page reload.
+  // Native: App.tsx dispatches "rafiq_auth_complete" after token exchange via deep link.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "rafiq_oauth_token_v1" && e.newValue) {
@@ -167,9 +175,17 @@ const Account: React.FC = () => {
         loadUserData(true);
       }
     };
+    const onAuthComplete = () => {
+      setLoggedIn(true);
+      loadUserData(true);
+    };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    window.addEventListener("rafiq_auth_complete", onAuthComplete);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("rafiq_auth_complete", onAuthComplete);
+    };
+  }, [loadUserData]);
 
   const handleLogin = () => signIn();
   const handleLogout = async () => {
@@ -324,18 +340,18 @@ const Account: React.FC = () => {
               </div>
               <div className="ac-profile-info">
                 <p className="ac-profile-name">
-                  {loggedIn && displayName ? displayName : loggedIn ? t.signedIn : t.guest}
+                  {loggedIn && displayName ? displayName : loggedIn ? t.signedIn : loggedIn === false ? t.guest : "…"}
                 </p>
                 {loggedIn && userProfile?.email && (
                   <p className="ac-profile-email">{userProfile.email}</p>
                 )}
-                {!loggedIn && <p className="ac-profile-hint">{t.signInHint}</p>}
+                {loggedIn === false && <p className="ac-profile-hint">{t.signInHint}</p>}
               </div>
-              {loggedIn ? (
+              {loggedIn === true ? (
                 <button className="ac-action-btn ac-signout-btn" onClick={handleLogout}>{t.signOut}</button>
-              ) : (
+              ) : loggedIn === false ? (
                 <button className="ac-action-btn ac-signin-btn" onClick={handleLogin}>{t.signIn}</button>
-              )}
+              ) : null}
             </div>
 
             {/* ── Streak card ── */}

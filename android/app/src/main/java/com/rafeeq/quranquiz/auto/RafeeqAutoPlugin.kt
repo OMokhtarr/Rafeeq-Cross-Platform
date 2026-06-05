@@ -28,6 +28,27 @@ class RafeeqAutoPlugin : Plugin() {
 
     companion object {
         var instance: RafeeqAutoPlugin? = null
+
+        // Pre-launch pending event: set by RafeeqMediaService when the plugin
+        // instance doesn't exist yet (car event arrived before MainActivity started).
+        // Picked up by load() and moved into the instance's pendingEvent slot.
+        @Volatile var preLaunchPendingEvent: JSObject? = null
+
+        fun storePendingEvent(
+            action: String,
+            reciter: String?,
+            surah: Int?,
+            aya: Int?,
+            positionMs: Long?
+        ) {
+            preLaunchPendingEvent = JSObject().apply {
+                put("action", action)
+                if (reciter != null) put("reciter", reciter)
+                if (surah != null) put("surah", surah)
+                if (aya != null) put("aya", aya)
+                if (positionMs != null) put("positionMs", positionMs)
+            }
+        }
     }
 
     // Holds at most one pending event while JS is not yet ready (cold launch).
@@ -38,7 +59,13 @@ class RafeeqAutoPlugin : Plugin() {
     override fun load() {
         instance = this
         jsReady = false
-        pendingEvent = null
+        // Pick up any event that arrived before the plugin was initialised
+        // (e.g. car pressed play before MainActivity ever started).
+        pendingEvent = preLaunchPendingEvent
+        preLaunchPendingEvent = null
+        if (pendingEvent != null) {
+            Log.d("RafeeqAuto", "load: picked up pre-launch pending event: ${pendingEvent?.getString("action")}")
+        }
         // Start the media service so Android Auto can discover it
         val intent = Intent(context, RafeeqMediaService::class.java)
         context.startForegroundService(intent)
@@ -64,7 +91,10 @@ class RafeeqAutoPlugin : Plugin() {
         if (pending != null) {
             pendingEvent = null
             Log.d("RafeeqAuto", "jsReady: flushing pending event: ${pending.getString("action")}")
-            notifyListeners("carAction", pending)
+            // notifyListeners must run on the main thread; PluginMethod threads vary.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                notifyListeners("carAction", pending)
+            }, 100)
         }
         call.resolve()
     }
@@ -170,8 +200,11 @@ class RafeeqAutoPlugin : Plugin() {
     }
 
     private fun wakeActivity() {
+        // FLAG_ACTIVITY_REORDER_TO_FRONT is ignored when combined with FLAG_ACTIVITY_NEW_TASK
+        // on many Android versions. With launchMode="singleTask" in the manifest, NEW_TASK
+        // alone is sufficient to bring the existing task to the front without recreating it.
         val launchIntent = Intent(context, com.rafeeq.quranquiz.MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         context.startActivity(launchIntent)
     }

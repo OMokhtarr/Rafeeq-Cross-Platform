@@ -98,6 +98,8 @@ const App: React.FC = () => {
           await exchangeCodeForToken(code);
           console.log("[appUrlOpen] token exchange success");
           window.location.hash = "/account";
+          // Notify Account page (already mounted on native) that tokens are ready
+          window.dispatchEvent(new CustomEvent("rafiq_auth_complete"));
         } catch (e) {
           console.error("[appUrlOpen] token exchange failed:", e);
         }

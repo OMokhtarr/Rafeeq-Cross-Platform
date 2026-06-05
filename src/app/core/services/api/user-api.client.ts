@@ -37,12 +37,13 @@ let tokenInflight: Promise<string> | null = null;
 async function getAccessToken(forceRefresh = false): Promise<string> {
   // 1. Try user token
   const userToken = await getStoredAccessToken();
+  const refreshToken = await getStoredRefreshToken();
+
   if (userToken && !forceRefresh) {
     return userToken;
   }
 
   // 2. Silent refresh of user token — if signed in, never fall back to broker
-  const refreshToken = await getStoredRefreshToken();
   if (refreshToken) {
     const newToken = await refreshAccessToken(); // throws NetworkError or server error — caller handles it
     return newToken;
@@ -269,16 +270,12 @@ interface SingleNoteResponse {
 
 /** Fetch all notes for the signed-in user. */
 export async function fetchAllNotes(): Promise<Note[]> {
-  const token = await getStoredAccessToken();
-  if (!token) return [];
   const res = await userApiFetch<NotesResponse>(`/v1/notes?limit=50`);
   return res.data ?? [];
 }
 
 /** Fetch notes for a specific verse key ("sura:aya"). */
 export async function fetchNotesForVerse(verseKey: string): Promise<Note[]> {
-  const token = await getStoredAccessToken();
-  if (!token) return [];
   const res = await userApiFetch<NotesResponse>(`/v1/notes/by-verse/${verseKey}`);
   return res.data ?? [];
 }
@@ -363,8 +360,6 @@ interface GoalTimelineResponse {
 
 
 export async function fetchTodayGoalPlan(type: GoalType = "QURAN_PAGES", mushafId = 2): Promise<TodayGoalPlan | null> {
-  const token = await getStoredAccessToken();
-  if (!token) return null;
   const res = await userApiFetch<TodayGoalPlanResponse>(
     `/v1/goals/get-todays-plan?type=${type}&mushafId=${mushafId}`,
   );
