@@ -240,9 +240,16 @@ export class NetworkError extends Error {
   }
 }
 
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("session_expired");
+    this.name = "SessionExpiredError";
+  }
+}
+
 export async function refreshAccessToken(): Promise<string> {
   const refreshToken = await getStoredRefreshToken();
-  if (!refreshToken) throw new Error("No refresh token available");
+  if (!refreshToken) throw new SessionExpiredError();
 
   let res: Response;
   try {
@@ -261,6 +268,10 @@ export async function refreshAccessToken(): Promise<string> {
   }
 
   if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[oauth] token refresh failed: ${res.status}`, body);
+    // 400/401 from the token endpoint means the refresh token itself is expired
+    if (res.status === 400 || res.status === 401) throw new SessionExpiredError();
     throw new Error(`Token refresh failed: ${res.status}`);
   }
 

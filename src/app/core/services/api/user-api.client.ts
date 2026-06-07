@@ -15,6 +15,7 @@ import {
   getStoredRefreshToken,
   getUserProfileFromIdTokenAsync,
   NetworkError,
+  SessionExpiredError,
 } from "../auth/oauth.service";
 
 const USER_API_BASE =
@@ -39,13 +40,17 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   const userToken = await getStoredAccessToken();
   const refreshToken = await getStoredRefreshToken();
 
+  console.log(`[getAccessToken] userToken=${!!userToken} refreshToken=${!!refreshToken} forceRefresh=${forceRefresh}`);
+
   if (userToken && !forceRefresh) {
     return userToken;
   }
 
   // 2. Silent refresh of user token — if signed in, never fall back to broker
   if (refreshToken) {
+    console.log("[getAccessToken] refreshing user token…");
     const newToken = await refreshAccessToken(); // throws NetworkError or server error — caller handles it
+    console.log("[getAccessToken] refresh succeeded");
     return newToken;
   }
 
@@ -136,9 +141,13 @@ async function userApiFetch<T>(
     if ((res.status === 401 || res.status === 403) && !refreshed) {
       refreshed = true;
       tokenState = null;
+      console.log(`[userApiFetch] ${res.status} on ${path} — attempting token refresh`);
       try {
         token = await refreshAccessToken();
+        console.log("[userApiFetch] token refreshed, retrying");
       } catch (err) {
+        console.error("[userApiFetch] token refresh failed:", err);
+        if (err instanceof SessionExpiredError) throw err; // propagate as-is
         if (isNetworkFailure(err)) throw new NetworkError();
         throw err;
       }

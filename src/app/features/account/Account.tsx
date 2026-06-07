@@ -15,8 +15,9 @@ import {
 import {
   signIn,
   signOut,
-  getStoredAccessToken,
+  getStoredRefreshToken,
   NetworkError,
+  SessionExpiredError,
 } from "../../core/services/auth/oauth.service";
 import AccountModal from "./AccountModal";
 import GoalsCard from "./GoalsCard";
@@ -121,14 +122,21 @@ const Account: React.FC = () => {
     try {
       const [streaksData, profileData, notesData] = await Promise.all([
         fetchStreaks(10),
-        fetchUserProfile().catch(() => null),
-        fetchAllNotes().catch(() => []),
+        fetchUserProfile().catch((err) => { console.warn("[Account] fetchUserProfile failed:", err); return null; }),
+        fetchAllNotes().catch((err) => { console.warn("[Account] fetchAllNotes failed:", err); return []; }),
       ]);
       setStreaks(streaksData);
       setUserProfile(profileData);
       setNotes(notesData as Note[]);
     } catch (err) {
-      if (err instanceof NetworkError || err instanceof TypeError) {
+      console.error("[Account] loadUserData failed:", err);
+      if (err instanceof SessionExpiredError) {
+        setError(
+          lang === "ar"
+            ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً."
+            : "session_expired",
+        );
+      } else if (err instanceof NetworkError || err instanceof TypeError) {
         setError(
           lang === "ar"
             ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
@@ -145,9 +153,11 @@ const Account: React.FC = () => {
   }, [lang]);
 
   // Load data on first mount — resolves login state async so it works on native too
+  // Use refresh token as the source of truth for "logged in" — access token may be
+  // expired but still stored; refresh token absence means the session is gone.
   useEffect(() => {
-    getStoredAccessToken().then((token) => {
-      const isLoggedIn = !!token;
+    getStoredRefreshToken().then((refreshToken) => {
+      const isLoggedIn = !!refreshToken;
       setLoggedIn(isLoggedIn);
       initialLoadDone.current = true;
       loadUserData(isLoggedIn);
@@ -158,8 +168,8 @@ const Account: React.FC = () => {
   // (the useEffect above already handles that)
   useIonViewWillEnter(() => {
     if (!initialLoadDone.current) return;
-    getStoredAccessToken().then((token) => {
-      const isLoggedIn = !!token;
+    getStoredRefreshToken().then((refreshToken) => {
+      const isLoggedIn = !!refreshToken;
       setLoggedIn(isLoggedIn);
       loadUserData(isLoggedIn);
     });
@@ -386,8 +396,16 @@ const Account: React.FC = () => {
                       <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
                     ) : error ? (
                       <div className="ac-error-block">
-                        <p className="ac-error">{error}</p>
-                        <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                        <p className="ac-error">
+                          {error === "session_expired"
+                            ? (lang === "ar" ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً." : "Your session has expired. Please sign in again.")
+                            : error}
+                        </p>
+                        {error === "session_expired" ? (
+                          <button className="ac-retry-btn" onClick={handleLogin}>{t.signIn}</button>
+                        ) : (
+                          <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -476,8 +494,16 @@ const Account: React.FC = () => {
                       <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
                     ) : notesError ? (
                       <div className="ac-error-block">
-                        <p className="ac-error">{notesError}</p>
-                        <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                        <p className="ac-error">
+                          {notesError === "session_expired"
+                            ? (lang === "ar" ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً." : "Your session has expired. Please sign in again.")
+                            : notesError}
+                        </p>
+                        {notesError === "session_expired" ? (
+                          <button className="ac-retry-btn" onClick={handleLogin}>{t.signIn}</button>
+                        ) : (
+                          <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
+                        )}
                       </div>
                     ) : notes.length === 0 ? (
                       <p className="ac-streak-empty">{t.noNotes}</p>

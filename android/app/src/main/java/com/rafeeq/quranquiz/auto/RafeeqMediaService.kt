@@ -90,7 +90,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             val page = intent.getIntExtra(EXTRA_PAGE, -1)
             if (aya > 0) {
                 currentPage = page
-                RafeeqAutoPlugin.instance?.sendCarEvent("jumpToAya", null, null, aya)
+                dispatchCarEvent("jumpToAya", aya = aya)
             }
         } else {
             MediaButtonReceiver.handleIntent(session, intent)

@@ -9,7 +9,7 @@ import {
   type TodayGoalPlan,
   updateGoal,
 } from "../../core/services/api/user-api.client";
-import { NetworkError } from "../../core/services/auth/oauth.service";
+import { NetworkError, SessionExpiredError, signIn } from "../../core/services/auth/oauth.service";
 
 interface Props {
   lang: "ar" | "en";
@@ -85,7 +85,9 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
       setPlan(todayPlan);
       setLoaded(true);
     } catch (err) {
-      if (err instanceof NetworkError || err instanceof TypeError) {
+      if (err instanceof SessionExpiredError) {
+        setError("session_expired");
+      } else if (err instanceof NetworkError || err instanceof TypeError) {
         setError(lang === "ar" ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً." : "No internet connection. Connect and try again.");
       } else {
         setError(t.errLoad);
@@ -259,10 +261,20 @@ const GoalsCard: React.FC<Props> = ({ lang, isRTL }) => {
             </div>
           ) : error ? (
             <div className="ac-error-block">
-              <p className="ac-error">{error}</p>
-              <button className="ac-retry-btn" onClick={load}>
-                {lang === "ar" ? "حاول مجدداً" : "Try again"}
-              </button>
+              <p className="ac-error">
+                {error === "session_expired"
+                  ? (lang === "ar" ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً." : "Your session has expired. Please sign in again.")
+                  : error}
+              </p>
+              {error === "session_expired" ? (
+                <button className="ac-retry-btn" onClick={() => signIn()}>
+                  {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
+                </button>
+              ) : (
+                <button className="ac-retry-btn" onClick={load}>
+                  {lang === "ar" ? "حاول مجدداً" : "Try again"}
+                </button>
+              )}
             </div>
           ) : hasGoal && !goal ? (
             <div className="ac-goals-stats">
