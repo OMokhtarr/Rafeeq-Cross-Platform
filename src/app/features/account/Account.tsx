@@ -122,8 +122,8 @@ const Account: React.FC = () => {
     try {
       const [streaksData, profileData, notesData] = await Promise.all([
         fetchStreaks(10),
-        fetchUserProfile().catch((err) => { console.warn("[Account] fetchUserProfile failed:", err); return null; }),
-        fetchAllNotes().catch((err) => { console.warn("[Account] fetchAllNotes failed:", err); return []; }),
+        fetchUserProfile().catch((err) => { if (err instanceof SessionExpiredError) throw err; console.warn("[Account] fetchUserProfile failed:", err); return null; }),
+        fetchAllNotes().catch((err) => { if (err instanceof SessionExpiredError) throw err; console.warn("[Account] fetchAllNotes failed:", err); return []; }),
       ]);
       setStreaks(streaksData);
       setUserProfile(profileData);
