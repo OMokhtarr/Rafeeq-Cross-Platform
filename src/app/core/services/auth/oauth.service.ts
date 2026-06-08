@@ -249,7 +249,7 @@ export class SessionExpiredError extends Error {
 
 export async function refreshAccessToken(): Promise<string> {
   const refreshToken = await getStoredRefreshToken();
-  if (!refreshToken) throw new SessionExpiredError();
+  if (!refreshToken) throw new Error("No refresh token available");
 
   let res: Response;
   try {

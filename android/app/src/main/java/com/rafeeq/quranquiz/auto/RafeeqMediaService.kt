@@ -6,7 +6,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -54,6 +58,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     data class PageMarker(val page: Int, val aya: Int)
 
     private lateinit var session: MediaSessionCompat
+    private lateinit var audioManager: AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var hasAudioFocus = false
     private var reciters: List<ReciterItem> = emptyList()
     private var surahs: List<SurahItem> = emptyList()
     private var currentReciter: String = ""
@@ -73,15 +80,62 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         createNotificationChannel()
         buildMediaSession()
+        requestAudioFocus()
         startForeground(NOTIFICATION_ID, buildNotification("رفيق", false, emptyList(), 0))
     }
 
     override fun onDestroy() {
         instance = null
+        abandonAudioFocus()
         session.release()
         super.onDestroy()
+    }
+
+    private fun requestAudioFocus() {
+        if (hasAudioFocus) return
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+            val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attrs)
+                .setAcceptsDelayedFocusGain(true)
+                .setOnAudioFocusChangeListener { focusChange ->
+                    when (focusChange) {
+                        AudioManager.AUDIOFOCUS_LOSS,
+                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                            hasAudioFocus = false
+                            dispatchCarEvent("pause")
+                        }
+                        AudioManager.AUDIOFOCUS_GAIN -> {
+                            hasAudioFocus = true
+                        }
+                    }
+                }
+                .build()
+            audioFocusRequest = req
+            audioManager.requestAudioFocus(req)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+        }
+        hasAudioFocus = (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+        Log.d("RafeeqMedia", "requestAudioFocus: result=$result hasAudioFocus=$hasAudioFocus")
+    }
+
+    private fun abandonAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(null)
+        }
+        hasAudioFocus = false
+        audioFocusRequest = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -481,6 +535,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     inner class SessionCallback : MediaSessionCompat.Callback() {
 
         override fun onPlay() {
+            requestAudioFocus()
             dispatchCarEvent("play")
         }
 
@@ -528,6 +583,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             if (mediaId == null) return
             if (mediaId.startsWith(SURAH_PREFIX)) {
                 val surahNumber = mediaId.removePrefix(SURAH_PREFIX).toIntOrNull() ?: return
+
+                requestAudioFocus()
 
                 // Immediately acknowledge the selection so Android Auto exits
                 // the "Getting your selection..." screen. Without this the UI
