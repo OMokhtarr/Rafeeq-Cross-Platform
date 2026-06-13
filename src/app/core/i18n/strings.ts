@@ -315,6 +315,11 @@ export interface AppStrings {
     goalSection: string;
     goalSectionDesc: string;
     pagesPerSession: string;
+    unitPages: string;
+    unitRub: string;
+    unitHizb: string;
+    unitJuz: string;
+    quantityPerSession: string;
     generatePlan: string;
     planTitle: string;
     planSession: (n: string) => string;
@@ -666,7 +671,12 @@ const ar: AppStrings = {
     noMemorized: "لم تُضف محفوظات بعد",
     goalSection: "إعداد الجلسات",
     goalSectionDesc: "تُقسَّم محفوظاتك إلى جلسات متساوية. أنجز ما تستطيع منها كل يوم وفق وقتك.",
-    pagesPerSession: "صفحات لكل جلسة",
+    pagesPerSession: "لكل جلسة",
+    unitPages: "صفحة",
+    unitRub: "ربع",
+    unitHizb: "حزب",
+    unitJuz: "جزء",
+    quantityPerSession: "الكمية لكل جلسة",
     generatePlan: "توليد الخطة",
     planTitle: "خطة المراجعة",
     planSession: (n: string) => `الجلسة ${n}`,
@@ -679,8 +689,8 @@ const ar: AppStrings = {
     planEdit: "تعديل الإعداد",
     planEmpty: "لا توجد جلسات في الخطة",
     backToSetup: "العودة للإعداد",
-    sessionNext: "التالية",
-    sessionRemaining: "المتبقية",
+    sessionNext: "الحالية",
+    sessionRemaining: "التالية",
     quranMemorized: "من القرآن محفوظ",
     planCompletion: "من الخطة منجز",
     sessionsDone: "مكتملة",
@@ -1022,7 +1032,12 @@ const en: AppStrings = {
     noMemorized: "No memorized content added yet",
     goalSection: "Session Setup",
     goalSectionDesc: "Your memorized content is divided into equal sessions. Complete as many as you can each day at your own pace.",
-    pagesPerSession: "Pages per session",
+    pagesPerSession: "per session",
+    unitPages: "Pages",
+    unitRub: "Rub'",
+    unitHizb: "Hizb",
+    unitJuz: "Juz",
+    quantityPerSession: "Quantity per session",
     generatePlan: "Generate Plan",
     planTitle: "Revision Plan",
     planSession: (n: string) => `Session ${n}`,
@@ -1035,8 +1050,8 @@ const en: AppStrings = {
     planEdit: "Edit Setup",
     planEmpty: "No sessions in this plan",
     backToSetup: "Back to Setup",
-    sessionNext: "Up Next",
-    sessionRemaining: "Remaining",
+    sessionNext: "Current",
+    sessionRemaining: "Up Next",
     quranMemorized: "Quran memorized",
     planCompletion: "Plan complete",
     sessionsDone: "done",

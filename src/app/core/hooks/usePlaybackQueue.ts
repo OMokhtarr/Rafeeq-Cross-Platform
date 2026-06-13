@@ -407,13 +407,25 @@ export function usePlaybackQueue(
 
         verseRepeatCountRef.current += 1;
 
-        try {
-          await el.play();
-        } catch (playErr) {
+        // Try el.play() up to 4 times with back-off.
+        // On Android Auto cold-start, the WebView may report NotAllowedError on
+        // the first attempt even with mediaPlaybackRequiresUserGesture=false because
+        // the audio context hasn't been unlocked yet. Retrying after a short delay
+        // usually succeeds once the system acknowledges the audio focus grant.
+        let playErr: unknown = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          try {
+            await el.play();
+            playErr = null;
+            break;
+          } catch (e) {
+            playErr = e;
+            if (!(e instanceof DOMException && e.name === "NotAllowedError")) break;
+            await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+          }
+        }
+        if (playErr !== null) {
           isLoadingRef.current = false;
-          // NotAllowedError means the WebView blocked autoplay (no user gesture).
-          // Leave the audio element loaded and ready — the next resume() or play
-          // attempt triggered by a user tap will succeed immediately.
           if (
             playErr instanceof DOMException &&
             playErr.name === "NotAllowedError"
@@ -524,16 +536,28 @@ export function usePlaybackQueue(
       const el = ensureEl();
       el.src = blobUrl;
       el.playbackRate = playbackRateRef.current;
-      await new Promise<void>((resolve) => {
-        const done = () => {
-          el.removeEventListener("ended", done);
-          el.removeEventListener("error", done);
-          resolve();
-        };
-        el.addEventListener("ended", done);
-        el.addEventListener("error", done);
-        el.play().catch(resolve);
-      });
+      // Retry play() up to 3 times — on Android Auto cold-start the audio context
+      // may not be unlocked on the first attempt.
+      let played = false;
+      for (let attempt = 0; attempt < 3 && !played; attempt++) {
+        try {
+          await el.play();
+          played = true;
+        } catch {
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+      if (played) {
+        await new Promise<void>((resolve) => {
+          const done = () => {
+            el.removeEventListener("ended", done);
+            el.removeEventListener("error", done);
+            resolve();
+          };
+          el.addEventListener("ended", done);
+          el.addEventListener("error", done);
+        });
+      }
       URL.revokeObjectURL(blobUrl);
     } catch {
       // Never block the main recitation if bismillah fails

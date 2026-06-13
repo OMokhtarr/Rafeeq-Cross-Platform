@@ -37,74 +37,82 @@ const TABS: TabDef[] = [
   {
     id: "home",
     icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5z" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 10.5L12 3l9 7.5" />
+        <path d="M5 8.5V20h4.5v-4.5h5V20H19V8.5" />
       </svg>
     ),
     route: "/",
     color: "var(--color-gold, #d4b48c)",
-    filled: true,
+    filled: false,
   },
   {
     id: "quran",
     icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M2 3h9a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H2V3z" />
-        <path d="M22 3h-9a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h9V3z" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 5a2 2 0 0 1 2-2h5.5v18H5a2 2 0 0 1-2-2V5z" />
+        <path d="M21 5a2 2 0 0 0-2-2h-5.5v18H19a2 2 0 0 0 2-2V5z" />
+        <line x1="12" y1="3" x2="12" y2="21" />
       </svg>
     ),
     route: "/viewer",
     color: "var(--color-quran)",
-    filled: true,
+    filled: false,
   },
   {
     id: "quiz",
     icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2a7 7 0 0 1 7 7c0 2.5-1.3 4.7-3.3 6l-.7.5V18H9v-2.5l-.7-.5A7 7 0 0 1 12 2z" />
-        <rect x="9" y="18" width="6" height="2" rx="1" />
-        <rect x="10" y="20" width="4" height="2" rx="1" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2" />
       </svg>
     ),
     route: "/quiz-list",
     color: "var(--color-quiz)",
-    filled: true,
+    filled: false,
   },
   {
     id: "azkar",
     icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="5" r="2.5" />
-        <circle cx="18.5" cy="9" r="2" />
-        <circle cx="19" cy="15.5" r="2" />
-        <circle cx="14" cy="20" r="2" />
-        <circle cx="7.5" cy="19.5" r="2" />
-        <circle cx="4" cy="14" r="2" />
-        <circle cx="5" cy="8" r="2" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* 8 beads evenly spaced on a circle of r=8.5 centred at 12,12 */}
+        <circle cx="12"    cy="3.5"  r="1.7" />
+        <circle cx="18.5"  cy="5.5"  r="1.7" />
+        <circle cx="20.5"  cy="12"   r="1.7" />
+        <circle cx="18.5"  cy="18.5" r="1.7" />
+        <circle cx="12"    cy="20.5" r="1.7" />
+        <circle cx="5.5"   cy="18.5" r="1.7" />
+        <circle cx="3.5"   cy="12"   r="1.7" />
+        <circle cx="5.5"   cy="5.5"  r="1.7" />
       </svg>
     ),
     route: "/azkar",
     color: "var(--color-azkar)",
-    filled: true,
+    filled: false,
   },
   {
     id: "hifz",
     icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 2.61 1.4 4.9 3.5 6.19V17h7v-1.81C17.6 13.9 19 11.61 19 9c0-3.87-3.13-7-7-7z" opacity="0.9"/>
-        <rect x="8" y="17" width="8" height="2" rx="1"/>
-        <rect x="9" y="19" width="6" height="2" rx="1"/>
-        <path d="M9 9.5l2 2 4-4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9"/>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* brain — shifted left to make room for book */}
+        <path d="M8 2A3 3 0 0 0 5 5c0 .45.09.88.26 1.26A3 3 0 0 0 3 9c0 1.2.7 2.3 1.75 2.8V13.5a2.5 2.5 0 0 0 5 0V12" />
+        <path d="M12 2A3 3 0 0 1 15 5c0 .45-.09.88-.26 1.26A3 3 0 0 1 17 9c0 1.2-.7 2.3-1.75 2.8V13.5a2.5 2.5 0 0 1-5 0V12" />
+        <line x1="10" y1="5.5" x2="10" y2="11" />
+        {/* small open book bottom-right */}
+        <path d="M14 16h3.5a.5.5 0 0 1 .5.5V22h-4v-6z" />
+        <path d="M14 16h-3.5a.5.5 0 0 0-.5.5V22h4v-6z" />
+        <line x1="14" y1="16" x2="14" y2="22" />
       </svg>
     ),
     route: "/hifz",
     color: "var(--color-hifz, #4a7c59)",
-    filled: true,
+    filled: false,
   },
   {
     id: "account",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
       </svg>
@@ -120,7 +128,7 @@ const TABS: TabDef[] = [
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       >

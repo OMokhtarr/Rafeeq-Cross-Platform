@@ -17,6 +17,8 @@ import {
   HifzGoal,
   MemorizedUnit,
   PlanSession,
+  SessionUnit,
+  unitToPageCount,
 } from "./hifz.service";
 import {
   getChapters,
@@ -506,7 +508,7 @@ const SetupView: React.FC<SetupViewProps> = ({
     onUpdateMemorized(memorized.filter((_, i) => i !== idx));
   };
 
-  const canGenerate = memorized.length > 0 && goal.pagesPerSession >= 1;
+  const canGenerate = memorized.length > 0 && goal.quantity >= 1;
 
   return (
     <div className="hifz-setup" dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -557,18 +559,31 @@ const SetupView: React.FC<SetupViewProps> = ({
         <h2 className="hifz-section-title">{h.goalSection}</h2>
         <p className="hifz-goal-desc">{h.goalSectionDesc}</p>
 
-        <div className="hifz-field-row">
-          <label className="hifz-label">{h.pagesPerSession}</label>
+        <label className="hifz-label">{h.quantityPerSession}</label>
+        <div className="hifz-goal-row">
           <input
             type="number"
+            inputMode="numeric"
             className="hifz-input hifz-input-sm"
             min={1}
-            max={100}
-            value={goal.pagesPerSession}
-            onChange={(e) =>
-              onUpdateGoal({ ...goal, pagesPerSession: Math.max(1, Number(e.target.value)) })
-            }
+            max={999}
+            value={goal.quantity}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              onUpdateGoal({ ...goal, quantity: isNaN(v) || v < 1 ? 1 : v });
+            }}
           />
+          <div className="hifz-toggle-group hifz-unit-group">
+            {(["pages", "rub", "hizb", "juz"] as SessionUnit[]).map((u) => (
+              <button
+                key={u}
+                className={`hifz-toggle-btn${goal.unit === u ? " active" : ""}`}
+                onClick={() => onUpdateGoal({ ...goal, unit: u })}
+              >
+                {u === "pages" ? h.unitPages : u === "rub" ? h.unitRub : u === "hizb" ? h.unitHizb : h.unitJuz}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -638,7 +653,9 @@ const SessionCard: React.FC<SessionCardProps> = ({
           onClick={() => onToggle(s.id)}
           aria-label={s.done ? h.planUndone : h.planDone}
         >
-          {s.done ? "✓" : "○"}
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </button>
       </div>
     </div>
@@ -695,6 +712,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>
       <div className="hifz-plan-header">
         <h1 className="hifz-title">{h.planTitle}</h1>
+        <div className="hifz-plan-header-actions">
+          <button className="hifz-edit-btn" onClick={onEdit} aria-label={h.planEdit}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <button className="hifz-reset-btn" onClick={onReset} aria-label={h.planReset}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* ── Hero card with charts ── */}
@@ -704,14 +735,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           color="var(--color-hifz, #4a7c59)"
           label={h.quranMemorized}
           sublabel={`${memorizedPages} / 604`}
-          size={130}
+          size={100}
         />
         <DonutChart
           percent={planPct}
           color="#5b8dd9"
           label={h.planCompletion}
           sublabel={`${doneSessions} / ${totalSessions}`}
-          size={130}
+          size={100}
         />
       </div>
 
@@ -743,8 +774,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <polyline points="14 2 14 8 20 8" />
             </svg>
           </div>
-          <span className="hifz-stat-num">{plan.goal.pagesPerSession}</span>
-          <span className="hifz-stat-lbl">{h.pagesPerSession}</span>
+          <span className="hifz-stat-num">{plan.goal.quantity ?? plan.goal.pagesPerSession ?? 5}</span>
+          <span className="hifz-stat-lbl">
+            {plan.goal.unit === "rub" ? h.unitRub : plan.goal.unit === "hizb" ? h.unitHizb : plan.goal.unit === "juz" ? h.unitJuz : h.unitPages}
+            {" "}{h.pagesPerSession}
+          </span>
         </div>
         <div className="hifz-stat-chip hifz-stat-chip-streak">
           <div className="hifz-stat-icon hifz-stat-icon-streak">
@@ -757,7 +791,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* ── Session context: previous / up next / coming up ── */}
+      {/* ── Session context row: previous / up next / coming up ── */}
       {sessions.length === 0 && (
         <p className="hifz-empty-hint">{h.planEmpty}</p>
       )}
@@ -768,46 +802,48 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {lastDoneSession && (
-        <section className="hifz-section">
-          <h2 className="hifz-section-title hifz-section-done-title">{h.sessionPrevious}</h2>
-          <SessionCard
-            session={lastDoneSession}
-            variant="done"
-            onToggle={onToggleSession}
-            onOpenPage={onOpenPage}
-            lang={lang}
-            h={h}
-          />
-        </section>
-      )}
-
-      {nextSession && (
-        <section className="hifz-section">
-          <h2 className="hifz-section-title hifz-section-today">{h.sessionNext}</h2>
-          <SessionCard
-            session={nextSession}
-            variant="next"
-            onToggle={onToggleSession}
-            onOpenPage={onOpenPage}
-            lang={lang}
-            h={h}
-          />
-        </section>
-      )}
-
-      {comingUpSession && (
-        <section className="hifz-section">
-          <h2 className="hifz-section-title">{h.sessionRemaining}</h2>
-          <SessionCard
-            session={comingUpSession}
-            variant="remaining"
-            onToggle={onToggleSession}
-            onOpenPage={onOpenPage}
-            lang={lang}
-            h={h}
-          />
-        </section>
+      {sessions.length > 0 && incomplete.length > 0 && (
+        <div className="hifz-session-row">
+          {lastDoneSession && (
+            <div className="hifz-session-col">
+              <span className="hifz-session-col-label hifz-section-done-title">{h.sessionPrevious}</span>
+              <SessionCard
+                session={lastDoneSession}
+                variant="done"
+                onToggle={onToggleSession}
+                onOpenPage={onOpenPage}
+                lang={lang}
+                h={h}
+              />
+            </div>
+          )}
+          {nextSession && (
+            <div className="hifz-session-col">
+              <span className="hifz-session-col-label hifz-section-today">{h.sessionNext}</span>
+              <SessionCard
+                session={nextSession}
+                variant="next"
+                onToggle={onToggleSession}
+                onOpenPage={onOpenPage}
+                lang={lang}
+                h={h}
+              />
+            </div>
+          )}
+          {comingUpSession && (
+            <div className="hifz-session-col">
+              <span className="hifz-session-col-label">{h.sessionRemaining}</span>
+              <SessionCard
+                session={comingUpSession}
+                variant="remaining"
+                onToggle={onToggleSession}
+                onOpenPage={onOpenPage}
+                lang={lang}
+                h={h}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── View all sessions ── */}
@@ -822,15 +858,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </svg>
         {h.viewAllSessions} ({totalSessions})
       </button>
-
-      <div className="hifz-plan-actions">
-        <button className="hifz-edit-btn" onClick={onEdit}>
-          {h.planEdit}
-        </button>
-        <button className="hifz-reset-btn" onClick={onReset}>
-          {h.planReset}
-        </button>
-      </div>
     </div>
   );
 };
@@ -922,7 +949,8 @@ const Hifz: React.FC = () => {
 
   const [memorized, setMemorized] = useState<MemorizedUnit[]>([]);
   const [goal, setGoal] = useState<HifzGoal>({
-    pagesPerSession: 5,
+    quantity: 5,
+    unit: "pages",
   });
 
   useEffect(() => {
@@ -1031,7 +1059,6 @@ const Hifz: React.FC = () => {
             />
           )}
         </div>
-        <div style={{ height: "var(--bottom-nav-height)" }} />
       </IonContent>
       {showAddSheet && (
         <AddMemorizedSheet

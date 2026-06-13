@@ -7,8 +7,25 @@ export type MemorizedUnit =
   | { type: "surah"; surah: number }
   | { type: "pages"; from: number; to: number };
 
+export type SessionUnit = "pages" | "rub" | "hizb" | "juz";
+
+// How many Quran pages each unit represents (approximate standard mushaf)
+const UNIT_TO_PAGES: Record<SessionUnit, number> = {
+  pages: 1,
+  rub: 2,   // 1 rub' = ~2 pages
+  hizb: 4,  // 1 hizb = 2 rub' = ~4 pages
+  juz: 20,  // 1 juz = ~20 pages (604 / 30 ≈ 20)
+};
+
+export function unitToPageCount(quantity: number, unit: SessionUnit): number {
+  return Math.max(1, Math.round(quantity * UNIT_TO_PAGES[unit]));
+}
+
 export interface HifzGoal {
-  pagesPerSession: number;
+  quantity: number;
+  unit: SessionUnit;
+  /** @deprecated kept for backward-compat with saved plans — derived on load */
+  pagesPerSession?: number;
 }
 
 export interface PlanSession {
@@ -116,7 +133,7 @@ export function generateSessions(
   const ranges = flattenMemorized(memorized, chaptersCache);
   if (ranges.length === 0) return [];
 
-  const pagesPerSession = Math.max(1, goal.pagesPerSession);
+  const pagesPerSession = unitToPageCount(goal.quantity ?? goal.pagesPerSession ?? 5, goal.unit ?? "pages");
 
   const allPages: number[] = [];
   for (const r of ranges) {

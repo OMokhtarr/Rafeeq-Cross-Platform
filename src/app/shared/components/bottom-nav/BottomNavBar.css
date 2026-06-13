@@ -162,8 +162,10 @@
 .rfq-tab-bar-fixed {
   position: absolute;
   bottom: 0;
-  inset-inline-start: 0;
-  inset-inline-end: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
   z-index: 10;
 }
 
