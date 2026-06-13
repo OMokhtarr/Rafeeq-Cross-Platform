@@ -7,6 +7,25 @@ body,
   overflow: hidden;
 }
 
+/* ── Global scrollbar hide ──────────────────────────────────
+   Never show scrollbars anywhere in the app — applies to all
+   scroll containers including Ionic IonContent shadow parts.
+   ─────────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+ion-content::part(scroll) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   margin: 0;
   font-family:

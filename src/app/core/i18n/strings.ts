@@ -17,6 +17,7 @@ export interface AppStrings {
     quiz: string;
     azkar: string;
     ahadith: string;
+    hifz: string;
     settings: string;
     comingSoon: string;
   };
@@ -291,6 +292,53 @@ export interface AppStrings {
     downloaded: string;
     languageGroup: (lang: string) => string;
   };
+
+  hifz: {
+    tabLabel: string;
+    title: string;
+    subtitle: string;
+    setupTitle: string;
+    setupSubtitle: string;
+    memorizedSection: string;
+    addMemorized: string;
+    addByJuz: string;
+    addBySurah: string;
+    addByPages: string;
+    juzLabel: string;
+    surahLabel: string;
+    fromPage: string;
+    toPage: string;
+    selectJuz: string;
+    selectSurah: string;
+    remove: string;
+    noMemorized: string;
+    goalSection: string;
+    goalSectionDesc: string;
+    pagesPerSession: string;
+    generatePlan: string;
+    planTitle: string;
+    planSession: (n: string) => string;
+    planPages: (from: string, to: string) => string;
+    planJuz: (n: string) => string;
+    planDone: string;
+    planUndone: string;
+    planProgress: (done: string, total: string) => string;
+    planReset: string;
+    planEdit: string;
+    planEmpty: string;
+    backToSetup: string;
+    sessionNext: string;
+    sessionRemaining: string;
+    quranMemorized: string;
+    planCompletion: string;
+    sessionsDone: string;
+    sessionsLeft: string;
+    streakDays: string;
+    openInQuran: string;
+    sessionPrevious: string;
+    viewAllSessions: string;
+    sessionsAll: string;
+  };
 }
 
 const ar: AppStrings = {
@@ -303,6 +351,7 @@ const ar: AppStrings = {
     quiz: "اختبارات",
     azkar: "أذكار",
     ahadith: "أحاديث",
+    hifz: "الحفظ",
     settings: "إعدادات",
     comingSoon: "قريباً...",
   },
@@ -595,6 +644,53 @@ const ar: AppStrings = {
     downloaded: "محفوظ",
     languageGroup: (lang: string) => lang,
   },
+
+  hifz: {
+    tabLabel: "الحفظ",
+    title: "خطة المراجعة",
+    subtitle: "راجع حفظك بانتظام",
+    setupTitle: "إعداد خطة المراجعة",
+    setupSubtitle: "حدّد ما حفظته وهدف المراجعة",
+    memorizedSection: "ما حفظتَه",
+    addMemorized: "إضافة محفوظات",
+    addByJuz: "بجزء",
+    addBySurah: "بسورة",
+    addByPages: "بصفحات",
+    juzLabel: "الجزء",
+    surahLabel: "السورة",
+    fromPage: "من صفحة",
+    toPage: "إلى صفحة",
+    selectJuz: "اختر الجزء",
+    selectSurah: "اختر السورة",
+    remove: "حذف",
+    noMemorized: "لم تُضف محفوظات بعد",
+    goalSection: "إعداد الجلسات",
+    goalSectionDesc: "تُقسَّم محفوظاتك إلى جلسات متساوية. أنجز ما تستطيع منها كل يوم وفق وقتك.",
+    pagesPerSession: "صفحات لكل جلسة",
+    generatePlan: "توليد الخطة",
+    planTitle: "خطة المراجعة",
+    planSession: (n: string) => `الجلسة ${n}`,
+    planPages: (from: string, to: string) => `ص ${from} – ${to}`,
+    planJuz: (n: string) => `الجزء ${n}`,
+    planDone: "تمّ",
+    planUndone: "لم يتمّ",
+    planProgress: (done: string, total: string) => `${done} / ${total} جلسة`,
+    planReset: "إعادة الخطة",
+    planEdit: "تعديل الإعداد",
+    planEmpty: "لا توجد جلسات في الخطة",
+    backToSetup: "العودة للإعداد",
+    sessionNext: "التالية",
+    sessionRemaining: "المتبقية",
+    quranMemorized: "من القرآن محفوظ",
+    planCompletion: "من الخطة منجز",
+    sessionsDone: "مكتملة",
+    sessionsLeft: "متبقية",
+    streakDays: "يوم متتالي",
+    openInQuran: "افتح في القرآن",
+    sessionPrevious: "السابقة",
+    viewAllSessions: "عرض جميع الجلسات",
+    sessionsAll: "جميع الجلسات",
+  },
 };
 
 const en: AppStrings = {
@@ -607,6 +703,7 @@ const en: AppStrings = {
     quiz: "Quizzes",
     azkar: "Azkar",
     ahadith: "Ahadith",
+    hifz: "Hifz",
     settings: "Settings",
     comingSoon: "Coming soon...",
   },
@@ -902,6 +999,53 @@ const en: AppStrings = {
     downloading: "Saving…",
     downloaded: "Saved",
     languageGroup: (lang: string) => lang,
+  },
+
+  hifz: {
+    tabLabel: "Hifz",
+    title: "Revision Planner",
+    subtitle: "Revise your memorization regularly",
+    setupTitle: "Set Up Your Plan",
+    setupSubtitle: "Define what you've memorized and your revision goal",
+    memorizedSection: "Memorized Content",
+    addMemorized: "Add Memorized",
+    addByJuz: "By Juz",
+    addBySurah: "By Surah",
+    addByPages: "By Pages",
+    juzLabel: "Juz",
+    surahLabel: "Surah",
+    fromPage: "From page",
+    toPage: "To page",
+    selectJuz: "Select Juz",
+    selectSurah: "Select Surah",
+    remove: "Remove",
+    noMemorized: "No memorized content added yet",
+    goalSection: "Session Setup",
+    goalSectionDesc: "Your memorized content is divided into equal sessions. Complete as many as you can each day at your own pace.",
+    pagesPerSession: "Pages per session",
+    generatePlan: "Generate Plan",
+    planTitle: "Revision Plan",
+    planSession: (n: string) => `Session ${n}`,
+    planPages: (from: string, to: string) => `Pg. ${from}–${to}`,
+    planJuz: (n: string) => `Juz ${n}`,
+    planDone: "Done",
+    planUndone: "Mark done",
+    planProgress: (done: string, total: string) => `${done} / ${total} sessions`,
+    planReset: "Reset Plan",
+    planEdit: "Edit Setup",
+    planEmpty: "No sessions in this plan",
+    backToSetup: "Back to Setup",
+    sessionNext: "Up Next",
+    sessionRemaining: "Remaining",
+    quranMemorized: "Quran memorized",
+    planCompletion: "Plan complete",
+    sessionsDone: "done",
+    sessionsLeft: "left",
+    streakDays: "day streak",
+    openInQuran: "Open in Quran",
+    sessionPrevious: "Previous",
+    viewAllSessions: "View All Sessions",
+    sessionsAll: "All Sessions",
   },
 };
 

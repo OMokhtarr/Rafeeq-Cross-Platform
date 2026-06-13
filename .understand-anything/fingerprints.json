@@ -1,16 +1,56 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "cefe54ac923a518d5c8a3914eaa37023e2bcaf2b",
-  "generatedAt": "2026-06-02T19:46:44.612Z",
+  "gitCommitHash": "e85b217f9d0b85889910eeb8a4c576f8f1e6a175",
+  "generatedAt": "2026-06-12T00:30:16.387Z",
   "files": {
     ".understand-anything/.understandignore": {
       "filePath": ".understand-anything/.understandignore",
-      "contentHash": "b158ccf234adbf918826d33fa7f0df90fd051fc089980487383d1de45a140ece",
+      "contentHash": "7b446e11b2fb10ad1e0030c7fca9d72c71cc4ca538e84e2392790488b0609128",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
       "totalLines": 43,
+      "hasStructuralAnalysis": false
+    },
+    ".understand-anything/fingerprints.json": {
+      "filePath": ".understand-anything/fingerprints.json",
+      "contentHash": "87da44a2f4d34f7fa4f66fc9aa54b2d2cc9a7ca49a16e52e6860ba13db1670ae",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6616,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/knowledge-graph.json": {
+      "filePath": ".understand-anything/knowledge-graph.json",
+      "contentHash": "64295dfc65acba128506a694f0911bc6a4b2c91fe5872b2b8120186bcc03d16d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 9141,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/meta.json": {
+      "filePath": ".understand-anything/meta.json",
+      "contentHash": "eebfcdacb85daa5c2530badd0b1a5d608110f6f7d94a9706704de6e4e00bb7cf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    ".understand-anything/tmp/changed-files.txt": {
+      "filePath": ".understand-anything/tmp/changed-files.txt",
+      "contentHash": "34cf0699278ac703555ae9c5b53b75fab86ac7bd34dd729f7f5f07eb7e22efd8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 23,
       "hasStructuralAnalysis": false
     },
     "android/app/build.gradle": {
@@ -123,22 +163,22 @@
     },
     "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqAutoPlugin.kt": {
       "filePath": "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqAutoPlugin.kt",
-      "contentHash": "903da42f5847c2cddc5820ca43224a8da99aa5b015d8f5e08325916b4ab3468c",
+      "contentHash": "1ca72847b9853f175e936dad16856601360d11a9e00d0bad55ca51899e7f218b",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 125,
+      "totalLines": 212,
       "hasStructuralAnalysis": false
     },
     "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqMediaService.kt": {
       "filePath": "android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqMediaService.kt",
-      "contentHash": "f27a37ef31fec92322a3644748580fe0ab59b7386bc05adf8354bd65beb4f205",
+      "contentHash": "6d8bda48ce77a917a517777b9bc1a3165c5815a714bc5cdcbf4e015f4d226b4f",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 466,
+      "totalLines": 607,
       "hasStructuralAnalysis": false
     },
     "android/app/src/main/java/com/rafeeq/quranquiz/MainActivity.kt": {
@@ -179,6 +219,26 @@
       "imports": [],
       "exports": [],
       "totalLines": 5,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable/ic_repeat_page_active.xml": {
+      "filePath": "android/app/src/main/res/drawable/ic_repeat_page_active.xml",
+      "contentHash": "0d428a27875d919732cd4efaf0c239208d9ed5aab3330a3b35b37e411014de35",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": false
+    },
+    "android/app/src/main/res/drawable/ic_repeat_page.xml": {
+      "filePath": "android/app/src/main/res/drawable/ic_repeat_page.xml",
+      "contentHash": "7de2ed21fd5d2729406f30d950134ffbddefd8673942b752a0766dc210b76898",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 10,
       "hasStructuralAnalysis": false
     },
     "android/app/src/main/res/drawable/ic_transparent.xml": {
@@ -430,6 +490,16 @@
       ],
       "exports": [],
       "totalLines": 49,
+      "hasStructuralAnalysis": true
+    },
+    "CLAUDE.md": {
+      "filePath": "CLAUDE.md",
+      "contentHash": "5439c0f2136b94e39c327292d50097c26072067be52d6be8c210846055f4cdac",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 10,
       "hasStructuralAnalysis": true
     },
     "codemagic.yaml": {
@@ -882,12 +952,12 @@
     },
     "package.json": {
       "filePath": "package.json",
-      "contentHash": "acd3072f2050c4f0e69b1b67a6d087d24d5e829240709b33ca7fbd5fe411c343",
+      "contentHash": "520eade811236fd0e58402f76315901fd57a75112d6c8f3392444bc7191ea2f2",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 74,
+      "totalLines": 75,
       "hasStructuralAnalysis": true
     },
     "privacy.html": {
@@ -994,13 +1064,13 @@
     },
     "src/App.tsx": {
       "filePath": "src/App.tsx",
-      "contentHash": "5bea6db72322cc7a52604c76a0c39dbed433cb2a94fb209165d2ecf057117364",
+      "contentHash": "fda3fe4fe30963f4d4b0f7c352c7975c9f7cc0e435d8f522e517825a9322e4be",
       "functions": [
         {
           "name": "App",
           "params": [],
           "exported": false,
-          "lineCount": 136
+          "lineCount": 138
         }
       ],
       "classes": [],
@@ -1231,7 +1301,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 187,
+      "totalLines": 189,
       "hasStructuralAnalysis": true
     },
     "src/app/core/context/LanguageContext.tsx": {
@@ -1292,7 +1362,7 @@
     },
     "src/app/core/context/PlaybackContext.tsx": {
       "filePath": "src/app/core/context/PlaybackContext.tsx",
-      "contentHash": "d7e28509f7db4221b9a9b08ea6c62191ade6cfad79fe963223c2d5e5d63b86cb",
+      "contentHash": "532080f62124c03b0fb03a3eec8c7adcb8430f6f1af2e9c76e347ffd480a76ba",
       "functions": [
         {
           "name": "getQueuePageMarkers",
@@ -1309,7 +1379,7 @@
             "{\r\n  children,\r\n}"
           ],
           "exported": true,
-          "lineCount": 188
+          "lineCount": 243
         },
         {
           "name": "usePlayback",
@@ -1366,7 +1436,7 @@
         "PlaybackProvider",
         "usePlayback"
       ],
-      "totalLines": 406,
+      "totalLines": 461,
       "hasStructuralAnalysis": true
     },
     "src/app/core/context/ThemeContext.tsx": {
@@ -1575,7 +1645,7 @@
     },
     "src/app/core/hooks/usePlaybackQueue.ts": {
       "filePath": "src/app/core/hooks/usePlaybackQueue.ts",
-      "contentHash": "73cac63256589bb71652d1423ef158fde71b57ae0b50be564c9301bd69d28564",
+      "contentHash": "3f2a671ed1259f9ed8c19b4f67ded9946cafe37f3d04c5d5516f51c98511d62e",
       "functions": [
         {
           "name": "probeDuration",
@@ -1593,7 +1663,7 @@
           ],
           "returnType": "PlaybackControls",
           "exported": true,
-          "lineCount": 663
+          "lineCount": 729
         }
       ],
       "classes": [],
@@ -1625,7 +1695,7 @@
       "exports": [
         "usePlaybackQueue"
       ],
-      "totalLines": 776,
+      "totalLines": 846,
       "hasStructuralAnalysis": true
     },
     "src/app/core/hooks/useWakeLock.ts": {
@@ -1658,14 +1728,14 @@
     },
     "src/app/core/i18n/strings.ts": {
       "filePath": "src/app/core/i18n/strings.ts",
-      "contentHash": "d63563575e988c666e29a5c1bfa4aafa3d2a077c1cef0e95b4ac2191bea1e07c",
+      "contentHash": "2272ed10e4ee71920ca355e065e0ce3f755bbdec2ba5300ab49ee419e7762ab3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [
         "STRINGS"
       ],
-      "totalLines": 903,
+      "totalLines": 909,
       "hasStructuralAnalysis": true
     },
     "src/app/core/services/api/font.loader.ts": {
@@ -2271,7 +2341,7 @@
     },
     "src/app/core/services/api/user-api.client.ts": {
       "filePath": "src/app/core/services/api/user-api.client.ts",
-      "contentHash": "a85c6c88bf54eb2482980403d8d5aad5cf43bb23cbcd5dd2d3e199b129a8667c",
+      "contentHash": "46856f31bdb989abb539f551261d539fa5652864706130a22cd6639f6b92e5b1",
       "functions": [
         {
           "name": "getAccessToken",
@@ -2280,7 +2350,16 @@
           ],
           "returnType": "Promise<string>",
           "exported": false,
-          "lineCount": 45
+          "lineCount": 50
+        },
+        {
+          "name": "isNetworkFailure",
+          "params": [
+            "err"
+          ],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 6
         },
         {
           "name": "userApiFetch",
@@ -2290,7 +2369,7 @@
           ],
           "returnType": "Promise<T>",
           "exported": false,
-          "lineCount": 57
+          "lineCount": 67
         },
         {
           "name": "fetchStreaks",
@@ -2324,7 +2403,7 @@
           "params": [],
           "returnType": "Promise<Note[]>",
           "exported": true,
-          "lineCount": 6
+          "lineCount": 4
         },
         {
           "name": "fetchNotesForVerse",
@@ -2333,7 +2412,7 @@
           ],
           "returnType": "Promise<Note[]>",
           "exported": true,
-          "lineCount": 6
+          "lineCount": 4
         },
         {
           "name": "addNote",
@@ -2372,7 +2451,7 @@
           ],
           "returnType": "Promise<TodayGoalPlan | null>",
           "exported": true,
-          "lineCount": 8
+          "lineCount": 6
         },
         {
           "name": "createGoal",
@@ -2491,7 +2570,8 @@
             "refreshAccessToken",
             "getStoredRefreshToken",
             "getUserProfileFromIdTokenAsync",
-            "NetworkError"
+            "NetworkError",
+            "SessionExpiredError"
           ]
         }
       ],
@@ -2515,7 +2595,7 @@
         "toggleBookmark",
         "removeLocalBookmark"
       ],
-      "totalLines": 459,
+      "totalLines": 476,
       "hasStructuralAnalysis": true
     },
     "src/app/core/services/audio/audio-cache.service.ts": {
@@ -2696,7 +2776,7 @@
     },
     "src/app/core/services/auth/oauth.service.ts": {
       "filePath": "src/app/core/services/auth/oauth.service.ts",
-      "contentHash": "b5322ee655a5944039b6232d7b0ffc49efec0b6db02bf886ea33f1add9013835",
+      "contentHash": "fc8e0db54d124dc875ef696bb61b8cb5c6977d1c41a5a307db0146484424706b",
       "functions": [
         {
           "name": "generateCodeVerifier",
@@ -2795,7 +2875,7 @@
           "params": [],
           "returnType": "Promise<string>",
           "exported": true,
-          "lineCount": 28
+          "lineCount": 32
         },
         {
           "name": "signOut",
@@ -2808,6 +2888,15 @@
       "classes": [
         {
           "name": "NetworkError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "SessionExpiredError",
           "methods": [
             "constructor"
           ],
@@ -2835,15 +2924,16 @@
         "signIn",
         "exchangeCodeForToken",
         "NetworkError",
+        "SessionExpiredError",
         "refreshAccessToken",
         "signOut"
       ],
-      "totalLines": 275,
+      "totalLines": 286,
       "hasStructuralAnalysis": true
     },
     "src/app/core/services/data/metadata.service.ts": {
       "filePath": "src/app/core/services/data/metadata.service.ts",
-      "contentHash": "25fc9008bd672b1dcf4eb708548ef73ca9162f1a1234c1ef0360c727e8a0b77e",
+      "contentHash": "43749def619338e36db75303cfc7c2a55d933acba6ba7249bb352eec796ba188",
       "functions": [
         {
           "name": "initMetadata",
@@ -2888,6 +2978,15 @@
         },
         {
           "name": "getSurahStartPage",
+          "params": [
+            "suraId"
+          ],
+          "returnType": "number",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getSurahEndPage",
           "params": [
             "suraId"
           ],
@@ -3032,6 +3131,7 @@
         "getSurahNameArabic",
         "getSurahNameEnglish",
         "getSurahStartPage",
+        "getSurahEndPage",
         "getPageStart",
         "estimatePageForVerse",
         "getJuzStart",
@@ -3042,7 +3142,7 @@
         "getRubEnd",
         "getRubNumberForPage"
       ],
-      "totalLines": 904,
+      "totalLines": 909,
       "hasStructuralAnalysis": true
     },
     "src/app/core/services/data/quran.service.ts": {
@@ -3426,7 +3526,7 @@
     },
     "src/app/core/services/native/driving-mode.plugin.ts": {
       "filePath": "src/app/core/services/native/driving-mode.plugin.ts",
-      "contentHash": "e0486bb6536bd8ed33444e65f7905ed52df899737b822e802956c6043cd7fbd4",
+      "contentHash": "591f907f88e45b92cc49200b18da9d2ffab103ee683cab6b5ee7c1c5b537725f",
       "functions": [],
       "classes": [],
       "imports": [
@@ -3440,7 +3540,7 @@
       "exports": [
         "DrivingMode"
       ],
-      "totalLines": 66,
+      "totalLines": 73,
       "hasStructuralAnalysis": true
     },
     "src/app/core/services/storage/idb.service.ts": {
@@ -3611,13 +3711,13 @@
     },
     "src/app/features/account/Account.tsx": {
       "filePath": "src/app/features/account/Account.tsx",
-      "contentHash": "f4f163cd25fcbe6b441ff44335d438ff9422b1366c8bbec9038c0e2a638c244e",
+      "contentHash": "9b7182d9b9acc875edde700897e43aa7b36550b8fa80876b2570611db0b97993",
       "functions": [
         {
           "name": "Account",
           "params": [],
           "exported": false,
-          "lineCount": 549
+          "lineCount": 592
         }
       ],
       "classes": [],
@@ -3626,6 +3726,7 @@
           "source": "react",
           "specifiers": [
             "React",
+            "useCallback",
             "useEffect",
             "useRef",
             "useState"
@@ -3666,8 +3767,7 @@
             "deleteNote",
             "Streak",
             "UserProfile",
-            "Note",
-            "UserApiError"
+            "Note"
           ]
         },
         {
@@ -3675,9 +3775,9 @@
           "specifiers": [
             "signIn",
             "signOut",
-            "getStoredAccessToken",
-            "getStoredAccessTokenSync",
-            "NetworkError"
+            "getStoredRefreshToken",
+            "NetworkError",
+            "SessionExpiredError"
           ]
         },
         {
@@ -3698,7 +3798,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 646,
+      "totalLines": 688,
       "hasStructuralAnalysis": true
     },
     "src/app/features/account/AccountModal.css": {
@@ -3745,7 +3845,7 @@
     },
     "src/app/features/account/GoalsCard.tsx": {
       "filePath": "src/app/features/account/GoalsCard.tsx",
-      "contentHash": "7a2dc48c1abb096e69a782e0d3b3dc5c772e3132a098bbdad17085c153b866a8",
+      "contentHash": "e1fa7561f4fb07daa7ed33ddf6ca03e214e67ca6a4c2df991f0285daefaef84e",
       "functions": [
         {
           "name": "GoalsCard",
@@ -3753,7 +3853,7 @@
             "{ lang, isRTL }"
           ],
           "exported": false,
-          "lineCount": 329
+          "lineCount": 346
         }
       ],
       "classes": [],
@@ -3778,13 +3878,20 @@
             "Goal",
             "GoalTimeline",
             "TodayGoalPlan",
-            "updateGoal",
-            "UserApiError"
+            "updateGoal"
+          ]
+        },
+        {
+          "source": "../../core/services/auth/oauth.service",
+          "specifiers": [
+            "NetworkError",
+            "SessionExpiredError",
+            "signIn"
           ]
         }
       ],
       "exports": [],
-      "totalLines": 361,
+      "totalLines": 378,
       "hasStructuralAnalysis": true
     },
     "src/app/features/azkar/Azkar.css": {
@@ -4409,23 +4516,23 @@
     },
     "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.css": {
       "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.css",
-      "contentHash": "730ae5b799ed10a5641610ef4dbe47129375ee6716c26dbf2fcc3533b015547b",
+      "contentHash": "60c0598db2e2fa9e46bbd9d16991fff6e670a72abeee2fedb821241464c7616d",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 480,
+      "totalLines": 510,
       "hasStructuralAnalysis": false
     },
     "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.tsx": {
       "filePath": "src/app/features/quiz/quizzes/akmel-alayah/pages/setup/AkmelAlAyahSetup.tsx",
-      "contentHash": "04bc7d36d9752ea2f0a10d91fa1ff0dbec29ea44b2bef82b332cff1bc5112715",
+      "contentHash": "67ac7304c1156b246823101d043341f029fe8f5f7744f93462cc9e0234c26dff",
       "functions": [
         {
           "name": "AkmelAlAyahSetup",
           "params": [],
           "exported": false,
-          "lineCount": 261
+          "lineCount": 322
         }
       ],
       "classes": [],
@@ -4462,7 +4569,9 @@
           "specifiers": [
             "getChapters",
             "getSurahNameArabic",
-            "getSurahNameEnglish"
+            "getSurahNameEnglish",
+            "getSurahStartPage",
+            "getSurahEndPage"
           ]
         },
         {
@@ -4501,7 +4610,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 282,
+      "totalLines": 345,
       "hasStructuralAnalysis": true
     },
     "src/app/features/quiz/quizzes/akmel-alayah/pages/test/AkmelAlAyah.css": {
@@ -4668,23 +4777,23 @@
     },
     "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.css": {
       "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.css",
-      "contentHash": "a8f47a96d1c03231838ee529cf09694bd3a0fc0c591acdae6bb90ccd71013d94",
+      "contentHash": "22a369be89f0189e0a692bd4c424952dc9226fb9a80cee30c0edd8e4304e6276",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 403,
+      "totalLines": 433,
       "hasStructuralAnalysis": false
     },
     "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.tsx": {
       "filePath": "src/app/features/quiz/quizzes/akmel-alnehayat/pages/setup/AkmelAlNehayatSetup.tsx",
-      "contentHash": "f66c2ec8b258981ea7413285a6a8d2c51bf71740c5b1f90c422dfddb768a77ba",
+      "contentHash": "81db8a1613809a45be1fb71193f60303e2d9d5b030d7bad7b5cfc45e2b388025",
       "functions": [
         {
           "name": "AkmelAlNehayatSetup",
           "params": [],
           "exported": false,
-          "lineCount": 254
+          "lineCount": 315
         }
       ],
       "classes": [],
@@ -4721,7 +4830,9 @@
           "specifiers": [
             "getChapters",
             "getSurahNameArabic",
-            "getSurahNameEnglish"
+            "getSurahNameEnglish",
+            "getSurahStartPage",
+            "getSurahEndPage"
           ]
         },
         {
@@ -4760,7 +4871,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 275,
+      "totalLines": 338,
       "hasStructuralAnalysis": true
     },
     "src/app/features/quiz/quizzes/akmel-alnehayat/pages/test/AkmelAlNehayat.css": {
@@ -4941,23 +5052,23 @@
     },
     "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.css": {
       "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.css",
-      "contentHash": "ded7ee633721b14a9c3c991fad6ed65a7e2315eb1f2eae295d3eb43d55709f1e",
+      "contentHash": "2e7122aab67beeb3d9b80f795804945858392dd4f3fc23d4dcad62d4174cbdb3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 476,
+      "totalLines": 506,
       "hasStructuralAnalysis": false
     },
     "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.tsx": {
       "filePath": "src/app/features/quiz/quizzes/mutashabihat/pages/setup/MutashabihatSetup.tsx",
-      "contentHash": "7fb2500cf56734fec3d9ed531b41f96a526b18b6da7433db3c1f139955b5914c",
+      "contentHash": "ee1544441d7788cc133800f6cf8a00af2bfeb353cb789440e7a1a1f4babb6d12",
       "functions": [
         {
           "name": "MutashabihatSetup",
           "params": [],
           "exported": false,
-          "lineCount": 267
+          "lineCount": 328
         }
       ],
       "classes": [],
@@ -4993,7 +5104,9 @@
           "source": "../../../../../../core/services/data/metadata.service",
           "specifiers": [
             "getChapters",
-            "getSurahNameEnglish"
+            "getSurahNameEnglish",
+            "getSurahStartPage",
+            "getSurahEndPage"
           ]
         },
         {
@@ -5032,7 +5145,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 287,
+      "totalLines": 350,
       "hasStructuralAnalysis": true
     },
     "src/app/features/quiz/quizzes/mutashabihat/pages/test/MutashabihatTest.css": {

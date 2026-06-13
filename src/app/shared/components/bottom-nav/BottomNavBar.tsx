@@ -4,7 +4,7 @@
  * Mirrors the design system's TabBar (filled rounded-square icon containers,
  * gold/category-tinted active state, Arabic label + small Latin sublabel).
  *
- * Tabs: Quran · Quiz · Azkar · Ahadith (coming soon) · Settings
+ * Tabs: Quran · Quiz · Azkar · Hifz · Settings
  *
  * The "active" prop highlights one tab. Pages without a matching tab can
  * pass `active={undefined}` (e.g. PageViewer is highlighted as 'quran').
@@ -20,7 +20,7 @@ export type NavTabKey =
   | "quran"
   | "quiz"
   | "azkar"
-  | "ahadith"
+  | "hifz"
   | "account"
   | "settings";
 
@@ -88,46 +88,18 @@ const TABS: TabDef[] = [
     filled: true,
   },
   {
-    id: "ahadith",
+    id: "hifz",
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-        <line
-          x1="8"
-          y1="8"
-          x2="16"
-          y2="8"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          opacity="0.4"
-        />
-        <line
-          x1="8"
-          y1="12"
-          x2="16"
-          y2="12"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          opacity="0.4"
-        />
-        <line
-          x1="8"
-          y1="16"
-          x2="13"
-          y2="16"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          opacity="0.4"
-        />
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 2.61 1.4 4.9 3.5 6.19V17h7v-1.81C17.6 13.9 19 11.61 19 9c0-3.87-3.13-7-7-7z" opacity="0.9"/>
+        <rect x="8" y="17" width="8" height="2" rx="1"/>
+        <rect x="9" y="19" width="6" height="2" rx="1"/>
+        <path d="M9 9.5l2 2 4-4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9"/>
       </svg>
     ),
-    route: "/ahadith",
-    color: "var(--color-ahadith)",
+    route: "/hifz",
+    color: "var(--color-hifz, #4a7c59)",
     filled: true,
-    comingSoon: true,
   },
   {
     id: "account",
@@ -186,7 +158,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
     quran: t.tabs.quran,
     quiz: t.tabs.quiz,
     azkar: t.tabs.azkar,
-    ahadith: t.tabs.ahadith,
+    hifz: t.tabs.hifz,
     account: lang === "ar" ? "حسابي" : "Account",
     settings: t.tabs.settings,
   };

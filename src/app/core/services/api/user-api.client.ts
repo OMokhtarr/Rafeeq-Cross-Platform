@@ -25,7 +25,7 @@ const USER_API_BASE =
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CLIENT_ID_HEADER = process.env.REACT_APP_QF_CLIENT_ID ?? "";
 
-// ─── Token cache (machine broker) ────────────────────────────────────────────
+// ─── Token cache ─────────────────────────────────────────────────────────────
 
 interface TokenState {
   accessToken: string;
@@ -34,6 +34,10 @@ interface TokenState {
 
 let tokenState: TokenState | null = null;
 let tokenInflight: Promise<string> | null = null;
+// Deduplicates concurrent user-token refresh calls — prevents race condition
+// where parallel API calls each try to refresh with the same refresh token,
+// causing the second call to arrive with an already-rotated (invalid) token.
+let userRefreshInflight: Promise<string> | null = null;
 
 async function getAccessToken(forceRefresh = false): Promise<string> {
   // 1. Try user token
@@ -49,7 +53,10 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   // 2. Silent refresh of user token — if signed in, never fall back to broker
   if (refreshToken) {
     console.log("[getAccessToken] refreshing user token…");
-    const newToken = await refreshAccessToken(); // throws NetworkError or server error — caller handles it
+    if (!userRefreshInflight) {
+      userRefreshInflight = refreshAccessToken().finally(() => { userRefreshInflight = null; });
+    }
+    const newToken = await userRefreshInflight;
     console.log("[getAccessToken] refresh succeeded");
     return newToken;
   }
@@ -143,7 +150,10 @@ async function userApiFetch<T>(
       tokenState = null;
       console.log(`[userApiFetch] ${res.status} on ${path} — attempting token refresh`);
       try {
-        token = await refreshAccessToken();
+        if (!userRefreshInflight) {
+          userRefreshInflight = refreshAccessToken().finally(() => { userRefreshInflight = null; });
+        }
+        token = await userRefreshInflight;
         console.log("[userApiFetch] token refreshed, retrying");
       } catch (err) {
         console.error("[userApiFetch] token refresh failed:", err);
