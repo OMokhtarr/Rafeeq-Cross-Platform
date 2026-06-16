@@ -455,6 +455,91 @@ ion-content {
   font-family: var(--font-latin);
 }
 
+.hifz-session-multi .hifz-session-body {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.hifz-session-multi .hifz-session-actions {
+  justify-content: flex-end;
+}
+
+.hifz-session-ranges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.hifz-session-range-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-hifz, #4a7c59) 6%, var(--color-bg-card));
+  border-left: 3px solid color-mix(in srgb, var(--color-hifz, #4a7c59) 55%, transparent);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  box-sizing: border-box;
+  width: 100%;
+}
+.hifz-session-range-btn:active {
+  background: color-mix(in srgb, var(--color-hifz, #4a7c59) 16%, var(--color-bg-card));
+  border-left-color: var(--color-hifz, #4a7c59);
+}
+
+.hifz-session-range-surahs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hifz-session-range-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-hifz, #4a7c59) 15%, transparent);
+  color: var(--color-hifz, #4a7c59);
+  flex-shrink: 0;
+}
+
+.hifz-session-surahs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hifz-session-surah-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.hifz-session-surah-name {
+  font-size: var(--text-sm);
+  font-family: var(--font-arabic);
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+.hifz-session-surah-pages {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-latin);
+  white-space: nowrap;
+}
+
 .hifz-session-actions {
   display: flex;
   align-items: center;
@@ -877,6 +962,88 @@ ion-content {
   cursor: not-allowed;
 }
 
+/* ── Reset confirmation dialog ───────────────────────────── */
+.hifz-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.hifz-confirm-dialog {
+  width: 100%;
+  max-width: 320px;
+  background: var(--color-bg-content);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: hifz-sheet-up 0.18s ease;
+}
+
+.hifz-confirm-title {
+  font-size: var(--text-lg);
+  font-family: var(--font-arabic);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+.hifz-confirm-body {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  margin: 0;
+  text-align: center;
+  line-height: var(--leading-normal);
+}
+
+.hifz-confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.hifz-confirm-cancel {
+  flex: 1;
+  padding: var(--space-3);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  font-family: var(--font-arabic);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.hifz-confirm-cancel:hover {
+  background: var(--color-bg-card-alt, var(--color-bg-card));
+}
+
+.hifz-confirm-yes {
+  flex: 1;
+  padding: var(--space-3);
+  background: #e05a5a;
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: var(--text-base);
+  font-family: var(--font-arabic);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.hifz-confirm-yes:hover {
+  opacity: 0.88;
+}
+
 /* ── Dashboard hero card (charts) ────────────────────────── */
 .hifz-hero-card {
   display: flex;
@@ -888,6 +1055,146 @@ ion-content {
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-xl);
   flex-shrink: 0;
+}
+
+/* ── Hero scroll (horizontally paged) ────────────────────── */
+.hifz-hero-scroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding-bottom: 2px;
+  flex-shrink: 0;
+  border-radius: var(--radius-xl);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hifz-hero-scroll::-webkit-scrollbar { display: none; }
+
+.hifz-hero-page {
+  min-width: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* ── Hero scroll dots ────────────────────────────────────── */
+.hifz-hero-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: var(--space-2);
+  flex-shrink: 0;
+}
+.hifz-hero-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-card);
+  transition: background var(--transition-fast);
+}
+.hifz-hero-dot-active {
+  background: var(--color-gold);
+  width: 14px;
+}
+
+/* ── Hero stat column (non-donut stats on page 2) ─────────── */
+.hifz-hero-stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 80px;
+}
+.hifz-hero-stat-num {
+  font-size: var(--text-3xl, 2rem);
+  font-weight: 700;
+  font-family: var(--font-latin);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+.hifz-hero-stat-num-sm {
+  font-size: var(--text-xl);
+}
+.hifz-hero-stat-lbl {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  text-align: center;
+  line-height: 1.3;
+}
+.hifz-hero-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: var(--space-2) 0;
+}
+
+/* ── Hero page 2: two big stat blocks ────────────────────── */
+.hifz-hero-page-stats {
+  gap: 0;
+  padding: var(--space-5) var(--space-4);
+}
+
+.hifz-hero-big-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+}
+
+.hifz-hero-big-num {
+  font-size: 2.6rem;
+  font-weight: 700;
+  font-family: var(--font-latin);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.hifz-hero-big-unit {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+}
+
+.hifz-hero-big-lbl {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-gold);
+  font-family: var(--font-arabic);
+  text-align: center;
+  opacity: 0.85;
+}
+
+.hifz-hero-big-sub {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-latin);
+  text-align: center;
+  margin-top: 2px;
+}
+
+.hifz-hero-stat-divider {
+  width: 1px;
+  height: 56px;
+  background: var(--color-border-subtle);
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .hifz-charts-row {

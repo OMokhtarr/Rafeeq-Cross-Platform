@@ -36,6 +36,10 @@ import {
   isPageBookmarked,
   recordActivityDay,
 } from "../../core/services/api/user-api.client";
+import {
+  loadHifzReadingSession,
+  saveHifzReadingSession,
+} from "../hifz/hifz.service";
 import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
@@ -118,6 +122,10 @@ const PageViewer: React.FC = () => {
   // Activity tracking: record time spent on each page for streak purposes
   const pageEntryTime = useRef<number>(Date.now());
   const pageVersesRef = useRef<Verse[]>([]);
+
+  // Hifz session tracking: mark pages as read after 30 s when coming from a session
+  const hifzTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hifzSessionRef = useRef(loadHifzReadingSession());
 
   // Shared playback queue
   const queue = usePlayback();
@@ -323,6 +331,34 @@ const PageViewer: React.FC = () => {
     });
     return () => {
       cancelled = true;
+    };
+  }, [currentPage]);
+
+  // Hifz read tracking: if an active hifz session covers this page, mark it read after 30 s.
+  // Also advances through contiguous pages that are covered by the session window.
+  useEffect(() => {
+    if (hifzTimerRef.current) {
+      clearTimeout(hifzTimerRef.current);
+      hifzTimerRef.current = null;
+    }
+    const rs = hifzSessionRef.current;
+    if (!rs) return;
+    const inRange = rs.ranges.some((r) => currentPage >= r.from && currentPage <= r.to);
+    if (!inRange) return;
+    hifzTimerRef.current = setTimeout(() => {
+      const latest = loadHifzReadingSession();
+      if (!latest) return;
+      if (!latest.readPages.includes(currentPage)) {
+        const updated = { ...latest, readPages: [...latest.readPages, currentPage] };
+        saveHifzReadingSession(updated);
+        hifzSessionRef.current = updated;
+      }
+    }, 30_000);
+    return () => {
+      if (hifzTimerRef.current) {
+        clearTimeout(hifzTimerRef.current);
+        hifzTimerRef.current = null;
+      }
     };
   }, [currentPage]);
 

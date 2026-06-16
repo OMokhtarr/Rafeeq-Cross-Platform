@@ -321,6 +321,7 @@ export interface AppStrings {
     unitJuz: string;
     quantityPerSession: string;
     generatePlan: string;
+    updatePlan: string;
     planTitle: string;
     planSession: (n: string) => string;
     planPages: (from: string, to: string) => string;
@@ -343,6 +344,18 @@ export interface AppStrings {
     sessionPrevious: string;
     viewAllSessions: string;
     sessionsAll: string;
+    daysActive: string;
+    todaySessions: string;
+    bestPlan: string;
+    bestPlanDays: string;
+    bestPlanPages: string;
+    bestPlanNone: string;
+    heroToday: string;
+    heroBestDay: string;
+    resetConfirmTitle: string;
+    resetConfirmBody: string;
+    resetConfirmYes: string;
+    resetConfirmNo: string;
   };
 }
 
@@ -678,6 +691,7 @@ const ar: AppStrings = {
     unitJuz: "جزء",
     quantityPerSession: "الكمية لكل جلسة",
     generatePlan: "توليد الخطة",
+    updatePlan: "تحديث الخطة",
     planTitle: "خطة المراجعة",
     planSession: (n: string) => `الجلسة ${n}`,
     planPages: (from: string, to: string) => `ص ${from} – ${to}`,
@@ -700,6 +714,18 @@ const ar: AppStrings = {
     sessionPrevious: "السابقة",
     viewAllSessions: "عرض جميع الجلسات",
     sessionsAll: "جميع الجلسات",
+    daysActive: "يوم منذ البداية",
+    todaySessions: "جلسة اليوم",
+    bestPlan: "أفضل خطة",
+    bestPlanDays: "يوم",
+    bestPlanPages: "ص",
+    bestPlanNone: "لا يوجد بعد",
+    heroToday: "جلسة اليوم",
+    heroBestDay: "أفضل يوم",
+    resetConfirmTitle: "إعادة الخطة؟",
+    resetConfirmBody: "سيتم مسح تقدمك في جميع الجلسات. هل أنت متأكد؟",
+    resetConfirmYes: "إعادة",
+    resetConfirmNo: "إلغاء",
   },
 };
 
@@ -1039,6 +1065,7 @@ const en: AppStrings = {
     unitJuz: "Juz",
     quantityPerSession: "Quantity per session",
     generatePlan: "Generate Plan",
+    updatePlan: "Update Plan",
     planTitle: "Revision Plan",
     planSession: (n: string) => `Session ${n}`,
     planPages: (from: string, to: string) => `Pg. ${from}–${to}`,
@@ -1061,6 +1088,18 @@ const en: AppStrings = {
     sessionPrevious: "Previous",
     viewAllSessions: "View All Sessions",
     sessionsAll: "All Sessions",
+    daysActive: "days active",
+    todaySessions: "today",
+    bestPlan: "Best Plan",
+    bestPlanDays: "d",
+    bestPlanPages: "pg",
+    bestPlanNone: "None yet",
+    heroToday: "today",
+    heroBestDay: "best day",
+    resetConfirmTitle: "Reset Plan?",
+    resetConfirmBody: "This will clear your progress on all sessions. Are you sure?",
+    resetConfirmYes: "Reset",
+    resetConfirmNo: "Cancel",
   },
 };
 

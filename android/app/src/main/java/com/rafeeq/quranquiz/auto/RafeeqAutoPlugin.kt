@@ -27,12 +27,15 @@ import com.getcapacitor.annotation.CapacitorPlugin
 class RafeeqAutoPlugin : Plugin() {
 
     companion object {
-        var instance: RafeeqAutoPlugin? = null
+        @Volatile var instance: RafeeqAutoPlugin? = null
 
         // Pre-launch pending event: set by RafeeqMediaService when the plugin
         // instance doesn't exist yet (car event arrived before MainActivity started).
         // Picked up by load() and moved into the instance's pendingEvent slot.
-        @Volatile var preLaunchPendingEvent: JSObject? = null
+        // Guarded by `lock` to prevent a race between the binder thread (service)
+        // writing storePendingEvent and the main thread reading it in load().
+        private val lock = Any()
+        private var preLaunchPendingEvent: JSObject? = null
 
         fun storePendingEvent(
             action: String,
@@ -41,13 +44,26 @@ class RafeeqAutoPlugin : Plugin() {
             aya: Int?,
             positionMs: Long?
         ) {
-            preLaunchPendingEvent = JSObject().apply {
+            val event = JSObject().apply {
                 put("action", action)
                 if (reciter != null) put("reciter", reciter)
                 if (surah != null) put("surah", surah)
                 if (aya != null) put("aya", aya)
                 if (positionMs != null) put("positionMs", positionMs)
             }
+            // If a live plugin instance already exists, deliver directly
+            val live = instance
+            if (live != null) {
+                live.pendingEvent = event
+                return
+            }
+            synchronized(lock) { preLaunchPendingEvent = event }
+        }
+
+        fun takePendingEvent(): JSObject? = synchronized(lock) {
+            val e = preLaunchPendingEvent
+            preLaunchPendingEvent = null
+            e
         }
     }
 
@@ -61,10 +77,10 @@ class RafeeqAutoPlugin : Plugin() {
         jsReady = false
         // Pick up any event that arrived before the plugin was initialised
         // (e.g. car pressed play before MainActivity ever started).
-        pendingEvent = preLaunchPendingEvent
-        preLaunchPendingEvent = null
-        if (pendingEvent != null) {
-            Log.d("RafeeqAuto", "load: picked up pre-launch pending event: ${pendingEvent?.getString("action")}")
+        val pre = takePendingEvent()
+        if (pre != null) {
+            pendingEvent = pre
+            Log.d("RafeeqAuto", "load: picked up pre-launch pending event: ${pre.getString("action")}")
         }
         // Start the media service so Android Auto can discover it
         val intent = Intent(context, RafeeqMediaService::class.java)
@@ -185,11 +201,19 @@ class RafeeqAutoPlugin : Plugin() {
         }
 
         if (jsReady) {
-            // WebView is alive — bring activity to front (in case screen was off) then fire.
+            // JS listener is live. Store the event as pending before waking the activity —
+            // if wakeActivity() causes a re-create (activity was killed), the new instance's
+            // load() will pick it up. If the activity stays alive, jsReady() won't be called
+            // again and we fire via notifyListeners after the delay.
+            pendingEvent = data
             wakeActivity()
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                notifyListeners("carAction", data)
-            }, 150)
+                // Only fire if this instance is still live and jsReady (not replaced by a new one)
+                if (jsReady && pendingEvent === data) {
+                    pendingEvent = null
+                    notifyListeners("carAction", data)
+                }
+            }, 200)
         } else {
             // Cold launch — wake the activity and queue the event.
             // jsReady() called from JS will flush it once the listener is registered.

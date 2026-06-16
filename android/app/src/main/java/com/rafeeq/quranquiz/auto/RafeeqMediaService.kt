@@ -83,6 +83,26 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         createNotificationChannel()
         buildMediaSession()
+        // Set an initial PlaybackState so Android Auto knows the session accepts play
+        // commands immediately. Without this the session has no advertised actions and
+        // the car's play button is either disabled or does nothing on cold start.
+        val initialState = PlaybackStateCompat.Builder()
+            .setActions(
+                PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                PlaybackStateCompat.ACTION_STOP or
+                PlaybackStateCompat.ACTION_SEEK_TO
+            )
+            .setState(PlaybackStateCompat.STATE_PAUSED, 0L, 0f)
+            .build()
+        session.setPlaybackState(initialState)
+        session.setMetadata(
+            MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, "رفيق")
+                .build()
+        )
         requestAudioFocus()
         startForeground(NOTIFICATION_ID, buildNotification("رفيق", false, emptyList(), 0))
     }

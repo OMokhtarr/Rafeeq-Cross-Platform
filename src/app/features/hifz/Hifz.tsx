@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useHistory } from "react-router-dom";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonViewDidEnter } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
@@ -8,15 +8,25 @@ import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   loadPlan,
   savePlan,
-  clearPlan,
   generateSessions,
   juzToPages,
   countMemorizedPages,
   computeStreak,
+  countSessionsToday,
+  countActiveDays,
+  computeMaxSessionsPerDay,
+  getSurahsForRanges,
+  loadBestPlan,
+  saveBestPlan,
+  saveHifzReadingSession,
+  loadHifzReadingSession,
+  sessionReadProgress,
   HifzPlan,
   HifzGoal,
+  BestPlanRecord,
   MemorizedUnit,
   PlanSession,
+  PageRange,
   SessionUnit,
   unitToPageCount,
 } from "./hifz.service";
@@ -26,6 +36,7 @@ import {
   getSurahNameEnglish,
   getSurahStartPage,
   getSurahEndPage,
+  getPageStart,
   initMetadata,
 } from "../../core/services/data/metadata.service";
 import "./Hifz.css";
@@ -466,6 +477,7 @@ interface SetupViewProps {
   lang: "ar" | "en";
   t: any;
   chapters: any[];
+  isEditing: boolean;
 }
 
 const SetupView: React.FC<SetupViewProps> = ({
@@ -478,6 +490,7 @@ const SetupView: React.FC<SetupViewProps> = ({
   lang,
   t,
   chapters,
+  isEditing,
 }) => {
   const h = t.hifz;
 
@@ -592,7 +605,7 @@ const SetupView: React.FC<SetupViewProps> = ({
         disabled={!canGenerate}
         onClick={onGenerate}
       >
-        {h.generatePlan}
+        {isEditing ? h.updatePlan : h.generatePlan}
       </button>
 
     </div>
@@ -605,10 +618,19 @@ interface SessionCardProps {
   session: PlanSession;
   variant: "next" | "remaining" | "done";
   onToggle: (id: string) => void;
-  onOpenPage: (page: number) => void;
+  onOpenPage: (page: number, session?: PlanSession) => void;
   lang: "ar" | "en";
   h: any;
+  chapters: any[];
+  readPages?: number[];
 }
+
+const OpenBookIcon = ({ size = 18 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width={size} height={size}>
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </svg>
+);
 
 const SessionCard: React.FC<SessionCardProps> = ({
   session: s,
@@ -617,56 +639,125 @@ const SessionCard: React.FC<SessionCardProps> = ({
   onOpenPage,
   lang,
   h,
-}) => (
-  <div className={`hifz-session hifz-session-${variant}`}>
-    <div className="hifz-session-body">
-      <div className="hifz-session-info">
-        <span className="hifz-session-label">{h.planSession(s.label)}</span>
-        <span className="hifz-session-pages">
-          {lang === "ar"
-            ? `ص ${s.fromPage} – ${s.toPage}`
-            : `Pg. ${s.fromPage}–${s.toPage}`}
-        </span>
-        {s.doneDate && <span className="hifz-session-date">{s.doneDate}</span>}
-      </div>
-      <div className="hifz-session-actions">
-        <button
-          className="hifz-session-open-btn"
-          onClick={() => onOpenPage(s.fromPage)}
-          aria-label={h.openInQuran}
-          title={h.openInQuran}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            width="18"
-            height="18"
+  chapters,
+  readPages = [],
+}) => {
+  // Resolve effective ranges — fall back to single range for old saved plans
+  const effectiveRanges: PageRange[] = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
+  const multiRange = effectiveRanges.length > 1;
+  const surahs = getSurahsForRanges(effectiveRanges, chapters);
+  const progress = s.done ? 100 : sessionReadProgress(s, readPages);
+
+  // Group surahs by which range they belong to (for multi-range display)
+  const rangeGroups: Array<{ range: PageRange; surahs: typeof surahs }> = multiRange
+    ? effectiveRanges.map((r) => ({
+        range: r,
+        surahs: surahs.filter((su) => su.rangeFrom === r.from),
+      }))
+    : [];
+
+  return (
+    <div className={`hifz-session hifz-session-${variant}${multiRange ? " hifz-session-multi" : ""}`}>
+      <div className="hifz-session-body">
+        <div className="hifz-session-info">
+          <span className="hifz-session-label">{h.planSession(s.label)}</span>
+
+          {multiRange ? (
+            // Non-contiguous session: one tappable block per range
+            <div className="hifz-session-ranges">
+              {rangeGroups.map(({ range, surahs: rSurahs }) => (
+                <button
+                  key={range.from}
+                  className="hifz-session-range-btn"
+                  onClick={() => onOpenPage(range.from, s)}
+                  title={h.openInQuran}
+                >
+                  <span className="hifz-session-range-surahs">
+                    {rSurahs.length > 0 ? (
+                      rSurahs.map((su) => (
+                        <span key={su.id} className="hifz-session-surah-item">
+                          <span
+                            className="hifz-session-surah-name"
+                            {...(lang === "ar" ? { lang: "ar", dir: "rtl" } : {})}
+                          >
+                            {lang === "ar" ? su.nameAr : su.nameEn}
+                          </span>
+                          <span className="hifz-session-surah-pages" dir="ltr">
+                            {lang === "ar" ? `ص ${su.from}–${su.to}` : `pg. ${su.from}–${su.to}`}
+                          </span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="hifz-session-surah-pages" dir="ltr">
+                        {lang === "ar" ? `ص ${range.from}–${range.to}` : `pg. ${range.from}–${range.to}`}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hifz-session-range-open">
+                    <OpenBookIcon size={14} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : surahs.length > 0 ? (
+            // Single contiguous range: plain labels, single open button in actions
+            <div className="hifz-session-surahs">
+              {surahs.map((su) => (
+                <span key={su.id} className="hifz-session-surah-item">
+                  <span
+                    className="hifz-session-surah-name"
+                    {...(lang === "ar" ? { lang: "ar", dir: "rtl" } : {})}
+                  >
+                    {lang === "ar" ? su.nameAr : su.nameEn}
+                  </span>
+                  <span className="hifz-session-surah-pages" dir="ltr">
+                    {lang === "ar" ? `ص ${su.from}–${su.to}` : `pg. ${su.from}–${su.to}`}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="hifz-session-pages">
+              {lang === "ar"
+                ? `ص ${s.fromPage} – ${s.toPage}`
+                : `Pg. ${s.fromPage}–${s.toPage}`}
+            </span>
+          )}
+
+          {s.doneDate && <span className="hifz-session-date">{s.doneDate}</span>}
+        </div>
+
+        <div className="hifz-session-actions">
+          {!multiRange && (
+            <button
+              className="hifz-session-open-btn"
+              onClick={() => onOpenPage(s.fromPage, s)}
+              aria-label={h.openInQuran}
+              title={h.openInQuran}
+            >
+              <OpenBookIcon />
+            </button>
+          )}
+          <button
+            className={`hifz-session-check${s.done ? " checked" : ""}`}
+            onClick={() => onToggle(s.id)}
+            aria-label={s.done ? h.planUndone : h.planDone}
           >
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-          </svg>
-        </button>
-        <button
-          className={`hifz-session-check${s.done ? " checked" : ""}`}
-          onClick={() => onToggle(s.id)}
-          aria-label={s.done ? h.planUndone : h.planDone}
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </button>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div className="hifz-session-bar-track">
+        <div
+          className="hifz-session-bar-fill"
+          style={{ width: `${progress}%`, transition: progress > 0 ? "width 0.4s ease" : "none" }}
+        />
       </div>
     </div>
-    <div className="hifz-session-bar-track">
-      <div
-        className="hifz-session-bar-fill"
-        style={{ width: s.done ? "100%" : "0%" }}
-      />
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── Sub-component: DashboardView ────────────────────────────────────────────
 
@@ -676,10 +767,12 @@ interface DashboardViewProps {
   onToggleSession: (id: string) => void;
   onReset: () => void;
   onEdit: () => void;
-  onOpenPage: (page: number) => void;
+  onOpenPage: (page: number, session?: PlanSession) => void;
   onViewAllSessions: () => void;
+  bestPlan: BestPlanRecord | null;
   lang: "ar" | "en";
   t: any;
+  readPages: number[];
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -690,10 +783,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onEdit,
   onOpenPage,
   onViewAllSessions,
+  bestPlan,
   lang,
   t,
+  readPages,
 }) => {
   const h = t.hifz;
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [heroPage, setHeroPage] = useState(0);
+  const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
   const doneSessions = sessions.filter((s) => s.done).length;
   const totalSessions = sessions.length;
@@ -701,6 +799,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const memorizedPages = countMemorizedPages(plan.memorized, chapters);
   const quranPct = (memorizedPages / 604) * 100;
   const streak = computeStreak(sessions);
+  const todaySessions = countSessionsToday(sessions);
+  const daysActive = countActiveDays(plan);
+  const maxSessionsPerDay = computeMaxSessionsPerDay(sessions);
 
   const incomplete = sessions.filter((s) => !s.done);
   const nextSession = incomplete[0] ?? null;
@@ -719,7 +820,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
           </button>
-          <button className="hifz-reset-btn" onClick={onReset} aria-label={h.planReset}>
+          <button className="hifz-reset-btn" onClick={() => setShowResetConfirm(true)} aria-label={h.planReset}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="1 4 1 10 7 10" />
               <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
@@ -728,22 +829,93 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* ── Hero card with charts ── */}
-      <div className="hifz-hero-card">
-        <DonutChart
-          percent={quranPct}
-          color="var(--color-hifz, #4a7c59)"
-          label={h.quranMemorized}
-          sublabel={`${memorizedPages} / 604`}
-          size={100}
-        />
-        <DonutChart
-          percent={planPct}
-          color="#5b8dd9"
-          label={h.planCompletion}
-          sublabel={`${doneSessions} / ${totalSessions}`}
-          size={100}
-        />
+      {/* ── Reset confirmation dialog ── */}
+      {showResetConfirm && (
+        <div className="hifz-confirm-backdrop" onClick={() => setShowResetConfirm(false)}>
+          <div className="hifz-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <p className="hifz-confirm-title">{h.resetConfirmTitle}</p>
+            <p className="hifz-confirm-body">{h.resetConfirmBody}</p>
+            <div className="hifz-confirm-actions">
+              <button className="hifz-confirm-cancel" onClick={() => setShowResetConfirm(false)}>
+                {h.resetConfirmNo}
+              </button>
+              <button className="hifz-confirm-yes" onClick={() => { setShowResetConfirm(false); onReset(); }}>
+                {h.resetConfirmYes}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hero card: horizontally scrollable pages of charts ── */}
+      <div
+        className="hifz-hero-scroll"
+        ref={heroScrollRef}
+        onScroll={() => {
+          const el = heroScrollRef.current;
+          if (!el) return;
+          const page = Math.round(el.scrollLeft / el.offsetWidth);
+          setHeroPage(page);
+        }}
+      >
+        {/* Page 1: Plan + Quran donuts */}
+        <div className="hifz-hero-page">
+          <DonutChart
+            percent={quranPct}
+            color="var(--color-hifz, #4a7c59)"
+            label={h.quranMemorized}
+            sublabel={`${memorizedPages} / 604`}
+            size={100}
+          />
+          <DonutChart
+            percent={planPct}
+            color="#5b8dd9"
+            label={h.planCompletion}
+            sublabel={`${doneSessions} / ${totalSessions}`}
+            size={100}
+          />
+        </div>
+        {/* Page 2: Days active + best plan */}
+        <div className="hifz-hero-page hifz-hero-page-stats">
+          <div className="hifz-hero-big-stat">
+            <span className="hifz-hero-big-num">{daysActive}</span>
+            <span className="hifz-hero-big-lbl">{h.daysActive}</span>
+          </div>
+          <div className="hifz-hero-stat-divider" />
+          <div className="hifz-hero-big-stat">
+            {bestPlan ? (
+              <>
+                <span className="hifz-hero-big-num">{bestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
+                <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
+                <span className="hifz-hero-big-sub">{bestPlan.totalPages}{h.bestPlanPages} · {bestPlan.totalSessions} sessions</span>
+              </>
+            ) : (
+              <>
+                <span className="hifz-hero-big-num">—</span>
+                <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
+                <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
+              </>
+            )}
+          </div>
+        </div>
+        {/* Page 3: Today's sessions + best day */}
+        <div className="hifz-hero-page hifz-hero-page-stats">
+          <div className="hifz-hero-big-stat">
+            <span className="hifz-hero-big-num">{todaySessions}</span>
+            <span className="hifz-hero-big-lbl">{h.heroToday}</span>
+          </div>
+          <div className="hifz-hero-stat-divider" />
+          <div className="hifz-hero-big-stat">
+            <span className="hifz-hero-big-num">{maxSessionsPerDay || "—"}</span>
+            <span className="hifz-hero-big-lbl">{h.heroBestDay}</span>
+          </div>
+        </div>
+      </div>
+      {/* Scroll indicator dots */}
+      <div className="hifz-hero-dots" aria-hidden="true">
+        <span className={`hifz-hero-dot${heroPage === 0 ? " hifz-hero-dot-active" : ""}`} />
+        <span className={`hifz-hero-dot${heroPage === 1 ? " hifz-hero-dot-active" : ""}`} />
+        <span className={`hifz-hero-dot${heroPage === 2 ? " hifz-hero-dot-active" : ""}`} />
       </div>
 
       {/* ── 4-chip stat row ── */}
@@ -774,11 +946,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <polyline points="14 2 14 8 20 8" />
             </svg>
           </div>
-          <span className="hifz-stat-num">{plan.goal.quantity ?? plan.goal.pagesPerSession ?? 5}</span>
-          <span className="hifz-stat-lbl">
-            {plan.goal.unit === "rub" ? h.unitRub : plan.goal.unit === "hizb" ? h.unitHizb : plan.goal.unit === "juz" ? h.unitJuz : h.unitPages}
-            {" "}{h.pagesPerSession}
-          </span>
+          <span className="hifz-stat-num">{todaySessions}</span>
+          <span className="hifz-stat-lbl">{h.todaySessions}</span>
         </div>
         <div className="hifz-stat-chip hifz-stat-chip-streak">
           <div className="hifz-stat-icon hifz-stat-icon-streak">
@@ -814,6 +983,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onOpenPage={onOpenPage}
                 lang={lang}
                 h={h}
+                chapters={chapters}
+                readPages={readPages}
               />
             </div>
           )}
@@ -827,6 +998,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onOpenPage={onOpenPage}
                 lang={lang}
                 h={h}
+                chapters={chapters}
+                readPages={readPages}
               />
             </div>
           )}
@@ -840,6 +1013,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onOpenPage={onOpenPage}
                 lang={lang}
                 h={h}
+                chapters={chapters}
+                readPages={readPages}
               />
             </div>
           )}
@@ -866,20 +1041,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
 interface HifzSessionsViewProps {
   plan: HifzPlan;
+  chapters: any[];
   onToggleSession: (id: string) => void;
   onBack: () => void;
-  onOpenPage: (page: number) => void;
+  onOpenPage: (page: number, session?: PlanSession) => void;
   lang: "ar" | "en";
   t: any;
+  readPages: number[];
 }
 
 const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
   plan,
+  chapters,
   onToggleSession,
   onBack,
   onOpenPage,
   lang,
   t,
+  readPages,
 }) => {
   const h = t.hifz;
   const sessions = plan.sessions;
@@ -928,6 +1107,8 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
             onOpenPage={onOpenPage}
             lang={lang}
             h={h}
+            chapters={chapters}
+            readPages={readPages}
           />
         ))}
       </div>
@@ -946,6 +1127,8 @@ const Hifz: React.FC = () => {
   const [view, setView] = useState<"setup" | "plan" | "sessions">("setup");
   const [chapters, setChapters] = useState<any[]>([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
+  const [readPages, setReadPages] = useState<number[]>([]);
 
   const [memorized, setMemorized] = useState<MemorizedUnit[]>([]);
   const [goal, setGoal] = useState<HifzGoal>({
@@ -953,31 +1136,53 @@ const Hifz: React.FC = () => {
     unit: "pages",
   });
 
+  // Sync read pages from localStorage when the user returns from the viewer
+  useIonViewDidEnter(() => {
+    const rs = loadHifzReadingSession();
+    if (rs && rs.readPages.length > 0) {
+      setReadPages(rs.readPages);
+    }
+  });
+
   useEffect(() => {
     initMetadata().then(() => {
-      setChapters(getChapters());
+      const chs = getChapters();
+      setChapters(chs);
+
+      const saved = loadPlan();
+      if (saved) {
+        setPlan(saved);
+        setMemorized(saved.memorized);
+        setGoal(saved.goal);
+        setView("plan");
+      }
+      setBestPlan(loadBestPlan());
     });
-    const saved = loadPlan();
-    if (saved) {
-      setPlan(saved);
-      setMemorized(saved.memorized);
-      setGoal(saved.goal);
-      setView("plan");
-    }
   }, []);
 
   const handleGenerate = useCallback(() => {
     const sessions = generateSessions(memorized, goal, chapters);
+    // When editing an existing plan, preserve done state for sessions that still match
+    const existingDoneMap = new Map(
+      (plan?.sessions ?? [])
+        .filter((s) => s.done)
+        .map((s) => [`${s.fromPage}-${s.toPage}`, s]),
+    );
+    const mergedSessions = sessions.map((s) => {
+      const key = `${s.fromPage}-${s.toPage}`;
+      const prev = existingDoneMap.get(key);
+      return prev ? { ...s, done: prev.done, doneDate: prev.doneDate } : s;
+    });
     const newPlan: HifzPlan = {
       memorized,
       goal,
-      sessions,
-      createdAt: new Date().toISOString(),
+      sessions: mergedSessions,
+      createdAt: plan?.createdAt ?? new Date().toISOString(),
     };
     savePlan(newPlan);
     setPlan(newPlan);
     setView("plan");
-  }, [memorized, goal, chapters]);
+  }, [memorized, goal, chapters, plan]);
 
   const handleToggleSession = useCallback(
     (id: string) => {
@@ -991,8 +1196,26 @@ const Hifz: React.FC = () => {
       const updated = { ...plan, sessions };
       savePlan(updated);
       setPlan(updated);
+
+      // Check if plan just completed — save best record
+      const allDone = sessions.every((s) => s.done);
+      if (allDone) {
+        const days = countActiveDays(updated);
+        const pages = countMemorizedPages(updated.memorized, chapters);
+        const record: BestPlanRecord = {
+          completedAt: today,
+          daysToFinish: days,
+          totalPages: pages,
+          totalSessions: sessions.length,
+        };
+        const existing = loadBestPlan();
+        if (!existing || days < existing.daysToFinish) {
+          saveBestPlan(record);
+          setBestPlan(record);
+        }
+      }
     },
-    [plan],
+    [plan, chapters],
   );
 
   const handleReset = useCallback(() => {
@@ -1012,10 +1235,30 @@ const Hifz: React.FC = () => {
   }, []);
 
   const handleOpenPage = useCallback(
-    (page: number) => {
-      history.push(`/viewer?page=${page}`);
+    (page: number, session?: PlanSession) => {
+      if (session && plan) {
+        // Build a contiguous reading window: from this session through all immediately
+        // following sessions whose pages are contiguous (gap === 1 page or less).
+        const allSessions = plan.sessions;
+        const startIdx = allSessions.findIndex((s) => s.id === session.id);
+        const ranges: PageRange[] = [];
+        const sessionIds: string[] = [];
+        let expectedNext = session.fromPage;
+        for (let i = startIdx; i < allSessions.length; i++) {
+          const s = allSessions[i];
+          if (s.fromPage > expectedNext + 1) break;
+          ranges.push({ from: s.fromPage, to: s.toPage });
+          sessionIds.push(s.id);
+          expectedNext = s.toPage + 1;
+        }
+        saveHifzReadingSession({ ranges, readPages: [], sessionIds });
+        setReadPages([]);
+      }
+      const firstAyah = getPageStart(page);
+      const vParam = firstAyah ? `&v=${firstAyah.sura}:${firstAyah.aya}` : "";
+      history.push(`/viewer?page=${page}${vParam}`);
     },
-    [history],
+    [history, plan],
   );
 
   return (
@@ -1033,6 +1276,7 @@ const Hifz: React.FC = () => {
               lang={lang as "ar" | "en"}
               t={t}
               chapters={chapters}
+              isEditing={plan !== null}
             />
           )}
           {view === "plan" && plan && (
@@ -1044,18 +1288,22 @@ const Hifz: React.FC = () => {
               onEdit={handleEdit}
               onOpenPage={handleOpenPage}
               onViewAllSessions={() => setView("sessions")}
+              bestPlan={bestPlan}
               lang={lang as "ar" | "en"}
               t={t}
+              readPages={readPages}
             />
           )}
           {view === "sessions" && plan && (
             <HifzSessionsView
               plan={plan}
+              chapters={chapters}
               onToggleSession={handleToggleSession}
               onBack={() => setView("plan")}
               onOpenPage={handleOpenPage}
               lang={lang as "ar" | "en"}
               t={t}
+              readPages={readPages}
             />
           )}
         </div>

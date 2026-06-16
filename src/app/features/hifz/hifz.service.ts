@@ -1,4 +1,6 @@
 const STORAGE_KEY = "rafiq_hifz_v2";
+const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
+const HIFZ_READING_KEY = "rafiq_hifz_reading_v1";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,11 +30,18 @@ export interface HifzGoal {
   pagesPerSession?: number;
 }
 
+export interface PageRange {
+  from: number;
+  to: number;
+}
+
 export interface PlanSession {
   id: string;
   label: string;
   fromPage: number;
   toPage: number;
+  /** Actual memorized page segments that make up this session (may be non-contiguous). */
+  ranges?: PageRange[];
   done: boolean;
   doneDate?: string;
 }
@@ -42,6 +51,13 @@ export interface HifzPlan {
   goal: HifzGoal;
   sessions: PlanSession[];
   createdAt: string;
+}
+
+export interface BestPlanRecord {
+  completedAt: string;
+  daysToFinish: number;
+  totalPages: number;
+  totalSessions: number;
 }
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
@@ -66,6 +82,72 @@ export function clearPlan(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {}
+}
+
+export function loadBestPlan(): BestPlanRecord | null {
+  try {
+    const raw = localStorage.getItem(BEST_PLAN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as BestPlanRecord;
+  } catch {
+    return null;
+  }
+}
+
+export function saveBestPlan(record: BestPlanRecord): void {
+  try {
+    localStorage.setItem(BEST_PLAN_KEY, JSON.stringify(record));
+  } catch {}
+}
+
+// ─── Hifz Reading Session ─────────────────────────────────────────────────────
+// Tracks which pages the user has actively read (≥30 s each) when navigating
+// from a Hifz session open button. Written by the viewer; read back by Hifz.
+
+export interface HifzReadingSession {
+  /** Flat list of all page ranges covered by the open session(s). */
+  ranges: PageRange[];
+  /** Pages the user has spent ≥30 s on (within ranges or contiguous next sessions). */
+  readPages: number[];
+  /** Session IDs whose pages are included in ranges (for progress updates). */
+  sessionIds: string[];
+}
+
+export function saveHifzReadingSession(s: HifzReadingSession): void {
+  try {
+    localStorage.setItem(HIFZ_READING_KEY, JSON.stringify(s));
+  } catch {}
+}
+
+export function loadHifzReadingSession(): HifzReadingSession | null {
+  try {
+    const raw = localStorage.getItem(HIFZ_READING_KEY);
+    return raw ? (JSON.parse(raw) as HifzReadingSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearHifzReadingSession(): void {
+  try {
+    localStorage.removeItem(HIFZ_READING_KEY);
+  } catch {}
+}
+
+/** Compute read-page progress (0–100) for a single session. */
+export function sessionReadProgress(
+  session: PlanSession,
+  readPages: number[],
+): number {
+  if (session.done) return 100;
+  const readSet = new Set(readPages);
+  const total = session.toPage - session.fromPage + 1;
+  if (total <= 0) return 0;
+  let count = 0;
+  for (let p = session.fromPage; p <= session.toPage; p++) {
+    if (readSet.has(p)) count++;
+  }
+  return Math.round((count / total) * 100);
 }
 
 // ─── Quran page ranges ────────────────────────────────────────────────────────
@@ -130,31 +212,35 @@ export function generateSessions(
   goal: HifzGoal,
   chaptersCache: any[],
 ): PlanSession[] {
-  const ranges = flattenMemorized(memorized, chaptersCache);
-  if (ranges.length === 0) return [];
+  const contiguousRanges = flattenMemorized(memorized, chaptersCache);
+  if (contiguousRanges.length === 0) return [];
 
   const pagesPerSession = unitToPageCount(goal.quantity ?? goal.pagesPerSession ?? 5, goal.unit ?? "pages");
 
-  const allPages: number[] = [];
-  for (const r of ranges) {
-    for (let p = r.from; p <= r.to; p++) allPages.push(p);
-  }
-
   const sessions: PlanSession[] = [];
   let sessionIndex = 0;
-  let cursor = 0;
 
-  while (cursor < allPages.length) {
-    const chunk = allPages.slice(cursor, cursor + pagesPerSession);
-    cursor += pagesPerSession;
+  const pushSession = (segs: PageRange[]) => {
     sessions.push({
       id: `session-${sessionIndex}`,
       label: `${sessionIndex + 1}`,
-      fromPage: chunk[0],
-      toPage: chunk[chunk.length - 1],
+      fromPage: segs[0].from,
+      toPage: segs[segs.length - 1].to,
+      ranges: segs.length === 1 ? undefined : segs,
       done: false,
     });
     sessionIndex++;
+  };
+
+  for (const range of contiguousRanges) {
+    // Each contiguous memorized block is sliced into sessions independently —
+    // sessions never cross the gap between two non-contiguous blocks.
+    let pos = range.from;
+    while (pos <= range.to) {
+      const end = Math.min(pos + pagesPerSession - 1, range.to);
+      pushSession([{ from: pos, to: end }]);
+      pos = end + 1;
+    }
   }
 
   return sessions;
@@ -176,6 +262,12 @@ export function computeStreak(sessions: PlanSession[]): number {
   );
   let streak = 0;
   const d = new Date();
+  // If nothing done today, start checking from yesterday so a past streak
+  // doesn't show as 0 just because today hasn't been reviewed yet.
+  const todayIso = d.toISOString().slice(0, 10);
+  if (!doneDates.has(todayIso)) {
+    d.setDate(d.getDate() - 1);
+  }
   while (true) {
     const ds = d.toISOString().slice(0, 10);
     if (doneDates.has(ds)) {
@@ -186,4 +278,83 @@ export function computeStreak(sessions: PlanSession[]): number {
     }
   }
   return streak;
+}
+
+export function countSessionsToday(sessions: PlanSession[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+  return sessions.filter((s) => s.done && s.doneDate === today).length;
+}
+
+export function computeMaxSessionsPerDay(sessions: PlanSession[]): number {
+  const counts = new Map<string, number>();
+  for (const s of sessions) {
+    if (s.done && s.doneDate) {
+      counts.set(s.doneDate, (counts.get(s.doneDate) ?? 0) + 1);
+    }
+  }
+  let max = 0;
+  counts.forEach((v) => { if (v > max) max = v; });
+  return max;
+}
+
+export function countActiveDays(plan: HifzPlan): number {
+  const start = new Date(plan.createdAt);
+  const now = new Date();
+  const ms = now.getTime() - start.getTime();
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+}
+
+export function getSurahsForPageRange(
+  fromPage: number,
+  toPage: number,
+  chaptersCache: any[],
+): Array<{ id: number; nameAr: string; nameEn: string; from: number; to: number }> {
+  const result: Array<{ id: number; nameAr: string; nameEn: string; from: number; to: number }> = [];
+  for (const ch of chaptersCache) {
+    const sf: number = ch.pages?.[0] ?? 0;
+    const se: number = ch.pages?.[1] ?? 0;
+    if (sf > toPage || se < fromPage) continue;
+    result.push({
+      id: ch.id,
+      nameAr: ch.name_arabic ?? `سورة ${ch.id}`,
+      nameEn: ch.name_simple ?? ch.translated_name?.name ?? `Surah ${ch.id}`,
+      from: Math.max(sf, fromPage),
+      to: Math.min(se, toPage),
+    });
+  }
+  result.sort((a, b) => a.from - b.from);
+  return result;
+}
+
+export type SurahSegment = {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  from: number;
+  to: number;
+  rangeFrom: number;
+};
+
+export function getSurahsForRanges(
+  ranges: PageRange[],
+  chaptersCache: any[],
+): SurahSegment[] {
+  const result: SurahSegment[] = [];
+  for (const r of ranges) {
+    for (const ch of chaptersCache) {
+      const sf: number = ch.pages?.[0] ?? 0;
+      const se: number = ch.pages?.[1] ?? 0;
+      if (sf > r.to || se < r.from) continue;
+      result.push({
+        id: ch.id,
+        nameAr: ch.name_arabic ?? `سورة ${ch.id}`,
+        nameEn: ch.name_simple ?? ch.translated_name?.name ?? `Surah ${ch.id}`,
+        from: Math.max(sf, r.from),
+        to: Math.min(se, r.to),
+        rangeFrom: r.from,
+      });
+    }
+  }
+  result.sort((a, b) => a.from - b.from);
+  return result;
 }
