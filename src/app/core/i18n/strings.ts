@@ -356,6 +356,13 @@ export interface AppStrings {
     resetConfirmBody: string;
     resetConfirmYes: string;
     resetConfirmNo: string;
+    sessionsUncompleted: string;
+    sessionsCompleted: string;
+    startNewRound: string;
+    newRoundConfirmTitle: string;
+    newRoundConfirmBody: string;
+    newRoundConfirmYes: string;
+    newRoundConfirmNo: string;
   };
 }
 
@@ -726,6 +733,13 @@ const ar: AppStrings = {
     resetConfirmBody: "سيتم مسح تقدمك في جميع الجلسات. هل أنت متأكد؟",
     resetConfirmYes: "إعادة",
     resetConfirmNo: "إلغاء",
+    sessionsUncompleted: "غير مكتملة",
+    sessionsCompleted: "مكتملة",
+    startNewRound: "ابدأ جولة جديدة",
+    newRoundConfirmTitle: "ابدأ جولة جديدة؟",
+    newRoundConfirmBody: "سيتم إعادة ضبط جميع الجلسات وبدء الخطة من جديد. سيُحفظ سجل أفضل خطة.",
+    newRoundConfirmYes: "ابدأ",
+    newRoundConfirmNo: "إلغاء",
   },
 };
 
@@ -1100,6 +1114,13 @@ const en: AppStrings = {
     resetConfirmBody: "This will clear your progress on all sessions. Are you sure?",
     resetConfirmYes: "Reset",
     resetConfirmNo: "Cancel",
+    sessionsUncompleted: "Uncompleted",
+    sessionsCompleted: "Completed",
+    startNewRound: "Start New Round",
+    newRoundConfirmTitle: "Start a New Round?",
+    newRoundConfirmBody: "All sessions will be reset and the plan starts fresh. Your best plan record will be saved.",
+    newRoundConfirmYes: "Start",
+    newRoundConfirmNo: "Cancel",
   },
 };
 

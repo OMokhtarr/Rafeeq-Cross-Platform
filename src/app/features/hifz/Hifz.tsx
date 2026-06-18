@@ -769,6 +769,7 @@ interface DashboardViewProps {
   onEdit: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
   onViewAllSessions: () => void;
+  onStartNewRound: () => void;
   bestPlan: BestPlanRecord | null;
   lang: "ar" | "en";
   t: any;
@@ -783,6 +784,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onEdit,
   onOpenPage,
   onViewAllSessions,
+  onStartNewRound,
   bestPlan,
   lang,
   t,
@@ -790,6 +792,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const h = t.hifz;
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
@@ -966,8 +969,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       )}
 
       {incomplete.length === 0 && sessions.length > 0 && (
-        <div className="hifz-all-done-banner">
-          {lang === "ar" ? "🎉 أحسنت! اكتملت جميع الجلسات" : "🎉 Well done! All sessions complete"}
+        <div className="hifz-all-done-block">
+          <div className="hifz-all-done-banner">
+            {lang === "ar" ? "🎉 أحسنت! اكتملت جميع الجلسات" : "🎉 Well done! All sessions complete"}
+          </div>
+          <button
+            className="hifz-new-round-btn"
+            onClick={() => setShowNewRoundConfirm(true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
+            </svg>
+            {h.startNewRound}
+          </button>
+          {showNewRoundConfirm && (
+            <div className="hifz-confirm-backdrop" onClick={() => setShowNewRoundConfirm(false)}>
+              <div className="hifz-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+                <p className="hifz-confirm-title">{h.newRoundConfirmTitle}</p>
+                <p className="hifz-confirm-body">{h.newRoundConfirmBody}</p>
+                <div className="hifz-confirm-actions">
+                  <button className="hifz-confirm-cancel" onClick={() => setShowNewRoundConfirm(false)}>
+                    {h.newRoundConfirmNo}
+                  </button>
+                  <button className="hifz-confirm-yes" onClick={() => { setShowNewRoundConfirm(false); onStartNewRound(); }}>
+                    {h.newRoundConfirmYes}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1064,6 +1095,10 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
   const sessions = plan.sessions;
   const doneCount = sessions.filter((s) => s.done).length;
   const total = sessions.length;
+  const [completedOpen, setCompletedOpen] = useState(false);
+
+  const incomplete = sessions.filter((s) => !s.done);
+  const done = sessions.filter((s) => s.done);
 
   const getVariant = (s: PlanSession): "next" | "remaining" | "done" => {
     if (s.done) return "done";
@@ -1097,21 +1132,72 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
         </div>
       </div>
 
-      <div className="hifz-sessions-list">
-        {sessions.map((s) => (
-          <SessionCard
-            key={s.id}
-            session={s}
-            variant={getVariant(s)}
-            onToggle={onToggleSession}
-            onOpenPage={onOpenPage}
-            lang={lang}
-            h={h}
-            chapters={chapters}
-            readPages={readPages}
-          />
-        ))}
-      </div>
+      {/* Uncompleted sessions */}
+      {incomplete.length > 0 && (
+        <div className="hifz-sessions-section">
+          <div className="hifz-sessions-section-label">
+            <span>{h.sessionsUncompleted}</span>
+            <span className="hifz-sessions-section-count">{incomplete.length}</span>
+          </div>
+          <div className="hifz-sessions-list">
+            {incomplete.map((s) => (
+              <SessionCard
+                key={s.id}
+                session={s}
+                variant={getVariant(s)}
+                onToggle={onToggleSession}
+                onOpenPage={onOpenPage}
+                lang={lang}
+                h={h}
+                chapters={chapters}
+                readPages={readPages}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Completed sessions — collapsible */}
+      {done.length > 0 && (
+        <div className="hifz-sessions-section hifz-sessions-section-done">
+          <button
+            className="hifz-sessions-section-label hifz-sessions-section-toggle"
+            onClick={() => setCompletedOpen((o) => !o)}
+            aria-expanded={completedOpen}
+          >
+            <span>{h.sessionsCompleted}</span>
+            <span className="hifz-sessions-section-count">{done.length}</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              width="14"
+              height="14"
+              className={`hifz-sessions-chevron${completedOpen ? " open" : ""}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {completedOpen && (
+            <div className="hifz-sessions-list">
+              {done.map((s) => (
+                <SessionCard
+                  key={s.id}
+                  session={s}
+                  variant="done"
+                  onToggle={onToggleSession}
+                  onOpenPage={onOpenPage}
+                  lang={lang}
+                  h={h}
+                  chapters={chapters}
+                  readPages={readPages}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -1230,6 +1316,34 @@ const Hifz: React.FC = () => {
     setPlan(updated);
   }, [plan]);
 
+  const handleStartNewRound = useCallback(() => {
+    if (!plan) return;
+    // Save best plan record before resetting if this completion is the best
+    const days = countActiveDays(plan);
+    const pages = countMemorizedPages(plan.memorized, chapters);
+    const record: BestPlanRecord = {
+      completedAt: todayStr(),
+      daysToFinish: days,
+      totalPages: pages,
+      totalSessions: plan.sessions.length,
+    };
+    const existing = loadBestPlan();
+    if (!existing || days < existing.daysToFinish) {
+      saveBestPlan(record);
+      setBestPlan(record);
+    }
+    // Reset all sessions and start fresh from today
+    const sessions = plan.sessions.map((s) => ({
+      ...s,
+      done: false,
+      doneDate: undefined,
+    }));
+    const updated = { ...plan, sessions, createdAt: new Date().toISOString() };
+    savePlan(updated);
+    setPlan(updated);
+    setReadPages([]);
+  }, [plan, chapters]);
+
   const handleEdit = useCallback(() => {
     setView("setup");
   }, []);
@@ -1288,6 +1402,7 @@ const Hifz: React.FC = () => {
               onEdit={handleEdit}
               onOpenPage={handleOpenPage}
               onViewAllSessions={() => setView("sessions")}
+              onStartNewRound={handleStartNewRound}
               bestPlan={bestPlan}
               lang={lang as "ar" | "en"}
               t={t}

@@ -1333,6 +1333,14 @@ ion-content {
 }
 
 /* ── All done banner ─────────────────────────────────────── */
+.hifz-all-done-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
+}
+
 .hifz-all-done-banner {
   text-align: center;
   padding: var(--space-4) var(--space-4);
@@ -1341,8 +1349,88 @@ ion-content {
   color: var(--color-hifz, #4a7c59);
   background: color-mix(in srgb, var(--color-hifz, #4a7c59) 10%, transparent);
   border-radius: var(--radius-lg);
+}
+
+.hifz-new-round-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-hifz, #4a7c59);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: var(--font-arabic);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.hifz-new-round-btn:hover {
+  opacity: 0.88;
+}
+
+/* ── Sessions view — section dividers ─────────────────────── */
+.hifz-sessions-section {
+  margin-bottom: var(--space-5);
+}
+
+.hifz-sessions-section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-family: var(--font-latin);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--space-2) 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
   margin-bottom: var(--space-3);
+}
+
+.hifz-sessions-section-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  cursor: pointer;
+  text-align: start;
+  padding: var(--space-2) 0 var(--space-3);
+  margin-bottom: var(--space-3);
+  transition: color var(--transition-fast);
+}
+.hifz-sessions-section-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.hifz-sessions-section-count {
+  margin-inline-start: auto;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: var(--text-xs, 11px);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.hifz-sessions-section-done .hifz-sessions-section-label,
+.hifz-sessions-section-done .hifz-sessions-section-toggle {
+  color: var(--color-text-muted);
+}
+
+.hifz-sessions-chevron {
+  margin-inline-start: var(--space-1);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.hifz-sessions-chevron.open {
+  transform: rotate(180deg);
 }
 
 /* ── All Sessions view ───────────────────────────────────── */

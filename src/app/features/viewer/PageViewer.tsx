@@ -126,6 +126,7 @@ const PageViewer: React.FC = () => {
   // Hifz session tracking: mark pages as read after 30 s when coming from a session
   const hifzTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hifzSessionRef = useRef(loadHifzReadingSession());
+  const hifzPageEntryRef = useRef<{ page: number; enteredAt: number } | null>(null);
 
   // Shared playback queue
   const queue = usePlayback();
@@ -334,8 +335,9 @@ const PageViewer: React.FC = () => {
     };
   }, [currentPage]);
 
-  // Hifz read tracking: if an active hifz session covers this page, mark it read after 30 s.
-  // Also advances through contiguous pages that are covered by the session window.
+  // Hifz read tracking: mark a page as read if user spends ≥30 s on it.
+  // Runs on every page change and also flushes on cleanup so navigating away
+  // after ≥30 s still marks the page — not just the timer path.
   useEffect(() => {
     if (hifzTimerRef.current) {
       clearTimeout(hifzTimerRef.current);
@@ -343,21 +345,49 @@ const PageViewer: React.FC = () => {
     }
     const rs = hifzSessionRef.current;
     if (!rs) return;
-    const inRange = rs.ranges.some((r) => currentPage >= r.from && currentPage <= r.to);
-    if (!inRange) return;
-    hifzTimerRef.current = setTimeout(() => {
+
+    const inRange = rs.ranges.some(
+      (r) => currentPage >= r.from && currentPage <= r.to,
+    );
+    if (!inRange) {
+      hifzPageEntryRef.current = null;
+      return;
+    }
+
+    const alreadyRead = rs.readPages.includes(currentPage);
+    if (!alreadyRead) {
+      hifzPageEntryRef.current = { page: currentPage, enteredAt: Date.now() };
+    }
+
+    const markRead = (page: number) => {
       const latest = loadHifzReadingSession();
       if (!latest) return;
-      if (!latest.readPages.includes(currentPage)) {
-        const updated = { ...latest, readPages: [...latest.readPages, currentPage] };
+      if (!latest.readPages.includes(page)) {
+        const updated = { ...latest, readPages: [...latest.readPages, page] };
         saveHifzReadingSession(updated);
         hifzSessionRef.current = updated;
       }
-    }, 30_000);
+    };
+
+    if (!alreadyRead) {
+      hifzTimerRef.current = setTimeout(() => {
+        markRead(currentPage);
+      }, 30_000);
+    }
+
     return () => {
       if (hifzTimerRef.current) {
         clearTimeout(hifzTimerRef.current);
         hifzTimerRef.current = null;
+      }
+      // Flush on page-turn or unmount: if ≥30 s elapsed, mark as read now
+      const entry = hifzPageEntryRef.current;
+      if (entry && entry.page === currentPage) {
+        const elapsed = Date.now() - entry.enteredAt;
+        if (elapsed >= 30_000) {
+          markRead(currentPage);
+        }
+        hifzPageEntryRef.current = null;
       }
     };
   }, [currentPage]);
