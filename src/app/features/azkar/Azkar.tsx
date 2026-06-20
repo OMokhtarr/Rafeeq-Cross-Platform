@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { IonPage, IonContent } from "@ionic/react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useParams } from "react-router-dom";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Capacitor } from "@capacitor/core";
 import azkarData from "../../../data/azkarData";
@@ -118,14 +118,27 @@ function saveCatState(
 
 const Azkar: React.FC = () => {
   const history = useHistory();
+  const { categoryId } = useParams<{ categoryId?: string }>();
+  const selectedCategory = categoryId ?? null;
   const { t, isRTL } = useLang();
   const ta = t.azkar;
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [counters, setCounters] = useState<Record<string, number>>({});
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
 
   // Touch tracking for swipe-to-reset (per-item)
   const touchRef = useRef<{ id: string; x: number; y: number } | null>(null);
+
+  // Load persisted state when category changes via URL
+  useEffect(() => {
+    if (!selectedCategory) {
+      setCounters({});
+      setCompleted({});
+      return;
+    }
+    const saved = loadCatState(selectedCategory);
+    setCounters(saved.counters);
+    setCompleted(saved.completed);
+  }, [selectedCategory]);
 
   // Persist on change
   useEffect(() => {
@@ -135,9 +148,7 @@ const Azkar: React.FC = () => {
 
   const handleCategorySelect = (catId: string) => {
     localStorage.removeItem(stateKey(catId));
-    setCounters({});
-    setCompleted({});
-    setSelectedCategory(catId);
+    history.push(`/azkar/${catId}`);
     window.scrollTo(0, 0);
   };
 
@@ -194,32 +205,29 @@ const Azkar: React.FC = () => {
       <IonPage>
         <IonContent fullscreen>
           <div className="azkar-page-wrapper">
-            <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
-              {/* Sticky header */}
-              <div
-                className="azkar-header"
-                style={{ "--cat-color": cat.color } as React.CSSProperties}
+            {/* Header — standard pattern with centered title */}
+            <div className="azkar-header">
+              <button
+                className="azkar-back-btn"
+                onClick={() => history.push("/azkar")}
+                aria-label={ta.back}
               >
-                <button
-                  className="azkar-back-btn"
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  {ta.back}
-                </button>
-                <div className="azkar-header-title">
-                  <div>
-                    <h1 lang="ar" dir="rtl">
-                      {cat.title}
-                    </h1>
-                    <p lang="ar" dir="rtl">
-                      {cat.subtitle}
-                    </p>
-                  </div>
-                </div>
-                {allDone && <div className="azkar-all-done">{ta.allDone}</div>}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {isRTL
+                    ? <path d="M5 12h14M12 5l7 7-7 7" />
+                    : <path d="M19 12H5M12 19l-7-7 7-7" />}
+                </svg>
+              </button>
+              <div className="azkar-header-title">
+                <h1 lang={isRTL ? "ar" : "en"} dir={isRTL ? "rtl" : "ltr"}>{isRTL ? cat.title : (cat.titleEn ?? cat.title)}</h1>
+                <p lang={isRTL ? "ar" : "en"} dir={isRTL ? "rtl" : "ltr"}>{isRTL ? cat.subtitle : (cat.subtitleEn ?? cat.subtitle)}</p>
               </div>
+              {allDone
+                ? <div className="azkar-all-done">{ta.allDone}</div>
+                : <div style={{ width: 44 }} />}
+            </div>
 
-              {/* Items list */}
+            <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
               <div className="azkar-list">
                 {cat.azkar.map((zikr: any, index: number) => {
                   const count = counters[zikr.id] || 0;
@@ -235,40 +243,22 @@ const Azkar: React.FC = () => {
                     <div
                       key={zikr.id}
                       className={`azkar-item ${isDone ? "completed" : ""}`}
-                      style={
-                        { "--cat-color": cat.color } as React.CSSProperties
-                      }
                       onTouchStart={onItemTouchStart(zikr.id)}
                       onTouchEnd={onItemTouchEnd(zikr.id)}
                     >
-                      {/* Item header: number badge + source */}
                       <div className="azkar-item-header">
                         <span className="azkar-item-num">{index + 1}</span>
                         {zikr.source && (
-                          <span className="azkar-item-source">
-                            {zikr.source}
-                          </span>
+                          <span className="azkar-item-source">{zikr.source}</span>
                         )}
                       </div>
-
-                      {/* Optional note */}
                       {zikr.note && (
                         <div className="azkar-note">{zikr.note}</div>
                       )}
-
-                      {/* Main Arabic text */}
-                      <p className="azkar-item-text" lang="ar">
-                        {zikr.text}
-                      </p>
-
-                      {/* Optional translation */}
+                      <p className="azkar-item-text" lang="ar">{zikr.text}</p>
                       {zikr.translation && (
-                        <p className="azkar-item-translation">
-                          {zikr.translation}
-                        </p>
+                        <p className="azkar-item-translation">{zikr.translation}</p>
                       )}
-
-                      {/* Progress bar for multi-repeat */}
                       {zikr.repeat > 1 && (
                         <div className="azkar-progress-bar">
                           <div
@@ -277,8 +267,6 @@ const Azkar: React.FC = () => {
                           />
                         </div>
                       )}
-
-                      {/* Footer: counter + reset */}
                       <div className="azkar-item-footer">
                         {zikr.repeat > 1 && !isDone && (
                           <span className="azkar-repeat-label">
@@ -288,9 +276,7 @@ const Azkar: React.FC = () => {
                         <div className="azkar-counter">
                           <button
                             className={`azkar-count-btn ${isDone ? "done" : ""}`}
-                            onClick={() =>
-                              handleCount(zikr.id, zikr.repeat ?? 1)
-                            }
+                            onClick={() => handleCount(zikr.id, zikr.repeat ?? 1)}
                             disabled={isDone}
                           >
                             {isDone ? (
@@ -301,9 +287,7 @@ const Azkar: React.FC = () => {
                               <span className="azkar-count-inner">
                                 <span className="count-number">{count}</span>
                                 <span className="count-slash">/</span>
-                                <span className="count-total">
-                                  {zikr.repeat}
-                                </span>
+                                <span className="count-total">{zikr.repeat}</span>
                               </span>
                             )}
                           </button>
@@ -321,19 +305,11 @@ const Azkar: React.FC = () => {
                   );
                 })}
               </div>
-
-              <div className="azkar-footer-nav">
-                <button
-                  className="azkar-back-bottom"
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  {ta.backToCategories}
-                </button>
-              </div>
+              <div className="azkar-list-end-spacer" />
             </div>
-            <BottomNavBar active="azkar" />
           </div>
         </IonContent>
+        <BottomNavBar active="azkar" fixed />
       </IonPage>
     );
   }
@@ -343,33 +319,74 @@ const Azkar: React.FC = () => {
     <IonPage>
       <IonContent fullscreen>
         <div className="azkar-page-wrapper">
+          {/* Standard page header */}
+          <div className="azkar-page-header">
+            <button
+              className="azkar-page-back-btn"
+              onClick={() => history.length > 1 ? history.goBack() : history.replace("/")}
+              aria-label={ta.back}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isRTL
+                  ? <path d="M5 12h14M12 5l7 7-7 7" />
+                  : <path d="M19 12H5M12 19l-7-7 7-7" />}
+              </svg>
+            </button>
+            <div className="azkar-page-header-text">
+              <h1 className="azkar-page-title" lang="ar" dir="rtl">{ta.title}</h1>
+            </div>
+            <div style={{ width: 44 }} />
+          </div>
+
           <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
             <div className="azkar-categories">
-              {azkarData.map((cat: any) => (
-                <button
-                  key={cat.id}
-                  className="azkar-cat-card"
-                  style={{ "--cat-color": cat.color } as React.CSSProperties}
-                  onClick={() => handleCategorySelect(cat.id)}
-                >
-                  <div className="azkar-cat-body">
-                    <h2 className="azkar-cat-title" lang="ar" dir="rtl">
-                      {cat.title}
-                    </h2>
-                    <p className="azkar-cat-subtitle" lang="ar" dir="rtl">
-                      {cat.subtitle}
-                    </p>
-                    <span className="azkar-cat-count">
-                      {cat.azkar.length} {ta.zikr}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {azkarData.map((cat: any) => {
+                const saved = loadCatState(cat.id);
+                const doneCount = cat.azkar.filter((z: any) => saved.completed[z.id]).length;
+                const pct = cat.azkar.length > 0 ? Math.round((doneCount / cat.azkar.length) * 100) : 0;
+                const isFullyDone = doneCount === cat.azkar.length && cat.azkar.length > 0;
+                return (
+                  <button
+                    key={cat.id}
+                    className={"azkar-cat-card" + (isFullyDone ? " azkar-cat-done" : "")}
+                    dir={isRTL ? "rtl" : "ltr"}
+                    onClick={() => handleCategorySelect(cat.id)}
+                  >
+                    <div className="azkar-cat-main">
+                      <div className="azkar-cat-body">
+                        <h2 className="azkar-cat-title" lang={isRTL ? "ar" : "en"}>{isRTL ? cat.title : (cat.titleEn ?? cat.title)}</h2>
+                        <p className="azkar-cat-subtitle" lang={isRTL ? "ar" : "en"}>{isRTL ? cat.subtitle : (cat.subtitleEn ?? cat.subtitle)}</p>
+                        <div className="azkar-cat-footer">
+                          <span className="azkar-cat-count">
+                            {cat.azkar.length} {ta.zikr}
+                          </span>
+                          {pct > 0 && (
+                            <span className="azkar-cat-pct">{isFullyDone ? "✓" : `${pct}%`}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="azkar-cat-arrow" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          {isRTL
+                            ? <path d="M19 12H5M12 19l-7-7 7-7" />
+                            : <path d="M5 12h14M12 5l7 7-7 7" />}
+                        </svg>
+                      </div>
+                    </div>
+                    {pct > 0 && (
+                      <div className="azkar-cat-progress-bar">
+                        <div className="azkar-cat-progress-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            <div className="azkar-list-end-spacer" />
           </div>
-          <BottomNavBar active="azkar" />
         </div>
       </IonContent>
+      <BottomNavBar active="azkar" fixed />
     </IonPage>
   );
 };

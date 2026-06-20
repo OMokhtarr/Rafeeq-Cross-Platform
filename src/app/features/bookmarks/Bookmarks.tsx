@@ -493,9 +493,9 @@ const Bookmarks: React.FC = () => {
             )}
           </div>
 
-          <BottomNavBar active="quran" />
         </div>
       </IonContent>
+      <BottomNavBar active="quran" fixed />
     </IonPage>
   );
 };

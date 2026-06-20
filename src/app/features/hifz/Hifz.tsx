@@ -525,10 +525,7 @@ const SetupView: React.FC<SetupViewProps> = ({
 
   return (
     <div className="hifz-setup" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <div className="hifz-setup-header">
-        <h1 className="hifz-title">{h.setupTitle}</h1>
-        <p className="hifz-subtitle">{h.setupSubtitle}</p>
-      </div>
+
 
       {/* Memorized content */}
       <section className="hifz-section">
@@ -774,6 +771,8 @@ interface DashboardViewProps {
   lang: "ar" | "en";
   t: any;
   readPages: number[];
+  showResetConfirm: boolean;
+  setShowResetConfirm: (v: boolean) => void;
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -789,9 +788,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   lang,
   t,
   readPages,
+  showResetConfirm,
+  setShowResetConfirm,
 }) => {
   const h = t.hifz;
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
@@ -814,24 +814,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <div className="hifz-plan-header">
-        <h1 className="hifz-title">{h.planTitle}</h1>
-        <div className="hifz-plan-header-actions">
-          <button className="hifz-edit-btn" onClick={onEdit} aria-label={h.planEdit}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
-          <button className="hifz-reset-btn" onClick={() => setShowResetConfirm(true)} aria-label={h.planReset}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
       {/* ── Reset confirmation dialog ── */}
       {showResetConfirm && (
         <div className="hifz-confirm-backdrop" onClick={() => setShowResetConfirm(false)}>
@@ -865,7 +847,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="hifz-hero-page">
           <DonutChart
             percent={quranPct}
-            color="var(--color-hifz, #4a7c59)"
+            color="var(--color-quran)"
             label={h.quranMemorized}
             sublabel={`${memorizedPages} / 604`}
             size={100}
@@ -1108,29 +1090,6 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
 
   return (
     <div className="hifz-sessions-view" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <div className="hifz-sessions-header">
-        <button className="hifz-back-btn" onClick={onBack} aria-label={lang === "ar" ? "رجوع" : "Back"}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            width="20"
-            height="20"
-            style={{ transform: lang === "ar" ? "scaleX(-1)" : "none" }}
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div className="hifz-sessions-header-text">
-          <h1 className="hifz-sessions-title">{h.sessionsAll}</h1>
-          <span className="hifz-sessions-count">
-            {lang === "ar"
-              ? `${doneCount} / ${total} مكتملة`
-              : `${doneCount} / ${total} done`}
-          </span>
-        </div>
-      </div>
 
       {/* Uncompleted sessions */}
       {incomplete.length > 0 && (
@@ -1215,6 +1174,7 @@ const Hifz: React.FC = () => {
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
   const [readPages, setReadPages] = useState<number[]>([]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const [memorized, setMemorized] = useState<MemorizedUnit[]>([]);
   const [goal, setGoal] = useState<HifzGoal>({
@@ -1375,10 +1335,82 @@ const Hifz: React.FC = () => {
     [history, plan],
   );
 
+  const h = t.hifz;
+  const isRTL = lang === "ar";
+
+  // Compute plan stats for header subtitle
+  const planDone = plan?.sessions.filter((s) => s.done).length ?? 0;
+  const planTotal = plan?.sessions.length ?? 0;
+  const sessionsDone = plan?.sessions.filter((s) => s.done).length ?? 0;
+  const sessionsTotal = plan?.sessions.length ?? 0;
+
+  const headerTitle =
+    view === "sessions" ? h.sessionsAll :
+    view === "plan"     ? h.planTitle :
+                          h.setupTitle;
+
+  const headerSubtitle =
+    view === "sessions"
+      ? (lang === "ar" ? `${sessionsDone} / ${sessionsTotal} مكتملة` : `${sessionsDone} / ${sessionsTotal} done`)
+      : view === "plan" && plan
+      ? (lang === "ar" ? `${planDone} / ${planTotal} مكتملة` : `${planDone} / ${planTotal} done`)
+      : h.setupSubtitle;
+
+  // Back: sessions → plan, setup-editing → plan, otherwise → app back
+  const handleHeaderBack = () => {
+    if (view === "sessions") { setView("plan"); return; }
+    if (view === "setup" && plan !== null) { setView("plan"); return; }
+    history.length > 1 ? history.goBack() : history.replace("/");
+  };
+
+  // Right slot: edit + reset on plan view, spacer elsewhere
+  const headerRight = view === "plan" ? (
+    <div style={{ display: "flex", gap: 6 }}>
+      <button
+        className="hifz-header-action-btn hifz-header-action-btn--edit"
+        onClick={() => setView("setup")}
+        aria-label={h.planEdit}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      </button>
+      <button
+        className="hifz-header-action-btn hifz-header-action-btn--reset"
+        onClick={() => setShowResetConfirm(true)}
+        aria-label={h.planReset}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
+        </svg>
+      </button>
+    </div>
+  ) : <div style={{ width: 44 }} />;
+
   return (
     <IonPage>
       <IonContent>
         <div className="hifz-page">
+          {/* ── Shared page header ── */}
+          <div className="hifz-page-header">
+            <button
+              className="hifz-back-btn"
+              onClick={handleHeaderBack}
+              aria-label={isRTL ? "رجوع" : "Back"}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
+              </svg>
+            </button>
+            <div className="hifz-page-header-text">
+              <h1>{headerTitle}</h1>
+              <p>{headerSubtitle}</p>
+            </div>
+            {headerRight}
+          </div>
+
           {view === "setup" && (
             <SetupView
               memorized={memorized}
@@ -1407,6 +1439,8 @@ const Hifz: React.FC = () => {
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}
+              showResetConfirm={showResetConfirm}
+              setShowResetConfirm={setShowResetConfirm}
             />
           )}
           {view === "sessions" && plan && (

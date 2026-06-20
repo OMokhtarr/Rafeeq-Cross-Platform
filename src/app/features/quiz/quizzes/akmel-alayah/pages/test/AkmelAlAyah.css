@@ -15,11 +15,15 @@ ion-content::part(scroll) {
 .aa-test-page-wrapper {
   width: 100%;
   height: 100%;
-  background: var(--color-bg-page);
+  background: var(--color-bg-content);
   color: var(--color-text-primary);
+  font-family: var(--font-arabic);
   display: flex;
   flex-direction: column;
+  align-items: center;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  box-sizing: border-box;
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
@@ -30,6 +34,7 @@ ion-content::part(scroll) {
   align-items: stretch;
   justify-content: flex-start;
   width: 100%;
+  max-width: var(--max-width-mobile, 600px);
   flex: 1;
   min-height: 0;
   padding: 10px;
@@ -48,7 +53,7 @@ ion-content::part(scroll) {
   border-radius: var(--radius-md);
   padding: 4px 10px;
   margin-bottom: 4px;
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
   min-height: 32px;
 }
@@ -74,7 +79,7 @@ ion-content::part(scroll) {
 }
 .aa-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
+  background: linear-gradient(90deg, var(--color-quran), var(--color-gold));
   transition: width 0.35s ease;
 }
 
@@ -104,22 +109,22 @@ ion-content::part(scroll) {
 /* Exit button remains circular */
 .aa-exit-btn {
   background: none;
-  border: 2px solid #e74c3c;
-  color: #e74c3c;
-  width: 28px;
-  height: 28px;
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: 50%;
   cursor: pointer;
-  font-size: var(--text-sm);
-  transition: all 0.25s;
+  transition: background var(--transition-base), border-color var(--transition-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .aa-exit-btn:hover {
-  background: #e74c3c;
-  color: white;
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
 }
 
 /* Question card – normal full height */
@@ -129,7 +134,7 @@ ion-content::part(scroll) {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 5px 10px;
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -167,16 +172,13 @@ ion-content::part(scroll) {
   flex-wrap: nowrap;
   gap: 4px;
   padding: 4px 8px;
-  background: linear-gradient(to bottom, #e8dccc, #dac09a);
+  border: 1.5px solid var(--color-gold-subtle);
   border-radius: var(--radius-pill);
   margin-bottom: 3px;
   direction: rtl;
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
-}
-[data-theme="night"] .aa-info-strip {
-  background: rgba(212, 180, 140, 0.15);
 }
 .aa-info-strip::-webkit-scrollbar {
   display: none;
@@ -193,21 +195,18 @@ ion-content::part(scroll) {
 .aa-meta {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  color: var(--color-quiz);
-  background: rgba(255, 255, 255, 0.3);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold-subtle);
   padding: 1px 7px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
   flex-shrink: 0;
 }
-[data-theme="night"] .aa-meta {
-  background: rgba(0, 0, 0, 0.2);
-}
 
 /* Verse box – hidden in immersive mode */
 .aa-verse-box {
   background: var(--color-gold-faint);
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-md);
   padding: 5px 8px;
   text-align: center;
@@ -225,9 +224,9 @@ ion-content::part(scroll) {
 .aa-hint-inline {
   font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-  color: #b8860b;
+  color: var(--color-gold);
   font-weight: 600;
-  border-bottom: 1.5px dashed #b8860b;
+  border-bottom: 1.5px dashed var(--color-gold);
 }
 .prompt {
   color: var(--color-text-muted);
@@ -247,7 +246,7 @@ ion-content::part(scroll) {
   width: 100%;
   padding: 12px;
   font-size: var(--text-md);
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-md);
   font-family: var(--font-arabic);
   direction: rtl;
@@ -258,7 +257,7 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
 }
 .aa-input:focus {
-  border-color: var(--color-text-primary);
+  border-color: var(--color-gold);
   outline: none;
   box-shadow: 0 0 0 4px var(--color-gold-faint);
 }
@@ -311,27 +310,30 @@ ion-content::part(scroll) {
   cursor: not-allowed;
 }
 
-/* Button variants — all share the quiz accent color */
+/* Button variants — gold ghost style */
 .aa-hint,
 .aa-context,
 .aa-submit,
 .aa-skip,
 .aa-recite {
-  background: var(--color-quiz);
-  color: #ffffff;
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
 }
 .aa-hint:hover:not(:disabled),
 .aa-context:hover:not(:disabled),
 .aa-submit:hover:not(:disabled),
 .aa-skip:hover:not(:disabled),
 .aa-recite:hover:not(:disabled) {
-  opacity: 0.85;
+  background: var(--color-gold-subtle);
+  border-color: var(--color-gold);
   transform: scale(1.02);
   box-shadow: var(--shadow-card-hover);
 }
 .aa-context.active {
-  opacity: 0.7;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: var(--color-gold-subtle);
+  border-color: var(--color-gold);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .aa-recite {
@@ -353,28 +355,19 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 .aa-result.correct {
-  background: #d4edda;
-  border: 2px solid #27ae60;
+  background: color-mix(in srgb, var(--color-quran) 12%, transparent);
+  border: 1.5px solid var(--color-quran);
+  color: var(--color-quran);
 }
 .aa-result.wrong {
-  background: #f8d7da;
-  border: 2px solid #e74c3c;
+  background: color-mix(in srgb, #e05a5a 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, #e05a5a 50%, transparent);
+  color: var(--color-text-primary);
 }
 .aa-result.skipped {
-  background: #e8f4fd;
-  border: 2px solid #95a5a6;
-}
-[data-theme="night"] .aa-result.correct {
-  background: rgba(76, 175, 125, 0.15);
-  color: #6cd699;
-}
-[data-theme="night"] .aa-result.wrong {
-  background: rgba(231, 76, 60, 0.15);
-  color: #f37b6f;
-}
-[data-theme="night"] .aa-result.skipped {
-  background: rgba(241, 196, 15, 0.12);
-  color: #f0d068;
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-border-card);
+  color: var(--color-text-muted);
 }
 .aa-result-icon {
   font-size: 1rem;
@@ -408,8 +401,8 @@ ion-content::part(scroll) {
 .aa-next-btn {
   width: 100%;
   padding: 12px;
-  background: #27ae60;
-  color: white;
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-md);
@@ -425,7 +418,7 @@ ion-content::part(scroll) {
   min-height: 44px;
 }
 .aa-next-btn:hover {
-  background: #2ecc71;
+  filter: brightness(1.1);
   transform: scale(1.02);
 }
 
@@ -437,7 +430,7 @@ ion-content::part(scroll) {
   flex-direction: column;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   overflow: hidden;
 }
 .aa-context-viewer > div,
@@ -457,7 +450,7 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-page);
+  background: var(--color-bg-content);
   color: var(--color-text-primary);
 }
 .aa-spinner {
@@ -480,7 +473,7 @@ ion-content::part(scroll) {
   padding: 30px;
   text-align: center;
   max-width: 400px;
-  border: 3px solid #e74c3c;
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
   white-space: pre-line;
 }
@@ -490,15 +483,12 @@ ion-content::part(scroll) {
 }
 .aa-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+  background: var(--color-quran);
   color: var(--color-text-on-dark);
   border: none;
   border-radius: var(--radius-pill);
   font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
 }
 .aa-complete-card {
@@ -507,7 +497,7 @@ ion-content::part(scroll) {
   padding: 30px 35px;
   text-align: center;
   max-width: 380px;
-  border: 3px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
 }
 .aa-complete-card h2 {
@@ -561,15 +551,12 @@ ion-content::part(scroll) {
   transition: all 0.25s;
 }
 .aa-complete-actions button:first-child {
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+  background: var(--color-quran);
   color: var(--color-text-on-dark);
 }
 .aa-complete-actions button:last-child {
-  background: var(--color-progress-track);
+  background: var(--color-bg-card-alt);
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
 }
 .aa-complete-actions button:hover {

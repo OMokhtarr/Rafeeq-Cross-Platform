@@ -10,6 +10,13 @@
 
 import { idb } from "../storage/idb.service";
 import { fetchAudioForAyah } from "../data/quran.service";
+import {
+  usesFileCache,
+  getWebPlayableUri,
+  getNativeFileUri,
+  ensureCachedFile,
+  hasCachedFile,
+} from "./audio-file-cache.service";
 
 const STORE = "audio";
 
@@ -28,8 +35,25 @@ export async function hasCached(
   sura: number,
   aya: number,
 ): Promise<boolean> {
+  if (usesFileCache()) return hasCachedFile(reciter, sura, aya);
   const rec = await idb.get<AudioRecord>(STORE, key(reciter, sura, aya));
   return !!rec;
+}
+
+/**
+ * Resolve the native file:// URI for a verse (downloading + caching if needed).
+ * This is what the native ExoPlayer plays. Android only — throws elsewhere.
+ */
+export async function getNativeAudioUri(
+  reciter: string,
+  sura: number,
+  aya: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (!usesFileCache()) {
+    throw new Error("getNativeAudioUri is Android-only");
+  }
+  return getNativeFileUri(reciter, sura, aya, signal);
 }
 
 export async function getCachedBlob(
@@ -70,6 +94,10 @@ export async function downloadAndCache(
   aya: number,
   signal?: AbortSignal,
 ): Promise<boolean> {
+  if (usesFileCache()) {
+    await ensureCachedFile(reciter, sura, aya, signal);
+    return true;
+  }
   if (await hasCached(reciter, sura, aya)) return true;
   const url = await fetchAudioForAyah(sura, aya, reciter);
   const res = await fetch(url, { signal });
@@ -132,6 +160,13 @@ export async function getCachedOrDownload(
   aya: number,
   signal?: AbortSignal,
 ): Promise<string> {
+  // On Android, use the shared file cache. The returned URL is a capacitor:// URL the
+  // WebView <audio> element can play; the SAME file is read by ExoPlayer via its
+  // file:// path (see getNativeFileUri). One copy on disk, both engines share it.
+  if (usesFileCache()) {
+    return getWebPlayableUri(reciter, sura, aya, signal);
+  }
+
   const blob = await getCachedBlob(reciter, sura, aya);
   if (blob) {
     return URL.createObjectURL(blob);

@@ -1,25 +1,25 @@
 /* ═══════════════════════════════════════════════
    BOTTOM NAV BAR — shared across all primary pages
-   Visual reference: design-system TabBar.jsx + components-tabs.html
    ═══════════════════════════════════════════════ */
 
 .rfq-tab-bar {
   display: flex;
   flex-direction: row;
   width: 100%;
-  background: var(--color-bg-tab, rgba(13, 31, 20, 0.96));
-  border-top: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.18));
-  /* Slimmer bar — 2px top, minimal bottom (just safe-area on devices that
-     need it). Frees vertical space for the mushaf content. */
-  padding: 2px env(safe-area-inset-right) max(2px, env(safe-area-inset-bottom))
-    env(safe-area-inset-left);
+  background: #0a0a0a;
+  border-top: 1px solid rgba(212, 180, 140, 0.12);
+  padding: 2px env(safe-area-inset-right) max(2px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
   flex-shrink: 0;
   box-sizing: border-box;
-  box-shadow: none;
   transition:
     background var(--transition-theme, 0.25s ease),
     border-color var(--transition-theme, 0.25s ease);
   z-index: 5;
+}
+
+[data-theme="day"] .rfq-tab-bar {
+  background: #ffffff;
+  border-top-color: rgba(0, 0, 0, 0.07);
 }
 
 .rfq-tab {
@@ -35,23 +35,34 @@
   padding: 2px 2px 1px;
   border-radius: var(--radius-lg, 12px);
   transition:
-    background var(--transition-base, 0.2s ease),
     color var(--transition-base, 0.2s ease),
     transform var(--transition-fast, 0.15s ease);
-  color: var(--color-tab-inactive, rgba(255, 255, 255, 0.55));
+  color: var(--color-tab-inactive, rgba(255, 255, 255, 0.4));
+}
+
+[data-theme="day"] .rfq-tab {
+  color: #000000;
   position: relative;
   min-width: 0;
-  /* Was 56px — pulled down to 44px so the whole nav bar shrinks. */
   min-height: 44px;
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .rfq-tab:active:not(:disabled) {
-  transform: scale(0.94);
+  transform: scale(0.9);
 }
 
 .rfq-tab:not(.rfq-tab-disabled):hover {
   color: var(--tab-color, var(--color-gold, #d4b48c));
+}
+
+[data-theme="night"] .rfq-tab:not(.rfq-tab-disabled):hover {
+  color: var(--color-steel-blue, #c8d6e5);
+}
+
+[data-theme="day"] .rfq-tab:not(.rfq-tab-disabled):hover {
+  color: #000000;
 }
 
 .rfq-tab-disabled {
@@ -59,12 +70,16 @@
   cursor: default;
 }
 
-/* Active tab adopts its category color */
+/* Active tab */
 .rfq-tab-active {
   color: var(--tab-color, var(--color-gold, #d4b48c));
 }
 
-/* Icon container — rounded square, tinted on active */
+[data-theme="night"] .rfq-tab-active {
+  color: var(--color-steel-blue, #c8d6e5);
+}
+
+/* Icon container */
 .rfq-tab-icon-box {
   width: 34px;
   height: 34px;
@@ -76,7 +91,11 @@
   background: transparent;
   transition:
     background var(--transition-fast, 0.15s ease),
-    color var(--transition-base, 0.2s ease);
+    transform var(--transition-base, 0.2s ease);
+}
+
+[data-theme="day"] .rfq-tab-icon-box {
+  background: transparent;
 }
 
 .rfq-tab-icon-box svg {
@@ -98,13 +117,23 @@
   stroke: currentColor;
 }
 
-.rfq-tab-active .rfq-tab-icon-box,
+/* Active icon: grey pill in day mode, color-tinted in night mode */
+.rfq-tab-active .rfq-tab-icon-box {
+  background: rgba(0, 0, 0, 0.07);
+  transform: scale(1.08) translateY(-1px);
+}
+
+[data-theme="night"] .rfq-tab-active .rfq-tab-icon-box {
+  background: rgba(200, 214, 229, 0.26);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
 .rfq-tab:not(.rfq-tab-disabled):hover .rfq-tab-icon-box {
-  background: color-mix(
-    in srgb,
-    var(--tab-color, var(--color-gold, #d4b48c)) 18%,
-    transparent
-  );
+  background: rgba(200, 214, 229, 0.12);
+}
+
+[data-theme="day"] .rfq-tab:not(.rfq-tab-disabled):hover .rfq-tab-icon-box {
+  background: rgba(0, 0, 0, 0.07);
 }
 
 /* Labels */
@@ -114,6 +143,7 @@
   color: inherit;
   line-height: 1;
   white-space: nowrap;
+  transition: opacity var(--transition-base, 0.2s ease);
 }
 
 [dir="ltr"] .rfq-tab-label-primary {
@@ -122,6 +152,10 @@
   letter-spacing: 0.3px;
 }
 
+/* Active label gets a subtle weight bump */
+.rfq-tab-active .rfq-tab-label-primary {
+  font-weight: 600;
+}
 
 .rfq-tab-soon {
   position: absolute;
@@ -135,7 +169,6 @@
   border-radius: var(--radius-sm, 4px);
 }
 
-/* Slightly bigger icons / text on phones ≥ 480px */
 @media (min-width: 480px) {
   .rfq-tab-icon-box {
     width: 38px;
@@ -156,9 +189,7 @@
   }
 }
 
-/* Fixed-position variant — pins the bar to the bottom of the nearest
-   positioned ancestor (typically IonContent). Pages using this MUST add
-   ~70px of bottom padding to avoid hiding content underneath. */
+/* Fixed-position variant */
 .rfq-tab-bar-fixed {
   position: absolute;
   bottom: 0;
@@ -169,9 +200,7 @@
   z-index: 10;
 }
 
-/* ── Page layout helper — pages that use BottomNavBar should put their main
-   content inside .rfq-page-with-nav so it leaves room for the bar.
-   Use it on the IonContent inner wrapper (NOT on IonContent itself). */
+/* Page layout helper */
 .rfq-page-with-nav {
   display: flex;
   flex-direction: column;

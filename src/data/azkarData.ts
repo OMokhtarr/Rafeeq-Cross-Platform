@@ -12,7 +12,9 @@ const azkarData = [
   {
     id: "morning-evening",
     title: "أذكار الصباح والمساء",
+    titleEn: "Morning & Evening Adhkar",
     subtitle: "تُقال في الصباح والمساء",
+    subtitleEn: "Recited in the morning and evening",
     icon: "🌅",
     color: "#e67e22",
     azkar: [
@@ -107,7 +109,9 @@ const azkarData = [
   {
     id: "morning-only",
     title: "أذكار الصباح",
+    titleEn: "Morning Adhkar",
     subtitle: "تُقال في الصباح خاصةً",
+    subtitleEn: "Recited in the morning only",
     icon: "🌄",
     color: "#f39c12",
     azkar: [
@@ -144,7 +148,9 @@ const azkarData = [
   {
     id: "evening-only",
     title: "أذكار المساء",
+    titleEn: "Evening Adhkar",
     subtitle: "تُقال في المساء خاصةً",
+    subtitleEn: "Recited in the evening only",
     icon: "🌙",
     color: "#8e44ad",
     azkar: [
@@ -169,7 +175,9 @@ const azkarData = [
   {
     id: "sleep",
     title: "أذكار النوم",
+    titleEn: "Sleep Adhkar",
     subtitle: "تُقال عند الأوى إلى الفراش",
+    subtitleEn: "Recited when going to bed",
     icon: "🌛",
     color: "#27254c",
     azkar: [
@@ -271,7 +279,9 @@ const azkarData = [
   {
     id: "wakeup",
     title: "أذكار الاستيقاظ",
+    titleEn: "Waking Up Adhkar",
     subtitle: "تُقال عند الاستيقاظ من النوم",
+    subtitleEn: "Recited upon waking from sleep",
     icon: "☀️",
     color: "#27ae60",
     azkar: [
@@ -296,7 +306,9 @@ const azkarData = [
   {
     id: "prayer-ruku-sujud",
     title: "أذكار الركوع والسجود",
+    titleEn: "Ruku & Sujud Adhkar",
     subtitle: "من أذكار الصلاة",
+    subtitleEn: "Adhkar of bowing and prostration",
     icon: "🕌",
     color: "#16a085",
     azkar: [
@@ -351,7 +363,9 @@ const azkarData = [
   {
     id: "after-prayer",
     title: "أذكار ما بعد الصلاة",
+    titleEn: "Post-Prayer Adhkar",
     subtitle: "تُقال في دبر كل صلاة",
+    subtitleEn: "Recited after every prayer",
     icon: "🤲",
     color: "#c0392b",
     azkar: [
@@ -426,7 +440,9 @@ const azkarData = [
   {
     id: "home",
     title: "دخول المنزل والخروج",
+    titleEn: "Entering & Leaving Home",
     subtitle: "أذكار البيت",
+    subtitleEn: "Adhkar of the home",
     icon: "🏠",
     color: "#2980b9",
     azkar: [
@@ -453,7 +469,9 @@ const azkarData = [
   {
     id: "masjid",
     title: "دخول المسجد والخروج",
+    titleEn: "Entering & Leaving the Masjid",
     subtitle: "أذكار المسجد",
+    subtitleEn: "Adhkar of the mosque",
     icon: "🕍",
     color: "#1abc9c",
     azkar: [
@@ -494,7 +512,9 @@ const azkarData = [
   {
     id: "adhan",
     title: "الذكر عند سماع الأذان",
+    titleEn: "Hearing the Adhan",
     subtitle: "يُردِّد مثل ما يقول المؤذن",
+    subtitleEn: "Repeat after the muadhin",
     icon: "📢",
     color: "#d35400",
     azkar: [
@@ -528,7 +548,9 @@ const azkarData = [
   {
     id: "toilet",
     title: "دخول الخلاء والخروج",
+    titleEn: "Entering & Leaving the Toilet",
     subtitle: "أذكار دورة المياه",
+    subtitleEn: "Adhkar of the restroom",
     icon: "🚪",
     color: "#7f8c8d",
     azkar: [
@@ -555,7 +577,9 @@ const azkarData = [
   {
     id: "wudu",
     title: "الذكر بعد الوضوء",
+    titleEn: "After Wudu",
     subtitle: "يُقال عقب الوضوء",
+    subtitleEn: "Recited after ablution",
     icon: "💧",
     color: "#3498db",
     azkar: [
@@ -582,7 +606,9 @@ const azkarData = [
   {
     id: "food",
     title: "أذكار الطعام والشراب",
+    titleEn: "Food & Drink Adhkar",
     subtitle: "أذكار قبل الطعام وبعده",
+    subtitleEn: "Before and after eating",
     icon: "🍽️",
     color: "#e74c3c",
     azkar: [
@@ -630,7 +656,9 @@ const azkarData = [
   {
     id: "travel",
     title: "أذكار السفر",
+    titleEn: "Travel Adhkar",
     subtitle: "أذكار الراكب والمسافر",
+    subtitleEn: "Adhkar for the traveller",
     icon: "✈️",
     color: "#9b59b6",
     azkar: [
@@ -677,7 +705,9 @@ const azkarData = [
   {
     id: "daily-misc",
     title: "أذكار يومية متفرقة",
+    titleEn: "Miscellaneous Daily Adhkar",
     subtitle: "أذكار لأحوال شتى",
+    subtitleEn: "Adhkar for various occasions",
     icon: "📿",
     color: "#721e1e",
     azkar: [
@@ -738,7 +768,9 @@ const azkarData = [
   {
     id: "majlis",
     title: "كفارة المجلس",
+    titleEn: "Expiation of the Gathering",
     subtitle: "يُقال عند القيام من المجلس",
+    subtitleEn: "Recited when leaving a gathering",
     icon: "🗣️",
     color: "#e67e22",
     azkar: [
@@ -758,7 +790,9 @@ const azkarData = [
   {
     id: "qunut",
     title: "دعاء القنوت في الوتر",
+    titleEn: "Qunut Supplication in Witr",
     subtitle: "من أذكار صلاة الوتر",
+    subtitleEn: "From the adhkar of Witr prayer",
     icon: "🌙",
     color: "#8e44ad",
     azkar: [

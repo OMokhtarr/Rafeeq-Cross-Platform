@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -15,15 +15,15 @@
   to   { opacity: 1; }
 }
 
-/* ── Sheet ── */
+/* ── Sheet — matches card surface ── */
 .amod-sheet {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   max-height: 82vh;
-  background: var(--color-bg-toolbar, #0f2418);
+  background: var(--color-bg-card);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  border: 1px solid rgba(212, 180, 140, 0.16);
+  border: 1.5px solid var(--color-border-card);
   border-bottom: none;
   display: flex;
   flex-direction: column;
@@ -36,11 +36,11 @@
   to   { transform: translateY(0);    opacity: 1; }
 }
 
-/* ── Handle ── */
+/* ── Drag handle ── */
 .amod-handle {
   width: 36px;
   height: 4px;
-  background: rgba(212, 180, 140, 0.25);
+  background: var(--color-gold-subtle);
   border-radius: 2px;
   margin: 10px auto 0;
   flex-shrink: 0;
@@ -53,97 +53,90 @@
   justify-content: space-between;
   padding: 12px 16px 10px;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(212, 180, 140, 0.1);
+  border-bottom: 1.5px solid var(--color-border-card);
 }
 
 .amod-title {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   font-weight: 700;
-  color: var(--color-gold, #d4b48c);
-  font-family: var(--font-latin, Georgia, serif);
+  color: var(--color-gold);
+  font-family: var(--font-latin);
 }
 
+/* Close button — circular gold border, matches back button style */
 .amod-close {
   background: none;
-  border: none;
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   cursor: pointer;
-  color: var(--color-text-primary, #e8e8e8);
-  opacity: 0.5;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  transition: opacity 0.15s;
   flex-shrink: 0;
+  transition: background var(--transition-base), border-color var(--transition-base);
 }
-.amod-close:hover { opacity: 1; }
-.amod-close svg { width: 18px; height: 18px; }
+.amod-close:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+.amod-close svg { width: 16px; height: 16px; }
 
 /* ── Scrollable body ── */
 .amod-body {
   flex: 1;
   overflow-y: auto;
   scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 16px 18px 32px;
 }
-.amod-body::-webkit-scrollbar { display: none; }
 
-/* ── Rich text content (Terms / Privacy) ── */
-.amod-prose h1 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-gold, #d4b48c);
-  margin: 0 0 4px;
-  font-family: var(--font-latin, Georgia, serif);
-}
-
+/* ── Rich text (Terms / Privacy) ── */
 .amod-prose .amod-updated {
-  font-size: 0.7rem;
-  opacity: 0.42;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   margin: 0 0 18px;
 }
 
 .amod-prose h2 {
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--color-gold, #d4b48c);
+  color: var(--color-gold);
   margin: 18px 0 6px;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.85;
 }
 
 .amod-prose p {
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   line-height: 1.65;
-  opacity: 0.75;
+  color: var(--color-text-secondary);
   margin: 0 0 8px;
 }
 
 .amod-prose strong {
-  color: var(--color-text-primary, #e8e8e8);
-  opacity: 1;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
-/* ── About content ── */
+/* ── About ── */
 .amod-about {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 8px 0 8px;
+  padding: 8px 0;
   text-align: center;
 }
 
 .amod-about-logo {
   width: 64px;
   height: 64px;
-  border-radius: 18px;
-  background: rgba(212, 180, 140, 0.1);
-  border: 1.5px solid rgba(212, 180, 140, 0.3);
+  border-radius: var(--radius-xl);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,42 +144,42 @@
 }
 
 .amod-about-name {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 700;
-  color: var(--color-gold, #d4b48c);
+  color: var(--color-gold);
   margin: 0;
-  font-family: var(--font-latin, Georgia, serif);
+  font-family: var(--font-latin);
 }
 
 .amod-about-tagline {
-  font-size: 0.78rem;
-  opacity: 0.55;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   margin: 0;
   line-height: 1.5;
   max-width: 260px;
 }
 
 .amod-about-version {
-  font-size: 0.68rem;
-  opacity: 0.35;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   margin: 0;
 }
 
 .amod-about-divider {
   width: 100%;
   height: 1px;
-  background: rgba(212, 180, 140, 0.1);
+  background: var(--color-border-card);
 }
 
 .amod-about-row {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
-.amod-about-row-label { opacity: 0.5; }
-.amod-about-row-val { color: var(--color-gold, #d4b48c); font-weight: 500; }
+.amod-about-row-label { color: var(--color-text-muted); }
+.amod-about-row-val { color: var(--color-gold); font-weight: 500; }
 
 /* ── Feature request ── */
 .amod-request {
@@ -196,8 +189,8 @@
 }
 
 .amod-request-label {
-  font-size: 0.78rem;
-  opacity: 0.55;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   margin: 0;
   line-height: 1.5;
 }
@@ -205,35 +198,36 @@
 .amod-request-textarea {
   width: 100%;
   min-height: 110px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(212, 180, 140, 0.2);
-  border-radius: 10px;
-  color: var(--color-text-primary, #e8e8e8);
-  font-size: 0.85rem;
+  background: var(--color-input-bg);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
   padding: 10px 12px;
   resize: none;
   outline: none;
   font-family: inherit;
   line-height: 1.5;
   box-sizing: border-box;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-base);
 }
 .amod-request-textarea:focus {
-  border-color: rgba(212, 180, 140, 0.45);
+  border-color: var(--color-gold-subtle);
 }
-.amod-request-textarea::placeholder { opacity: 0.35; }
+.amod-request-textarea::placeholder { color: var(--color-text-muted); }
 
+/* Submit — green, matches count button style */
 .amod-request-submit {
   align-self: flex-end;
-  background: var(--color-gold, #d4b48c);
-  color: #0d1f14;
+  background: var(--color-quran);
+  color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 9px 22px;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast);
 }
 .amod-request-submit:hover { opacity: 0.85; }
 .amod-request-submit:disabled { opacity: 0.4; cursor: default; }

@@ -542,6 +542,7 @@ const Account: React.FC = () => {
             )}
 
             {/* ── Info group ── */}
+            <p className="ac-section-label">{lang === "ar" ? "معلومات" : "Info"}</p>
             <div className="ac-group">
               <button className="ac-row" onClick={() => setModal("about")}>
                 <span className="ac-row-label">{t.aboutApp}</span>
@@ -566,6 +567,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* ── Share / Rate group ── */}
+            <p className="ac-section-label">{lang === "ar" ? "مشاركة" : "Share"}</p>
             <div className="ac-group">
               <button className="ac-row" onClick={handleShare}>
                 <span className="ac-row-label">{t.shareApp}</span>
@@ -584,6 +586,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* ── Legal group ── */}
+            <p className="ac-section-label">{lang === "ar" ? "قانوني" : "Legal"}</p>
             <div className="ac-group">
               <button className="ac-row" onClick={() => setModal("terms")}>
                 <span className="ac-row-label">{t.terms}</span>
@@ -609,9 +612,9 @@ const Account: React.FC = () => {
               </div>
             )}
 
+            <div className="ac-bottom-spacer" />
           </div>
 
-          <BottomNavBar active="account" />
         </div>
 
         {/* ── Modals ── */}
@@ -680,6 +683,7 @@ const Account: React.FC = () => {
         )}
 
       </IonContent>
+      <BottomNavBar active="account" fixed />
     </IonPage>
   );
 };

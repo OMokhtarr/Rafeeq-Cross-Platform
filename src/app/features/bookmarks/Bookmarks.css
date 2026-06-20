@@ -6,47 +6,52 @@
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  background: var(--color-bg-app, #0d1f14);
-  color: var(--color-text-primary, #e8e8e8);
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
   max-width: var(--max-width-mobile, 600px);
   min-width: var(--min-width-mobile, 320px);
   margin: 0 auto;
   width: 100%;
+  padding-top: env(safe-area-inset-top);
+  box-sizing: border-box;
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
-/* ── Header ── */
+/* ── Header — standard pattern ── */
 .bm-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: var(--color-bg-toolbar, rgba(13, 31, 20, 0.96));
-  border-bottom: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.18));
+  background: var(--color-bg-content);
+  border-bottom: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
+  transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
 .bm-back {
   background: none;
-  border: none;
+  border: 1.5px solid var(--color-gold-subtle);
   cursor: pointer;
-  color: var(--color-text-primary, #e8e8e8);
-  width: 40px;
-  height: 40px;
+  color: var(--color-gold);
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  transition: background 0.15s;
+  border-radius: 50%;
+  transition: background var(--transition-base), border-color var(--transition-base);
   flex-shrink: 0;
 }
 
 .bm-back:hover {
-  background: rgba(212, 180, 140, 0.12);
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
 }
 
 .bm-back svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .bm-header-titles {
@@ -55,70 +60,73 @@
 }
 
 .bm-title {
-  font-family: var(--font-arabic, "Scheherazade New", serif);
-  font-size: 1.25rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-xl);
   font-weight: 700;
-  margin: 0;
-  color: var(--color-gold, #d4b48c);
+  margin: 0 0 2px;
+  color: var(--color-gold);
 }
 
 [dir="ltr"] .bm-title {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 1.1rem;
+  font-family: var(--font-latin);
+  font-size: var(--text-lg);
 }
 
 .bm-subtitle {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 0.68rem;
-  opacity: 0.5;
-  margin: 2px 0 0;
-  letter-spacing: 0.3px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 /* ── Body ── */
 .bm-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 16px 88px;
+  padding: var(--space-4) 16px calc(var(--bottom-nav-height) + var(--space-6));
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 /* ── Section ── */
 .bm-section {
-  background: var(--color-bg-card, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.14));
-  border-radius: 16px;
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
 .bm-section-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--color-row-border, rgba(212, 180, 140, 0.1));
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--color-row-border);
 }
 
 .bm-section-icon {
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
 .bm-section-title {
   flex: 1;
-  font-family: var(--font-arabic, "Scheherazade New", serif);
-  font-size: 1rem;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--color-gold, #d4b48c);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-gold);
   margin: 0;
+  opacity: 0.85;
 }
 
 [dir="ltr"] .bm-section-title {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 0.875rem;
-  letter-spacing: 0.3px;
+  font-family: var(--font-latin);
+  font-size: var(--text-sm);
+  letter-spacing: 0.1em;
 }
 
 .bm-section-count {

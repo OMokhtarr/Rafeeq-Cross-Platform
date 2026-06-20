@@ -147,6 +147,7 @@ const App: React.FC = () => {
                     component={SearchResults}
                   />
                   <Route exact path="/azkar" component={Azkar} />
+                  <Route exact path="/azkar/:categoryId" component={Azkar} />
                   <Route exact path="/quiz-list" component={QuizList} />
                   <Route
                     exact

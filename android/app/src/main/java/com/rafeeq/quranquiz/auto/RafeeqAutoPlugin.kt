@@ -82,9 +82,21 @@ class RafeeqAutoPlugin : Plugin() {
             pendingEvent = pre
             Log.d("RafeeqAuto", "load: picked up pre-launch pending event: ${pre.getString("action")}")
         }
-        // Start the media service so Android Auto can discover it
-        val intent = Intent(context, RafeeqMediaService::class.java)
-        context.startForegroundService(intent)
+        // NOTE: we intentionally do NOT start the media service here. Starting it on
+        // every app open made the media notification card appear immediately, even when
+        // nothing was playing. Android Auto binds to the MediaBrowserService on its own
+        // when a car connects (no notification needed for browsing), and the service is
+        // started on demand the first time content/playback is pushed (see ensureService).
+    }
+
+    /**
+     * Start the media service if it isn't already running. Uses a plain startService —
+     * the service only promotes to a foreground service (showing the media card) once
+     * audio actually plays.
+     */
+    private fun ensureService() {
+        if (RafeeqMediaService.instance != null) return
+        context.startService(Intent(context, RafeeqMediaService::class.java))
     }
 
     override fun handleOnDestroy() {
@@ -117,12 +129,25 @@ class RafeeqAutoPlugin : Plugin() {
 
     @PluginMethod
     fun setContentTree(call: PluginCall) {
+        ensureService()
         val service = RafeeqMediaService.instance
         if (service == null) {
-            call.reject("MediaService not running")
+            // Service is starting (startService → onCreate is async). Retry shortly so the
+            // content tree is ready by the time Android Auto browses it.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val s = RafeeqMediaService.instance
+                if (s != null) {
+                    applyContentTree(call, s)
+                } else {
+                    call.reject("MediaService not running")
+                }
+            }, 300)
             return
         }
+        applyContentTree(call, service)
+    }
 
+    private fun applyContentTree(call: PluginCall, service: RafeeqMediaService) {
         val recitersArr = call.getArray("reciters") ?: JSArray()
         val surahsArr = call.getArray("surahs") ?: JSArray()
 
@@ -148,6 +173,7 @@ class RafeeqAutoPlugin : Plugin() {
 
     @PluginMethod
     fun updatePlaybackState(call: PluginCall) {
+        ensureService()
         val service = RafeeqMediaService.instance
         if (service == null) {
             call.reject("MediaService not running")
@@ -180,6 +206,89 @@ class RafeeqAutoPlugin : Plugin() {
         call.resolve()
     }
 
+    // ── JS → Native ExoPlayer control ───────────────────────────────────────────
+    // The JS brain (usePlaybackQueue) resolves verse URLs/files and drives the native
+    // ExoPlayer through these methods. On web/iOS these are never called (the <audio>
+    // element is used instead).
+
+    /**
+     * Load a single resolved source (http URL or file:// path) for one verse and play it.
+     * The JS brain owns progression — when the track ends, the service fires a
+     * 'nativeTrackEnded' carAction so JS picks the next verse.
+     */
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun loadNativeTrack(call: PluginCall) {
+        ensureService()
+        val service = RafeeqMediaService.instance ?: run { call.reject("MediaService not running"); return }
+        val url = call.getString("url") ?: run { call.reject("url required"); return }
+        val index = call.getInt("index") ?: 0
+        val title = call.getString("title") ?: ""
+        val autoplay = call.getBoolean("autoplay") ?: true
+        service.loadNativeTrack(url, index, title, autoplay)
+        call.resolve()
+    }
+
+    /**
+     * Push the full resolved flat queue so the service can persist it for cold-start
+     * car playback. `urls` is the ordered list of resolved sources; `startIndex` is where
+     * to begin; `title` is the display title for the notification/car.
+     */
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun setNativeQueue(call: PluginCall) {
+        ensureService()
+        val service = RafeeqMediaService.instance ?: run { call.reject("MediaService not running"); return }
+        val urlsArr = call.getArray("urls") ?: JSArray()
+        val urls = (0 until urlsArr.length()).mapNotNull { i -> urlsArr.optString(i).takeIf { it.isNotEmpty() } }
+        val startIndex = call.getInt("startIndex") ?: 0
+        val title = call.getString("title") ?: "رفيق"
+        val autoplay = call.getBoolean("autoplay") ?: true
+        service.setNativeQueue(urls, startIndex, title, autoplay)
+        call.resolve()
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun nativePlay(call: PluginCall) {
+        RafeeqMediaService.instance?.nativePlay()
+        call.resolve()
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun nativePause(call: PluginCall) {
+        RafeeqMediaService.instance?.nativePause()
+        call.resolve()
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun nativeSeek(call: PluginCall) {
+        val pos = (call.getDouble("positionMs") ?: 0.0).toLong()
+        RafeeqMediaService.instance?.nativeSeek(pos)
+        call.resolve()
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun nativeSetSpeed(call: PluginCall) {
+        val speed = (call.getDouble("speed") ?: 1.0).toFloat()
+        RafeeqMediaService.instance?.nativeSetSpeed(speed)
+        call.resolve()
+    }
+
+    /** Play a one-shot intro (bismillah); 'nativeIntroEnded' fires when it finishes. */
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun playNativeIntro(call: PluginCall) {
+        ensureService()
+        val service = RafeeqMediaService.instance ?: run { call.reject("MediaService not running"); return }
+        val url = call.getString("url") ?: run { call.reject("url required"); return }
+        service.playNativeIntro(url)
+        call.resolve()
+    }
+
     // ── Native → JS ────────────────────────────────────────────────────────────
 
     /**
@@ -191,13 +300,22 @@ class RafeeqAutoPlugin : Plugin() {
      *  2. Store the event — jsReady() will flush it once the listener is registered.
      * If JS is already ready, fire immediately (app was already in foreground/background-alive).
      */
-    fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null, positionMs: Long? = null) {
+    fun sendCarEvent(action: String, reciter: String?, surah: Int?, aya: Int? = null, positionMs: Long? = null, durationMs: Long? = null) {
         val data = JSObject().apply {
             put("action", action)
             if (reciter != null) put("reciter", reciter)
             if (surah != null) put("surah", surah)
             if (aya != null) put("aya", aya)
             if (positionMs != null) put("positionMs", positionMs)
+            if (durationMs != null) put("durationMs", durationMs)
+        }
+
+        // High-frequency, non-interactive events (position ticks) must never wake the
+        // activity or queue — they're only meaningful while JS is already live. Fire
+        // directly and bail.
+        if (action == "nativePosition") {
+            if (jsReady) notifyListeners("carAction", data)
+            return
         }
 
         if (jsReady) {

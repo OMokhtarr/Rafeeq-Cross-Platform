@@ -114,132 +114,88 @@ const AkmelAlNehayatSetup: React.FC = () => {
     return false;
   };
 
+  const scrollZoneLabel = () => {
+    if (scopeType === "surah") {
+      return (
+        <>
+          {tq.selectSurah}
+          {selectedSurah && (
+            <span className="an-selected-badge" lang="ar" dir="rtl">
+              {getSurahNameArabic(selectedSurah)}
+            </span>
+          )}
+        </>
+      );
+    }
+    if (scopeType === "page") return tq.pageRange;
+    if (scopeType === "juz") {
+      return (
+        <>
+          {tq.selectJuzs}
+          {selectedJuzs.length > 0 && (
+            <span className="an-selected-badge">
+              {toHindi(selectedJuzs.length)} {tq.pickedJuzs}
+            </span>
+          )}
+        </>
+      );
+    }
+    return null;
+  };
+
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="an-setup-page-wrapper">
-          <div className="an-container">
-            <div className="an-card">
-              {/* ── Scope selector ── */}
-              <div className="an-section">
-                <label className="an-label">{tq.scope}</label>
-                <div className="an-type-row">
-                  {[
-                    { key: "surah" as const, icon: "📖", label: tq.scopeSurah },
-                    { key: "page" as const, icon: "📄", label: tq.scopePages },
-                    { key: "juz" as const, icon: "📚", label: tq.scopeJuz },
-                  ].map((opt) => (
-                    <button
-                      key={opt.key}
-                      className={`an-type-btn ${scopeType === opt.key ? "active" : ""}`}
-                      onClick={() => setScopeType(opt.key)}
-                    >
-                      <span className="an-type-icon">{opt.icon}</span>
-                      <span className="an-type-ar">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* ── Header ── */}
+          <div className="an-setup-header">
+            <button
+              className="an-setup-back-btn"
+              onClick={() => history.push("/quiz-list")}
+              aria-label={tq.backToList}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isRTL
+                  ? <path d="M5 12h14M12 5l7 7-7 7" />
+                  : <path d="M19 12H5M12 19l-7-7 7-7" />}
+              </svg>
+            </button>
+            <div className="an-setup-header-text">
+              <h1 className="an-setup-title">{tq.nehayatTitle}</h1>
+            </div>
+            <div style={{ width: 44 }} />
+          </div>
+
+          {/* ── Body ── */}
+          <div className="an-body" dir={isRTL ? "rtl" : "ltr"}>
+            {/* Scope selector */}
+            <div className="an-scope-section">
+              <div className="an-label">{tq.scope}</div>
+              <div className="an-type-row">
+                {[
+                  { key: "surah" as const, label: tq.scopeSurah },
+                  { key: "page" as const, label: tq.scopePages },
+                  { key: "juz" as const, label: tq.scopeJuz },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`an-type-btn ${scopeType === opt.key ? "active" : ""}`}
+                    onClick={() => setScopeType(opt.key)}
+                  >
+                    <span className="an-type-ar">{opt.label}</span>
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* ── Surah grid (single-select) ── */}
-              {scopeType === "surah" && (
-                <div className="an-section an-section-scrollable">
-                  <label className="an-label">
-                    {tq.selectSurah}
-                    {selectedSurah && (
-                      <span className="an-selected-badge" lang="ar" dir="rtl">
-                        {getSurahNameArabic(selectedSurah)}
-                      </span>
-                    )}
-                  </label>
-                  <div className="an-surah-grid">
-                    {surahNames.slice(1, 115).map((entry, i) => {
-                      const num = i + 1;
-                      return (
-                        <button
-                          key={num}
-                          className={`an-surah-chip ${selectedSurah === num ? "active" : ""}`}
-                          onClick={() => setSelectedSurah(num)}
-                        >
-                          <span className="an-chip-text">
-                            {isRTL ? (
-                              <>
-                                <span className="an-chip-name" lang="ar" dir="rtl">
-                                  {entry!.arabic}
-                                </span>
-                                <span className="an-chip-en">{entry!.english}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="an-chip-en">{entry!.english}</span>
-                                <span className="an-chip-name" lang="ar" dir="rtl">
-                                  {entry!.arabic}
-                                </span>
-                              </>
-                            )}
-                          </span>
-                          <span className="an-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {!selectedSurah && (
-                    <p className="an-hint-text">{tq.hintOneSurah}</p>
-                  )}
-                </div>
-              )}
+            {/* Scrollable selection zone */}
+            <div className="an-scroll-zone">
+              <div className="an-scroll-zone-label">{scrollZoneLabel()}</div>
 
-              {/* ── Page range ── */}
+              {/* Page pickers — always visible above the surah scroll list */}
               {scopeType === "page" && (
-                <div className="an-section an-section-scrollable">
-                  <label className="an-label">{tq.pageRange}</label>
-                  {/* Surah filter */}
-                  <div className="an-surah-filter-row">
-                    <button
-                      className={`an-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
-                      onClick={() => handlePageFilterSurahChange(null)}
-                    >
-                      {tq.allPages}
-                    </button>
-                  </div>
-                  <div className="an-surah-grid an-surah-grid-compact">
-                    {surahNames.slice(1, 115).map((entry, i) => {
-                      const num = i + 1;
-                      return (
-                        <button
-                          key={num}
-                          className={`an-surah-chip${pageFilterSurah === num ? " active" : ""}`}
-                          onClick={() => handlePageFilterSurahChange(num)}
-                        >
-                          <span className="an-chip-text">
-                            {isRTL ? (
-                              <>
-                                <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                <span className="an-chip-en">{entry!.english}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="an-chip-en">{entry!.english}</span>
-                                <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                              </>
-                            )}
-                          </span>
-                          <span className="an-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Page pickers */}
+                <div className="an-page-picker-bar">
                   <div className="an-page-row">
-                    <div className="an-page-input">
-                      <span>{tq.to}</span>
-                      <InlineSelect
-                        value={String(pageTo)}
-                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
-                        onChange={(v) => setPageTo(Number(v))}
-                        fullWidth
-                      />
-                    </div>
                     <div className="an-page-input">
                       <span>{tq.from}</span>
                       <InlineSelect
@@ -253,6 +209,15 @@ const AkmelAlNehayatSetup: React.FC = () => {
                         fullWidth
                       />
                     </div>
+                    <div className="an-page-input">
+                      <span>{tq.to}</span>
+                      <InlineSelect
+                        value={String(pageTo)}
+                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
+                        onChange={(v) => setPageTo(Number(v))}
+                        fullWidth
+                      />
+                    </div>
                   </div>
                   <p className="an-range-info">
                     {tq.pageCount}: {isRTL ? toHindi(pageTo - pageFrom + 1) : String(pageTo - pageFrom + 1)}
@@ -260,17 +225,87 @@ const AkmelAlNehayatSetup: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Juz grid (multi-select) ── */}
-              {scopeType === "juz" && (
-                <div className="an-section">
-                  <label className="an-label">
-                    {tq.selectJuzs}
-                    {selectedJuzs.length > 0 && (
-                      <span className="an-selected-badge">
-                        {toHindi(selectedJuzs.length)} {tq.pickedJuzs}
-                      </span>
+              <div className="an-scroll-inner">
+
+                {/* Surah grid */}
+                {scopeType === "surah" && (
+                  <>
+                    <div className="an-surah-grid">
+                      {surahNames.slice(1, 115).map((entry, i) => {
+                        const num = i + 1;
+                        return (
+                          <button
+                            key={num}
+                            className={`an-surah-chip ${selectedSurah === num ? "active" : ""}`}
+                            onClick={() => setSelectedSurah(num)}
+                          >
+                            <span className="an-chip-text">
+                              {isRTL ? (
+                                <>
+                                  <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  <span className="an-chip-en">{entry!.english}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="an-chip-en">{entry!.english}</span>
+                                  <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="an-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!selectedSurah && (
+                      <p className="an-hint-text">{tq.hintOneSurah}</p>
                     )}
-                  </label>
+                  </>
+                )}
+
+                {/* Page range — surah filter only; pickers are above */}
+                {scopeType === "page" && (
+                  <>
+                    <div className="an-surah-filter-row">
+                      <button
+                        className={`an-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
+                        onClick={() => handlePageFilterSurahChange(null)}
+                      >
+                        {tq.allPages}
+                      </button>
+                    </div>
+                    <div className="an-surah-grid an-surah-grid-compact">
+                      {surahNames.slice(1, 115).map((entry, i) => {
+                        const num = i + 1;
+                        return (
+                          <button
+                            key={num}
+                            className={`an-surah-chip${pageFilterSurah === num ? " active" : ""}`}
+                            onClick={() => handlePageFilterSurahChange(num)}
+                          >
+                            <span className="an-chip-text">
+                              {isRTL ? (
+                                <>
+                                  <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  <span className="an-chip-en">{entry!.english}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="an-chip-en">{entry!.english}</span>
+                                  <span className="an-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="an-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Juz grid */}
+                {scopeType === "juz" && (
                   <div className="an-juz-grid">
                     {JUZS.map((j) => (
                       <button
@@ -283,53 +318,46 @@ const AkmelAlNehayatSetup: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ── Question count ── */}
-              <div className="an-section">
-                <label className="an-label">{tq.questionCount}</label>
-                <div className="an-count-row">
-                  {[5, 10, 15, 20].map((n) => (
-                    <button
-                      key={n}
-                      className={`an-count-btn ${questionCount === n ? "active" : ""}`}
-                      onClick={() => setQuestionCount(n)}
-                    >
-                      {isRTL ? toHindi(n) : String(n)}
-                    </button>
-                  ))}
-                  <div className={`an-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
-                    <InlineSelect
-                      value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
-                      options={countOptions}
-                      onChange={(v) => setQuestionCount(Number(v))}
-                      fullWidth
-                    />
-                  </div>
-                </div>
               </div>
-
-              {/* ── Start ── */}
-              <button
-                className="an-start-btn"
-                onClick={handleStart}
-                disabled={!isReady()}
-              >
-                {tq.start}
-              </button>
-
-              <button
-                className="an-back-btn"
-                onClick={() => history.push("/quiz-list")}
-              >
-                {tq.backToList}
-              </button>
             </div>
           </div>
-          <BottomNavBar active="quiz" />
+
+          {/* ── Footer: always visible ── */}
+          <div className="an-footer">
+            <div className="an-footer-label">{tq.questionCount}</div>
+            <div className="an-count-row">
+              {[5, 10, 15, 20].map((n) => (
+                <button
+                  key={n}
+                  className={`an-count-btn ${questionCount === n ? "active" : ""}`}
+                  onClick={() => setQuestionCount(n)}
+                >
+                  {isRTL ? toHindi(n) : String(n)}
+                </button>
+              ))}
+              <div className={`an-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
+                <InlineSelect
+                  value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
+                  options={countOptions}
+                  onChange={(v) => setQuestionCount(Number(v))}
+                  fullWidth
+                />
+              </div>
+            </div>
+            <button
+              className="an-start-btn"
+              onClick={handleStart}
+              disabled={!isReady()}
+            >
+              {tq.start}
+            </button>
+          </div>
+
         </div>
       </IonContent>
+      <BottomNavBar active="quiz" fixed />
     </IonPage>
   );
 };

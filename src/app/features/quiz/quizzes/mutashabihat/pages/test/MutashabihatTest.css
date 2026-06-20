@@ -15,23 +15,24 @@ ion-content::part(scroll) {
 .mst-test-page-wrapper {
   width: 100%;
   height: 100%;
-  background: var(--color-bg-page);
+  background: var(--color-bg-content);
   color: var(--color-text-primary);
+  font-family: var(--font-arabic);
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
 .mst-container {
   width: 100%;
-  max-width: 600px;
+  max-width: var(--max-width-mobile, 600px);
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  padding: 4px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -57,7 +58,7 @@ ion-content::part(scroll) {
 
 .mst-sibling-nav {
   background: var(--color-gold-faint);
-  border-bottom: 2px solid var(--color-gold);
+  border-bottom: 1.5px solid var(--color-border-card);
   padding: 10px 12px;
   flex-shrink: 0;
 }
@@ -75,8 +76,8 @@ ion-content::part(scroll) {
 }
 
 .mst-sibling-count {
-  background: var(--color-quiz);
-  color: var(--color-text-on-dark);
+  background: var(--color-gold-subtle);
+  color: var(--color-gold);
   border-radius: var(--radius-pill);
   padding: 1px 8px;
   font-size: var(--text-sm);
@@ -159,7 +160,7 @@ ion-content::part(scroll) {
   border-radius: var(--radius-md);
   padding: 4px 10px;
   margin-bottom: 4px;
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
   min-height: 32px;
 }
@@ -184,7 +185,7 @@ ion-content::part(scroll) {
 }
 .mst-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-quiz), var(--color-gold));
+  background: linear-gradient(90deg, var(--color-quran), var(--color-gold));
   transition: width 0.35s ease;
 }
 
@@ -214,22 +215,22 @@ ion-content::part(scroll) {
 /* ── Exit button — matches aa-exit-btn (small circle) ─────────────────── */
 .mst-exit-btn {
   background: none;
-  border: 2px solid #e74c3c;
-  color: #e74c3c;
-  width: 28px;
-  height: 28px;
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: 50%;
   cursor: pointer;
-  font-size: var(--text-sm);
-  transition: all 0.25s;
+  transition: background var(--transition-base), border-color var(--transition-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .mst-exit-btn:hover {
-  background: #e74c3c;
-  color: white;
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
 }
 
 /* Card shrinks to its content — context viewer fills the remaining height */
@@ -239,7 +240,7 @@ ion-content::part(scroll) {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 5px 10px;
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -311,7 +312,7 @@ ion-content::part(scroll) {
   flex-wrap: nowrap;
   gap: 4px;
   padding: 4px 8px;
-  background: linear-gradient(to bottom, #e8dccc, #dac09a);
+  border: 1.5px solid var(--color-gold-subtle);
   border-radius: var(--radius-pill);
   margin-bottom: 3px;
   direction: rtl;
@@ -319,9 +320,6 @@ ion-content::part(scroll) {
   overflow-x: auto;
   scrollbar-width: none;
   min-height: 0;
-}
-[data-theme="night"] .mst-info-strip {
-  background: rgba(212, 180, 140, 0.15);
 }
 .mst-info-strip::-webkit-scrollbar {
   display: none;
@@ -342,21 +340,18 @@ ion-content::part(scroll) {
 .mst-meta {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  color: var(--color-quiz);
-  background: rgba(255, 255, 255, 0.3);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold-subtle);
   padding: 1px 7px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
   flex-shrink: 0;
 }
-[data-theme="night"] .mst-meta {
-  background: rgba(0, 0, 0, 0.2);
-}
 .mst-similar-badge {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  background: var(--color-quiz);
-  color: var(--color-gold-faint);
+  background: var(--color-gold-subtle);
+  color: var(--color-gold);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   flex-shrink: 0;
@@ -382,7 +377,7 @@ ion-content::part(scroll) {
   padding: 2px 7px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-gold);
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--color-bg-card);
   cursor: pointer;
   transition: all 0.18s;
   direction: rtl;
@@ -390,40 +385,37 @@ ion-content::part(scroll) {
   white-space: nowrap;
   color: var(--color-text-primary);
 }
-[data-theme="night"] .mst-inline-chip {
-  background: rgba(0, 0, 0, 0.3);
-}
 .mst-inline-chip:hover {
-  border-color: var(--color-quiz);
+  border-color: var(--color-gold);
   background: var(--color-gold-faint);
 }
 .mst-inline-chip.active.target {
-  background: rgba(255, 215, 0, 0.22);
+  background: var(--color-gold-faint);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
+  box-shadow: 0 0 0 2px var(--color-gold-subtle);
 }
 .mst-inline-chip.active.sibling {
-  background: rgba(74, 144, 226, 0.12);
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+  background: color-mix(in srgb, var(--color-azkar) 12%, transparent);
+  border-color: var(--color-azkar);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-azkar) 30%, transparent);
 }
 .mst-inline-chip.sibling {
-  border-color: rgba(74, 144, 226, 0.5);
+  border-color: color-mix(in srgb, var(--color-azkar) 50%, transparent);
 }
 .mst-inline-chip.active-chip {
-  background: var(--ion-color-primary-tint, #4c8dff);
-  border-color: var(--ion-color-primary, #3880ff);
-  color: white;
+  background: var(--color-azkar);
+  border-color: var(--color-azkar);
+  color: var(--color-text-on-dark);
 }
 .mst-inline-chip.active-chip .mst-chip-surah,
 .mst-inline-chip.active-chip .mst-chip-meta {
-  color: white;
+  color: var(--color-text-on-dark);
 }
 
 /* Verse box */
 .mst-verse-box {
   background: var(--color-gold-faint);
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-md);
   padding: 5px 8px;
   text-align: center;
@@ -443,9 +435,9 @@ ion-content::part(scroll) {
 .mst-hint-inline {
   font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-  color: #b8860b;
+  color: var(--color-gold);
   font-weight: 600;
-  border-bottom: 2px dashed #b8860b;
+  border-bottom: 2px dashed var(--color-gold);
 }
 
 .mst-prompt {
@@ -467,7 +459,7 @@ ion-content::part(scroll) {
   width: 100%;
   padding: 12px;
   font-size: var(--text-md);
-  border: 2px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-md);
   font-family: var(--font-arabic);
   direction: rtl;
@@ -478,7 +470,7 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
 }
 .mst-input:focus {
-  border-color: var(--color-text-primary);
+  border-color: var(--color-gold);
   outline: none;
   box-shadow: 0 0 0 4px var(--color-gold-faint);
 }
@@ -515,27 +507,30 @@ ion-content::part(scroll) {
   cursor: not-allowed;
 }
 
-/* Button variants — all share the quiz accent color */
+/* Button variants — gold ghost style */
 .mst-hint,
 .mst-context,
 .mst-submit,
 .mst-skip,
 .mst-recite {
-  background: var(--color-quiz);
-  color: #ffffff;
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
 }
 .mst-hint:hover:not(:disabled),
 .mst-context:hover:not(:disabled),
 .mst-submit:hover:not(:disabled),
 .mst-skip:hover:not(:disabled),
 .mst-recite:hover:not(:disabled) {
-  opacity: 0.85;
+  background: var(--color-gold-subtle);
+  border-color: var(--color-gold);
   transform: scale(1.02);
   box-shadow: var(--shadow-card-hover);
 }
 .mst-context.active {
-  opacity: 0.7;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: var(--color-gold-subtle);
+  border-color: var(--color-gold);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .mst-recite {
@@ -557,28 +552,19 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 .mst-result.correct {
-  background: #d4edda;
-  border: 2px solid #27ae60;
+  background: color-mix(in srgb, var(--color-quran) 12%, transparent);
+  border: 1.5px solid var(--color-quran);
+  color: var(--color-quran);
 }
 .mst-result.wrong {
-  background: #f8d7da;
-  border: 2px solid #e74c3c;
+  background: color-mix(in srgb, #e05a5a 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, #e05a5a 50%, transparent);
+  color: var(--color-text-primary);
 }
 .mst-result.skipped {
-  background: #e8f4fd;
-  border: 2px solid #95a5a6;
-}
-[data-theme="night"] .mst-result.correct {
-  background: rgba(76, 175, 125, 0.15);
-  color: #6cd699;
-}
-[data-theme="night"] .mst-result.wrong {
-  background: rgba(231, 76, 60, 0.15);
-  color: #f37b6f;
-}
-[data-theme="night"] .mst-result.skipped {
-  background: rgba(241, 196, 15, 0.12);
-  color: #f0d068;
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-border-card);
+  color: var(--color-text-muted);
 }
 
 .mst-result-icon {
@@ -640,7 +626,7 @@ ion-content::part(scroll) {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   font-weight: bold;
-  color: var(--color-quiz);
+  color: var(--color-gold);
 }
 .mst-sibling-ref {
   font-family: var(--font-arabic);
@@ -660,8 +646,8 @@ ion-content::part(scroll) {
 .mst-next-btn {
   width: 100%;
   padding: 12px;
-  background: #27ae60;
-  color: white;
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-md);
@@ -677,7 +663,7 @@ ion-content::part(scroll) {
   min-height: 44px;
 }
 .mst-next-btn:hover {
-  background: #2ecc71;
+  filter: brightness(1.1);
   transform: scale(1.02);
 }
 
@@ -690,7 +676,7 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-page);
+  background: var(--color-bg-content);
   color: var(--color-text-primary);
 }
 .mst-spinner {
@@ -713,7 +699,7 @@ ion-content::part(scroll) {
   padding: 30px;
   text-align: center;
   max-width: 400px;
-  border: 3px solid #e74c3c;
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
   white-space: pre-line;
 }
@@ -723,15 +709,12 @@ ion-content::part(scroll) {
 }
 .mst-error-box button {
   padding: 10px 24px;
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+  background: var(--color-quran);
   color: var(--color-text-on-dark);
   border: none;
   border-radius: var(--radius-pill);
   font-size: var(--text-md);
+  font-family: var(--font-arabic);
   cursor: pointer;
 }
 .mst-complete-card {
@@ -740,7 +723,7 @@ ion-content::part(scroll) {
   padding: 30px 35px;
   text-align: center;
   max-width: 380px;
-  border: 3px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
 }
 .mst-complete-card h2 {
@@ -794,15 +777,12 @@ ion-content::part(scroll) {
   transition: all 0.25s;
 }
 .mst-complete-actions button:first-child {
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary),
-    var(--color-text-primary)
-  );
+  background: var(--color-quran);
   color: var(--color-text-on-dark);
 }
 .mst-complete-actions button:last-child {
-  background: var(--color-progress-track);
+  background: var(--color-bg-card-alt);
+  border: 1.5px solid var(--color-border-card);
   color: var(--color-text-primary);
 }
 .mst-complete-actions button:hover {
@@ -826,7 +806,7 @@ ion-content::part(scroll) {
   gap: 5px;
   padding: 6px 8px;
   background: var(--color-gold-faint);
-  border-bottom: 2px solid var(--color-gold);
+  border-bottom: 1.5px solid var(--color-border-card);
   overflow-x: auto;
   flex-shrink: 0;
   direction: rtl;
@@ -854,20 +834,21 @@ ion-content::part(scroll) {
   color: var(--color-text-primary);
 }
 .mst-verse-chip:hover {
-  border-color: var(--color-quiz);
+  border-color: var(--color-gold);
+  background: var(--color-gold-faint);
 }
 .mst-verse-chip.active.target {
-  background: rgba(255, 215, 0, 0.18);
+  background: var(--color-gold-faint);
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 2px rgba(212, 180, 140, 0.5);
+  box-shadow: 0 0 0 2px var(--color-gold-subtle);
 }
 .mst-verse-chip.active.sibling {
-  background: rgba(74, 144, 226, 0.1);
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+  background: color-mix(in srgb, var(--color-azkar) 10%, transparent);
+  border-color: var(--color-azkar);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-azkar) 30%, transparent);
 }
 .mst-verse-chip.sibling {
-  border-color: rgba(74, 144, 226, 0.4);
+  border-color: color-mix(in srgb, var(--color-azkar) 40%, transparent);
 }
 .mst-chip-surah {
   font-family: var(--font-arabic);
@@ -879,7 +860,7 @@ ion-content::part(scroll) {
 .mst-chip-meta {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  color: var(--color-quiz);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 .mst-chip-preview {
@@ -888,10 +869,10 @@ ion-content::part(scroll) {
 .mst-open-context-hint {
   width: 100%;
   padding: 6px 10px;
-  background: rgba(74, 144, 226, 0.1);
-  border: 1.5px solid #4a90e2;
+  background: color-mix(in srgb, var(--color-azkar) 10%, transparent);
+  border: 1.5px solid var(--color-azkar);
   border-radius: var(--radius-md);
-  color: #2c6fad;
+  color: var(--color-azkar);
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -905,7 +886,7 @@ ion-content::part(scroll) {
   margin-top: 4px;
 }
 .mst-open-context-hint:hover {
-  background: rgba(74, 144, 226, 0.18);
+  background: color-mix(in srgb, var(--color-azkar) 18%, transparent);
 }
 
 /* ── Immersive mode support ───────────────────────────────────────────── */
@@ -926,7 +907,7 @@ ion-content::part(scroll) {
   flex-direction: column;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-gold);
+  border: 1.5px solid var(--color-border-card);
   overflow: hidden;
   margin-top: 8px;
 }

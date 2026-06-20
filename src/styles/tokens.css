@@ -30,7 +30,7 @@
      day-mode defaults. Ahadith and Settings are flat across modes. */
 
   --color-ahadith: #6b3a8a;
-  --color-hifz: #4a7c59;
+  --color-hifz: #7c6cd4;
   --color-settings: #7f8c8d;
 
   /* ── TYPOGRAPHY ──────────────────────────────────── */
@@ -148,7 +148,7 @@
   --color-gold-faint: rgba(212, 180, 140, 0.08);
 
   /* Category accents */
-  --color-quran: #0d3d21;
+  --color-quran: #3eb489;
   --color-quiz: #c8773a;
   --color-azkar: #5a9fd4;
 
@@ -236,17 +236,17 @@
   --color-gold-faint: rgba(184, 134, 11, 0.06);
 
   /* Category accents */
-  --color-quran: #1e7b47;
+  --color-quran: #1a9a72;
   --color-quiz: #c5551e;
   --color-azkar: #2a6fa5;
 
-  /* Borders — clean, minimal */
+  /* Borders — gold-tinted like night mode */
   --color-border-gold: var(--color-gold);
-  --color-border-subtle: rgba(0, 0, 0, 0.08);
-  --color-border-card: rgba(0, 0, 0, 0.06);
-  --color-row-border: rgba(0, 0, 0, 0.05);
-  --color-tab-border: rgba(0, 0, 0, 0.08);
-  --color-settings-border: rgba(0, 0, 0, 0.08);
+  --color-border-subtle: rgba(184, 134, 11, 0.15);
+  --color-border-card: rgba(184, 134, 11, 0.22);
+  --color-row-border: rgba(184, 134, 11, 0.15);
+  --color-tab-border: rgba(184, 134, 11, 0.18);
+  --color-settings-border: rgba(184, 134, 11, 0.22);
 
   /* Inputs */
   --color-input-bg: #f5f5f5;

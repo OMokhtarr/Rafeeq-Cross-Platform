@@ -259,7 +259,17 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
               activeQueueRef.current.length > 0
                 ? activeQueueRef.current
                 : Array.from({ length: 7 }, (_, i) => ({ sura: 1, aya: i + 1 }));
-            q.start(coldQueue).catch(() => {});
+            // `aya` carries the index ExoPlayer is already playing on cold start, so the
+            // brain adopts that position instead of restarting from the beginning.
+            const startIdx =
+              event.aya != null && event.aya >= 0 && event.aya < coldQueue.length
+                ? event.aya
+                : 0;
+            if (startIdx > 0) {
+              q.startAt(coldQueue, startIdx).catch(() => {});
+            } else {
+              q.start(coldQueue).catch(() => {});
+            }
           }
           break;
         case "pause":
@@ -312,6 +322,21 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           q.seekToMs(event.positionMs);
           break;
         }
+        case "nativeTrackEnded": {
+          // The native ExoPlayer finished the current verse. Let the brain apply
+          // repeat/range/page logic and feed the next verse.
+          q.notifyTrackEnded();
+          break;
+        }
+        case "nativePosition": {
+          // Live position tick from ExoPlayer: positionMs is per-verse, durationMs is
+          // the current verse's duration. The brain converts to range position.
+          q.notifyNativePosition(event.positionMs ?? 0, event.durationMs ?? 0);
+          break;
+        }
+        case "nativeIntroEnded":
+          // Handled by the one-time listener in nativeBismillahIntro; ignore here.
+          break;
       }
     })
       .then((handle) => {

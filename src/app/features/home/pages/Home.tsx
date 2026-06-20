@@ -1,20 +1,3 @@
-/**
- * HOME PAGE
- *
- * Replaces the splash screen as the app's main entry point.
- * Layout (matches design-system ui_kit Home):
- *   ┌──────────────────────────────┐
- *   │     RAFEEQ wordmark (small)  │
- *   │                              │
- *   │   بِسْمِ اللَّهِ              │
- *   │   الرَّحْمَٰنِ الرَّحِيمِ     │   ← centered, gold, large
- *   │                              │
- *   │   رفيق · RAFEEQ              │   ← brand stack at bottom
- *   ├──────────────────────────────┤
- *   │ Quran  Quiz  Azkar  Ahad ⚙   │   ← shared BottomNavBar
- *   └──────────────────────────────┘
- */
-
 import React from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useLang } from "../../../core/context/LanguageContext";
@@ -51,10 +34,10 @@ const Home: React.FC = () => {
               {/* Bottom gradient fade — blends into the app bg above the tab bar */}
               <div className="home-stage-fade" aria-hidden="true" />
             </div>
-            <BottomNavBar active="home" />
           </div>
         </div>
       </IonContent>
+      <BottomNavBar active="home" fixed />
     </IonPage>
   );
 };

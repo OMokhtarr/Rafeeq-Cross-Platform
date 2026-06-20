@@ -22,8 +22,7 @@ const MutashabihatSetup: React.FC = () => {
   const { t, isRTL } = useLang();
   const tq = t.quizSetup;
 
-  const [scopeType, setScopeType] =
-    useState<MutashabihatConfig["scopeType"]>("surah");
+  const [scopeType, setScopeType] = useState<MutashabihatConfig["scopeType"]>("surah");
   const [selectedSurahs, setSelectedSurahs] = useState<number[]>([]);
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
@@ -59,7 +58,6 @@ const MutashabihatSetup: React.FC = () => {
     [isRTL],
   );
 
-  // Build surah names list from metadata service
   const surahNames = useMemo(() => {
     const chapters = getChapters();
     return [
@@ -120,136 +118,88 @@ const MutashabihatSetup: React.FC = () => {
     return false;
   };
 
+  const scrollZoneLabel = () => {
+    if (scopeType === "surah") {
+      return (
+        <>
+          {tq.selectSurahs}
+          {selectedSurahs.length > 0 && (
+            <span className="ms-count-badge">
+              {toHindi(selectedSurahs.length)} {tq.pickedSurahs}
+            </span>
+          )}
+        </>
+      );
+    }
+    if (scopeType === "page") return tq.pageRange;
+    if (scopeType === "juz") {
+      return (
+        <>
+          {tq.selectJuzs}
+          {selectedJuzs.length > 0 && (
+            <span className="ms-count-badge">
+              {toHindi(selectedJuzs.length)} {tq.pickedJuzs}
+            </span>
+          )}
+        </>
+      );
+    }
+    return null;
+  };
+
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="ms-setup-page-wrapper">
-          <div className="ms-setup-container">
-            <div className="ms-setup-card">
-              {/* ── Scope selector ── */}
-              <div className="ms-section">
-                <label className="ms-label">{tq.scope}</label>
-                <div className="ms-type-row">
-                  {[
-                    { key: "surah" as const, icon: "📖", label: tq.scopeSurah },
-                    { key: "page" as const, icon: "📄", label: tq.scopePages },
-                    { key: "juz" as const, icon: "📚", label: tq.scopeJuz },
-                  ].map((opt) => (
-                    <button
-                      key={opt.key}
-                      className={`ms-type-btn ${
-                        scopeType === opt.key ? "active" : ""
-                      }`}
-                      onClick={() => setScopeType(opt.key)}
-                    >
-                      <span className="ms-type-icon">{opt.icon}</span>
-                      <span className="ms-type-ar">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* ── Header ── */}
+          <div className="ms-setup-header">
+            <button
+              className="ms-setup-back-btn"
+              onClick={() => history.push("/quiz-list")}
+              aria-label={tq.backToList}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isRTL
+                  ? <path d="M5 12h14M12 5l7 7-7 7" />
+                  : <path d="M19 12H5M12 19l-7-7 7-7" />}
+              </svg>
+            </button>
+            <div className="ms-setup-header-text">
+              <h1 className="ms-setup-title">{tq.mutashabihatTitle}</h1>
+            </div>
+            <div style={{ width: 44 }} />
+          </div>
+
+          {/* ── Body ── */}
+          <div className="ms-body" dir={isRTL ? "rtl" : "ltr"}>
+            {/* Scope selector */}
+            <div className="ms-scope-section">
+              <div className="ms-label">{tq.scope}</div>
+              <div className="ms-type-row">
+                {[
+                  { key: "surah" as const, label: tq.scopeSurah },
+                  { key: "page" as const, label: tq.scopePages },
+                  { key: "juz" as const, label: tq.scopeJuz },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`ms-type-btn ${scopeType === opt.key ? "active" : ""}`}
+                    onClick={() => setScopeType(opt.key)}
+                  >
+                    <span className="ms-type-ar">{opt.label}</span>
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* ── Surah multi-select grid ── */}
-              {scopeType === "surah" && (
-                <div className="ms-section ms-section-scrollable">
-                  <label className="ms-label">
-                    {tq.selectSurahs}
-                    {selectedSurahs.length > 0 && (
-                      <span className="ms-count-badge">
-                        {toHindi(selectedSurahs.length)} {tq.pickedSurahs}
-                      </span>
-                    )}
-                  </label>
-                  <div className="ms-surah-grid">
-                    {surahNames.slice(1, 115).map((entry, i) => {
-                      const num = i + 1;
-                      return (
-                        <button
-                          key={num}
-                          className={`ms-surah-chip ${
-                            selectedSurahs.includes(num) ? "active" : ""
-                          }`}
-                          onClick={() => toggleSurah(num)}
-                        >
-                          <span className="ms-chip-text">
-                            {isRTL ? (
-                              <>
-                                <span className="ms-chip-name" lang="ar" dir="rtl">
-                                  {entry!.arabic}
-                                </span>
-                                <span className="ms-chip-en">{entry!.english}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="ms-chip-en">{entry!.english}</span>
-                                <span className="ms-chip-name" lang="ar" dir="rtl">
-                                  {entry!.arabic}
-                                </span>
-                              </>
-                            )}
-                          </span>
-                          <span className="ms-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {selectedSurahs.length === 0 && (
-                    <p className="ms-hint-text">{tq.hintOneSurahMin}</p>
-                  )}
-                </div>
-              )}
+            {/* Scrollable selection zone */}
+            <div className="ms-scroll-zone">
+              <div className="ms-scroll-zone-label">{scrollZoneLabel()}</div>
 
-              {/* ── Page range ── */}
+              {/* Page pickers — always visible above the surah scroll list */}
               {scopeType === "page" && (
-                <div className="ms-section ms-section-scrollable">
-                  <label className="ms-label">{tq.pageRange}</label>
-                  {/* Surah filter */}
-                  <div className="ms-surah-filter-row">
-                    <button
-                      className={`ms-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
-                      onClick={() => handlePageFilterSurahChange(null)}
-                    >
-                      {tq.allPages}
-                    </button>
-                  </div>
-                  <div className="ms-surah-grid ms-surah-grid-compact">
-                    {surahNames.slice(1, 115).map((entry, i) => {
-                      const num = i + 1;
-                      return (
-                        <button
-                          key={num}
-                          className={`ms-surah-chip${pageFilterSurah === num ? " active" : ""}`}
-                          onClick={() => handlePageFilterSurahChange(num)}
-                        >
-                          <span className="ms-chip-text">
-                            {isRTL ? (
-                              <>
-                                <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                <span className="ms-chip-en">{entry!.english}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="ms-chip-en">{entry!.english}</span>
-                                <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                              </>
-                            )}
-                          </span>
-                          <span className="ms-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Page pickers */}
+                <div className="ms-page-picker-bar">
                   <div className="ms-page-row">
-                    <div className="ms-page-input">
-                      <span>{tq.to}</span>
-                      <InlineSelect
-                        value={String(pageTo)}
-                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
-                        onChange={(v) => setPageTo(Number(v))}
-                        fullWidth
-                      />
-                    </div>
                     <div className="ms-page-input">
                       <span>{tq.from}</span>
                       <InlineSelect
@@ -263,6 +213,15 @@ const MutashabihatSetup: React.FC = () => {
                         fullWidth
                       />
                     </div>
+                    <div className="ms-page-input">
+                      <span>{tq.to}</span>
+                      <InlineSelect
+                        value={String(pageTo)}
+                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
+                        onChange={(v) => setPageTo(Number(v))}
+                        fullWidth
+                      />
+                    </div>
                   </div>
                   <p className="ms-range-info">
                     {tq.pageCount}: {isRTL ? toHindi(pageTo - pageFrom + 1) : String(pageTo - pageFrom + 1)}
@@ -270,24 +229,92 @@ const MutashabihatSetup: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Juz multi-select ── */}
-              {scopeType === "juz" && (
-                <div className="ms-section">
-                  <label className="ms-label">
-                    {tq.selectJuzs}
-                    {selectedJuzs.length > 0 && (
-                      <span className="ms-count-badge">
-                        {toHindi(selectedJuzs.length)} {tq.pickedJuzs}
-                      </span>
+              <div className="ms-scroll-inner">
+
+                {/* Surah multi-select grid */}
+                {scopeType === "surah" && (
+                  <>
+                    <div className="ms-surah-grid">
+                      {surahNames.slice(1, 115).map((entry, i) => {
+                        const num = i + 1;
+                        return (
+                          <button
+                            key={num}
+                            className={`ms-surah-chip ${selectedSurahs.includes(num) ? "active" : ""}`}
+                            onClick={() => toggleSurah(num)}
+                          >
+                            <span className="ms-chip-text">
+                              {isRTL ? (
+                                <>
+                                  <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  <span className="ms-chip-en">{entry!.english}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="ms-chip-en">{entry!.english}</span>
+                                  <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="ms-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedSurahs.length === 0 && (
+                      <p className="ms-hint-text">{tq.hintOneSurahMin}</p>
                     )}
-                  </label>
+                  </>
+                )}
+
+                {/* Page range — surah filter only; pickers are above */}
+                {scopeType === "page" && (
+                  <>
+                    <div className="ms-surah-filter-row">
+                      <button
+                        className={`ms-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
+                        onClick={() => handlePageFilterSurahChange(null)}
+                      >
+                        {tq.allPages}
+                      </button>
+                    </div>
+                    <div className="ms-surah-grid ms-surah-grid-compact">
+                      {surahNames.slice(1, 115).map((entry, i) => {
+                        const num = i + 1;
+                        return (
+                          <button
+                            key={num}
+                            className={`ms-surah-chip${pageFilterSurah === num ? " active" : ""}`}
+                            onClick={() => handlePageFilterSurahChange(num)}
+                          >
+                            <span className="ms-chip-text">
+                              {isRTL ? (
+                                <>
+                                  <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  <span className="ms-chip-en">{entry!.english}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="ms-chip-en">{entry!.english}</span>
+                                  <span className="ms-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="ms-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Juz grid */}
+                {scopeType === "juz" && (
                   <div className="ms-juz-grid">
                     {JUZS.map((j) => (
                       <button
                         key={j}
-                        className={`ms-juz-chip ${
-                          selectedJuzs.includes(j) ? "active" : ""
-                        }`}
+                        className={`ms-juz-chip ${selectedJuzs.includes(j) ? "active" : ""}`}
                         onClick={() => toggleJuz(j)}
                       >
                         <span className="ms-juz-label">{tq.juzWord}</span>
@@ -295,53 +322,46 @@ const MutashabihatSetup: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ── Question count ── */}
-              <div className="ms-section">
-                <label className="ms-label">{tq.questionCount}</label>
-                <div className="ms-count-row">
-                  {[5, 10, 15, 20].map((n) => (
-                    <button
-                      key={n}
-                      className={`ms-count-btn ${questionCount === n ? "active" : ""}`}
-                      onClick={() => setQuestionCount(n)}
-                    >
-                      {isRTL ? toHindi(n) : String(n)}
-                    </button>
-                  ))}
-                  <div className={`ms-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
-                    <InlineSelect
-                      value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
-                      options={countOptions}
-                      onChange={(v) => setQuestionCount(Number(v))}
-                      fullWidth
-                    />
-                  </div>
-                </div>
               </div>
-
-              {/* ── Start ── */}
-              <button
-                className="ms-start-btn"
-                onClick={handleStart}
-                disabled={!isReady()}
-              >
-                {tq.start}
-              </button>
-
-              <button
-                className="ms-back-btn"
-                onClick={() => history.push("/quiz-list")}
-              >
-                {tq.backToList}
-              </button>
             </div>
           </div>
-          <BottomNavBar active="quiz" />
+
+          {/* ── Footer: always visible ── */}
+          <div className="ms-footer">
+            <div className="ms-footer-label">{tq.questionCount}</div>
+            <div className="ms-count-row">
+              {[5, 10, 15, 20].map((n) => (
+                <button
+                  key={n}
+                  className={`ms-count-btn ${questionCount === n ? "active" : ""}`}
+                  onClick={() => setQuestionCount(n)}
+                >
+                  {isRTL ? toHindi(n) : String(n)}
+                </button>
+              ))}
+              <div className={`ms-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
+                <InlineSelect
+                  value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
+                  options={countOptions}
+                  onChange={(v) => setQuestionCount(Number(v))}
+                  fullWidth
+                />
+              </div>
+            </div>
+            <button
+              className="ms-start-btn"
+              onClick={handleStart}
+              disabled={!isReady()}
+            >
+              {tq.start}
+            </button>
+          </div>
+
         </div>
       </IonContent>
+      <BottomNavBar active="quiz" fixed />
     </IonPage>
   );
 };

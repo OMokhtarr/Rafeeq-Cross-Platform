@@ -147,7 +147,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const queue = usePlayback();
   const tp = t.playback;
 
-  const nightCls = isNight ? " pb--night" : "";
+  const nightCls = "";
 
   const startPageQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -405,38 +405,33 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     );
   };
 
-  const renderSpeedRow = () => (
-    <div className={`pb-segmented${nightCls}`}>
+  const renderSpeedBtns = () => (
+    <div className="pb-segmented pb-segmented--inline">
       {SPEED_OPTIONS.map((sp) => (
         <button
           key={sp}
           type="button"
-          className={
-            `pb-seg-btn${nightCls}` +
-            (prefs.playbackRate === sp ? " is-active" : "")
-          }
+          className={"pb-seg-btn" + (prefs.playbackRate === sp ? " is-active" : "")}
           onClick={() => updatePref("playbackRate", sp)}
         >
-          {sp}x{sp === 1 ? ` (${tp.speedDefault})` : ""}
+          {sp}x
         </button>
       ))}
     </div>
   );
 
-  const renderRepeatRow = (
+  const renderRepeatBtns = (
     value: RepeatMode,
     onChange: (m: RepeatMode) => void,
   ) => {
     const choices: RepeatMode[] = [1, 2, 3, "loop"];
     return (
-      <div className={`pb-segmented${nightCls}`}>
+      <div className="pb-segmented pb-segmented--inline">
         {choices.map((c) => (
           <button
             key={String(c)}
             type="button"
-            className={
-              `pb-seg-btn${nightCls}` + (value === c ? " is-active" : "")
-            }
+            className={"pb-seg-btn" + (value === c ? " is-active" : "")}
             onClick={() => onChange(c)}
           >
             {c === "loop" ? tp.loop : tp.times(c as number)}
@@ -464,27 +459,22 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const content = downloadsOpen ? (
     // Downloads overlay (replaces main content)
     <div className={`pb-page${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
-      <header className={`pb-header${nightCls}`}>
+      <header className="pb-header">
         <button
           type="button"
-          className={`pb-back-btn${nightCls}`}
+          className="pb-back-btn"
           onClick={() => setDownloadsOpen(false)}
           aria-label={tp.closeLabel}
         >
-          {isRTL ? "›" : "‹"}
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
+          </svg>
         </button>
         <h1 className="pb-title">{tp.downloadsTitle}</h1>
         <span className="pb-header-spacer" />
       </header>
-      <div className="pb-body">
-        <div className={`pb-card${nightCls}`}>
-          <p className={`pb-row-label${nightCls}`}>
-            {lang === "ar"
-              ? "اختر السور للتحميل:"
-              : "Select Surahs to download:"}
-          </p>
-        </div>
-        <div className={`pb-surah-list${nightCls}`}>
+      <div className="pb-body pb-body--downloads">
+        <div className="pb-surah-list">
           {surahOptions.map((sura) => {
             const state = surahDownloads[sura.value];
             const isDownloading = !!state?.abortController;
@@ -561,14 +551,17 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   ) : (
     // Main settings
     <div className={`pb-page${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
-      <header className={`pb-header${nightCls}`}>
+      <header className="pb-header">
         <button
           type="button"
-          className={`pb-close${nightCls}`}
+          className="pb-close"
           onClick={() => (onClose ? onClose() : history.goBack())}
           aria-label={tp.closeLabel}
         >
-          ✕
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
         <h1 className="pb-title">{tp.title}</h1>
         <span className="pb-header-spacer" />
@@ -630,26 +623,25 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
         </section>
 
         <section className="pb-section">
-          <h2 className={`pb-section-title${nightCls}`}>{tp.playSpeed}</h2>
-          {renderSpeedRow()}
+          <h2 className="pb-section-title">{tp.playSpeed} / {tp.playEachVerse} / {tp.playTheRange}</h2>
+          <div className="pb-card pb-card--controls">
+            <div className="pb-ctrl-row">
+              <span className="pb-ctrl-label">{tp.playSpeed}</span>
+              {renderSpeedBtns()}
+            </div>
+            <div className="pb-ctrl-row">
+              <span className="pb-ctrl-label">{tp.playEachVerse}</span>
+              {renderRepeatBtns(prefs.repeatVerse, (m) => updatePref("repeatVerse", m))}
+            </div>
+            <div className="pb-ctrl-row">
+              <span className="pb-ctrl-label">{tp.playTheRange}</span>
+              {renderRepeatBtns(prefs.repeatRange, (m) => updatePref("repeatRange", m))}
+            </div>
+          </div>
         </section>
 
         <section className="pb-section">
-          <h2 className={`pb-section-title${nightCls}`}>{tp.playEachVerse}</h2>
-          {renderRepeatRow(prefs.repeatVerse, (m) =>
-            updatePref("repeatVerse", m),
-          )}
-        </section>
-
-        <section className="pb-section">
-          <h2 className={`pb-section-title${nightCls}`}>{tp.playTheRange}</h2>
-          {renderRepeatRow(prefs.repeatRange, (m) =>
-            updatePref("repeatRange", m),
-          )}
-        </section>
-
-        <section className="pb-section">
-          <h2 className={`pb-section-title${nightCls}`}>{tp.quickSelect}</h2>
+          <h2 className="pb-section-title">{tp.quickSelect}</h2>
           <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
             <button
               type="button"

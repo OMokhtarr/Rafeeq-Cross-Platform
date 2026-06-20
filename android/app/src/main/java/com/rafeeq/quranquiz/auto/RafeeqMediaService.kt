@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.content.SharedPreferences
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -51,6 +52,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         const val EXTRA_AYA = "aya"
         const val EXTRA_PAGE = "page"
 
+        // SharedPreferences for persisting the last flat queue so cold-start car
+        // playback has instant sound before the JS brain wakes up.
+        private const val PREFS = "rafeeq_player"
+        private const val KEY_QUEUE_URLS = "queue_urls"
+        private const val KEY_QUEUE_INDEX = "queue_index"
+        private const val KEY_QUEUE_TITLE = "queue_title"
+
         // Singleton so RafeeqAutoPlugin can push state updates here
         var instance: RafeeqMediaService? = null
     }
@@ -61,6 +69,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var hasAudioFocus = false
+
+    // Native playback engine (the "dumb" player). Drives actual audio output so
+    // Android Auto cold start works without a running WebView.
+    @androidx.media3.common.util.UnstableApi
+    private var player: RafeeqPlayer? = null
+    // True while the JS brain is alive and feeding URLs one at a time. When false
+    // (cold start), the player walks the persisted flat queue itself.
+    private var jsDriving = false
+    private lateinit var prefs: SharedPreferences
     private var reciters: List<ReciterItem> = emptyList()
     private var surahs: List<SurahItem> = emptyList()
     private var currentReciter: String = ""
@@ -77,12 +94,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
+    @androidx.media3.common.util.UnstableApi
     override fun onCreate() {
         super.onCreate()
         instance = this
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         createNotificationChannel()
         buildMediaSession()
+        buildPlayer()
         // Set an initial PlaybackState so Android Auto knows the session accepts play
         // commands immediately. Without this the session has no advertised actions and
         // the car's play button is either disabled or does nothing on cold start.
@@ -103,15 +123,199 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, "رفيق")
                 .build()
         )
-        requestAudioFocus()
-        startForeground(NOTIFICATION_ID, buildNotification("رفيق", false, emptyList(), 0))
+        // NOTE: we intentionally do NOT call startForeground() here. The service is
+        // created either by Android Auto binding (for browsing — no notification needed)
+        // or lazily when playback starts. The media notification card only appears once
+        // audio actually plays, via promoteToForeground(). This stops the card from
+        // showing the instant the phone app opens.
     }
 
+    // Tracks whether we've already promoted to a foreground service so we don't
+    // repeatedly call startForeground.
+    private var isForeground = false
+
+    /**
+     * Promote to a foreground service and show the media notification. Called the moment
+     * playback begins (from the player's onPlayingChanged or a cold-start play). Idempotent.
+     */
+    private fun promoteToForeground(title: String, playing: Boolean) {
+        val notification = buildNotification(title, playing, pageMarkers, currentPage)
+        if (!isForeground) {
+            startForeground(NOTIFICATION_ID, notification)
+            isForeground = true
+        } else {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(NOTIFICATION_ID, notification)
+        }
+    }
+
+    @androidx.media3.common.util.UnstableApi
     override fun onDestroy() {
         instance = null
+        player?.release()
+        player = null
         abandonAudioFocus()
         session.release()
         super.onDestroy()
+    }
+
+    // ── Native player ───────────────────────────────────────────────────────────
+
+    @androidx.media3.common.util.UnstableApi
+    private fun buildPlayer() {
+        player = RafeeqPlayer(this, object : RafeeqPlayer.Callbacks {
+            override fun onEnded(index: Int) {
+                // If the JS brain is driving, let it apply repeat/range/page logic and
+                // feed the next verse. If it isn't (pure cold start before the WebView
+                // wakes), the player self-advances through the persisted flat list and we
+                // must NOT also notify JS — that would double-advance once JS arrives.
+                if (jsDriving) {
+                    dispatchCarEvent("nativeTrackEnded", aya = index)
+                }
+            }
+
+            override fun onPosition(positionMs: Long, durationMs: Long) {
+                // Keep the MediaSession position fresh for the car progress bar.
+                val state = if (player?.isPlaying() == true)
+                    PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+                val sb = PlaybackStateCompat.Builder()
+                    .setActions(
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                        PlaybackStateCompat.ACTION_STOP or
+                        PlaybackStateCompat.ACTION_SEEK_TO
+                    )
+                    .setState(state, positionMs, if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f)
+                session.setPlaybackState(sb.build())
+                // Forward the per-verse position to the JS brain so the in-app slider
+                // ticks live (JS adds the elapsed time of prior verses in the range).
+                if (jsDriving) {
+                    dispatchCarEvent("nativePosition", positionMs = positionMs, durationMs = durationMs)
+                }
+            }
+
+            override fun onPlayingChanged(isPlaying: Boolean) {
+                val st = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+                val sb = PlaybackStateCompat.Builder()
+                    .setActions(
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                        PlaybackStateCompat.ACTION_STOP or
+                        PlaybackStateCompat.ACTION_SEEK_TO
+                    )
+                    .setState(st, player?.currentPositionMs() ?: 0L, if (isPlaying) 1f else 0f)
+                session.setPlaybackState(sb.build())
+                // Show the media card only once playback actually begins.
+                if (isPlaying) {
+                    val title = session.controller.metadata
+                        ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق"
+                    promoteToForeground(title, true)
+                }
+            }
+
+            override fun onError(index: Int, message: String) {
+                Log.e("RafeeqMedia", "player error at index=$index: $message")
+            }
+        })
+    }
+
+    /**
+     * Persist the last flat queue (resolved URLs/files + display title) so a cold-start
+     * car play can begin immediately. Called by the plugin when JS pushes a native queue.
+     */
+    fun persistQueue(urls: List<String>, startIndex: Int, title: String) {
+        prefs.edit()
+            .putString(KEY_QUEUE_URLS, urls.joinToString("\n"))
+            .putInt(KEY_QUEUE_INDEX, startIndex)
+            .putString(KEY_QUEUE_TITLE, title)
+            .apply()
+    }
+
+    private fun loadPersistedQueue(): Triple<List<String>, Int, String>? {
+        val raw = prefs.getString(KEY_QUEUE_URLS, null) ?: return null
+        val urls = raw.split("\n").filter { it.isNotBlank() }
+        if (urls.isEmpty()) return null
+        val idx = prefs.getInt(KEY_QUEUE_INDEX, 0).coerceIn(0, urls.lastIndex)
+        val title = prefs.getString(KEY_QUEUE_TITLE, "رفيق") ?: "رفيق"
+        return Triple(urls, idx, title)
+    }
+
+    // ── Native playback control (called by plugin / session callbacks) ──────────
+
+    /** JS brain pushes the full resolved flat queue + where to start. */
+    @androidx.media3.common.util.UnstableApi
+    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean) {
+        jsDriving = true
+        persistQueue(urls, startIndex, title)
+        requestAudioFocus()
+        player?.loadList(urls, startIndex, playWhenReady = autoplay)
+        updateTitleMetadata(title)
+    }
+
+    /** JS brain feeds a single resolved URL for one verse (it owns progression). */
+    @androidx.media3.common.util.UnstableApi
+    fun loadNativeTrack(url: String, index: Int, title: String, autoplay: Boolean) {
+        jsDriving = true
+        requestAudioFocus()
+        player?.load(url, index, playWhenReady = autoplay)
+        if (title.isNotEmpty()) updateTitleMetadata(title)
+    }
+
+    /**
+     * Play a one-shot intro (bismillah) and fire a 'nativeIntroEnded' carAction when it
+     * finishes so the JS brain proceeds to the first real verse.
+     */
+    @androidx.media3.common.util.UnstableApi
+    fun playNativeIntro(url: String) {
+        jsDriving = true
+        requestAudioFocus()
+        player?.playIntro(url) {
+            dispatchCarEvent("nativeIntroEnded")
+        }
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    fun nativePlay() { requestAudioFocus(); player?.play() }
+    @androidx.media3.common.util.UnstableApi
+    fun nativePause() { player?.pause() }
+    @androidx.media3.common.util.UnstableApi
+    fun nativeSeek(positionMs: Long) { player?.seekTo(positionMs) }
+    @androidx.media3.common.util.UnstableApi
+    fun nativeSetSpeed(speed: Float) { player?.setPlaybackSpeed(speed) }
+
+    /**
+     * Cold-start play: JS is not driving yet. Start the persisted flat queue directly
+     * so the car has sound immediately, then wake the WebView in the background so the
+     * brain can take over with full repeat/range logic.
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun coldStartPlay() {
+        val persisted = loadPersistedQueue()
+        if (persisted != null) {
+            val (urls, idx, title) = persisted
+            Log.d("RafeeqMedia", "coldStartPlay: starting persisted queue size=${urls.size} idx=$idx")
+            requestAudioFocus()
+            player?.loadList(urls, idx, playWhenReady = true)
+            updateTitleMetadata(title)
+            // Tell the brain which index ExoPlayer is already playing so it adopts that
+            // position on handoff instead of restarting the queue from the beginning.
+            dispatchCarEvent("play", aya = idx)
+        } else {
+            Log.d("RafeeqMedia", "coldStartPlay: no persisted queue, falling back to JS wake")
+            dispatchCarEvent("play")
+        }
+    }
+
+    private fun updateTitleMetadata(title: String) {
+        session.setMetadata(
+            MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                .build()
+        )
     }
 
     private fun requestAudioFocus() {
@@ -388,9 +592,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             .build()
         session.setMetadata(metadata)
 
-        val notification = buildNotification(surahName, isPlaying, pageMarkers, currentPage)
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, notification)
+        // Promote to foreground (and show the card) on first play; otherwise just refresh
+        // the existing notification. When paused, we keep the card so transport controls
+        // remain available, but we never create it before playback has started.
+        if (isPlaying || isForeground) {
+            promoteToForeground(surahName.ifEmpty { "رفيق" }, isPlaying)
+        }
     }
 
     // ── Session & notification ──────────────────────────────────────────────────
@@ -537,10 +744,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * event in the plugin's companion pending slot and wakes MainActivity so it
      * initialises the plugin and flushes the event via jsReady().
      */
-    private fun dispatchCarEvent(action: String, reciter: String? = null, surah: Int? = null, aya: Int? = null, positionMs: Long? = null) {
+    private fun dispatchCarEvent(action: String, reciter: String? = null, surah: Int? = null, aya: Int? = null, positionMs: Long? = null, durationMs: Long? = null) {
         val plugin = RafeeqAutoPlugin.instance
         if (plugin != null) {
-            plugin.sendCarEvent(action, reciter, surah, aya, positionMs)
+            plugin.sendCarEvent(action, reciter, surah, aya, positionMs, durationMs)
         } else {
             // Plugin not loaded yet — store as pending and wake the activity.
             Log.d("RafeeqMedia", "dispatchCarEvent: plugin null, storing pending '$action' and waking MainActivity")
@@ -554,16 +761,28 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
     inner class SessionCallback : MediaSessionCompat.Callback() {
 
+        @androidx.media3.common.util.UnstableApi
         override fun onPlay() {
             requestAudioFocus()
-            dispatchCarEvent("play")
+            if (jsDriving) {
+                // JS brain is alive and owns playback — just resume the native player and
+                // notify JS so its UI state stays in sync.
+                player?.play()
+                dispatchCarEvent("play")
+            } else {
+                // Cold start: make sound NOW from the persisted queue, then wake the brain.
+                coldStartPlay()
+            }
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onPause() {
+            player?.pause()
             dispatchCarEvent("pause")
         }
 
         override fun onSkipToNext() {
+            // Verse/range progression lives in the JS brain — let it pick the next URL.
             dispatchCarEvent("next")
         }
 
@@ -571,11 +790,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             dispatchCarEvent("prev")
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onStop() {
+            player?.pause()
             dispatchCarEvent("stop")
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onSeekTo(pos: Long) {
+            player?.seekTo(pos)
             dispatchCarEvent("seekTo", positionMs = pos)
         }
 

@@ -106,7 +106,7 @@ const TABS: TabDef[] = [
       </svg>
     ),
     route: "/hifz",
-    color: "var(--color-hifz, #4a7c59)",
+    color: "var(--color-hifz, #7c6cd4)",
     filled: false,
   },
   {
@@ -118,7 +118,7 @@ const TABS: TabDef[] = [
       </svg>
     ),
     route: "/account",
-    color: "var(--color-gold, #d4b48c)",
+    color: "var(--color-steel-blue, #c8d6e5)",
     filled: false,
   },
   {
@@ -189,7 +189,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
               (isActive ? " rfq-tab-active" : "")
             }
             style={{ "--tab-color": tab.color } as React.CSSProperties}
-            onClick={() => !tab.comingSoon && history.push(route)}
+            onClick={() => !tab.comingSoon && history.replace(route)}
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
             aria-label={
