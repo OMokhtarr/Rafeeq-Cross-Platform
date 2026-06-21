@@ -11,7 +11,7 @@
     "ios:open": "npx cap open ios",
     "ios:run": "npx cap run ios",
     "android:sync": "npm run build:prod && npx cap sync android",
-    "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug bundleRelease",
     "android:open": "npx cap open android",
     "android:run": "npx cap run android",
     "electron:dev": "concurrently \"react-scripts start\" \"wait-on http://localhost:3000 && npx cap open @capacitor-community/electron\"",
