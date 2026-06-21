@@ -97,7 +97,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     override fun onCreate() {
         super.onCreate()
-        instance = this
+        // NOTE: `instance` is published LAST (end of onCreate), not here. Other code uses
+        // `RafeeqMediaService.instance != null` as the signal that the service is fully
+        // ready (session + player built). Publishing it before buildMediaSession() caused
+        // a crash: JS calls updatePlaybackState → ensureService → sees a non-null instance
+        // and immediately calls updateState() while `session` is still uninitialized
+        // (UninitializedPropertyAccessException).
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         createNotificationChannel()
@@ -128,6 +133,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // or lazily when playback starts. The media notification card only appears once
         // audio actually plays, via promoteToForeground(). This stops the card from
         // showing the instant the phone app opens.
+
+        // Publish the singleton LAST — only now is the service safe to call into.
+        instance = this
     }
 
     // Tracks whether we've already promoted to a foreground service so we don't

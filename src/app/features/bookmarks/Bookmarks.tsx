@@ -191,7 +191,7 @@ const Bookmarks: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="bm-page" dir={isRTL ? "rtl" : "ltr"}>
           {/* Header */}
           <header className="bm-header">

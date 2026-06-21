@@ -254,11 +254,22 @@
   min-height: 0;
 }
 
-/* In the compact context viewer, override the page-level space-between so
-   lines stack from the top without forced vertical gaps between them. */
-.mcv-body .mushaf-page-glyph {
-  justify-content: center;
+/* The wrapper around <MushafPage> must be a constrained flex column so the
+   page can derive its height from the available body space. Without this it
+   collapses to a plain block, MushafPage's `flex: 1` does nothing, and the 15
+   lines lay out at their natural height — overflowing below the page area. */
+.mcv-body .mushaf-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
 }
+
+/* Line distribution and spacing for the compact context viewer live in
+   MushafPage.css (.mcv-body .mushaf-page-glyph) so the page-fit font sizing
+   and the layout overrides stay in one place. */
 
 .mcv-loading {
   flex: 1;

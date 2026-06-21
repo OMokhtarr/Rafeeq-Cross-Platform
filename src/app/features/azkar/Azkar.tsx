@@ -203,7 +203,7 @@ const Azkar: React.FC = () => {
 
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="azkar-page-wrapper">
             {/* Header — standard pattern with centered title */}
             <div className="azkar-header">
@@ -317,7 +317,7 @@ const Azkar: React.FC = () => {
   // ── Category list view ───────────────────────────────────────────────────────
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="azkar-page-wrapper">
           {/* Standard page header */}
           <div className="azkar-page-header">

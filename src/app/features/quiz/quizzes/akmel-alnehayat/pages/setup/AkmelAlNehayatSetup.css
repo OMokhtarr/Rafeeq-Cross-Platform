@@ -1,13 +1,9 @@
 ion-content {
   --background: var(--color-bg-content);
 }
-ion-content::part(scroll) {
-  overflow: hidden;
-}
-
 .an-setup-page-wrapper {
   width: 100%;
-  height: calc(100dvh - var(--bottom-nav-height));
+  height: 100vh;
   background: var(--color-bg-content);
   color: var(--color-text-primary);
   display: flex;
@@ -376,7 +372,7 @@ ion-content::part(scroll) {
   flex-shrink: 0;
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
-  padding: 10px 16px 12px;
+  padding: 10px 16px calc(var(--bottom-nav-height) + 12px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

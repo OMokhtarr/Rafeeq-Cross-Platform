@@ -349,7 +349,7 @@ const AkmelAlNehayat: React.FC = () => {
   if (loading)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="an-test-page-wrapper">
             <div className="an-loading">
               <div className="an-spinner"></div>
@@ -365,7 +365,7 @@ const AkmelAlNehayat: React.FC = () => {
   if (error)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="an-test-page-wrapper">
             <div className="an-error">
               <div className="an-error-box">
@@ -388,7 +388,7 @@ const AkmelAlNehayat: React.FC = () => {
     const pct = Math.round((score / questions.length) * 100);
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="an-test-page-wrapper">
             <div className="an-complete">
               <div className="an-complete-card">
@@ -422,7 +422,7 @@ const AkmelAlNehayat: React.FC = () => {
   // ── Main quiz render ───────────────────────────────────────────────────────
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="an-test-page-wrapper">
           <div className="an-container">
             {/* Header */}

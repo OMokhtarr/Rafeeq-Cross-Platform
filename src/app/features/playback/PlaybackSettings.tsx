@@ -737,7 +737,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
 
   return (
     <IonPage>
-      <IonContent fullscreen>{content}</IonContent>
+      <IonContent>{content}</IonContent>
     </IonPage>
   );
 };

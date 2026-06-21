@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IonPage, IonContent, useIonToast } from "@ionic/react";
+import { IonPage, IonContent, useIonToast, useIonViewWillEnter } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import MushafPage from "../../shared/components/mushaf-page/MushafPage";
@@ -127,6 +127,18 @@ const PageViewer: React.FC = () => {
   const hifzTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hifzSessionRef = useRef(loadHifzReadingSession());
   const hifzPageEntryRef = useRef<{ page: number; enteredAt: number } | null>(null);
+
+  // The viewer page is cached in the Ionic navigation stack, so the useRef above
+  // only runs once. Reload the reading session every time the view re-enters so
+  // opening a Hifz session from an already-mounted viewer actually tracks reads.
+  // The tick bump re-runs the read-tracking effect below even when the landing
+  // page equals the page already shown (reopening the same session).
+  const [hifzEnterTick, setHifzEnterTick] = useState(0);
+  useIonViewWillEnter(() => {
+    hifzSessionRef.current = loadHifzReadingSession();
+    hifzPageEntryRef.current = null;
+    setHifzEnterTick((n) => n + 1);
+  });
 
   // Shared playback queue
   const queue = usePlayback();
@@ -390,7 +402,7 @@ const PageViewer: React.FC = () => {
         hifzPageEntryRef.current = null;
       }
     };
-  }, [currentPage]);
+  }, [currentPage, hifzEnterTick]);
 
   useEffect(() => {
     if (sheetVerseKey) immersive.showChrome();

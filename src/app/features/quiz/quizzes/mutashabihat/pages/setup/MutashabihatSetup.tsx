@@ -149,7 +149,7 @@ const MutashabihatSetup: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="ms-setup-page-wrapper">
           {/* ── Header ── */}
           <div className="ms-setup-header">

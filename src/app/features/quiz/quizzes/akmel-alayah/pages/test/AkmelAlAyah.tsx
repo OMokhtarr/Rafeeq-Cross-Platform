@@ -247,7 +247,7 @@ const AkmelAlAyah: React.FC = () => {
   if (loading)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="aa-test-page-wrapper">
             <div className="aa-loading">
               <div className="aa-spinner"></div>
@@ -263,7 +263,7 @@ const AkmelAlAyah: React.FC = () => {
   if (error)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="aa-test-page-wrapper">
             <div className="aa-error">
               <div className="aa-error-box">
@@ -286,7 +286,7 @@ const AkmelAlAyah: React.FC = () => {
     const pct = Math.round((score / questions.length) * 100);
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="aa-test-page-wrapper">
             <div className="aa-complete">
               <div className="aa-complete-card">
@@ -324,7 +324,7 @@ const AkmelAlAyah: React.FC = () => {
   // ── Main quiz render ───────────────────────────────────────────────────────
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="aa-test-page-wrapper">
           <div className="aa-container">
             {/* Header – becomes minimal when immersive */}

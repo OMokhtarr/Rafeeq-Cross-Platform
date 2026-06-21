@@ -28,7 +28,7 @@ const QuizList: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="ql-page-wrapper">
           {/* ── Header ── */}
           <div className="ql-header">

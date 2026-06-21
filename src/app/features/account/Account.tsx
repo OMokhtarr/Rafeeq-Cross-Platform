@@ -317,7 +317,7 @@ const Account: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="account-page" dir={isRTL ? "rtl" : "ltr"}>
 
           {/* ── Header ── */}

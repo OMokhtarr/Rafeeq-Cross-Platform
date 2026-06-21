@@ -1325,8 +1325,13 @@ const Hifz: React.FC = () => {
           sessionIds.push(s.id);
           expectedNext = s.toPage + 1;
         }
-        saveHifzReadingSession({ ranges, readPages: [], sessionIds });
-        setReadPages([]);
+        // Preserve previously-read pages so already-read sessions keep their
+        // progress bar filled; only the tracked window (ranges/sessionIds) is
+        // swapped to the session being opened now.
+        const prev = loadHifzReadingSession();
+        const carriedReadPages = prev?.readPages ?? [];
+        saveHifzReadingSession({ ranges, readPages: carriedReadPages, sessionIds });
+        setReadPages(carriedReadPages);
       }
       const firstAyah = getPageStart(page);
       const vParam = firstAyah ? `&v=${firstAyah.sura}:${firstAyah.aya}` : "";

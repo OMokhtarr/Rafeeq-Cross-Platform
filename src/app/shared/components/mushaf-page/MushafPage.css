@@ -291,9 +291,13 @@
   text-shadow: none;
 }
 
-/* In the compact MushafContextViewer, override space-between so lines
-   stack naturally from the top without forced vertical gaps. */
+/* In the compact MushafContextViewer, distribute the 15 lines evenly across
+   the full page height (like the printed Mushaf) instead of stacking from the
+   top. space-between + a tighter line-height keeps every line inside the
+   page area — flex-start with the default 2.0 line-height made the lines total
+   taller than the container, so the bottom verses overflowed below the page. */
 .mcv-body .mushaf-page-glyph {
-  justify-content: flex-start;
-  gap: 0.25em;
+  justify-content: space-between;
+  gap: 0;
+  line-height: 1.7;
 }

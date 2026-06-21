@@ -204,7 +204,7 @@ const MutashabihatTest: React.FC = () => {
   if (loading)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="mst-test-page-wrapper">
             <div className="mst-loading">
               <div className="mst-spinner"></div>
@@ -219,7 +219,7 @@ const MutashabihatTest: React.FC = () => {
   if (error)
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="mst-test-page-wrapper">
             <div className="mst-error">
               <div className="mst-error-box">
@@ -241,7 +241,7 @@ const MutashabihatTest: React.FC = () => {
     const pct = Math.round((score / questions.length) * 100);
     return (
       <IonPage>
-        <IonContent fullscreen>
+        <IonContent>
           <div className="mst-test-page-wrapper">
             <div className="mst-complete">
               <div className="mst-complete-card">
@@ -301,7 +301,7 @@ const MutashabihatTest: React.FC = () => {
   // ── Main quiz render ───────────────────────────────────────────────────────
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className="mst-test-page-wrapper">
           <div className="mst-container">
             {/* Header – minimal when immersive */}

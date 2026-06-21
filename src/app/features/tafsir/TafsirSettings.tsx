@@ -106,7 +106,7 @@ const TafsirSettings: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent>
         <div className={`tfs-wrapper${nightCls}`} dir={isRTL ? "rtl" : "ltr"}>
           {/* Header */}
           <header className={`tfs-header${nightCls}`}>
