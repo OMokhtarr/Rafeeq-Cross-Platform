@@ -322,20 +322,10 @@ const Account: React.FC = () => {
 
           {/* ── Header ── */}
           <header className="account-header">
-            <button
-              className="account-back"
-              onClick={() => history.length > 1 ? history.goBack() : history.replace("/")}
-              aria-label={t.back}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
-              </svg>
-            </button>
             <div className="account-header-titles">
               <h1 className="account-title">{t.title}</h1>
               <p className="account-subtitle">{t.subtitle}</p>
             </div>
-            <div className="account-back" aria-hidden style={{ visibility: "hidden" }} />
           </header>
 
           <div className="account-body">

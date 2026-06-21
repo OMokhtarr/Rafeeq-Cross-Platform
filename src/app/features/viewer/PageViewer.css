@@ -225,11 +225,7 @@
 }
 
 .toolbar-button.next-verse-button:hover:not(:disabled) {
-  color: #2e7d32;
-}
-
-[data-theme="night"] .toolbar-button.next-verse-button:hover:not(:disabled) {
-  color: #6ee7a3;
+  color: var(--color-quran);
 }
 
 [data-theme="night"] .page-navigation-compact {

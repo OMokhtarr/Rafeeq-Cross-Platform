@@ -1365,7 +1365,7 @@ const Hifz: React.FC = () => {
   const handleHeaderBack = () => {
     if (view === "sessions") { setView("plan"); return; }
     if (view === "setup" && plan !== null) { setView("plan"); return; }
-    history.length > 1 ? history.goBack() : history.replace("/");
+    history.replace("/");
   };
 
   // Right slot: edit + reset on plan view, spacer elsewhere
@@ -1400,15 +1400,17 @@ const Hifz: React.FC = () => {
         <div className="hifz-page">
           {/* ── Shared page header ── */}
           <div className="hifz-page-header">
-            <button
-              className="hifz-back-btn"
-              onClick={handleHeaderBack}
-              aria-label={isRTL ? "رجوع" : "Back"}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
-              </svg>
-            </button>
+            {(view === "sessions" || (view === "setup" && plan !== null)) ? (
+              <button
+                className="hifz-back-btn"
+                onClick={handleHeaderBack}
+                aria-label={isRTL ? "رجوع" : "Back"}
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
+                </svg>
+              </button>
+            ) : <div style={{ width: 44 }} />}
             <div className="hifz-page-header-text">
               <h1>{headerTitle}</h1>
               <p>{headerSubtitle}</p>

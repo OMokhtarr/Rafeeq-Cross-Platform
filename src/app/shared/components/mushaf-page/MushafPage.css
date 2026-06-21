@@ -152,14 +152,9 @@
    verse is never green and hidden at the same time. */
 .mushaf-verse-green,
 .mushaf-verse-green.mushaf-ayah-end {
-  color: #2e7d32 !important;
+  color: var(--color-quran) !important;
   background: none;
   text-shadow: none;
-}
-
-[data-theme="night"] .mushaf-verse-green,
-[data-theme="night"] .mushaf-verse-green.mushaf-ayah-end {
-  color: #6ee7a3 !important;
 }
 
 [data-theme="night"] .mushaf-verse-selected {
@@ -180,7 +175,7 @@
   width: 36px;
   height: 36px;
   border: 3px solid rgba(0, 0, 0, 0.12);
-  border-top-color: var(--ion-color-primary, #2c7a4b);
+  border-top-color: var(--color-quran);
   border-radius: 50%;
   animation: mushaf-spin 0.9s linear infinite;
 }
@@ -224,11 +219,7 @@
 }
 
 .mushaf-word-hinted {
-  color: #2e7d32 !important;
-}
-
-[data-theme="night"] .mushaf-word-hinted {
-  color: #6ee7a3 !important;
+  color: var(--color-quran) !important;
 }
 
 /* Decorative surah header. The ink (frame fill + name text) is forced to

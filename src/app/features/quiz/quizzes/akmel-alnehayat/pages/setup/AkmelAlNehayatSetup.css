@@ -1,9 +1,12 @@
 ion-content {
   --background: var(--color-bg-content);
 }
+.an-setup-content {
+  --overflow: hidden;
+}
 .an-setup-page-wrapper {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   background: var(--color-bg-content);
   color: var(--color-text-primary);
   display: flex;

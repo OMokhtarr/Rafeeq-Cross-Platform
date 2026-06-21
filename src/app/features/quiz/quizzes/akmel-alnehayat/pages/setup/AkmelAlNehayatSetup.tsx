@@ -145,7 +145,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent>
+      <IonContent class="an-setup-content">
         <div className="an-setup-page-wrapper">
           {/* ── Header ── */}
           <div className="an-setup-header">

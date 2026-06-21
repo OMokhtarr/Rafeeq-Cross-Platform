@@ -321,21 +321,9 @@ const Azkar: React.FC = () => {
         <div className="azkar-page-wrapper">
           {/* Standard page header */}
           <div className="azkar-page-header">
-            <button
-              className="azkar-page-back-btn"
-              onClick={() => history.length > 1 ? history.goBack() : history.replace("/")}
-              aria-label={ta.back}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isRTL
-                  ? <path d="M5 12h14M12 5l7 7-7 7" />
-                  : <path d="M19 12H5M12 19l-7-7 7-7" />}
-              </svg>
-            </button>
             <div className="azkar-page-header-text">
               <h1 className="azkar-page-title" lang="ar" dir="rtl">{ta.title}</h1>
             </div>
-            <div style={{ width: 44 }} />
           </div>
 
           <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>

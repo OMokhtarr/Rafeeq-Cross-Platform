@@ -225,6 +225,15 @@ const AkmelAlNehayat: React.FC = () => {
     showAllVerses();
   }, [showAllVerses]);
 
+  // Intercept hardware/browser back — show exit confirmation instead of navigating away.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      (ev as CustomEvent).detail.register(10, () => setShowExitModal(true));
+    };
+    document.addEventListener("ionBackButton", handler);
+    return () => document.removeEventListener("ionBackButton", handler);
+  }, []);
+
   // ── Load config + generate questions ──────────────────────────────────────
   useEffect(() => {
     let cancelled = false;

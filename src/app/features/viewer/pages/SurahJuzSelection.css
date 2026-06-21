@@ -256,7 +256,7 @@
 
 .sjs-num-meccan {
   background: rgba(26, 107, 60, 0.1);
-  color: var(--color-quran, #1a6b3c);
+  color: var(--color-quran);
 }
 
 .sjs-num-medinan {
@@ -399,7 +399,7 @@
 
 .sjs-pill-meccan {
   background: rgba(26, 107, 60, 0.1);
-  color: var(--color-quran, #1a6b3c);
+  color: var(--color-quran);
 }
 
 .sjs-pill-medinan {
