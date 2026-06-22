@@ -121,6 +121,7 @@ const MushafPage: React.FC<Props> = ({
   const pressTimer = useRef<number | null>(null);
   const pressKey = useRef<string | null>(null);
   const consumedByLongPress = useRef(false);
+  const endMarkerTouchStart = useRef<{ x: number; y: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -230,7 +231,7 @@ const MushafPage: React.FC<Props> = ({
       // the same size regardless of how many slots header/bismillah occupy.
       // Header and bismillah have a fixed height (--slot-px) that comes out
       // of the flex space-between distribution — they don't shrink the text.
-      const byHeight = slotPx / 1.8;
+      const byHeight = slotPx / 2.0;
       const byWidth = w * (showTrailingHeader ? 0.048 : 0.052);
       el.style.fontSize = `${Math.round(Math.min(byHeight, byWidth))}px`;
     };
@@ -458,12 +459,32 @@ const MushafPage: React.FC<Props> = ({
         className={cls}
         data-verse-key={key}
         {...(hiddenSegKey ? { "data-hidden-seg": hiddenSegKey } : {})}
-        onClick={onVerseTap ? () => handleClick(key) : undefined}
-        onTouchStart={
-          onVerseTap || onVerseLongPress ? () => startPress(key) : undefined
+        onClick={
+          isEndMarker && onVerseLongPress
+            ? (e) => { e.stopPropagation(); onVerseLongPress(key); }
+            : onVerseTap ? () => handleClick(key) : undefined
         }
-        onTouchEnd={onVerseTap || onVerseLongPress ? cancelPress : undefined}
-        onTouchMove={onVerseTap || onVerseLongPress ? cancelPress : undefined}
+        onTouchStart={
+          isEndMarker && onVerseLongPress
+            ? (e) => { endMarkerTouchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+            : !isEndMarker && (onVerseTap || onVerseLongPress) ? () => startPress(key) : undefined
+        }
+        onTouchEnd={
+          isEndMarker && onVerseLongPress
+            ? (e) => {
+                const start = endMarkerTouchStart.current;
+                endMarkerTouchStart.current = null;
+                if (!start) return;
+                const dx = e.changedTouches[0].clientX - start.x;
+                const dy = e.changedTouches[0].clientY - start.y;
+                if (Math.sqrt(dx * dx + dy * dy) > 8) return;
+                e.preventDefault();
+                e.stopPropagation();
+                onVerseLongPress(key);
+              }
+            : onVerseTap || onVerseLongPress ? cancelPress : undefined
+        }
+        onTouchMove={!isEndMarker && (onVerseTap || onVerseLongPress) ? cancelPress : undefined}
         onContextMenu={
           onVerseTap || onVerseLongPress
             ? (e) => {

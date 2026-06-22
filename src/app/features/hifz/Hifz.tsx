@@ -1370,7 +1370,7 @@ const Hifz: React.FC = () => {
 
   // Right slot: edit + reset on plan view, spacer elsewhere
   const headerRight = view === "plan" ? (
-    <div style={{ display: "flex", gap: 6 }}>
+    <div className="hifz-header-right">
       <button
         className="hifz-header-action-btn hifz-header-action-btn--edit"
         onClick={() => setView("setup")}
@@ -1392,11 +1392,11 @@ const Hifz: React.FC = () => {
         </svg>
       </button>
     </div>
-  ) : <div style={{ width: 44 }} />;
+  ) : <div className="hifz-header-right" />;
 
   return (
     <IonPage>
-      <IonContent>
+      <IonContent fullscreen>
         <div className="hifz-page">
           {/* ── Shared page header ── */}
           <div className="hifz-page-header">

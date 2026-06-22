@@ -2,42 +2,37 @@
    SURAH / JUZ SELECTION PAGE
    ═══════════════════════════════════════════════ */
 
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
 .sjs-page {
   display: flex;
   flex-direction: column;
   width: 100%;
   min-width: var(--min-width-mobile, 320px);
   height: 100%;
-  background: #ffffff;
-  color: var(--color-text-primary, #1c1c1c);
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
   overflow: hidden;
+  transition: background var(--transition-theme), color var(--transition-theme);
 }
 
-[data-theme="night"] .sjs-page,
-[data-theme="dark"] .sjs-page {
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-page, #1c1c1c) 0%,
-    var(--color-bg-page, #1c1c1c) 100%
-  );
-  color: #fff;
-}
-
-/* ── Header ── */
+/* ── Header — standard pattern matching Settings/Account/Hifz ── */
 .sjs-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.85rem;
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-header, #1c1c1c) 0%,
-    var(--color-bg-header, #1c1c1c) 100%
-  );
-  border-bottom: 3px solid var(--color-gold, #d4b48c);
-  color: #fff;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-bg-content);
+  border-bottom: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
 .sjs-back {
@@ -48,21 +43,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 2px solid rgba(212, 180, 140, 0.4);
-  color: #fff;
+  background: none;
+  border: 1.5px solid var(--color-gold-subtle);
+  color: var(--color-gold);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background var(--transition-base), border-color var(--transition-base);
 }
 .sjs-back:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-.sjs-back:active {
-  transform: scale(0.92);
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
 }
 .sjs-back svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .sjs-header-titles {
@@ -72,47 +65,37 @@
 }
 
 .sjs-title {
-  font-family: var(--font-arabic, "Scheherazade New", "Amiri", serif);
-  font-size: 1.35rem;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--color-gold, #d4b48c);
-  margin: 0;
+  color: var(--color-gold);
+  margin: 0 0 2px;
   line-height: 1.2;
 }
 
 [dir="ltr"] .sjs-title {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 1.15rem;
+  font-family: var(--font-latin);
+  font-size: var(--text-lg);
 }
 
 .sjs-subtitle {
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: 0.65rem;
-  color: var(--color-steel-blue, #c8d6e5);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin-top: 2px;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
-[dir="rtl"] .sjs-subtitle {
-  font-family: var(--font-arabic, "Scheherazade New", serif);
-  font-size: 0.78rem;
-  letter-spacing: 0;
-  text-transform: none;
+[dir="ltr"] .sjs-subtitle {
+  font-family: var(--font-latin);
 }
 
 /* ── Tabs ── */
 .sjs-tabs {
   display: flex;
-  background: var(--color-bg-card, #fff);
-  border-bottom: 1px solid var(--color-border-subtle, rgba(212, 180, 140, 0.25));
+  background: var(--color-bg-content);
+  border-bottom: 1px solid var(--color-border-card);
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-[data-theme="night"] .sjs-tabs,
-[data-theme="dark"] .sjs-tabs {
-  background: rgba(0, 0, 0, 0.25);
+  transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
 .sjs-tab {
@@ -151,12 +134,7 @@
 }
 
 .sjs-tab-active {
-  color: var(--color-text-primary, #1c1c1c);
-}
-
-[data-theme="night"] .sjs-tab-active,
-[data-theme="dark"] .sjs-tab-active {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 /* ── List ── */
@@ -175,7 +153,7 @@
 }
 
 .sjs-list-wrap-with-nav {
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
 }
 
 .sjs-list {

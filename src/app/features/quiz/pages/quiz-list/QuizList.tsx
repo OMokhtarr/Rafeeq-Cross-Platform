@@ -28,25 +28,13 @@ const QuizList: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent>
+      <IonContent fullscreen>
         <div className="ql-page-wrapper">
           {/* ── Header ── */}
           <div className="ql-header">
-            <button
-              className="ql-header-back-btn"
-              onClick={() => history.length > 1 ? history.goBack() : history.replace("/")}
-              aria-label={t.quiz.backHome}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isRTL
-                  ? <path d="M5 12h14M12 5l7 7-7 7" />
-                  : <path d="M19 12H5M12 19l-7-7 7-7" />}
-              </svg>
-            </button>
             <div className="ql-header-text" dir={isRTL ? "rtl" : "ltr"}>
               <h1 className="ql-title">{tql.titleHeader}</h1>
             </div>
-            <div style={{ width: 44 }} />
           </div>
 
           {/* ── Quiz cards ── */}

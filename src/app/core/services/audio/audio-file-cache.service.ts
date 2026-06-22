@@ -116,6 +116,28 @@ export async function hasCachedFile(
   return fileExists(fileName(reciter, sura, aya));
 }
 
+/**
+ * Resolve a source ExoPlayer can play for the cold-start persisted queue, WITHOUT
+ * forcing a download. Prefers an already-cached local file (offline, instant); falls
+ * back to the remote https:// URL (always available). ExoPlayer streams https directly.
+ *
+ * This is used to persist the whole queue up front: the live path downloads verses as
+ * they play, so most aren't cached yet when the queue is first pushed — we must NOT
+ * drop those, or the persisted cold-start list would be nearly empty.
+ */
+export async function getColdStartUri(
+  reciter: string,
+  sura: number,
+  aya: number,
+): Promise<string> {
+  const path = fileName(reciter, sura, aya);
+  if (await fileExists(path)) {
+    const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
+    return uri;
+  }
+  return fetchAudioForAyah(sura, aya, reciter);
+}
+
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

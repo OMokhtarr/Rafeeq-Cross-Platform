@@ -310,10 +310,15 @@ class RafeeqAutoPlugin : Plugin() {
             if (durationMs != null) put("durationMs", durationMs)
         }
 
-        // High-frequency, non-interactive events (position ticks) must never wake the
-        // activity or queue — they're only meaningful while JS is already live. Fire
-        // directly and bail.
-        if (action == "nativePosition") {
+        // Internal player→brain events (position ticks, track/intro end) are only
+        // meaningful while JS is already live and driving. They must fire DIRECTLY and
+        // must NEVER wake the activity or go through the pending-event/delay path — that
+        // path is for cold-start INTERACTIVE car commands. Routing these through it caused
+        // every verse-end to relaunch the activity and let rapid events overwrite each
+        // other's pendingEvent (so advance() silently dropped → playback stalled after
+        // the first ayah).
+        if (action == "nativePosition" || action == "nativeTrackEnded" ||
+            action == "nativeIntroEnded" || action == "nativePlaying") {
             if (jsReady) notifyListeners("carAction", data)
             return
         }

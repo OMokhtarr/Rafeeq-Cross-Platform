@@ -49,7 +49,10 @@ export type CarActionType =
   // and duration (durationMs) so the in-app slider ticks live on Android.
   | "nativePosition"
   // Fired when a one-shot native intro (bismillah) finishes.
-  | "nativeIntroEnded";
+  | "nativeIntroEnded"
+  // Fired when ExoPlayer's actual play/pause state changes (e.g. user paused from the
+  // notification), so the in-app play/pause button stays in sync. `surah`: 1=playing,0=paused.
+  | "nativePlaying";
 
 export interface CarActionEvent {
   action: CarActionType;

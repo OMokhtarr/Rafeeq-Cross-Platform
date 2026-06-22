@@ -2,6 +2,11 @@
 ion-content {
   --background: var(--color-bg-content);
 }
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
 
 .pb-page {
   width: 100%;
@@ -12,7 +17,6 @@ ion-content {
   flex-direction: column;
   overflow: hidden;
   font-family: var(--font-arabic);
-  padding-top: env(safe-area-inset-top);
   box-sizing: border-box;
   transition: background var(--transition-theme), color var(--transition-theme);
 }
@@ -75,8 +79,8 @@ ion-content {
 .pb-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px calc(var(--bottom-nav-height) + var(--space-4));
+  gap: 6px;
+  padding: 8px 16px 12px;
   max-width: var(--max-width-mobile, 600px);
   width: 100%;
   margin: 0 auto;
@@ -95,18 +99,11 @@ ion-content {
 .pb-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .pb-section-title {
-  margin: 0 0 1px 4px;
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-gold);
-  opacity: 0.85;
+  display: none;
 }
 
 /* ── Card ─────────────────────────────────────────────────────────────────── */
@@ -114,10 +111,10 @@ ion-content {
   background: var(--color-bg-card);
   border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-xl);
-  padding: 10px 14px;
+  padding: 7px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   box-shadow: var(--shadow-card);
   transition: background var(--transition-theme), border-color var(--transition-theme);
 }
@@ -151,7 +148,7 @@ ion-content {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--color-row-border);
 }
 .pb-ctrl-row:last-child {
@@ -191,12 +188,12 @@ ion-content {
 /* ── Segmented controls ───────────────────────────────────────────────────── */
 .pb-segmented {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 4px;
   background: var(--color-bg-card);
   border: 1.5px solid var(--color-border-card);
   border-radius: var(--radius-xl);
-  padding: 5px;
+  padding: 4px;
   box-shadow: var(--shadow-card);
   transition: background var(--transition-theme), border-color var(--transition-theme);
 }
@@ -219,18 +216,18 @@ ion-content {
   background: transparent;
   border: 1px solid var(--color-border-subtle);
   color: var(--color-text-primary);
-  padding: 7px 12px;
+  padding: 5px 8px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   font-family: var(--font-arabic);
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-/* Quick-select grid buttons — slightly smaller so grid stays compact */
+/* Quick-select grid buttons */
 .pb-segmented--two-col .pb-seg-btn {
-  padding: 7px 6px;
+  padding: 5px 4px;
   font-size: var(--text-sm);
 }
 
@@ -268,7 +265,7 @@ ion-content {
   border: none;
   border-top: 1px solid var(--color-row-border);
   color: var(--color-text-primary);
-  padding: 10px 2px;
+  padding: 6px 2px;
   cursor: pointer;
   font-size: var(--text-base);
   font-family: var(--font-arabic);
@@ -286,13 +283,12 @@ ion-content {
 
 /* ── CTA button ───────────────────────────────────────────────────────────── */
 .pb-cta {
-  margin-top: auto;
   width: 100%;
   background: var(--color-quran);
   color: #fff;
   border: none;
   border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
+  padding: 10px var(--space-4);
   font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;

@@ -59,6 +59,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         private const val KEY_QUEUE_INDEX = "queue_index"
         private const val KEY_QUEUE_TITLE = "queue_title"
 
+        // Home page background (forest-deep, #0d1f14 — see Home.css). Used to tint the
+        // media notification card so it matches the app's identity.
+        val HOME_BG_COLOR = android.graphics.Color.parseColor("#0D1F14")
+
         // Singleton so RafeeqAutoPlugin can push state updates here
         var instance: RafeeqMediaService? = null
     }
@@ -78,6 +82,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // (cold start), the player walks the persisted flat queue itself.
     private var jsDriving = false
     private lateinit var prefs: SharedPreferences
+
+    // The custom actions (prev/next page, replay) from the last updateState. The per-second
+    // position ticks must re-apply these, otherwise they'd clobber the page-nav buttons in
+    // the car/notification by publishing a PlaybackState without them.
+    private var currentCustomActions: List<PlaybackStateCompat.CustomAction> = emptyList()
+
     private var reciters: List<ReciterItem> = emptyList()
     private var surahs: List<SurahItem> = emptyList()
     private var currentReciter: String = ""
@@ -134,6 +144,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // audio actually plays, via promoteToForeground(). This stops the card from
         // showing the instant the phone app opens.
 
+        // Seed the Android Auto browse tree with static defaults so the car can list
+        // reciters/surahs immediately on a cold start (phone app never opened). JS may
+        // later override these via setContentTree.
+        if (reciters.isEmpty()) reciters = RafeeqContentDefaults.RECITERS
+        if (surahs.isEmpty()) surahs = RafeeqContentDefaults.SURAHS
+
         // Publish the singleton LAST — only now is the service safe to call into.
         instance = this
     }
@@ -183,45 +199,36 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             }
 
             override fun onPosition(positionMs: Long, durationMs: Long) {
-                // Keep the MediaSession position fresh for the car progress bar.
-                val state = if (player?.isPlaying() == true)
-                    PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
-                val sb = PlaybackStateCompat.Builder()
-                    .setActions(
-                        PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                        PlaybackStateCompat.ACTION_STOP or
-                        PlaybackStateCompat.ACTION_SEEK_TO
-                    )
-                    .setState(state, positionMs, if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f)
-                session.setPlaybackState(sb.build())
+                // Keep the MediaSession position fresh WITHOUT dropping page-nav buttons.
+                publishPlaybackState(player?.isPlaying() == true, positionMs)
                 // Forward the per-verse position to the JS brain so the in-app slider
-                // ticks live (JS adds the elapsed time of prior verses in the range).
+                // ticks live. We tag the tick with the player's current track index
+                // (`surah` field) so JS can DROP stale ticks that arrive after a jump to a
+                // different verse (which otherwise yank the slider to a wrong/0 position).
                 if (jsDriving) {
-                    dispatchCarEvent("nativePosition", positionMs = positionMs, durationMs = durationMs)
+                    dispatchCarEvent(
+                        "nativePosition",
+                        surah = player?.currentIndex() ?: 0,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                    )
                 }
             }
 
             override fun onPlayingChanged(isPlaying: Boolean) {
-                val st = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
-                val sb = PlaybackStateCompat.Builder()
-                    .setActions(
-                        PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                        PlaybackStateCompat.ACTION_STOP or
-                        PlaybackStateCompat.ACTION_SEEK_TO
-                    )
-                    .setState(st, player?.currentPositionMs() ?: 0L, if (isPlaying) 1f else 0f)
-                session.setPlaybackState(sb.build())
+                publishPlaybackState(isPlaying, player?.currentPositionMs() ?: 0L)
                 // Show the media card only once playback actually begins.
                 if (isPlaying) {
                     val title = session.controller.metadata
                         ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق"
                     promoteToForeground(title, true)
+                }
+                // Forward the actual play/pause state to the JS brain so the in-app
+                // play/pause button always reflects reality — including when the user
+                // pauses/plays from the NOTIFICATION (which otherwise wouldn't reliably
+                // reach JS). Fired directly like position ticks (no activity wake).
+                if (jsDriving) {
+                    dispatchCarEvent("nativePlaying", surah = if (isPlaying) 1 else 0)
                 }
             }
 
@@ -254,14 +261,17 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
     // ── Native playback control (called by plugin / session callbacks) ──────────
 
-    /** JS brain pushes the full resolved flat queue + where to start. */
+    /**
+     * Persist the resolved flat queue for the NEXT cold start. This must NOT touch the
+     * live player: when JS is driving, playback advances track-by-track via loadNativeTrack.
+     * (Previously this called loadList, which reloaded/stopped the verse that was already
+     * playing and re-armed the cold-list self-advance — fighting the JS-driven advance and
+     * stalling playback after the first ayah.)
+     */
     @androidx.media3.common.util.UnstableApi
     fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean) {
         jsDriving = true
         persistQueue(urls, startIndex, title)
-        requestAudioFocus()
-        player?.loadList(urls, startIndex, playWhenReady = autoplay)
-        updateTitleMetadata(title)
     }
 
     /** JS brain feeds a single resolved URL for one verse (it owns progression). */
@@ -313,7 +323,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             // position on handoff instead of restarting the queue from the beginning.
             dispatchCarEvent("play", aya = idx)
         } else {
-            Log.d("RafeeqMedia", "coldStartPlay: no persisted queue, falling back to JS wake")
+            // Nothing played yet on this install (no persisted queue). We can't build the
+            // authenticated audio URL natively, so wake the app: the brain will resolve
+            // Al-Fatiha and start native playback (and persist it for next time).
+            Log.d("RafeeqMedia", "coldStartPlay: no persisted queue, waking app to start")
             dispatchCarEvent("play")
         }
     }
@@ -324,6 +337,27 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
                 .build()
         )
+    }
+
+    /**
+     * Publish a PlaybackState that ALWAYS re-applies the current custom actions (page-nav,
+     * replay). Used by the per-second position ticks and play/pause changes so they never
+     * wipe out the page buttons that updateState added.
+     */
+    private fun publishPlaybackState(playing: Boolean, positionMs: Long) {
+        val st = if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+        val sb = PlaybackStateCompat.Builder()
+            .setActions(
+                PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                PlaybackStateCompat.ACTION_STOP or
+                PlaybackStateCompat.ACTION_SEEK_TO
+            )
+            .setState(st, positionMs, if (playing) 1f else 0f)
+        currentCustomActions.forEach { sb.addCustomAction(it) }
+        session.setPlaybackState(sb.build())
     }
 
     private fun requestAudioFocus() {
@@ -391,6 +425,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         clientUid: Int,
         rootHints: Bundle?
     ): BrowserRoot {
+        // A media client (Android Auto, the car, or the system media controls) is
+        // connecting. Promote to a foreground media service NOW so the MediaSession's
+        // transport controls (the car's play button → onPlay()) are reliably routed.
+        // This does NOT fire on a plain phone-app open (no media browser connects), so
+        // the notification card still won't appear just from opening the app.
+        promoteToForeground(
+            session.controller.metadata
+                ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق",
+            false,
+        )
         return BrowserRoot(ROOT_ID, null)
     }
 
@@ -506,92 +550,47 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 if (isPlaying) 1f else 0f
             )
 
-        // Add prev-page and next-page custom actions when the surah spans multiple pages.
-        // Both slots are always added in fixed order (prev left, next right) so that
-        // Android Auto never shifts nextPage to the left when prevPage is unavailable.
+        // Build prev-page / next-page / replay custom actions when the surah spans
+        // multiple pages. Collect them into a list so the per-second position ticks can
+        // re-apply the SAME actions (publishPlaybackState) instead of wiping them out.
+        val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
         if (pageMarkers.size > 1) {
             val currentIdx = pageMarkers.indexOfFirst { it.page == currentPage }
                 .let { if (it < 0) pageMarkers.indexOfFirst { it.page >= currentPage }.let { i -> if (i < 0) pageMarkers.lastIndex else i } else it }
 
             val prevMarker = if (currentIdx > 0) pageMarkers[currentIdx - 1] else null
             val nextMarker = if (currentIdx < pageMarkers.lastIndex) pageMarkers[currentIdx + 1] else null
-
             val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
 
-            // Slot 0 — prev-page (always present; no-op when on the first page)
-            // Slot 1 — next-page (always present; no-op when on the last page)
+            // Slot 0 — prev-page (no-op when on the first page)
+            actions.add(
+                if (prevMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("prevPage", "◀ ص ${prevMarker.page}", android.R.drawable.ic_media_previous)
+                        .setExtras(Bundle().apply { putInt("aya", prevMarker.aya); putInt("page", prevMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("prevPage_noop", "◀", android.R.drawable.ic_media_previous).build()
+            )
+            // Slot 1 — next-page (no-op when on the last page)
+            actions.add(
+                if (nextMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("nextPage", "ص ${nextMarker.page} ▶", android.R.drawable.ic_media_next)
+                        .setExtras(Bundle().apply { putInt("aya", nextMarker.aya); putInt("page", nextMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("nextPage_noop", "▶", android.R.drawable.ic_media_next).build()
+            )
             // Slot 2 — replay-page toggle
-            // Android 13+ media widget shows only 2 custom actions; keeping page nav
-            // in slots 0/1 ensures both prev/next are visible and repeat stays accessible
-            // in Android Auto (which shows all 3).
-            if (prevMarker != null) {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "prevPage",
-                        "◀ ص ${prevMarker.page}",
-                        android.R.drawable.ic_media_previous
-                    ).setExtras(Bundle().apply {
-                        putInt("aya", prevMarker.aya)
-                        putInt("page", prevMarker.page)
-                    }).build()
-                )
-            } else {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "prevPage_noop",
-                        "◀",
-                        android.R.drawable.ic_media_previous
-                    ).build()
-                )
-            }
-
-            // Slot 1 — next-page
-            if (nextMarker != null) {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "nextPage",
-                        "ص ${nextMarker.page} ▶",
-                        android.R.drawable.ic_media_next
-                    ).setExtras(Bundle().apply {
-                        putInt("aya", nextMarker.aya)
-                        putInt("page", nextMarker.page)
-                    }).build()
-                )
-            } else {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "nextPage_noop",
-                        "▶",
-                        android.R.drawable.ic_media_next
-                    ).build()
-                )
-            }
-
-            // Slot 2 — replay-page toggle (3rd; hidden on phone media widget, visible in Android Auto)
             val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
-            val replayLabel = "↺ ص ${currentMarker?.page ?: ""}"
-            if (currentMarker != null) {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "replayPage",
-                        replayLabel,
-                        replayIcon
-                    ).setExtras(Bundle().apply {
-                        putInt("aya", currentMarker.aya)
-                        putInt("page", currentMarker.page)
-                    }).build()
-                )
-            } else {
-                stateBuilder.addCustomAction(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "replayPage_noop",
-                        "↺",
-                        R.drawable.ic_repeat_page
-                    ).build()
-                )
-            }
+            actions.add(
+                if (currentMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("replayPage", "↺ ص ${currentMarker.page}", replayIcon)
+                        .setExtras(Bundle().apply { putInt("aya", currentMarker.aya); putInt("page", currentMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
+            )
         }
 
+        currentCustomActions = actions
+        actions.forEach { stateBuilder.addCustomAction(it) }
         session.setPlaybackState(stateBuilder.build())
 
         val metadata = MediaMetadataCompat.Builder()
@@ -652,7 +651,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val largeIcon = BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
+        val largeIcon = buildLargeIcon()
 
         Log.d("RafeeqMedia", "buildNotification: markers=${markers.size} activePage=$activePage")
 
@@ -681,6 +680,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             .setLargeIcon(largeIcon)
             .setContentIntent(openAppIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            // Tint the media card with the home page's forest-deep background so the card
+            // (and its accent) match the app's identity. setColorized asks the system to
+            // use this as the card background on the media style notification.
+            .setColor(HOME_BG_COLOR)
+            .setColorized(true)
 
         // Index 0 — prev-page (disabled when no previous page)
         if (prevMarker != null) {
@@ -729,6 +733,33 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         )
 
         return builder.build()
+    }
+
+    // Composite the launcher logo onto a forest-deep tile so the media card's large icon
+    // blends with the home-page-colored (colorized) card background.
+    //
+    // NOTE: ic_launcher is an adaptive icon (XML), which BitmapFactory.decodeResource
+    // CANNOT decode (returns null → crash). We load it as a Drawable (which supports
+    // adaptive/vector drawables) and render it onto the canvas instead.
+    private var cachedLargeIcon: android.graphics.Bitmap? = null
+    private fun buildLargeIcon(): android.graphics.Bitmap? {
+        cachedLargeIcon?.let { return it }
+        val drawable = try {
+            androidx.core.content.ContextCompat.getDrawable(this, R.mipmap.ic_launcher)
+        } catch (e: Exception) {
+            null
+        } ?: return null
+
+        val size = 256
+        val out = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(out)
+        canvas.drawColor(HOME_BG_COLOR)
+        // Inset the logo slightly so the forest background shows as a border.
+        val pad = (size * 0.12f).toInt()
+        drawable.setBounds(pad, pad, size - pad, size - pad)
+        drawable.draw(canvas)
+        cachedLargeIcon = out
+        return out
     }
 
     private fun createNotificationChannel() {

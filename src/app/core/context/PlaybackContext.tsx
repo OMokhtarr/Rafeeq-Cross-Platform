@@ -94,7 +94,33 @@ function getQueuePageMarkers(
 export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const queue = usePlaybackQueue(DEFAULT_OPTS);
+  // Refs the onQueueEnded callback reads (defined before usePlaybackQueue so the option
+  // can reference them; assigned to real values further down).
+  const activeQueueRef = useRef<VerseKey[]>([]);
+  const queueRef = useRef<ReturnType<typeof usePlaybackQueue> | null>(null);
+
+  // Auto-play the NEXT surah when the current one finishes and the user is NOT looping it.
+  // Returns true if it started the next surah (so the hook doesn't stop). Stops after 114.
+  const handleQueueEnded = React.useCallback((): boolean => {
+    const q = queueRef.current;
+    const aq = activeQueueRef.current;
+    if (!q || aq.length === 0) return false;
+    // Only meaningful for a single-surah queue (the normal case for surah playback).
+    const sura = aq[0].sura;
+    if (aq.some((v) => v.sura !== sura)) return false;
+    const nextSura = sura + 1;
+    if (nextSura > 114) return false; // after An-Nas, stop
+    const count = SURAH_VERSE_COUNTS[nextSura] ?? 0;
+    if (count <= 0) return false;
+    const nextQueue: VerseKey[] = Array.from({ length: count }, (_, i) => ({
+      sura: nextSura,
+      aya: i + 1,
+    }));
+    q.start(nextQueue).catch(() => {});
+    return true;
+  }, []);
+
+  const queue = usePlaybackQueue({ ...DEFAULT_OPTS, onQueueEnded: handleQueueEnded });
   const listenerRef = useRef<{ remove: () => void } | null>(null);
   const isNative = Capacitor.isNativePlatform();
   const [currentReciterId, setCurrentReciterId] = useState(
@@ -110,12 +136,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     len: number;
     markers: Array<{ page: number; aya: number }>;
   } | null>(null);
-  // Always-current ref to the active queue for use inside event listener closures
-  const activeQueueRef = useRef<VerseKey[]>([]);
   // Tracks whether anything is currently loaded so "play" from a cold car start falls back to start()
   const currentVerseRef = useRef<string | null>(null);
-  // Stable ref to queue controls so the car listener effect doesn't re-register on every render
-  const queueRef = useRef(queue);
+  // (activeQueueRef and queueRef are declared above so handleQueueEnded can reference them.)
   const setCurrentReciterIdRef = useRef(setCurrentReciterId);
   useEffect(() => {
     queueRef.current = queue;
@@ -151,13 +174,13 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     const q = activeQueueRef.current;
     const currentVerse = currentVerseRef.current;
     if (!repeatPageEnabled || q.length === 0 || !currentVerse) {
-      queueRef.current.setRepeatPageRange(null);
+      queue.setRepeatPageRange(null);
       return;
     }
     const suraNum = parseInt(currentVerse.split(":")[0], 10);
     const ayaNum = parseInt(currentVerse.split(":")[1], 10);
     if (isNaN(suraNum) || isNaN(ayaNum)) {
-      queueRef.current.setRepeatPageRange(null);
+      queue.setRepeatPageRange(null);
       return;
     }
     const currentPage = estimatePageForVerse(suraNum, ayaNum);
@@ -173,9 +196,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     if (first !== -1) {
-      queueRef.current.setRepeatPageRange({ first, last });
+      queue.setRepeatPageRange({ first, last });
     }
-  }, [repeatPageEnabled, queue.state.currentVerse, queue.queue]);
+  }, [repeatPageEnabled, queue]);
 
   // Keep Android Auto display in sync with playback state.
   // positionMs is intentionally omitted from deps — PlaybackStateCompat interpolates
@@ -247,6 +270,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
 
     DrivingMode.addListener("carAction", (event) => {
       const q = queueRef.current;
+      if (!q) return;
       switch (event.action) {
         case "play":
           if (currentVerseRef.current) {
@@ -330,10 +354,20 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         case "nativePosition": {
           // Live position tick from ExoPlayer: positionMs is per-verse, durationMs is
-          // the current verse's duration. The brain converts to range position.
-          q.notifyNativePosition(event.positionMs ?? 0, event.durationMs ?? 0);
+          // the current verse's duration, and `surah` carries the track index this tick
+          // belongs to (so the brain can drop stale ticks after a jump).
+          q.notifyNativePosition(
+            event.positionMs ?? 0,
+            event.durationMs ?? 0,
+            event.surah ?? -1,
+          );
           break;
         }
+        case "nativePlaying":
+          // ExoPlayer's actual play/pause state changed (e.g. paused from the
+          // notification). Sync the in-app play/pause button. surah: 1=playing, 0=paused.
+          q.notifyNativePlaying(event.surah === 1);
+          break;
         case "nativeIntroEnded":
           // Handled by the one-time listener in nativeBismillahIntro; ignore here.
           break;

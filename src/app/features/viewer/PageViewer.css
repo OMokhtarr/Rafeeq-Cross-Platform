@@ -21,7 +21,7 @@
   padding: 10px 16px;
   background: var(--color-bg-toolbar);
   color: var(--color-text-primary);
-  border-bottom: 0.5px solid #e8e0d0;
+  border-bottom: 1px solid var(--color-gold);
   box-shadow: none;
   flex-shrink: 0;
   position: relative;
@@ -32,7 +32,6 @@
 
 [data-theme="night"] .top-toolbar {
   background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
-  border-bottom: 1px solid var(--color-gold);
   color: white;
 }
 
@@ -83,10 +82,7 @@
 
 /* Play button — gold accent; recite mode uses gold background */
 .toolbar-button.play-button {
-  color: var(--color-gold, #b8860b);
-}
-[data-theme="night"] .toolbar-button.play-button {
-  color: var(--color-gold, #d4b48c);
+  color: var(--color-gold);
 }
 .toolbar-button.play-button--recite {
   background: rgba(212, 180, 140, 0.2);
@@ -373,21 +369,18 @@
 
 /* Bookmark button — gold when active (bookmarked) */
 .toolbar-button.bookmark-button {
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
-  transition: color 0.2s ease, transform 0.15s ease;
+  color: var(--color-gold);
+  opacity: 0.4;
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
 }
 .toolbar-button.bookmark-button--active {
-  color: var(--color-gold, #d4b48c);
+  color: var(--color-gold);
+  opacity: 1;
 }
 .toolbar-button.bookmark-button--active svg {
-  filter: drop-shadow(0 0 4px rgba(212, 180, 140, 0.5));
+  filter: drop-shadow(0 0 4px var(--color-gold-subtle));
 }
-[data-theme="day"] .toolbar-button.bookmark-button {
-  color: rgba(0, 0, 0, 0.4);
-}
-[data-theme="day"] .toolbar-button.bookmark-button--active {
-  color: var(--color-gold, #b8860b);
-}
+
 
 .toolbar-right {
   display: flex;
@@ -1663,4 +1656,19 @@
 [data-theme="night"] .toolbar-button.playback-play {
   background: var(--color-gold, #d4b48c);
   color: #0d1f14;
+}
+
+/* ── Playback sheet drag handle ───────────────────────────────────────────── */
+.playback-sheet-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+[data-theme="night"] .playback-sheet-drag-handle {
+  background: rgba(255, 255, 255, 0.22);
 }

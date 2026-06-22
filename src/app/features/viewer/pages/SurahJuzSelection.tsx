@@ -290,6 +290,7 @@ const SurahJuzSelection: React.FC = () => {
                 {isRTL ? "انتقال سريع" : "Quick Navigation"}
               </p>
             </div>
+            <div style={{ width: 44, flexShrink: 0 }} />
           </div>
 
           {/* ── Tabs ── */}

@@ -179,7 +179,16 @@ class RafeeqPlayer(
     ) {
         val p = ensurePlayer()
         currentIndex = indexOverride ?: index
-        val src = sources.getOrNull(index) ?: return
+        var src = sources.getOrNull(index)
+        // Skip empty entries (a verse whose URL couldn't be resolved when the cold queue
+        // was persisted). Advance to the next non-empty source in the cold list.
+        if (src.isNullOrEmpty()) {
+            var i = index + 1
+            while (i < sources.size && sources[i].isEmpty()) i++
+            if (i >= sources.size) { Log.w("RafeeqPlayer", "no playable source from index=$index"); return }
+            currentIndex = i
+            src = sources[i]
+        }
         p.setMediaItem(MediaItem.fromUri(Uri.parse(src)))
         p.prepare()
         p.playWhenReady = playWhenReady

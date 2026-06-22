@@ -18,7 +18,6 @@ ion-content::part(scroll) {
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  padding-top: env(safe-area-inset-top);
   transition:
     background var(--transition-theme),
     color var(--transition-theme);

@@ -25,6 +25,7 @@ import {
   downloadAndCache,
   hasCached,
 } from "../services/audio/audio-cache.service";
+import { getSurahNameArabic } from "../services/data/metadata.service";
 import {
   isNativeOutput,
   nativePlayVerse,
@@ -83,7 +84,14 @@ export interface PlaybackControls {
    * and duration in ms. Updates the in-app slider (range position = elapsed prior verses
    * + this verse's position) and learns verse durations to build the range total.
    */
-  notifyNativePosition: (perVersePositionMs: number, perVerseDurationMs: number) => void;
+  notifyNativePosition: (
+    perVersePositionMs: number,
+    perVerseDurationMs: number,
+    tickIndex: number,
+  ) => void;
+  /** Sync the in-app play/pause button to ExoPlayer's real state (Android) — e.g. when
+   * the user pauses/plays from the notification. */
+  notifyNativePlaying: (playing: boolean) => void;
   setRepeatPageRange: (range: { first: number; last: number } | null) => void;
   setPlaybackRate: (rate: number) => void;
   setReciter: (reciter: string) => void;
@@ -102,6 +110,14 @@ export interface UsePlaybackQueueOptions {
   playbackRate?: number;
   repeatVerse?: RepeatMode;
   repeatRange?: RepeatMode;
+  /**
+   * Called when the queue finishes naturally with no remaining repeat passes (i.e. the
+   * surah ended and the user is NOT looping it). Return true if continuation was handled
+   * (e.g. the next surah was started) so the hook does NOT stop; return false/undefined to
+   * let the hook stop(). Surah-level knowledge (verse counts, next-surah) lives in the
+   * caller (PlaybackContext), not here.
+   */
+  onQueueEnded?: () => boolean;
 }
 
 const INITIAL_STATE: PlaybackState = {
@@ -117,26 +133,32 @@ const INITIAL_STATE: PlaybackState = {
   repeatPageActive: false,
 };
 
-/** Load a blob URL into a temporary Audio element just long enough to read its duration. */
+/** Load a URL into a temporary Audio element just long enough to read its duration.
+ * Works for blob:, capacitor:// and http(s) URLs. Has a timeout so a verse whose
+ * metadata never loads can't hang the prefetch Promise.all (which would leave the
+ * range duration — and thus the progress bar — stuck at 0). */
 function probeDuration(blobUrl: string): Promise<number> {
   return new Promise((resolve) => {
-    const el = new Audio(blobUrl);
-    const cleanup = () => {
-      el.removeEventListener("durationchange", onDuration);
+    const el = new Audio();
+    el.preload = "metadata";
+    let done = false;
+    const finish = (d: number) => {
+      if (done) return;
+      done = true;
+      el.removeEventListener("loadedmetadata", onMeta);
+      el.removeEventListener("durationchange", onMeta);
       el.removeEventListener("error", onError);
+      clearTimeout(timer);
       el.src = "";
-    };
-    const onDuration = () => {
-      const d = el.duration;
-      cleanup();
       resolve(isFinite(d) && d > 0 ? d : 0);
     };
-    const onError = () => {
-      cleanup();
-      resolve(0);
-    };
-    el.addEventListener("durationchange", onDuration);
+    const onMeta = () => finish(el.duration);
+    const onError = () => finish(0);
+    const timer = setTimeout(() => finish(el.duration), 8000);
+    el.addEventListener("loadedmetadata", onMeta);
+    el.addEventListener("durationchange", onMeta);
     el.addEventListener("error", onError);
+    el.src = blobUrl;
   });
 }
 
@@ -156,6 +178,10 @@ export function usePlaybackQueue(
   const repeatVerseRef = useRef<RepeatMode>(initial.repeatVerse ?? 1);
   const repeatRangeRef = useRef<RepeatMode>(initial.repeatRange ?? 1);
   const repeatPageRangeRef = useRef<{ first: number; last: number } | null>(null);
+  const onQueueEndedRef = useRef<UsePlaybackQueueOptions["onQueueEnded"]>(
+    initial.onQueueEnded,
+  );
+  onQueueEndedRef.current = initial.onQueueEnded;
 
   const currentBlobUrlRef = useRef<string | null>(null);
   const prefetchAbortRef = useRef<AbortController | null>(null);
@@ -367,6 +393,9 @@ export function usePlaybackQueue(
       void playIndexRef.current(0);
       return;
     }
+    // Queue finished with no remaining repeat passes. Give the caller a chance to
+    // continue (e.g. auto-play the next surah). If it handles continuation, don't stop.
+    if (onQueueEndedRef.current?.()) return;
     stop();
   }, [stop]);
 
@@ -419,8 +448,7 @@ export function usePlaybackQueue(
       // the 'nativeTrackEnded' carAction (wired in PlaybackContext → advance()).
       if (isNativeOutput()) {
         try {
-          const [sStr] = verseKey.split(":");
-          const surahName = `سورة ${sStr}`;
+          const surahName = getSurahNameArabic(sura);
           await nativePlayVerse(
             reciterRef.current,
             sura,
@@ -707,7 +735,7 @@ export function usePlaybackQueue(
               reciterRef.current,
               queue,
               0,
-              `سورة ${titleSura}`,
+              getSurahNameArabic(titleSura),
             )
             .catch(() => {}),
         );
@@ -784,7 +812,7 @@ export function usePlaybackQueue(
         const titleSura = queue[idx].sura;
         void import("../services/audio/native-audio-output").then((m) =>
           m
-            .pushNativeQueue(reciterRef.current, queue, idx, `سورة ${titleSura}`)
+            .pushNativeQueue(reciterRef.current, queue, idx, getSurahNameArabic(titleSura))
             .catch(() => {}),
         );
       }
@@ -976,8 +1004,14 @@ export function usePlaybackQueue(
   // ─── notifyNativePosition (Android) ──────────────────────────────────────────
   // Mirrors the <audio> "timeupdate" + "durationchange" handlers for the native path.
   const notifyNativePosition = useCallback(
-    (perVersePositionMs: number, perVerseDurationMs: number) => {
+    (perVersePositionMs: number, perVerseDurationMs: number, tickIndex: number) => {
       const idx = indexRef.current;
+
+      // Drop stale ticks: a position update emitted for a previous verse can arrive over
+      // the bridge AFTER a jump (prev/next page) already moved us to a new verse. Applying
+      // it would yank the slider to a wrong position or momentarily to 0. We only accept
+      // ticks tagged with the current index (tickIndex < 0 means untagged — accept it).
+      if (tickIndex >= 0 && tickIndex !== idx) return;
 
       // Learn this verse's duration (once) so the range total builds up as verses play.
       if (perVerseDurationMs > 0) {
@@ -994,14 +1028,42 @@ export function usePlaybackQueue(
 
       const rangePosSec =
         elapsedBeforeCurrentVerseRef.current + perVersePositionMs / 1000;
+      const totalMs = Math.round(totalRangeDurationRef.current * 1000);
       setState((s) => ({
         ...s,
         positionMs: Math.round(rangePosSec * 1000),
-        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+        // Never regress the displayed total to 0 on a transient tick (e.g. the new verse's
+        // first tick before its duration is known). Keep the last known total until we have
+        // a real, larger value.
+        durationMs: totalMs > 0 ? totalMs : s.durationMs,
       }));
     },
     [],
   );
+
+  const nativePlayingPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const notifyNativePlaying = useCallback((playing: boolean) => {
+    // Clear any pending debounced pause.
+    if (nativePlayingPauseTimerRef.current) {
+      clearTimeout(nativePlayingPauseTimerRef.current);
+      nativePlayingPauseTimerRef.current = null;
+    }
+    if (playing) {
+      setState((s) => (s.isPlaying ? s : { ...s, isPlaying: true }));
+      return;
+    }
+    // Debounce "paused": ExoPlayer reports a momentary pause BETWEEN verses while the
+    // next track loads. Only show paused if playback hasn't resumed within 450ms — a
+    // real user pause (notification) stays paused; a verse transition resumes and cancels.
+    nativePlayingPauseTimerRef.current = setTimeout(() => {
+      nativePlayingPauseTimerRef.current = null;
+      if (!isLoadingRef.current) {
+        setState((s) => (s.isPlaying ? { ...s, isPlaying: false } : s));
+      }
+    }, 450);
+  }, []);
 
   // ─── resumeSession ─────────────────────────────────────────────────────────
   const resumeSession = useCallback(
@@ -1108,6 +1170,7 @@ export function usePlaybackQueue(
     seekToMs,
     notifyTrackEnded: advance,
     notifyNativePosition,
+    notifyNativePlaying,
     setRepeatPageRange,
     setPlaybackRate,
     setReciter,

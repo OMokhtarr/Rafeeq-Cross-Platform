@@ -1,6 +1,11 @@
 ion-content {
   --background: var(--color-bg-content);
 }
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
 
 /* ── Page wrapper ─────────────────────────────────────────── */
 .hifz-page {
@@ -13,7 +18,6 @@ ion-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: env(safe-area-inset-top);
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
@@ -69,6 +73,16 @@ ion-content {
 .hifz-back-btn:hover {
   background: var(--color-gold-faint);
   border-color: var(--color-gold);
+}
+
+/* Right slot in plan header — matches left 44px spacer width so title stays centered */
+.hifz-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 44px;
 }
 
 /* Edit/reset action buttons in plan header */

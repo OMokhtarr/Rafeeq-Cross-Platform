@@ -5,6 +5,11 @@
 ion-content {
   --background: var(--color-bg-content);
 }
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
 
 .account-page {
   background: var(--color-bg-content);
@@ -13,7 +18,6 @@ ion-content {
   min-width: var(--min-width-mobile, 320px);
   margin: 0 auto;
   width: 100%;
-  padding-top: env(safe-area-inset-top);
 }
 
 /* ── Header — matches Settings header ── */
@@ -52,7 +56,7 @@ ion-content {
 .account-header-titles { text-align: center; flex: 1; }
 
 .account-title {
-  font-family: var(--font-arabic);
+  font-family: var(--font-arabic-display);
   font-size: var(--text-xl);
   font-weight: 700;
   margin: 0;

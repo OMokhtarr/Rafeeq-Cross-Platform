@@ -23,7 +23,6 @@ ion-content::part(scroll) {
   align-items: center;
   box-sizing: border-box;
   overflow: hidden;
-  padding-top: env(safe-area-inset-top);
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 

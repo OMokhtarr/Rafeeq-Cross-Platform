@@ -203,7 +203,7 @@ const Azkar: React.FC = () => {
 
     return (
       <IonPage>
-        <IonContent>
+        <IonContent fullscreen>
           <div className="azkar-page-wrapper">
             {/* Header — standard pattern with centered title */}
             <div className="azkar-header">
@@ -322,7 +322,8 @@ const Azkar: React.FC = () => {
           {/* Standard page header */}
           <div className="azkar-page-header">
             <div className="azkar-page-header-text">
-              <h1 className="azkar-page-title" lang="ar" dir="rtl">{ta.title}</h1>
+              <h1 className="azkar-page-title" lang={isRTL ? "ar" : "en"} dir={isRTL ? "rtl" : "ltr"}>{ta.title}</h1>
+              <p className="azkar-page-subtitle">{ta.subtitle}</p>
             </div>
           </div>
 

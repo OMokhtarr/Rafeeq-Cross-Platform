@@ -96,6 +96,7 @@
   display: inline-block;
   position: relative;
   flex-shrink: 1;
+  cursor: pointer;
 }
 
 /* Playback highlight — static, no animation */

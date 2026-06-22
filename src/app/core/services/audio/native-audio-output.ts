@@ -14,6 +14,7 @@
 import { Capacitor } from "@capacitor/core";
 import { DrivingMode } from "../native/driving-mode.plugin";
 import { getNativeAudioUri } from "./audio-cache.service";
+import { getColdStartUri } from "./audio-file-cache.service";
 
 /** True only on Android, where playback output goes through ExoPlayer. */
 export function isNativeOutput(): boolean {
@@ -38,10 +39,14 @@ export async function nativePlayVerse(
 }
 
 /**
- * Push the whole resolved queue to native so cold-start car playback can begin
- * instantly from the persisted list. Resolves each verse to its file:// URI.
- * Best-effort: if some verses aren't cached yet they're skipped from the cold list
- * (they'll still play live when the brain reaches them).
+ * Push the whole resolved queue to native so cold-start car playback can begin instantly
+ * from the persisted list. Each verse resolves to a cached file:// URI if available, else
+ * its remote https:// URL (ExoPlayer streams https directly). We must NOT drop uncached
+ * verses — when this runs, the live path has only just started downloading, so most aren't
+ * cached yet. Dropping them would persist a near-empty list and cold start would play
+ * nothing (the exact bug we're fixing). One bad resolution is replaced with "" and only
+ * trailing/leading empties are trimmed; gaps would misalign indices, so we keep order and
+ * let ExoPlayer skip an occasional bad item.
  */
 export async function pushNativeQueue(
   reciter: string,
@@ -52,14 +57,17 @@ export async function pushNativeQueue(
   const uris = await Promise.all(
     queue.map(async ({ sura, aya }) => {
       try {
-        return await getNativeAudioUri(reciter, sura, aya);
+        return await getColdStartUri(reciter, sura, aya);
       } catch {
         return "";
       }
     }),
   );
+  // Keep index alignment: only drop entries if ALL are empty (nothing resolved).
+  const anyResolved = uris.some((u) => u.length > 0);
+  if (!anyResolved) return; // nothing to persist; leave any prior queue intact
   await DrivingMode.setNativeQueue({
-    urls: uris.filter((u) => u.length > 0),
+    urls: uris,
     startIndex,
     title,
     autoplay: false,

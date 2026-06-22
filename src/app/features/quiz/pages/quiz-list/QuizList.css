@@ -1,6 +1,11 @@
 ion-content {
   --background: var(--color-bg-content);
 }
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
 .ql-page-wrapper {
   width: 100%;
   min-height: 100%;
@@ -10,7 +15,6 @@ ion-content {
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
-  padding-top: env(safe-area-inset-top);
   box-sizing: border-box;
   transition:
     background var(--transition-theme),
@@ -21,7 +25,7 @@ ion-content {
 .ql-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 12px 16px;
   background: var(--color-bg-content);
   border-bottom: 1.5px solid var(--color-border-card);
@@ -29,28 +33,7 @@ ion-content {
   transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
-.ql-header-back-btn {
-  background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background var(--transition-base), border-color var(--transition-base);
-}
-
-.ql-header-back-btn:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
-}
-
 .ql-header-text {
-  flex: 1;
   text-align: center;
 }
 
