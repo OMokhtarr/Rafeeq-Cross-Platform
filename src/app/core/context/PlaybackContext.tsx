@@ -53,6 +53,18 @@ const RECITER_DISPLAY_NAME: Record<string, string> = {
   alafasy: "العفاسي",
 };
 
+// The car browse tree exposes reciters by SLUG (see CAR_RECITERS), but the audio API
+// resolves verses by NUMERIC recitation id. Map the car's slug → numeric id so a surah
+// selected from Android Auto resolves audio correctly (without this, fetchAudioForAyah
+// gets the slug and 404s). Numbers verified against /resources/recitations.
+const CAR_RECITER_SLUG_TO_ID: Record<string, string> = {
+  "minshawi-murattal": "9",
+  abdul_basit_murattal: "2",
+  sudais: "3",
+  husary: "6",
+  alafasy: "7",
+};
+
 /**
  * Given a queue that is entirely within one surah, returns one {page, aya} marker
  * per Mushaf page that contains at least one verse from the queue.
@@ -200,58 +212,87 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [repeatPageEnabled, queue]);
 
-  // Keep Android Auto display in sync with playback state.
-  // positionMs is intentionally omitted from deps — PlaybackStateCompat interpolates
-  // position automatically when STATE_PLAYING + speed=1f is set. We only re-sync on
-  // verse change (which carries a fresh durationMs), play/pause transitions, and queue changes.
+  // Latest position, read inside the sync push WITHOUT being a dependency. We seed the
+  // notification's position only on verse/play-pause/duration changes (and explicit seeks);
+  // Android's PlaybackStateCompat interpolates the seconds in between (STATE_PLAYING +
+  // speed 1f). Pushing a fresh position every second instead would (a) be redundant with
+  // the native interpolation and (b) fight the user while they drag the notification's seek
+  // scrubber, snapping the thumb back to the playing position ("moves right and left").
+  const latestPositionMsRef = useRef(0);
   useEffect(() => {
-    if (!isNative) return;
-    const { currentVerse, isPlaying, positionMs, durationMs, repeatPageActive } = queue.state;
-    const verseKey = currentVerse ?? "";
-    let surahName = "";
-    let suraNum = NaN;
-    if (verseKey) {
-      suraNum = parseInt(verseKey.split(":")[0], 10);
-      if (!isNaN(suraNum)) surahName = getSurahNameArabic(suraNum);
-    }
-    const ayaNum = verseKey ? parseInt(verseKey.split(":")[1], 10) : NaN;
+    latestPositionMsRef.current = queue.state.positionMs;
+  }, [queue.state.positionMs]);
 
-    // Recompute page markers only when the queue identity changes
-    let pageMarkers: Array<{ page: number; aya: number }> | undefined;
-    const q = queue.queue;
-    if (q.length > 0) {
-      const firstAya = q[0].aya;
-      const lastAya = q[q.length - 1].aya;
-      const len = q.length;
-      const cached = pageMarkersCache.current;
-      if (
-        !cached ||
-        cached.firstAya !== firstAya ||
-        cached.lastAya !== lastAya ||
-        cached.len !== len
-      ) {
-        const markers = getQueuePageMarkers(q);
-        pageMarkersCache.current = { firstAya, lastAya, len, markers };
-        pageMarkers = markers;
+  // Push the current playback state to the native notification / Android Auto. When
+  // `positionOverride` is given (a seek), that exact position is sent instead of the
+  // last live position, so the scrubber settles where the user dropped it.
+  const pushPlaybackState = React.useCallback(
+    (positionOverride?: number) => {
+      if (!isNative) return;
+      const { currentVerse, isPlaying, durationMs, repeatPageActive } =
+        queue.state;
+      const positionMs = positionOverride ?? latestPositionMsRef.current;
+      const verseKey = currentVerse ?? "";
+      let surahName = "";
+      let suraNum = NaN;
+      if (verseKey) {
+        suraNum = parseInt(verseKey.split(":")[0], 10);
+        if (!isNaN(suraNum)) surahName = getSurahNameArabic(suraNum);
       }
-    }
+      const ayaNum = verseKey ? parseInt(verseKey.split(":")[1], 10) : NaN;
 
-    const currentPage =
-      !isNaN(suraNum) && !isNaN(ayaNum)
-        ? estimatePageForVerse(suraNum, ayaNum)
-        : 0;
+      // Recompute page markers only when the queue identity changes
+      let pageMarkers: Array<{ page: number; aya: number }> | undefined;
+      const q = queue.queue;
+      if (q.length > 0) {
+        const firstAya = q[0].aya;
+        const lastAya = q[q.length - 1].aya;
+        const len = q.length;
+        const cached = pageMarkersCache.current;
+        if (
+          !cached ||
+          cached.firstAya !== firstAya ||
+          cached.lastAya !== lastAya ||
+          cached.len !== len
+        ) {
+          const markers = getQueuePageMarkers(q);
+          pageMarkersCache.current = { firstAya, lastAya, len, markers };
+          pageMarkers = markers;
+        }
+      }
 
-    DrivingMode.updatePlaybackState({
-      isPlaying,
-      surahName,
-      verseKey,
-      reciterName: RECITER_DISPLAY_NAME[currentReciterId] ?? currentReciterId,
-      positionMs,
-      durationMs,
-      pageMarkers,
-      currentPage,
-      repeatPageActive,
-    }).catch(() => {});
+      const currentPage =
+        !isNaN(suraNum) && !isNaN(ayaNum)
+          ? estimatePageForVerse(suraNum, ayaNum)
+          : 0;
+
+      DrivingMode.updatePlaybackState({
+        isPlaying,
+        surahName,
+        verseKey,
+        reciterName: RECITER_DISPLAY_NAME[currentReciterId] ?? currentReciterId,
+        positionMs,
+        durationMs,
+        pageMarkers,
+        currentPage,
+        repeatPageActive,
+      }).catch(() => {});
+    },
+    [isNative, currentReciterId, queue.queue, queue.state],
+  );
+
+  // Always-current reference to pushPlaybackState. Both the sync effect and the seek
+  // handler call through this ref so neither has to list pushPlaybackState as a dependency
+  // — pushPlaybackState changes on every queue.state update, and depending on it would
+  // re-fire the sync effect every second (the exact per-tick push we're avoiding).
+  const pushSeekedPositionRef = useRef(pushPlaybackState);
+  useEffect(() => {
+    pushSeekedPositionRef.current = pushPlaybackState;
+  }, [pushPlaybackState]);
+
+  // Sync the notification on verse/play-pause/duration changes (NOT on every position tick).
+  useEffect(() => {
+    pushSeekedPositionRef.current();
   }, [
     isNative,
     currentReciterId,
@@ -320,7 +361,10 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
             }),
           );
           if (event.reciter) {
-            q.setReciter(event.reciter);
+            // event.reciter is the car's slug; resolve audio with the numeric id.
+            const numericId =
+              CAR_RECITER_SLUG_TO_ID[event.reciter] ?? event.reciter;
+            q.setReciter(numericId);
             setCurrentReciterIdRef.current(event.reciter);
           }
           q.start(verseQueue).catch(() => {});
@@ -343,7 +387,13 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         case "seekTo": {
           if (event.positionMs == null) break;
-          q.seekToMs(event.positionMs);
+          const seekPos = event.positionMs;
+          q.seekToMs(seekPos);
+          // Immediately re-seed the notification's position to the seeked spot. The sync
+          // effect doesn't fire on a same-verse position change (it intentionally omits
+          // positionMs from its deps to avoid fighting the scrubber), so without this the
+          // notification thumb would snap back to where playback was before the seek.
+          pushSeekedPositionRef.current(seekPos);
           break;
         }
         case "nativeTrackEnded": {

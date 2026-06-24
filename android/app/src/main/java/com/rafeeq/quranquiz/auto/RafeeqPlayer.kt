@@ -57,6 +57,10 @@ class RafeeqPlayer(
     private var coldList: List<String> = emptyList()
     private var currentIndex: Int = 0
 
+    // Repeat-page loop range over the cold list [first, last] inclusive. (-1, -1) = off. When
+    // active, the self-advance loops back to `first` after finishing `last` (native repeat-page).
+    private var coldRepeatRange: Pair<Int, Int> = -1 to -1
+
     // When set, the currently-loaded track is a one-shot intro (e.g. bismillah). On end,
     // this callback fires instead of the normal onEnded/advance, then is cleared.
     private var introCallback: (() -> Unit)? = null
@@ -100,8 +104,16 @@ class RafeeqPlayer(
                     callbacks.onEnded(currentIndex)
                     // Cold-start self-advance: if we're walking a pre-resolved list and JS
                     // hasn't taken over, move to the next URL ourselves.
-                    if (coldList.isNotEmpty() && currentIndex + 1 < coldList.size) {
-                        loadInternal(coldList, currentIndex + 1, playWhenReady = true)
+                    if (coldList.isNotEmpty()) {
+                        val (rf, rl) = coldRepeatRange
+                        Log.d("RafeeqPlayer", "ended idx=$currentIndex range=[$rf,$rl] willLoop=${rf in 0..rl && currentIndex >= rl}")
+                        if (rf in 0..rl && currentIndex >= rl) {
+                            // Repeat-page on and we just finished the page's last verse → loop
+                            // back to the page's first verse.
+                            loadInternal(coldList, rf, playWhenReady = true)
+                        } else if (currentIndex + 1 < coldList.size) {
+                            loadInternal(coldList, currentIndex + 1, playWhenReady = true)
+                        }
                     }
                 }
             }
@@ -140,6 +152,7 @@ class RafeeqPlayer(
     fun load(source: String, index: Int, playWhenReady: Boolean = true) {
         main.post {
             coldList = emptyList()
+            coldRepeatRange = -1 to -1
             loadInternal(listOf(source), 0, playWhenReady, indexOverride = index)
         }
     }
@@ -169,6 +182,25 @@ class RafeeqPlayer(
             coldList = sources
             loadInternal(sources, startIndex, playWhenReady)
         }
+    }
+
+    /**
+     * Jump to another track within the CURRENT cold list (native cold-start path) — e.g. the
+     * page-nav / next / prev buttons when the JS brain isn't driving. No-op if there's no
+     * cold list or the index is out of range.
+     */
+    fun jumpToColdIndex(index: Int, playWhenReady: Boolean = true) {
+        main.post {
+            val list = coldList
+            if (list.isEmpty() || index < 0 || index >= list.size) return@post
+            loadInternal(list, index, playWhenReady)
+        }
+    }
+
+    /** Set/clear the native repeat-page loop range over the cold list (inclusive indices).
+     *  Pass (-1, -1) to disable. */
+    fun setColdRepeatRange(first: Int, last: Int) {
+        main.post { coldRepeatRange = first to last }
     }
 
     private fun loadInternal(

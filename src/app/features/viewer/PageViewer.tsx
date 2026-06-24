@@ -38,7 +38,9 @@ import {
 } from "../../core/services/api/user-api.client";
 import {
   loadHifzReadingSession,
+  loadHifzReadingSessionAsync,
   saveHifzReadingSession,
+  saveHifzReadingSessionAsync,
 } from "../hifz/hifz.service";
 import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
@@ -51,6 +53,12 @@ function saveLastPage(page: number) {
   try {
     localStorage.setItem(LAST_PAGE_KEY, String(page));
   } catch {}
+}
+
+// Persist hifz reading session to both localStorage (immediate) and native (background)
+function persistHifzReadingSession(session: any) {
+  saveHifzReadingSession(session);
+  saveHifzReadingSessionAsync(session).catch(() => {});
 }
 function loadLastPage(): number | null {
   try {
@@ -91,6 +99,13 @@ function readSettings(): ReadSettings {
     translation: "",
     showTranslation: false,
   };
+}
+
+function formatTime(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -379,7 +394,7 @@ const PageViewer: React.FC = () => {
       if (!latest) return;
       if (!latest.readPages.includes(page)) {
         const updated = { ...latest, readPages: [...latest.readPages, page] };
-        saveHifzReadingSession(updated);
+        persistHifzReadingSession(updated);
         hifzSessionRef.current = updated;
       }
     };
@@ -991,22 +1006,30 @@ const PageViewer: React.FC = () => {
                     </svg>
                   </button>
                 </div>
-                {/* Progress bar — spans full width below buttons */}
+                {/* Progress bar with timestamps */}
                 {queue.state.durationMs > 0 && (
-                  <div
-                    className="playback-progress-track"
-                    aria-label="Playback progress"
-                    role="progressbar"
-                    aria-valuenow={queue.state.positionMs}
-                    aria-valuemin={0}
-                    aria-valuemax={queue.state.durationMs}
-                  >
+                  <div className="playback-progress-wrapper">
+                    <span className="playback-time playback-time-current">
+                      {formatTime(queue.state.positionMs)}
+                    </span>
                     <div
-                      className="playback-progress-fill"
-                      style={{
-                        width: `${Math.min(100, (queue.state.positionMs / queue.state.durationMs) * 100)}%`,
-                      }}
-                    />
+                      className="playback-progress-track"
+                      aria-label="Playback progress"
+                      role="progressbar"
+                      aria-valuenow={queue.state.positionMs}
+                      aria-valuemin={0}
+                      aria-valuemax={queue.state.durationMs}
+                    >
+                      <div
+                        className="playback-progress-fill"
+                        style={{
+                          width: `${Math.min(100, (queue.state.positionMs / queue.state.durationMs) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="playback-time playback-time-total">
+                      {formatTime(queue.state.durationMs)}
+                    </span>
                   </div>
                 )}
               </div>

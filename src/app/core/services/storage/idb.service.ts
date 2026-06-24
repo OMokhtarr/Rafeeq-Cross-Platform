@@ -15,7 +15,8 @@ const DB_NAME = "rafeeq-quran";
 //     cached pre-v5 carry `codeV1` strings that will not render in V4 fonts,
 //     and the `fonts` records hold V1 TTF blobs. Both stores are wiped on
 //     upgrade so the next read repopulates them with V4 data.
-const DB_VERSION = 5;
+// v6: added `hifz` store for persisting Hifz plan, best-plan, and reading-session data.
+const DB_VERSION = 6;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -64,6 +65,12 @@ export class IDBService {
         // record shape: { id: `${reciter}:${sura}:${aya}`, blob: Blob, mime: string }
         if (!db.objectStoreNames.contains("audio")) {
           db.createObjectStore("audio", { keyPath: "id" });
+        }
+
+        // hifz store: Hifz plan, best-plan, and reading-session data.
+        // record shape: { id: "plan" | "best-plan" | "reading-session", data: string }
+        if (!db.objectStoreNames.contains("hifz")) {
+          db.createObjectStore("hifz", { keyPath: "id" });
         }
 
         // v5: switching from QPC V1 to V4 invalidates `pages` (verses now

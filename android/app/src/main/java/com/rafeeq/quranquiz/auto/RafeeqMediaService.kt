@@ -95,6 +95,33 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private var currentPage: Int = 0
     private var repeatPageActive: Boolean = false
 
+    // The surah being played by the NATIVE cold-start path (no JS brain). Non-zero only when
+    // native is the playback driver; used to recompute the current page from the player's
+    // track index so the page-nav buttons track playback. Cleared when JS takes over.
+    private var nativeColdStartSura: Int = 0
+
+    // ── Native cold-start duration model ────────────────────────────────────────
+    // The exact whole-surah duration (ms) fetched from the QF timestamp endpoint, so the car
+    // duration bar shows the correct FIXED range total without the JS brain. 0 until fetched.
+    private var nativeRangeTotalMs: Long = 0L
+    // Per-verse durations learned from ExoPlayer (index → ms), to build the cumulative range
+    // position = sum(prior verses) + current verse position.
+    private val nativeVerseDurationsMs = HashMap<Int, Long>()
+    // Background fetcher for the timestamp total (network must be off the main thread).
+    private val nativeDurationExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    // Native repeat-page: the cold-list index range [first, last] of the page currently being
+    // looped (inclusive). null when repeat-page is off or not on the native path.
+    private var nativeRepeatPageFirst: Int = -1
+    private var nativeRepeatPageLast: Int = -1
+
+    // Last metadata pushed to the session. METADATA_KEY_DURATION is what scales the
+    // notification's progress bar; re-setting metadata on every verse (even with the same
+    // values) makes Android reinitialise the bar — the visible "reset" at each verse start.
+    // We therefore only call setMetadata when the title or duration actually changes.
+    private var lastMetaTitle: String? = null
+    private var lastMetaDurationMs: Long = -1L
+
     // Pending detached results waiting for content to arrive from JS
     private val pendingReciters = mutableListOf<Result<List<MediaBrowserCompat.MediaItem>>>()
     private val pendingSurahs = mutableMapOf<String, Result<List<MediaBrowserCompat.MediaItem>>>()
@@ -180,6 +207,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         player = null
         abandonAudioFocus()
         session.release()
+        nativeDurationExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -199,12 +227,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             }
 
             override fun onPosition(positionMs: Long, durationMs: Long) {
-                // Keep the MediaSession position fresh WITHOUT dropping page-nav buttons.
-                publishPlaybackState(player?.isPlaying() == true, positionMs)
-                // Forward the per-verse position to the JS brain so the in-app slider
-                // ticks live. We tag the tick with the player's current track index
-                // (`surah` field) so JS can DROP stale ticks that arrive after a jump to a
-                // different verse (which otherwise yank the slider to a wrong/0 position).
+                // When the JS brain is driving, JS is the SINGLE source of truth for the
+                // notification position/duration: it pushes the cumulative RANGE position
+                // (elapsed across all verses) via updateState(). ExoPlayer's position here is
+                // only PER-VERSE and resets to 0 at every track change, so publishing it would
+                // yank the notification bar back to 0 each verse. We therefore only publish
+                // natively during cold start (jsDriving == false), and otherwise just forward
+                // the per-verse tick to JS to convert into a range position.
                 if (jsDriving) {
                     dispatchCarEvent(
                         "nativePosition",
@@ -212,23 +241,33 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                         positionMs = positionMs,
                         durationMs = durationMs,
                     )
+                } else {
+                    // Native cold start: learn this verse's duration so the cumulative range
+                    // position is correct, then publish the CUMULATIVE position (not per-verse).
+                    val idx = player?.currentIndex() ?: 0
+                    if (durationMs > 0) nativeVerseDurationsMs[idx] = durationMs
+                    publishPlaybackState(player?.isPlaying() == true, nativeCumulativePositionMs())
                 }
             }
 
             override fun onPlayingChanged(isPlaying: Boolean) {
-                publishPlaybackState(isPlaying, player?.currentPositionMs() ?: 0L)
                 // Show the media card only once playback actually begins.
                 if (isPlaying) {
                     val title = session.controller.metadata
                         ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق"
                     promoteToForeground(title, true)
                 }
-                // Forward the actual play/pause state to the JS brain so the in-app
-                // play/pause button always reflects reality — including when the user
-                // pauses/plays from the NOTIFICATION (which otherwise wouldn't reliably
-                // reach JS). Fired directly like position ticks (no activity wake).
                 if (jsDriving) {
+                    // JS owns the play/pause state shown on the notification. ExoPlayer briefly
+                    // reports paused→playing at EVERY verse boundary (old track ends, new track
+                    // loads); publishing that here makes the notification play/pause button
+                    // flicker. Instead we forward the raw state to JS, which debounces the
+                    // transient between-verse pause and pushes a stable state via updateState().
                     dispatchCarEvent("nativePlaying", surah = if (isPlaying) 1 else 0)
+                } else {
+                    // Cold start (no JS brain yet): native is the only writer. Publish the
+                    // cumulative range position so the bar doesn't reset each verse.
+                    publishPlaybackState(isPlaying, nativeCumulativePositionMs())
                 }
             }
 
@@ -278,6 +317,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun loadNativeTrack(url: String, index: Int, title: String, autoplay: Boolean) {
         jsDriving = true
+        // JS brain is now driving — stop the native page-marker derivation; JS owns page
+        // markers via updateState() from here on.
+        nativeColdStartSura = 0
         requestAudioFocus()
         player?.load(url, index, playWhenReady = autoplay)
         if (title.isNotEmpty()) updateTitleMetadata(title)
@@ -317,24 +359,133 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             val (urls, idx, title) = persisted
             Log.d("RafeeqMedia", "coldStartPlay: starting persisted queue size=${urls.size} idx=$idx")
             requestAudioFocus()
+            jsDriving = false
             player?.loadList(urls, idx, playWhenReady = true)
             updateTitleMetadata(title)
             // Tell the brain which index ExoPlayer is already playing so it adopts that
             // position on handoff instead of restarting the queue from the beginning.
             dispatchCarEvent("play", aya = idx)
         } else {
-            // Nothing played yet on this install (no persisted queue). We can't build the
-            // authenticated audio URL natively, so wake the app: the brain will resolve
-            // Al-Fatiha and start native playback (and persist it for next time).
-            Log.d("RafeeqMedia", "coldStartPlay: no persisted queue, waking app to start")
-            dispatchCarEvent("play")
+            // Nothing played yet on this install (no persisted queue). Build Al-Fatiha's
+            // public CDN URLs NATIVELY and play — no WebView wake needed (OEMs like MIUI
+            // block that from a background service). The brain can still adopt later.
+            Log.d("RafeeqMedia", "coldStartPlay: no persisted queue, native Al-Fatiha")
+            val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+            val urls = RafeeqAudioUrls.buildSurahUrls(reciter, 1)
+            if (urls.isNotEmpty()) {
+                requestAudioFocus()
+                jsDriving = false
+                val title = surahArabicName(1)
+                persistQueue(urls, 0, title)
+                player?.loadList(urls, 0, playWhenReady = true)
+                updateTitleMetadata(title)
+                dispatchCarEvent("play", aya = 0)
+            } else {
+                // Should never happen (Al-Fatiha is always resolvable); fall back to wake.
+                dispatchCarEvent("play")
+            }
         }
     }
 
+    /**
+     * Fetch the exact whole-surah duration (ms) for the native cold-start duration bar, on a
+     * background thread (network). On success, set nativeRangeTotalMs and push the duration
+     * into the session metadata so the bar gets its fixed scale. No-op if QF isn't configured.
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun fetchNativeRangeTotal(reciter: String, sura: Int) {
+        nativeDurationExecutor.execute {
+            val totalMs = RafeeqQfApi.fetchChapterDurationMs(reciter, sura)
+            Log.d("RafeeqMedia", "fetchNativeRangeTotal: sura=$sura reciter=$reciter totalMs=$totalMs (coldStartSura=$nativeColdStartSura)")
+            if (totalMs > 0 && nativeColdStartSura == sura) {
+                nativeRangeTotalMs = totalMs
+                // setMetadata must run on the main thread.
+                mainHandler.post {
+                    if (nativeColdStartSura == sura) {
+                        lastMetaDurationMs = totalMs
+                        session.setMetadata(
+                            MediaMetadataCompat.Builder()
+                                .putString(
+                                    MediaMetadataCompat.METADATA_KEY_TITLE,
+                                    lastMetaTitle ?: surahArabicName(sura),
+                                )
+                                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalMs)
+                                .build()
+                        )
+                        publishPlaybackState(player?.isPlaying() == true, nativeCumulativePositionMs())
+                    }
+                }
+            }
+        }
+    }
+
+    /** Recompute the cold-list index range of the page being looped (native repeat-page).
+     *  Cleared when repeat is off. Page = the verses whose Mushaf page == currentPage. */
+    @androidx.media3.common.util.UnstableApi
+    private fun updateNativeRepeatPageRange() {
+        if (!repeatPageActive || nativeColdStartSura <= 0) {
+            nativeRepeatPageFirst = -1
+            nativeRepeatPageLast = -1
+            player?.setColdRepeatRange(-1, -1)
+            return
+        }
+        val count = RafeeqAudioUrls.SURAH_VERSE_COUNTS[nativeColdStartSura] ?: return
+        var first = -1
+        var last = -1
+        for (aya in 1..count) {
+            val page = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, aya)
+            if (page == currentPage) {
+                if (first == -1) first = aya - 1 // cold-list index
+                last = aya - 1
+            } else if (first != -1) {
+                break
+            }
+        }
+        nativeRepeatPageFirst = first
+        nativeRepeatPageLast = last
+        player?.setColdRepeatRange(first, last)
+        Log.d("RafeeqMedia", "updateNativeRepeatPageRange: active=$repeatPageActive page=$currentPage range=[$first,$last] (idx aya-1)")
+    }
+
+    /** Cumulative range position (ms) for native cold start = sum of the verses BEFORE the
+     *  current one + the current verse's position. Verses we've already played have exact
+     *  durations; for not-yet-played verses (e.g. after a forward page jump) we estimate with
+     *  the average known verse duration so the bar lands at roughly the right spot, then
+     *  self-corrects as real durations arrive. */
+    @androidx.media3.common.util.UnstableApi
+    private fun nativeCumulativePositionMs(): Long {
+        val idx = player?.currentIndex() ?: 0
+        return nativeElapsedBeforeIndex(idx) + (player?.currentPositionMs() ?: 0L)
+    }
+
+    /** Sum of verse durations BEFORE cold-list index `idx` (exact where known, average
+     *  estimate for unplayed verses). Used to seed the bar on a page jump before the new
+     *  verse's position ticks arrive. */
+    private fun nativeElapsedBeforeIndex(idx: Int): Long {
+        val known = nativeVerseDurationsMs.values
+        val avg = if (known.isNotEmpty()) known.sum() / known.size else 0L
+        var elapsed = 0L
+        for (i in 0 until idx) elapsed += nativeVerseDurationsMs[i] ?: avg
+        return elapsed
+    }
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
     private fun updateTitleMetadata(title: String) {
+        // Skip if the title is unchanged. loadNativeTrack() calls this for EVERY verse, and
+        // re-setting metadata (a) drops METADATA_KEY_DURATION to 0 — collapsing the
+        // notification progress bar until the next updateState restores it — and (b) makes
+        // Android reinitialise the bar. Both show up as the bar "resetting" at each verse.
+        if (title == lastMetaTitle) return
+        lastMetaTitle = title
+        // Preserve the last known duration so the bar keeps its scale across the title change.
         session.setMetadata(
             MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                .putLong(
+                    MediaMetadataCompat.METADATA_KEY_DURATION,
+                    if (lastMetaDurationMs >= 0) lastMetaDurationMs else 0L,
+                )
                 .build()
         )
     }
@@ -344,7 +495,22 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * replay). Used by the per-second position ticks and play/pause changes so they never
      * wipe out the page buttons that updateState added.
      */
-    private fun publishPlaybackState(playing: Boolean, positionMs: Long) {
+    @androidx.media3.common.util.UnstableApi
+    private fun publishPlaybackState(playing: Boolean, positionMs: Long, derivePage: Boolean = true) {
+        // On the native cold-start path (no JS brain), keep the page-nav buttons live: derive
+        // the current page from the player's track index (list index i == aya i+1) and rebuild
+        // the custom actions so prev/next-page highlight the right page as playback advances.
+        // `derivePage=false` right after a page jump (the jump already set currentPage and the
+        // async player index isn't settled yet).
+        if (nativeColdStartSura > 0) {
+            if (derivePage) {
+                val idx = player?.currentIndex() ?: 0
+                val aya = idx + 1
+                val page = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, aya)
+                if (page > 0 && page != currentPage) currentPage = page
+            }
+            currentCustomActions = buildPageCustomActions()
+        }
         val st = if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
         val sb = PlaybackStateCompat.Builder()
             .setActions(
@@ -360,6 +526,51 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         session.setPlaybackState(sb.build())
     }
 
+    /**
+     * Build the prev-page / next-page / replay-page custom actions from the current
+     * pageMarkers + currentPage + repeatPageActive. Returns empty when the surah fits on a
+     * single page. Shared by updateState (JS-driven) and the native cold-start path so the
+     * page-nav buttons appear in both — no-op slots keep the button positions fixed.
+     */
+    private fun buildPageCustomActions(): List<PlaybackStateCompat.CustomAction> {
+        val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
+        if (pageMarkers.size > 1) {
+            val currentIdx = pageMarkers.indexOfFirst { it.page == currentPage }
+                .let { if (it < 0) pageMarkers.indexOfFirst { it.page >= currentPage }.let { i -> if (i < 0) pageMarkers.lastIndex else i } else it }
+
+            val prevMarker = if (currentIdx > 0) pageMarkers[currentIdx - 1] else null
+            val nextMarker = if (currentIdx < pageMarkers.lastIndex) pageMarkers[currentIdx + 1] else null
+            val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
+
+            // Slot 0 — prev-page (no-op when on the first page)
+            actions.add(
+                if (prevMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("prevPage", "◀ ص ${prevMarker.page}", android.R.drawable.ic_media_previous)
+                        .setExtras(Bundle().apply { putInt("aya", prevMarker.aya); putInt("page", prevMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("prevPage_noop", "◀", android.R.drawable.ic_media_previous).build()
+            )
+            // Slot 1 — next-page (no-op when on the last page)
+            actions.add(
+                if (nextMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("nextPage", "ص ${nextMarker.page} ▶", android.R.drawable.ic_media_next)
+                        .setExtras(Bundle().apply { putInt("aya", nextMarker.aya); putInt("page", nextMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("nextPage_noop", "▶", android.R.drawable.ic_media_next).build()
+            )
+            // Slot 2 — replay-page toggle
+            val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
+            actions.add(
+                if (currentMarker != null)
+                    PlaybackStateCompat.CustomAction.Builder("replayPage", "↺ ص ${currentMarker.page}", replayIcon)
+                        .setExtras(Bundle().apply { putInt("aya", currentMarker.aya); putInt("page", currentMarker.page) }).build()
+                else
+                    PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
+            )
+        }
+        return actions
+    }
+
     private fun requestAudioFocus() {
         if (hasAudioFocus) return
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -372,13 +583,29 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 .setAcceptsDelayedFocusGain(true)
                 .setOnAudioFocusChangeListener { focusChange ->
                     when (focusChange) {
-                        AudioManager.AUDIOFOCUS_LOSS,
-                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                        AudioManager.AUDIOFOCUS_LOSS -> {
+                            // Permanent loss (e.g. another app takes over): pause via JS so
+                            // the in-app play/pause button reflects the paused state.
                             hasAudioFocus = false
-                            dispatchCarEvent("pause")
+                            player?.pause()
+                            if (jsDriving) dispatchCarEvent("pause")
+                        }
+                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+                        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                            // Transient loss (e.g. notification sound, system UI): pause the
+                            // native player silently. Do NOT notify JS — this is a momentary
+                            // interruption (a few hundred ms). Telling JS would flip the
+                            // in-app button to paused and prevent auto-resume on focus regain.
+                            hasAudioFocus = false
+                            player?.pause()
                         }
                         AudioManager.AUDIOFOCUS_GAIN -> {
+                            // Focus returned after a transient loss: resume automatically so
+                            // playback continues without the user having to press play again.
                             hasAudioFocus = true
+                            if (player?.isPlaying() == false) {
+                                player?.play()
+                            }
                         }
                     }
                 }
@@ -550,54 +777,25 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 if (isPlaying) 1f else 0f
             )
 
-        // Build prev-page / next-page / replay custom actions when the surah spans
-        // multiple pages. Collect them into a list so the per-second position ticks can
-        // re-apply the SAME actions (publishPlaybackState) instead of wiping them out.
-        val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
-        if (pageMarkers.size > 1) {
-            val currentIdx = pageMarkers.indexOfFirst { it.page == currentPage }
-                .let { if (it < 0) pageMarkers.indexOfFirst { it.page >= currentPage }.let { i -> if (i < 0) pageMarkers.lastIndex else i } else it }
-
-            val prevMarker = if (currentIdx > 0) pageMarkers[currentIdx - 1] else null
-            val nextMarker = if (currentIdx < pageMarkers.lastIndex) pageMarkers[currentIdx + 1] else null
-            val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
-
-            // Slot 0 — prev-page (no-op when on the first page)
-            actions.add(
-                if (prevMarker != null)
-                    PlaybackStateCompat.CustomAction.Builder("prevPage", "◀ ص ${prevMarker.page}", android.R.drawable.ic_media_previous)
-                        .setExtras(Bundle().apply { putInt("aya", prevMarker.aya); putInt("page", prevMarker.page) }).build()
-                else
-                    PlaybackStateCompat.CustomAction.Builder("prevPage_noop", "◀", android.R.drawable.ic_media_previous).build()
-            )
-            // Slot 1 — next-page (no-op when on the last page)
-            actions.add(
-                if (nextMarker != null)
-                    PlaybackStateCompat.CustomAction.Builder("nextPage", "ص ${nextMarker.page} ▶", android.R.drawable.ic_media_next)
-                        .setExtras(Bundle().apply { putInt("aya", nextMarker.aya); putInt("page", nextMarker.page) }).build()
-                else
-                    PlaybackStateCompat.CustomAction.Builder("nextPage_noop", "▶", android.R.drawable.ic_media_next).build()
-            )
-            // Slot 2 — replay-page toggle
-            val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
-            actions.add(
-                if (currentMarker != null)
-                    PlaybackStateCompat.CustomAction.Builder("replayPage", "↺ ص ${currentMarker.page}", replayIcon)
-                        .setExtras(Bundle().apply { putInt("aya", currentMarker.aya); putInt("page", currentMarker.page) }).build()
-                else
-                    PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
-            )
-        }
-
+        // Build prev-page / next-page / replay custom actions from the current pageMarkers/
+        // currentPage/repeatPageActive (shared with the native cold-start path).
+        val actions = buildPageCustomActions()
         currentCustomActions = actions
         actions.forEach { stateBuilder.addCustomAction(it) }
         session.setPlaybackState(stateBuilder.build())
 
-        val metadata = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, surahName)
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMs)
-            .build()
-        session.setMetadata(metadata)
+        // Only push metadata when the title or duration actually changed. Re-sending it on
+        // every verse (with the now-fixed range duration) made Android reinitialise the
+        // notification progress bar — the bar/timestamp "reset" the user saw at verse start.
+        if (surahName != lastMetaTitle || durationMs != lastMetaDurationMs) {
+            lastMetaTitle = surahName
+            lastMetaDurationMs = durationMs
+            val metadata = MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, surahName)
+                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMs)
+                .build()
+            session.setMetadata(metadata)
+        }
 
         // Promote to foreground (and show the card) on first play; otherwise just refresh
         // the existing notification. When paused, we keep the card so transport controls
@@ -820,13 +1018,26 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             dispatchCarEvent("pause")
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onSkipToNext() {
-            // Verse/range progression lives in the JS brain — let it pick the next URL.
-            dispatchCarEvent("next")
+            if (jsDriving) {
+                // Verse/range progression lives in the JS brain — let it pick the next URL.
+                dispatchCarEvent("next")
+            } else {
+                // Native cold start: step the cold list forward one verse.
+                val idx = player?.currentIndex() ?: 0
+                player?.jumpToColdIndex(idx + 1)
+            }
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onSkipToPrevious() {
-            dispatchCarEvent("prev")
+            if (jsDriving) {
+                dispatchCarEvent("prev")
+            } else {
+                val idx = player?.currentIndex() ?: 0
+                if (idx > 0) player?.jumpToColdIndex(idx - 1)
+            }
         }
 
         @androidx.media3.common.util.UnstableApi
@@ -837,10 +1048,22 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         @androidx.media3.common.util.UnstableApi
         override fun onSeekTo(pos: Long) {
-            player?.seekTo(pos)
-            dispatchCarEvent("seekTo", positionMs = pos)
+            // `pos` is an absolute position on the RANGE timeline (cumulative across all
+            // verses) because that's the duration/position we publish. ExoPlayer's own
+            // timeline is only the CURRENT verse, so seeking it directly to a range
+            // position would be out of bounds. When JS is driving, let the brain map the
+            // range position to the right verse + per-verse offset (seekToMs) and load it;
+            // it will then seek the native player to the in-verse offset. Only seek the
+            // player directly during cold start (no brain yet).
+            if (jsDriving) {
+                dispatchCarEvent("seekTo", positionMs = pos)
+            } else {
+                player?.seekTo(pos)
+                dispatchCarEvent("seekTo", positionMs = pos)
+            }
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onCustomAction(action: String?, extras: Bundle?) {
             if (action == null) return
             if (action == "prevPage" || action == "nextPage") {
@@ -848,19 +1071,50 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 val page = extras?.getInt("page", -1) ?: -1
                 if (aya > 0) {
                     currentPage = page
-                    dispatchCarEvent("jumpToAya", aya = aya)
+                    if (jsDriving) {
+                        dispatchCarEvent("jumpToAya", aya = aya)
+                    } else {
+                        // Native cold start: the cold list is verse 1..N at index 0..N-1,
+                        // so the page's first aya maps to index aya-1.
+                        Log.d("RafeeqMedia", "pageNav action=$action -> page=$page aya=$aya repeatActive=$repeatPageActive")
+                        player?.jumpToColdIndex(aya - 1)
+                        // If looping, move the loop to the page we just navigated to.
+                        if (repeatPageActive) updateNativeRepeatPageRange()
+                        // Immediately reflect the jumped-to position on the bar (don't wait for
+                        // the next tick). jumpToColdIndex posts async, so compute from aya-1 and
+                        // skip page-derivation (currentPage was already set above).
+                        val jumpElapsed = nativeElapsedBeforeIndex(aya - 1)
+                        publishPlaybackState(true, jumpElapsed, derivePage = false)
+                    }
                 }
             }
             if (action == "replayPage") {
                 val aya = extras?.getInt("aya", -1) ?: -1
                 val page = extras?.getInt("page", -1) ?: -1
-                if (aya > 0) {
-                    currentPage = page
-                    dispatchCarEvent("replayPage", aya = aya)
+                if (jsDriving) {
+                    if (aya > 0) {
+                        currentPage = page
+                        dispatchCarEvent("replayPage", aya = aya)
+                    }
+                } else {
+                    // Native cold start: repeat the page where playback ACTUALLY is now, not
+                    // the page baked into the button's extras (which can be stale if playback
+                    // crossed a page boundary since the button was last rebuilt). Derive the
+                    // current page from the player's track index (list index i == aya i+1).
+                    if (nativeColdStartSura > 0) {
+                        val idx = player?.currentIndex() ?: 0
+                        currentPage = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, idx + 1)
+                    }
+                    repeatPageActive = !repeatPageActive
+                    updateNativeRepeatPageRange()
+                    // Rebuild the buttons so the repeat icon reflects the new on/off state.
+                    currentCustomActions = buildPageCustomActions()
+                    publishPlaybackState(player?.isPlaying() == true, nativeCumulativePositionMs())
                 }
             }
         }
 
+        @androidx.media3.common.util.UnstableApi
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
             if (mediaId == null) return
             if (mediaId.startsWith(SURAH_PREFIX)) {
@@ -868,9 +1122,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
                 requestAudioFocus()
 
-                // Immediately acknowledge the selection so Android Auto exits
-                // the "Getting your selection..." screen. Without this the UI
-                // hangs until the JS side finishes loading and fires updateState.
+                // Immediately acknowledge the selection so Android Auto exits the
+                // "Getting your selection..." screen.
                 val bufferingState = PlaybackStateCompat.Builder()
                     .setActions(
                         PlaybackStateCompat.ACTION_PLAY or
@@ -881,8 +1134,50 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     .build()
                 session.setPlaybackState(bufferingState)
 
+                // ── Play NATIVELY, no WebView required ──────────────────────────────────
+                // Build the whole surah's public CDN URLs and play them on ExoPlayer right
+                // now. This is the fix for the cold-start "no sound" bug: resolving audio no
+                // longer depends on waking the WebView (which MIUI and other OEMs block from
+                // a background service), so the car plays whether the phone is locked or not.
+                val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+                val urls = RafeeqAudioUrls.buildSurahUrls(reciter, surahNumber)
+                if (urls.isNotEmpty()) {
+                    val title = surahArabicName(surahNumber)
+                    Log.d("RafeeqMedia", "onPlayFromMediaId: native play surah=$surahNumber reciter=$reciter verses=${urls.size}")
+                    // jsDriving=false → player self-advances through the flat list and native
+                    // is the sole MediaSession writer (publishPlaybackState). If the WebView is
+                    // alive (or wakes), the brain can still take over via dispatchCarEvent below.
+                    jsDriving = false
+                    // Compute the page-nav markers natively so prev/next-page + repeat-page
+                    // buttons appear even without the WebView/brain (cold start).
+                    nativeColdStartSura = surahNumber
+                    pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(surahNumber)
+                        .map { PageMarker(it.first, it.second) }
+                    currentPage = pageMarkers.firstOrNull()?.page ?: 0
+                    // Fresh surah → repeat-page off.
+                    repeatPageActive = false
+                    player?.setColdRepeatRange(-1, -1)
+                    // Reset + fetch the exact whole-surah duration for the bar (off-thread).
+                    nativeVerseDurationsMs.clear()
+                    nativeRangeTotalMs = 0L
+                    fetchNativeRangeTotal(reciter, surahNumber)
+                    persistQueue(urls, 0, title)
+                    player?.loadList(urls, 0, playWhenReady = true)
+                    updateTitleMetadata(title)
+                }
+
+                // Still notify the brain so it adopts/takes over WHEN available (repeat/range
+                // logic). On a locked MIUI cold start this wake is blocked and simply no-ops —
+                // native playback above already produced sound, so we don't depend on it.
                 dispatchCarEvent("selectSurah", reciter = currentReciter, surah = surahNumber)
             }
         }
+    }
+
+    /** Arabic surah name for the notification/metadata title, from the browse-tree data. */
+    private fun surahArabicName(number: Int): String {
+        return surahs.firstOrNull { it.number == number }?.arabicName
+            ?: RafeeqContentDefaults.SURAHS.firstOrNull { it.number == number }?.arabicName
+            ?: "رفيق"
     }
 }

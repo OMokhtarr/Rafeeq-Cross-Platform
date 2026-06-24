@@ -25,6 +25,7 @@ import {
   downloadAndCache,
   hasCached,
 } from "../services/audio/audio-cache.service";
+import { getRangeDurations } from "../services/audio/audio-duration.service";
 import { getSurahNameArabic } from "../services/data/metadata.service";
 import {
   isNativeOutput,
@@ -133,34 +134,6 @@ const INITIAL_STATE: PlaybackState = {
   repeatPageActive: false,
 };
 
-/** Load a URL into a temporary Audio element just long enough to read its duration.
- * Works for blob:, capacitor:// and http(s) URLs. Has a timeout so a verse whose
- * metadata never loads can't hang the prefetch Promise.all (which would leave the
- * range duration — and thus the progress bar — stuck at 0). */
-function probeDuration(blobUrl: string): Promise<number> {
-  return new Promise((resolve) => {
-    const el = new Audio();
-    el.preload = "metadata";
-    let done = false;
-    const finish = (d: number) => {
-      if (done) return;
-      done = true;
-      el.removeEventListener("loadedmetadata", onMeta);
-      el.removeEventListener("durationchange", onMeta);
-      el.removeEventListener("error", onError);
-      clearTimeout(timer);
-      el.src = "";
-      resolve(isFinite(d) && d > 0 ? d : 0);
-    };
-    const onMeta = () => finish(el.duration);
-    const onError = () => finish(0);
-    const timer = setTimeout(() => finish(el.duration), 8000);
-    el.addEventListener("loadedmetadata", onMeta);
-    el.addEventListener("durationchange", onMeta);
-    el.addEventListener("error", onError);
-    el.src = blobUrl;
-  });
-}
 
 export function usePlaybackQueue(
   initial: UsePlaybackQueueOptions,
@@ -192,6 +165,12 @@ export function usePlaybackQueue(
   const verseDurationsRef = useRef<Record<number, number>>({});
   // Estimated total duration of the range (sum of known verse durations)
   const totalRangeDurationRef = useRef(0);
+  // Last per-verse duration reported by ExoPlayer — fallback for advance() when
+  // the verse ended before its duration was stored in verseDurationsRef.
+  const lastNativeVerseDurationSecRef = useRef(0);
+  // True while transitioning between verses on native — suppresses the spurious
+  // "paused" event ExoPlayer fires between tracks.
+  const isVerseTransitioningRef = useRef(false);
 
   const [state, setState] = useState<PlaybackState>(INITIAL_STATE);
   const [activeQueue, setActiveQueue] = useState<VerseKey[]>([]);
@@ -334,6 +313,8 @@ export function usePlaybackQueue(
     elapsedBeforeCurrentVerseRef.current = 0;
     verseDurationsRef.current = {};
     totalRangeDurationRef.current = 0;
+    lastNativeVerseDurationSecRef.current = 0;
+    isVerseTransitioningRef.current = false;
     try {
       if ("mediaSession" in navigator)
         navigator.mediaSession.playbackState = "none";
@@ -370,14 +351,20 @@ export function usePlaybackQueue(
         elapsed += verseDurationsRef.current[i] ?? 0;
       }
       elapsedBeforeCurrentVerseRef.current = elapsed;
+      isVerseTransitioningRef.current = true;
       void playIndexRef.current(pageRange.first);
       return;
     }
 
     if (nextIdx < queue.length) {
-      // Advance elapsed by the completed verse's known duration
+      // Advance elapsed by the completed verse's known duration; fall back to the last
+      // ExoPlayer-reported duration so the position never jumps to 0 between verses.
+      const knownDur = verseDurationsRef.current[indexRef.current];
       elapsedBeforeCurrentVerseRef.current +=
-        verseDurationsRef.current[indexRef.current] ?? 0;
+        knownDur != null && knownDur > 0
+          ? knownDur
+          : lastNativeVerseDurationSecRef.current;
+      isVerseTransitioningRef.current = true;
       void playIndexRef.current(nextIdx);
       return;
     }
@@ -390,6 +377,7 @@ export function usePlaybackQueue(
     if (rangePassCountRef.current < rangeTarget) {
       // Loop back to start — reset position to beginning of range
       elapsedBeforeCurrentVerseRef.current = 0;
+      isVerseTransitioningRef.current = true;
       void playIndexRef.current(0);
       return;
     }
@@ -436,6 +424,11 @@ export function usePlaybackQueue(
         ...s,
         currentIndex: idx,
         currentVerse: verseKey,
+        // Seed the cumulative position to this verse's start (sum of all prior verses) NOW,
+        // so the notification's position is correct the instant the verse-change sync fires.
+        // Without this it briefly shows the PREVIOUS verse's last position (the new verse's
+        // first native tick hasn't arrived yet), making the bar appear to reset/jump.
+        positionMs: Math.round(elapsedBeforeCurrentVerseRef.current * 1000),
         isLoading: true,
         error: null,
         verseRepeatCount: verseRepeatCountRef.current + 1,
@@ -687,6 +680,8 @@ export function usePlaybackQueue(
       elapsedBeforeCurrentVerseRef.current = 0;
       verseDurationsRef.current = {};
       totalRangeDurationRef.current = 0;
+      lastNativeVerseDurationSecRef.current = 0;
+      isVerseTransitioningRef.current = false;
 
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
@@ -697,6 +692,45 @@ export function usePlaybackQueue(
       const first = queue[0];
       const wantsBismillah =
         first.aya === 1 && first.sura !== 1 && first.sura !== 9;
+
+      const reciter = reciterRef.current;
+      const signal = controller.signal;
+
+      // Show a loading state and reset the bar to 0/0 while we resolve the range total
+      // (below) before the first verse plays.
+      isLoadingRef.current = true;
+      setState((s) => ({
+        ...s,
+        currentVerse: `${first.sura}:${first.aya}`,
+        isLoading: true,
+        isPlaying: false,
+        positionMs: 0,
+        durationMs: 0,
+      }));
+
+      // Resolve the WHOLE range's per-verse + total duration BEFORE playback starts, using
+      // the Quran Foundation timestamp endpoint (exact ms, cached, whole-surah total in one
+      // call). This replaces probing downloaded audio files, which was unreliable on Android
+      // (the WebView often never reports metadata for capacitor:// URLs), leaving the total
+      // wrong and growing one verse at a time. Accurate per-verse durations also keep the
+      // cumulative position correct at every verse boundary (no notification-bar reset).
+      const { perVerseSec, totalSec } = await getRangeDurations(
+        reciter,
+        queue,
+        signal,
+      );
+      if (signal.aborted || queueRef.current.length === 0) return;
+
+      for (let i = 0; i < perVerseSec.length; i++) {
+        if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
+      }
+      totalRangeDurationRef.current = totalSec;
+
+      // Publish the fixed total ONCE, before any audio plays.
+      setState((s) => ({
+        ...s,
+        durationMs: Math.round(totalRangeDurationRef.current * 1000),
+      }));
 
       if (isNativeOutput()) {
         // ExoPlayer is the output on Android; the <audio> element is unused.
@@ -740,45 +774,6 @@ export function usePlaybackQueue(
             .catch(() => {}),
         );
       }
-
-      const reciter = reciterRef.current;
-      const signal = controller.signal;
-      const prefetchAll = async () => {
-        // Fetch all verse durations in parallel so the total is ready at once.
-        await Promise.all(
-          queue.map(async ({ sura, aya }, i) => {
-            if (signal.aborted) return;
-            try {
-              const blobUrl = await getCachedOrDownload(
-                reciter,
-                sura,
-                aya,
-                signal,
-              );
-              const dur = await probeDuration(blobUrl);
-              URL.revokeObjectURL(blobUrl);
-              if (dur > 0 && !signal.aborted) {
-                const prev = verseDurationsRef.current[i] ?? 0;
-                verseDurationsRef.current[i] = dur;
-                totalRangeDurationRef.current = Math.max(
-                  0,
-                  totalRangeDurationRef.current - prev + dur,
-                );
-              }
-            } catch {
-              // continue on network error or abort
-            }
-          }),
-        );
-        // All probes done — push the settled total once.
-        if (!signal.aborted) {
-          setState((s) => ({
-            ...s,
-            durationMs: Math.round(totalRangeDurationRef.current * 1000),
-          }));
-        }
-      };
-      prefetchAll();
     },
     [ensureEl, playIndex, playBismillahIntro],
   );
@@ -801,6 +796,8 @@ export function usePlaybackQueue(
       elapsedBeforeCurrentVerseRef.current = 0;
       verseDurationsRef.current = {};
       totalRangeDurationRef.current = 0;
+      lastNativeVerseDurationSecRef.current = 0;
+      isVerseTransitioningRef.current = false;
 
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
@@ -817,41 +814,31 @@ export function usePlaybackQueue(
         );
       }
 
-      // Probe durations so the slider total is correct.
+      // Resolve durations from the timestamp endpoint so the slider total is correct.
+      // Cold start prioritizes instant audio, so this runs in the background (we've already
+      // started playing the adopted verse above) and corrects the bar once resolved.
       const reciter = reciterRef.current;
       const signal = controller.signal;
       void (async () => {
-        await Promise.all(
-          queue.map(async ({ sura, aya }, i) => {
-            if (signal.aborted) return;
-            try {
-              const blobUrl = await getCachedOrDownload(reciter, sura, aya, signal);
-              const dur = await probeDuration(blobUrl);
-              URL.revokeObjectURL(blobUrl);
-              if (dur > 0 && !signal.aborted) {
-                const prev = verseDurationsRef.current[i] ?? 0;
-                verseDurationsRef.current[i] = dur;
-                totalRangeDurationRef.current = Math.max(
-                  0,
-                  totalRangeDurationRef.current - prev + dur,
-                );
-              }
-            } catch {
-              /* ignore */
-            }
-          }),
+        const { perVerseSec, totalSec } = await getRangeDurations(
+          reciter,
+          queue,
+          signal,
         );
-        if (!signal.aborted) {
-          // Position reflects all verses before the adopted index.
-          let elapsed = 0;
-          for (let i = 0; i < idx; i++) elapsed += verseDurationsRef.current[i] ?? 0;
-          elapsedBeforeCurrentVerseRef.current = elapsed;
-          setState((s) => ({
-            ...s,
-            positionMs: Math.round(elapsed * 1000),
-            durationMs: Math.round(totalRangeDurationRef.current * 1000),
-          }));
+        if (signal.aborted) return;
+        for (let i = 0; i < perVerseSec.length; i++) {
+          if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
         }
+        totalRangeDurationRef.current = totalSec;
+        // Position reflects all verses before the adopted index.
+        let elapsed = 0;
+        for (let i = 0; i < idx; i++) elapsed += verseDurationsRef.current[i] ?? 0;
+        elapsedBeforeCurrentVerseRef.current = elapsed;
+        setState((s) => ({
+          ...s,
+          positionMs: Math.round(elapsed * 1000),
+          durationMs: Math.round(totalRangeDurationRef.current * 1000),
+        }));
       })();
     },
     [playIndex],
@@ -1013,29 +1000,24 @@ export function usePlaybackQueue(
       // ticks tagged with the current index (tickIndex < 0 means untagged — accept it).
       if (tickIndex >= 0 && tickIndex !== idx) return;
 
-      // Learn this verse's duration (once) so the range total builds up as verses play.
+      // Track the latest per-verse duration ONLY as a fallback for advance() (so the
+      // position never jumps to 0 between verses). We deliberately do NOT write to
+      // verseDurationsRef or totalRangeDurationRef here: those are owned exclusively by
+      // the upfront prefetch probe in start()/startAt(). Writing a native-tick duration
+      // into verseDurationsRef without also adjusting totalRangeDurationRef caused the
+      // prefetch probe to later subtract a value it never added — making the displayed
+      // total shrink over time. The range total must stay FIXED for the whole range.
       if (perVerseDurationMs > 0) {
-        const durSec = perVerseDurationMs / 1000;
-        const prev = verseDurationsRef.current[idx] ?? 0;
-        if (Math.abs(durSec - prev) > 0.01) {
-          verseDurationsRef.current[idx] = durSec;
-          totalRangeDurationRef.current = Math.max(
-            0,
-            totalRangeDurationRef.current - prev + durSec,
-          );
-        }
+        lastNativeVerseDurationSecRef.current = perVerseDurationMs / 1000;
       }
 
       const rangePosSec =
         elapsedBeforeCurrentVerseRef.current + perVersePositionMs / 1000;
-      const totalMs = Math.round(totalRangeDurationRef.current * 1000);
+      // Position only. Duration is fixed for the range and pushed separately; never
+      // overwrite it from a per-verse tick (which would make the right-side total jitter).
       setState((s) => ({
         ...s,
         positionMs: Math.round(rangePosSec * 1000),
-        // Never regress the displayed total to 0 on a transient tick (e.g. the new verse's
-        // first tick before its duration is known). Keep the last known total until we have
-        // a real, larger value.
-        durationMs: totalMs > 0 ? totalMs : s.durationMs,
       }));
     },
     [],
@@ -1051,18 +1033,21 @@ export function usePlaybackQueue(
       nativePlayingPauseTimerRef.current = null;
     }
     if (playing) {
+      isVerseTransitioningRef.current = false;
       setState((s) => (s.isPlaying ? s : { ...s, isPlaying: true }));
       return;
     }
+    // Suppress the spurious "paused" event ExoPlayer fires between verse tracks.
+    if (isVerseTransitioningRef.current) return;
     // Debounce "paused": ExoPlayer reports a momentary pause BETWEEN verses while the
-    // next track loads. Only show paused if playback hasn't resumed within 450ms — a
+    // next track loads. Only show paused if playback hasn't resumed within 800ms — a
     // real user pause (notification) stays paused; a verse transition resumes and cancels.
     nativePlayingPauseTimerRef.current = setTimeout(() => {
       nativePlayingPauseTimerRef.current = null;
-      if (!isLoadingRef.current) {
+      if (!isLoadingRef.current && !isVerseTransitioningRef.current) {
         setState((s) => (s.isPlaying ? { ...s, isPlaying: false } : s));
       }
-    }, 450);
+    }, 800);
   }, []);
 
   // ─── resumeSession ─────────────────────────────────────────────────────────

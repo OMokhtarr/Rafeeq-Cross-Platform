@@ -354,6 +354,59 @@ function absoluteAudioUrl(u: string): string {
   return `https://verses.quran.foundation/${u.replace(/^\/+/, "")}`;
 }
 
+// ─── Audio timestamps ──────────────────────────────────────────────────────────
+// GET /audio/reciters/{reciter_id}/timestamp
+//   - reciter_id is a CHAPTER-reciter id (from /resources/chapter_reciters), NOT an
+//     ayah-by-ayah recitation id. For the reciters this app ships, the two id spaces
+//     happen to share the same numbers (AbdulBaset Murattal = 2, Minshawi = 9, Sudais
+//     = 3, Husary = 6, Afasy = 7), so the stored numeric reciter id is passed straight
+//     through. See AUDIO_RECITER_ID_MAP in audio-duration.service if that ever diverges.
+//   - Scope with `chapter_number` (whole surah in ONE call) OR `verse_key` (one verse).
+//   - Returns timestamps in MILLISECONDS on the reciter's full-surah timeline; a verse's
+//     duration is `timestamp_to - timestamp_from`.
+// Auth + 401/403/429/5xx handling is provided by apiFetch (the headers x-auth-token /
+// authorization / x-client-id are injected on every request, token refresh on 401,
+// exponential backoff on 429/5xx).
+
+export interface AudioTimestampResult {
+  timestampFrom: number;
+  timestampTo: number;
+}
+
+interface AudioTimestampResponse {
+  result?: { timestamp_from?: number; timestamp_to?: number };
+  timestamp_from?: number;
+  timestamp_to?: number;
+}
+
+export async function fetchAudioTimestamp(
+  reciterId: string | number,
+  scope: {
+    chapterNumber?: number;
+    verseKey?: string;
+    verseId?: number;
+    word?: number;
+    wordFrom?: number;
+    wordTo?: number;
+  },
+): Promise<AudioTimestampResult> {
+  const data = await apiFetch<AudioTimestampResponse>(
+    `/audio/reciters/${encodeURIComponent(String(reciterId))}/timestamp`,
+    {
+      chapter_number: scope.chapterNumber,
+      verse_key: scope.verseKey,
+      verse_id: scope.verseId,
+      word: scope.word,
+      word_from: scope.wordFrom,
+      word_to: scope.wordTo,
+    },
+  );
+  const r = data.result ?? data;
+  const from = r.timestamp_from ?? 0;
+  const to = r.timestamp_to ?? 0;
+  return { timestampFrom: from, timestampTo: to };
+}
+
 // ─── Translations ─────────────────────────────────────────────────────────────
 
 interface ApiEdition {

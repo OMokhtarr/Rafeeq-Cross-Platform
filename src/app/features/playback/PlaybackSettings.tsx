@@ -202,18 +202,23 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     };
   }, [lang]);
 
+  // These depend ONLY on the pref value, NOT on `queue`. The queue object is a fresh
+  // reference every render, so including it re-ran each effect on EVERY render — which
+  // fired setPlaybackRate (→ nativeSetSpeed over the bridge) dozens of times per second.
+  // The setters are stable callbacks, so it's safe to omit `queue` from the deps.
+  const { setReciter, setPlaybackRate, setRepeatVerse, setRepeatRange } = queue;
   useEffect(() => {
-    queue.setReciter(prefs.reciter);
-  }, [prefs.reciter, queue]);
+    setReciter(prefs.reciter);
+  }, [prefs.reciter, setReciter]);
   useEffect(() => {
-    queue.setPlaybackRate(prefs.playbackRate);
-  }, [prefs.playbackRate, queue]);
+    setPlaybackRate(prefs.playbackRate);
+  }, [prefs.playbackRate, setPlaybackRate]);
   useEffect(() => {
-    queue.setRepeatVerse(prefs.repeatVerse);
-  }, [prefs.repeatVerse, queue]);
+    setRepeatVerse(prefs.repeatVerse);
+  }, [prefs.repeatVerse, setRepeatVerse]);
   useEffect(() => {
-    queue.setRepeatRange(prefs.repeatRange);
-  }, [prefs.repeatRange, queue]);
+    setRepeatRange(prefs.repeatRange);
+  }, [prefs.repeatRange, setRepeatRange]);
 
   const updatePref = <K extends keyof StoredPlaybackPrefs>(
     key: K,

@@ -1,13 +1,33 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+// Read the Quran Foundation token-broker URL + client id from the SAME root .env file the
+// web build uses, so the native cold-start path (RafeeqQfApi) can fetch audio timestamps
+// without duplicating these values. The token broker holds the real OAuth secret server-side;
+// these two are public identifiers already shipped in the JS bundle. Falls back to "" so a
+// build without an env file still compiles (native timestamp fetch just no-ops).
+def qfEnv = { String key ->
+    def candidates = [
+        new File(rootProject.projectDir, "../.env.local"),
+        new File(rootProject.projectDir, "../.env.production"),
+        new File(rootProject.projectDir, "../.env"),
+    ]
+    for (f in candidates) {
+        if (f.exists()) {
+            def line = f.readLines().find { it.trim().startsWith("${key}=") }
+            if (line != null) return line.substring(line.indexOf('=') + 1).trim().replaceAll('^["\']|["\']$', '')
+        }
+    }
+    return ""
+}
+
 android {
     namespace "com.rafeeq.quranquiz"
     ndkVersion = "27.0.12077973"
-    
+
     // Use the variables from variables.gradle
     compileSdk rootProject.ext.compileSdkVersion
-    
+
     defaultConfig {
         applicationId "com.rafeeq.quranquiz"
         minSdk rootProject.ext.minSdkVersion
@@ -15,6 +35,11 @@ android {
         versionCode 2
         versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // QF config for the native audio-timestamp fetch (cold-start duration bar).
+        buildConfigField "String", "QF_TOKEN_BROKER_URL", "\"${qfEnv('REACT_APP_TOKEN_BROKER_URL')}\""
+        buildConfigField "String", "QF_CONTENT_API_BASE", "\"${qfEnv('REACT_APP_CONTENT_API_BASE')}\""
+        buildConfigField "String", "QF_CLIENT_ID", "\"${qfEnv('REACT_APP_QF_CLIENT_ID')}\""
         
         aaptOptions {
             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -27,6 +52,10 @@ android {
                 arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {

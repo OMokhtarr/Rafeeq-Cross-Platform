@@ -1,6 +1,12 @@
+import { Capacitor } from "@capacitor/core";
+import { idb } from "../../core/services/storage/idb.service";
+
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
 const HIFZ_READING_KEY = "rafiq_hifz_reading_v1";
+
+// Hifz data store name in IndexedDB (created on demand)
+const HIFZ_STORE = "hifz";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +67,53 @@ export interface BestPlanRecord {
 }
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
+// Platform-aware storage:
+// - Android: Capacitor Filesystem (quran-audio/ directory, same pattern as audio cache)
+// - Web/iOS: IndexedDB (hifz store)
+// - Fallback: localStorage for backward compat and synchronous reads
 
+const HIFZ_DIR = "hifz-data";
+
+async function ensureHifzDir(): Promise<void> {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+  try {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    await Filesystem.mkdir({
+      path: HIFZ_DIR,
+      directory: Directory.Data,
+      recursive: true,
+    });
+  } catch {
+    // Already exists
+  }
+}
+
+async function readHifzFile(fileName: string): Promise<string | null> {
+  try {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    const { data } = await Filesystem.readFile({
+      path: `${HIFZ_DIR}/${fileName}`,
+      directory: Directory.Data,
+    });
+    return typeof data === "string" ? data : new TextDecoder().decode(data as any);
+  } catch {
+    return null;
+  }
+}
+
+async function writeHifzFile(fileName: string, content: string): Promise<void> {
+  try {
+    await ensureHifzDir();
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    await Filesystem.writeFile({
+      path: `${HIFZ_DIR}/${fileName}`,
+      directory: Directory.Data,
+      data: content,
+    });
+  } catch {}
+}
+
+// Synchronous fallback (localStorage only, for backward compat and sync reads)
 export function loadPlan(): HifzPlan | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -72,9 +124,39 @@ export function loadPlan(): HifzPlan | null {
   }
 }
 
+// Async load from proper storage (filesystem on Android, IndexedDB on web/iOS)
+export async function loadPlanAsync(): Promise<HifzPlan | null> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const json = await readHifzFile("plan.json");
+      return json ? (JSON.parse(json) as HifzPlan) : null;
+    } else {
+      // Web/iOS: IndexedDB
+      const rec = await idb.get<{ data: string }>(HIFZ_STORE, "plan");
+      return rec ? (JSON.parse(rec.data) as HifzPlan) : null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+// Sync save (localStorage, for quick UI updates)
 export function savePlan(plan: HifzPlan): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+  } catch {}
+}
+
+// Async save (filesystem on Android, IndexedDB on web/iOS)
+export async function savePlanAsync(plan: HifzPlan): Promise<void> {
+  try {
+    const json = JSON.stringify(plan);
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      await writeHifzFile("plan.json", json);
+    } else {
+      // Web/iOS: IndexedDB
+      await idb.put(HIFZ_STORE, { id: "plan", data: json });
+    }
   } catch {}
 }
 
@@ -84,6 +166,21 @@ export function clearPlan(): void {
   } catch {}
 }
 
+export async function clearPlanAsync(): Promise<void> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      await Filesystem.deleteFile({
+        path: `${HIFZ_DIR}/plan.json`,
+        directory: Directory.Data,
+      });
+    } else {
+      await idb.delete(HIFZ_STORE, "plan");
+    }
+  } catch {}
+}
+
+// Best plan functions
 export function loadBestPlan(): BestPlanRecord | null {
   try {
     const raw = localStorage.getItem(BEST_PLAN_KEY);
@@ -94,9 +191,34 @@ export function loadBestPlan(): BestPlanRecord | null {
   }
 }
 
+export async function loadBestPlanAsync(): Promise<BestPlanRecord | null> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const json = await readHifzFile("best-plan.json");
+      return json ? (JSON.parse(json) as BestPlanRecord) : null;
+    } else {
+      const rec = await idb.get<{ data: string }>(HIFZ_STORE, "best-plan");
+      return rec ? (JSON.parse(rec.data) as BestPlanRecord) : null;
+    }
+  } catch {
+    return null;
+  }
+}
+
 export function saveBestPlan(record: BestPlanRecord): void {
   try {
     localStorage.setItem(BEST_PLAN_KEY, JSON.stringify(record));
+  } catch {}
+}
+
+export async function saveBestPlanAsync(record: BestPlanRecord): Promise<void> {
+  try {
+    const json = JSON.stringify(record);
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      await writeHifzFile("best-plan.json", json);
+    } else {
+      await idb.put(HIFZ_STORE, { id: "best-plan", data: json });
+    }
   } catch {}
 }
 
@@ -119,6 +241,17 @@ export function saveHifzReadingSession(s: HifzReadingSession): void {
   } catch {}
 }
 
+export async function saveHifzReadingSessionAsync(s: HifzReadingSession): Promise<void> {
+  try {
+    const json = JSON.stringify(s);
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      await writeHifzFile("reading-session.json", json);
+    } else {
+      await idb.put(HIFZ_STORE, { id: "reading-session", data: json });
+    }
+  } catch {}
+}
+
 export function loadHifzReadingSession(): HifzReadingSession | null {
   try {
     const raw = localStorage.getItem(HIFZ_READING_KEY);
@@ -128,9 +261,37 @@ export function loadHifzReadingSession(): HifzReadingSession | null {
   }
 }
 
+export async function loadHifzReadingSessionAsync(): Promise<HifzReadingSession | null> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const json = await readHifzFile("reading-session.json");
+      return json ? (JSON.parse(json) as HifzReadingSession) : null;
+    } else {
+      const rec = await idb.get<{ data: string }>(HIFZ_STORE, "reading-session");
+      return rec ? (JSON.parse(rec.data) as HifzReadingSession) : null;
+    }
+  } catch {
+    return null;
+  }
+}
+
 export function clearHifzReadingSession(): void {
   try {
     localStorage.removeItem(HIFZ_READING_KEY);
+  } catch {}
+}
+
+export async function clearHifzReadingSessionAsync(): Promise<void> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      await Filesystem.deleteFile({
+        path: `${HIFZ_DIR}/reading-session.json`,
+        directory: Directory.Data,
+      });
+    } else {
+      await idb.delete(HIFZ_STORE, "reading-session");
+    }
   } catch {}
 }
 

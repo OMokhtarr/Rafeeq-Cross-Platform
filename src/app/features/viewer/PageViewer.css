@@ -1633,8 +1633,23 @@
   cursor: default;
 }
 
-.playback-progress-track {
+.playback-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
+}
+
+.playback-time {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(212, 180, 140, 0.6);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.playback-progress-track {
+  flex: 1;
   height: 3px;
   background: rgba(212, 180, 140, 0.25);
   border-radius: 2px;

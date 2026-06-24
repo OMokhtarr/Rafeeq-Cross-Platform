@@ -7,7 +7,9 @@ import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   loadPlan,
+  loadPlanAsync,
   savePlan,
+  savePlanAsync,
   generateSessions,
   juzToPages,
   countMemorizedPages,
@@ -17,9 +19,13 @@ import {
   computeMaxSessionsPerDay,
   getSurahsForRanges,
   loadBestPlan,
+  loadBestPlanAsync,
   saveBestPlan,
+  saveBestPlanAsync,
   saveHifzReadingSession,
+  saveHifzReadingSessionAsync,
   loadHifzReadingSession,
+  loadHifzReadingSessionAsync,
   sessionReadProgress,
   HifzPlan,
   HifzGoal,
@@ -45,6 +51,22 @@ import "./Hifz.css";
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Persist to both localStorage (immediate UI update) and native storage (background)
+function persistPlan(plan: HifzPlan): void {
+  savePlan(plan);
+  savePlanAsync(plan).catch(() => {}); // Fire and forget for native
+}
+
+function persistBestPlan(record: BestPlanRecord): void {
+  saveBestPlan(record);
+  saveBestPlanAsync(record).catch(() => {}); // Fire and forget for native
+}
+
+function persistHifzReadingSession(session: any): void {
+  saveHifzReadingSession(session);
+  saveHifzReadingSessionAsync(session).catch(() => {}); // Fire and forget for native
 }
 
 // ─── Sub-component: AddMemorizedSheet ────────────────────────────────────────
@@ -1191,19 +1213,30 @@ const Hifz: React.FC = () => {
   });
 
   useEffect(() => {
-    initMetadata().then(() => {
-      const chs = getChapters();
-      setChapters(chs);
-
-      const saved = loadPlan();
+    // Load saved plan from storage (web localStorage or native Capacitor Preferences)
+    const loadInitial = async () => {
+      const saved = await loadPlanAsync();
       if (saved) {
         setPlan(saved);
         setMemorized(saved.memorized);
         setGoal(saved.goal);
         setView("plan");
       }
-      setBestPlan(loadBestPlan());
-    });
+      const best = await loadBestPlanAsync();
+      setBestPlan(best);
+    };
+
+    loadInitial();
+
+    // Fetch metadata in parallel; if offline, chapters will fail but plan is already loaded
+    initMetadata()
+      .then(() => {
+        const chs = getChapters();
+        setChapters(chs);
+      })
+      .catch(() => {
+        // Offline or error fetching metadata — already loaded plan from storage above
+      });
   }, []);
 
   const handleGenerate = useCallback(() => {
@@ -1225,7 +1258,7 @@ const Hifz: React.FC = () => {
       sessions: mergedSessions,
       createdAt: plan?.createdAt ?? new Date().toISOString(),
     };
-    savePlan(newPlan);
+    persistPlan(newPlan);
     setPlan(newPlan);
     setView("plan");
   }, [memorized, goal, chapters, plan]);
@@ -1256,7 +1289,7 @@ const Hifz: React.FC = () => {
         };
         const existing = loadBestPlan();
         if (!existing || days < existing.daysToFinish) {
-          saveBestPlan(record);
+          persistBestPlan(record);
           setBestPlan(record);
         }
       }
@@ -1330,7 +1363,7 @@ const Hifz: React.FC = () => {
         // swapped to the session being opened now.
         const prev = loadHifzReadingSession();
         const carriedReadPages = prev?.readPages ?? [];
-        saveHifzReadingSession({ ranges, readPages: carriedReadPages, sessionIds });
+        persistHifzReadingSession({ ranges, readPages: carriedReadPages, sessionIds });
         setReadPages(carriedReadPages);
       }
       const firstAyah = getPageStart(page);

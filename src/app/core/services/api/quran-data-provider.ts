@@ -4,7 +4,10 @@ import type {
   PageTranslation,
   TafsirText,
   TafsirResource,
+  AudioTimestampResult,
 } from "./quran-api.client";
+
+export type { AudioTimestampResult } from "./quran-api.client";
 
 async function trySdkOrFallback<Args extends any[], Return>(
   methodName: string,
@@ -45,6 +48,23 @@ export async function fetchAudioForAyah(
   reciter: string,
 ) {
   return trySdkOrFallback("fetchAudioForAyah", sura, aya, reciter);
+}
+
+export async function fetchAudioTimestamp(
+  reciterId: string | number,
+  scope: {
+    chapterNumber?: number;
+    verseKey?: string;
+    verseId?: number;
+    word?: number;
+    wordFrom?: number;
+    wordTo?: number;
+  },
+): Promise<AudioTimestampResult> {
+  return trySdkOrFallback<
+    [string | number, typeof scope],
+    AudioTimestampResult
+  >("fetchAudioTimestamp", reciterId, scope);
 }
 
 export async function fetchChapters() {
