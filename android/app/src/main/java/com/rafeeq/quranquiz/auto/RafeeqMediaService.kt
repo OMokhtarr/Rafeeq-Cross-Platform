@@ -396,7 +396,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private fun fetchNativeRangeTotal(reciter: String, sura: Int) {
         nativeDurationExecutor.execute {
             val totalMs = RafeeqQfApi.fetchChapterDurationMs(reciter, sura)
-            Log.d("RafeeqMedia", "fetchNativeRangeTotal: sura=$sura reciter=$reciter totalMs=$totalMs (coldStartSura=$nativeColdStartSura)")
             if (totalMs > 0 && nativeColdStartSura == sura) {
                 nativeRangeTotalMs = totalMs
                 // setMetadata must run on the main thread.
@@ -421,6 +420,46 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
     /** Recompute the cold-list index range of the page being looped (native repeat-page).
      *  Cleared when repeat is off. Page = the verses whose Mushaf page == currentPage. */
+    /** Skip the native cold list to a verse index, keeping the page + repeat range in sync.
+     *  When repeat-page is on and the skip crosses a page boundary, the loop range must follow
+     *  the verse we land on (otherwise the old page's range would still loop). Sets the new
+     *  page's range and jumps atomically so the self-advance can't use a stale range. */
+    @androidx.media3.common.util.UnstableApi
+    private fun nativeSkipToIndex(index: Int) {
+        if (index < 0) return
+        if (nativeColdStartSura > 0) {
+            val newPage = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, index + 1)
+            if (newPage > 0) currentPage = newPage
+        }
+        if (repeatPageActive && nativeColdStartSura > 0) {
+            val (rf, rl) = nativePageIndexRange(currentPage)
+            nativeRepeatPageFirst = rf
+            nativeRepeatPageLast = rl
+            player?.jumpToColdIndexWithRange(index, rf, rl)
+        } else {
+            player?.jumpToColdIndex(index)
+        }
+    }
+
+    /** The cold-list index range [first, last] of all verses on `page` of the current native
+     *  surah (inclusive). (-1,-1) if none. cold-list index == aya-1. */
+    private fun nativePageIndexRange(page: Int): Pair<Int, Int> {
+        if (nativeColdStartSura <= 0) return -1 to -1
+        val count = RafeeqAudioUrls.SURAH_VERSE_COUNTS[nativeColdStartSura] ?: return -1 to -1
+        var first = -1
+        var last = -1
+        for (aya in 1..count) {
+            val p = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, aya)
+            if (p == page) {
+                if (first == -1) first = aya - 1
+                last = aya - 1
+            } else if (first != -1) {
+                break
+            }
+        }
+        return first to last
+    }
+
     @androidx.media3.common.util.UnstableApi
     private fun updateNativeRepeatPageRange() {
         if (!repeatPageActive || nativeColdStartSura <= 0) {
@@ -429,22 +468,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             player?.setColdRepeatRange(-1, -1)
             return
         }
-        val count = RafeeqAudioUrls.SURAH_VERSE_COUNTS[nativeColdStartSura] ?: return
-        var first = -1
-        var last = -1
-        for (aya in 1..count) {
-            val page = RafeeqAudioUrls.estimatePageForVerse(nativeColdStartSura, aya)
-            if (page == currentPage) {
-                if (first == -1) first = aya - 1 // cold-list index
-                last = aya - 1
-            } else if (first != -1) {
-                break
-            }
-        }
+        val (first, last) = nativePageIndexRange(currentPage)
         nativeRepeatPageFirst = first
         nativeRepeatPageLast = last
         player?.setColdRepeatRange(first, last)
-        Log.d("RafeeqMedia", "updateNativeRepeatPageRange: active=$repeatPageActive page=$currentPage range=[$first,$last] (idx aya-1)")
     }
 
     /** Cumulative range position (ms) for native cold start = sum of the verses BEFORE the
@@ -542,21 +569,23 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             val nextMarker = if (currentIdx < pageMarkers.lastIndex) pageMarkers[currentIdx + 1] else null
             val currentMarker = if (currentIdx >= 0 && currentIdx <= pageMarkers.lastIndex) pageMarkers[currentIdx] else null
 
-            // Slot 0 — prev-page (no-op when on the first page)
+            // Slot 0 — prev-page (no-op when on the first page). Uses the built-in fast-rewind
+            // (double chevron ◀◀) so it's visually distinct from the single-triangle prev-VERSE
+            // skip, and renders reliably in Android Auto (custom vectors hit AA's icon cache).
             actions.add(
                 if (prevMarker != null)
-                    PlaybackStateCompat.CustomAction.Builder("prevPage", "◀ ص ${prevMarker.page}", android.R.drawable.ic_media_previous)
+                    PlaybackStateCompat.CustomAction.Builder("prevPage", "◀ ص ${prevMarker.page}", android.R.drawable.ic_media_rew)
                         .setExtras(Bundle().apply { putInt("aya", prevMarker.aya); putInt("page", prevMarker.page) }).build()
                 else
-                    PlaybackStateCompat.CustomAction.Builder("prevPage_noop", "◀", android.R.drawable.ic_media_previous).build()
+                    PlaybackStateCompat.CustomAction.Builder("prevPage_noop", "◀", android.R.drawable.ic_media_rew).build()
             )
             // Slot 1 — next-page (no-op when on the last page)
             actions.add(
                 if (nextMarker != null)
-                    PlaybackStateCompat.CustomAction.Builder("nextPage", "ص ${nextMarker.page} ▶", android.R.drawable.ic_media_next)
+                    PlaybackStateCompat.CustomAction.Builder("nextPage", "ص ${nextMarker.page} ▶", android.R.drawable.ic_media_ff)
                         .setExtras(Bundle().apply { putInt("aya", nextMarker.aya); putInt("page", nextMarker.page) }).build()
                 else
-                    PlaybackStateCompat.CustomAction.Builder("nextPage_noop", "▶", android.R.drawable.ic_media_next).build()
+                    PlaybackStateCompat.CustomAction.Builder("nextPage_noop", "▶", android.R.drawable.ic_media_ff).build()
             )
             // Slot 2 — replay-page toggle
             val replayIcon = if (repeatPageActive) R.drawable.ic_repeat_page_active else R.drawable.ic_repeat_page
@@ -1026,7 +1055,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             } else {
                 // Native cold start: step the cold list forward one verse.
                 val idx = player?.currentIndex() ?: 0
-                player?.jumpToColdIndex(idx + 1)
+                nativeSkipToIndex(idx + 1)
             }
         }
 
@@ -1036,7 +1065,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 dispatchCarEvent("prev")
             } else {
                 val idx = player?.currentIndex() ?: 0
-                if (idx > 0) player?.jumpToColdIndex(idx - 1)
+                if (idx > 0) nativeSkipToIndex(idx - 1)
             }
         }
 
@@ -1074,12 +1103,18 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     if (jsDriving) {
                         dispatchCarEvent("jumpToAya", aya = aya)
                     } else {
-                        // Native cold start: the cold list is verse 1..N at index 0..N-1,
-                        // so the page's first aya maps to index aya-1.
-                        Log.d("RafeeqMedia", "pageNav action=$action -> page=$page aya=$aya repeatActive=$repeatPageActive")
-                        player?.jumpToColdIndex(aya - 1)
-                        // If looping, move the loop to the page we just navigated to.
-                        if (repeatPageActive) updateNativeRepeatPageRange()
+                        // Native cold start: the cold list is verse 1..N at index 0..N-1, so the
+                        // page's first aya maps to index aya-1. Jump AND (re)arm the repeat range
+                        // for the new page ATOMICALLY so the self-advance can't loop the old page
+                        // back over the jump.
+                        if (repeatPageActive) {
+                            val (rf, rl) = nativePageIndexRange(page)
+                            nativeRepeatPageFirst = rf
+                            nativeRepeatPageLast = rl
+                            player?.jumpToColdIndexWithRange(aya - 1, rf, rl)
+                        } else {
+                            player?.jumpToColdIndex(aya - 1)
+                        }
                         // Immediately reflect the jumped-to position on the bar (don't wait for
                         // the next tick). jumpToColdIndex posts async, so compute from aya-1 and
                         // skip page-derivation (currentPage was already set above).

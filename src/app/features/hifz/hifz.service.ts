@@ -125,16 +125,31 @@ export function loadPlan(): HifzPlan | null {
 }
 
 // Async load from proper storage (filesystem on Android, IndexedDB on web/iOS)
+// Falls back to old localStorage key if data isn't found, then migrates it
 export async function loadPlanAsync(): Promise<HifzPlan | null> {
   try {
+    let plan: HifzPlan | null = null;
+
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
       const json = await readHifzFile("plan.json");
-      return json ? (JSON.parse(json) as HifzPlan) : null;
+      plan = json ? (JSON.parse(json) as HifzPlan) : null;
     } else {
       // Web/iOS: IndexedDB
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "plan");
-      return rec ? (JSON.parse(rec.data) as HifzPlan) : null;
+      plan = rec ? (JSON.parse(rec.data) as HifzPlan) : null;
     }
+
+    // Fallback: check old localStorage key if nothing found
+    if (!plan) {
+      const oldJson = localStorage.getItem(STORAGE_KEY);
+      if (oldJson) {
+        plan = JSON.parse(oldJson) as HifzPlan;
+        // Migrate to new storage immediately (fire and forget)
+        if (plan) savePlanAsync(plan).catch(() => {});
+      }
+    }
+
+    return plan;
   } catch {
     return null;
   }
@@ -193,13 +208,26 @@ export function loadBestPlan(): BestPlanRecord | null {
 
 export async function loadBestPlanAsync(): Promise<BestPlanRecord | null> {
   try {
+    let record: BestPlanRecord | null = null;
+
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
       const json = await readHifzFile("best-plan.json");
-      return json ? (JSON.parse(json) as BestPlanRecord) : null;
+      record = json ? (JSON.parse(json) as BestPlanRecord) : null;
     } else {
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "best-plan");
-      return rec ? (JSON.parse(rec.data) as BestPlanRecord) : null;
+      record = rec ? (JSON.parse(rec.data) as BestPlanRecord) : null;
     }
+
+    // Fallback: check old localStorage key if nothing found
+    if (!record) {
+      const oldJson = localStorage.getItem(BEST_PLAN_KEY);
+      if (oldJson) {
+        record = JSON.parse(oldJson) as BestPlanRecord;
+        if (record) saveBestPlanAsync(record).catch(() => {});
+      }
+    }
+
+    return record;
   } catch {
     return null;
   }
@@ -263,13 +291,26 @@ export function loadHifzReadingSession(): HifzReadingSession | null {
 
 export async function loadHifzReadingSessionAsync(): Promise<HifzReadingSession | null> {
   try {
+    let session: HifzReadingSession | null = null;
+
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
       const json = await readHifzFile("reading-session.json");
-      return json ? (JSON.parse(json) as HifzReadingSession) : null;
+      session = json ? (JSON.parse(json) as HifzReadingSession) : null;
     } else {
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "reading-session");
-      return rec ? (JSON.parse(rec.data) as HifzReadingSession) : null;
+      session = rec ? (JSON.parse(rec.data) as HifzReadingSession) : null;
     }
+
+    // Fallback: check old localStorage key if nothing found
+    if (!session) {
+      const oldJson = localStorage.getItem(HIFZ_READING_KEY);
+      if (oldJson) {
+        session = JSON.parse(oldJson) as HifzReadingSession;
+        if (session) saveHifzReadingSessionAsync(session).catch(() => {});
+      }
+    }
+
+    return session;
   } catch {
     return null;
   }

@@ -106,7 +106,6 @@ class RafeeqPlayer(
                     // hasn't taken over, move to the next URL ourselves.
                     if (coldList.isNotEmpty()) {
                         val (rf, rl) = coldRepeatRange
-                        Log.d("RafeeqPlayer", "ended idx=$currentIndex range=[$rf,$rl] willLoop=${rf in 0..rl && currentIndex >= rl}")
                         if (rf in 0..rl && currentIndex >= rl) {
                             // Repeat-page on and we just finished the page's last verse → loop
                             // back to the page's first verse.
@@ -191,6 +190,18 @@ class RafeeqPlayer(
      */
     fun jumpToColdIndex(index: Int, playWhenReady: Boolean = true) {
         main.post {
+            val list = coldList
+            if (list.isEmpty() || index < 0 || index >= list.size) return@post
+            loadInternal(list, index, playWhenReady)
+        }
+    }
+
+    /** Atomically set the repeat-page loop range AND jump to a track, on the same main-thread
+     *  post — so a page-nav while looping can't race the self-advance (which would otherwise
+     *  loop the old page back over the jump). Pass repeat (-1,-1) to just jump without looping. */
+    fun jumpToColdIndexWithRange(index: Int, rangeFirst: Int, rangeLast: Int, playWhenReady: Boolean = true) {
+        main.post {
+            coldRepeatRange = rangeFirst to rangeLast
             val list = coldList
             if (list.isEmpty() || index < 0 || index >= list.size) return@post
             loadInternal(list, index, playWhenReady)
