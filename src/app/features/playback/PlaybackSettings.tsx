@@ -163,6 +163,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     pageEnd(startPageQuery),
   );
   const [activeQuick, setActiveQuick] = useState<string | null>(null);
+  const [pendingQuick, setPendingQuick] = useState<string | null>(null);
 
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [surahDownloads, setSurahDownloads] = useState<
@@ -237,6 +238,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     const first = verses[0];
     const page = estimatePageForVerse(first.sura, first.aya);
     const verseKey = `${first.sura}:${first.aya}`;
+    setPendingQuick(null);
     history.replace(`/viewer?page=${page}&v=${encodeURIComponent(verseKey)}`);
     await queue.start(verses);
     onClose?.();
@@ -273,11 +275,13 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setStartVerse(pageStart(p));
     setEndVerse(pageEnd(p));
     setActiveQuick("page");
+    setPendingQuick("page");
   };
   const setRangeFromPage = (p: number) => {
     setStartVerse(pageStart(p));
     setEndVerse(pageEnd(604));
     setActiveQuick("fromPage");
+    setPendingQuick("fromPage");
   };
   const setRangeToSurah = (s: number) => {
     const ch = getChapters().find((c) => c.id === s);
@@ -288,23 +292,27 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setStartVerse(getJuzStart(j));
     setEndVerse(getJuzEnd(j));
     setActiveQuick("juz");
+    setPendingQuick("juz");
   };
   const setRangeToHizb = (h: number) => {
     if (h < 1 || h > 60) return;
     setStartVerse(getHizbStart(h));
     setEndVerse(getHizbEnd(h));
     setActiveQuick("hizb");
+    setPendingQuick("hizb");
   };
   const setRangeToRub = (r: number) => {
     if (r < 1 || r > 240) return;
     setStartVerse(getRubStart(r));
     setEndVerse(getRubEnd(r));
     setActiveQuick("rub");
+    setPendingQuick("rub");
   };
   const setRangeToAll = () => {
     setStartVerse({ sura: 1, aya: 1 });
     setEndVerse({ sura: 114, aya: 6 });
     setActiveQuick("all");
+    setPendingQuick("all");
   };
 
   // Downloads
@@ -651,7 +659,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "page" ? " is-active" : ""
+                pendingQuick === "page" || activeQuick === "page" ? " is-active" : ""
               }`}
               onClick={() => setRangeToPage(currentPage)}
             >
@@ -660,7 +668,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "fromPage" ? " is-active" : ""
+                pendingQuick === "fromPage" || activeQuick === "fromPage" ? " is-active" : ""
               }`}
               onClick={() => setRangeFromPage(currentPage)}
             >
@@ -688,7 +696,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "juz" ? " is-active" : ""
+                pendingQuick === "juz" || activeQuick === "juz" ? " is-active" : ""
               }`}
               onClick={() => setRangeToJuz(currentJuz)}
             >
@@ -697,7 +705,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "hizb" ? " is-active" : ""
+                pendingQuick === "hizb" || activeQuick === "hizb" ? " is-active" : ""
               }`}
               onClick={() => setRangeToHizb(currentHizb)}
             >
@@ -706,7 +714,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "rub" ? " is-active" : ""
+                pendingQuick === "rub" || activeQuick === "rub" ? " is-active" : ""
               }`}
               onClick={() => setRangeToRub(currentRub)}
             >
@@ -717,7 +725,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                activeQuick === "all" ? " is-active" : ""
+                pendingQuick === "all" || activeQuick === "all" ? " is-active" : ""
               }`}
               onClick={setRangeToAll}
             >

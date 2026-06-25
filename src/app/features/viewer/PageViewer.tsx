@@ -36,12 +36,7 @@ import {
   isPageBookmarked,
   recordActivityDay,
 } from "../../core/services/api/user-api.client";
-import {
-  loadHifzReadingSession,
-  loadHifzReadingSessionAsync,
-  saveHifzReadingSession,
-  saveHifzReadingSessionAsync,
-} from "../hifz/hifz.service";
+import { markPageRead, isPageMarkedRead } from "../hifz/hifz.service";
 import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
@@ -55,11 +50,8 @@ function saveLastPage(page: number) {
   } catch {}
 }
 
-// Persist hifz reading session to both localStorage (immediate) and native (background)
-function persistHifzReadingSession(session: any) {
-  saveHifzReadingSession(session);
-  saveHifzReadingSessionAsync(session).catch(() => {});
-}
+// Time a page must stay visible before it counts as "read" for Hifz progress.
+const HIFZ_READ_DWELL_MS = 30_000;
 function loadLastPage(): number | null {
   try {
     const raw = localStorage.getItem(LAST_PAGE_KEY);
@@ -138,19 +130,15 @@ const PageViewer: React.FC = () => {
   const pageEntryTime = useRef<number>(Date.now());
   const pageVersesRef = useRef<Verse[]>([]);
 
-  // Hifz session tracking: mark pages as read after 30 s when coming from a session
+  // Hifz read tracking: mark pages read after 30 s if they belong to a plan session.
   const hifzTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hifzSessionRef = useRef(loadHifzReadingSession());
   const hifzPageEntryRef = useRef<{ page: number; enteredAt: number } | null>(null);
 
-  // The viewer page is cached in the Ionic navigation stack, so the useRef above
-  // only runs once. Reload the reading session every time the view re-enters so
-  // opening a Hifz session from an already-mounted viewer actually tracks reads.
-  // The tick bump re-runs the read-tracking effect below even when the landing
-  // page equals the page already shown (reopening the same session).
+  // The viewer page is cached in the Ionic navigation stack. Bump a tick on every
+  // re-enter so the read-tracking effect below restarts its dwell timer for the
+  // current page even when the landing page equals the one already shown.
   const [hifzEnterTick, setHifzEnterTick] = useState(0);
   useIonViewWillEnter(() => {
-    hifzSessionRef.current = loadHifzReadingSession();
     hifzPageEntryRef.current = null;
     setHifzEnterTick((n) => n + 1);
   });
@@ -365,57 +353,38 @@ const PageViewer: React.FC = () => {
     };
   }, [currentPage]);
 
-  // Hifz read tracking: mark a page as read if user spends ≥30 s on it.
-  // Runs on every page change and also flushes on cleanup so navigating away
-  // after ≥30 s still marks the page — not just the timer path.
+  // Hifz read tracking: after spending ≥30 s on a page, check whether that page
+  // belongs to any session in the saved plan and, if so, mark it read. This is
+  // independent of how the viewer was opened — staying on any plan page counts.
+  // Also flushes on page-turn / unmount so leaving after ≥30 s still marks it.
   useEffect(() => {
     if (hifzTimerRef.current) {
       clearTimeout(hifzTimerRef.current);
       hifzTimerRef.current = null;
     }
-    const rs = hifzSessionRef.current;
-    if (!rs) return;
 
-    const inRange = rs.ranges.some(
-      (r) => currentPage >= r.from && currentPage <= r.to,
-    );
-    if (!inRange) {
+    // Already counted — don't re-run the dwell timer or marking logic for it.
+    if (isPageMarkedRead(currentPage)) {
       hifzPageEntryRef.current = null;
       return;
     }
 
-    const alreadyRead = rs.readPages.includes(currentPage);
-    if (!alreadyRead) {
-      hifzPageEntryRef.current = { page: currentPage, enteredAt: Date.now() };
-    }
+    hifzPageEntryRef.current = { page: currentPage, enteredAt: Date.now() };
 
-    const markRead = (page: number) => {
-      const latest = loadHifzReadingSession();
-      if (!latest) return;
-      if (!latest.readPages.includes(page)) {
-        const updated = { ...latest, readPages: [...latest.readPages, page] };
-        persistHifzReadingSession(updated);
-        hifzSessionRef.current = updated;
-      }
-    };
-
-    if (!alreadyRead) {
-      hifzTimerRef.current = setTimeout(() => {
-        markRead(currentPage);
-      }, 30_000);
-    }
+    hifzTimerRef.current = setTimeout(() => {
+      markPageRead(currentPage);
+    }, HIFZ_READ_DWELL_MS);
 
     return () => {
       if (hifzTimerRef.current) {
         clearTimeout(hifzTimerRef.current);
         hifzTimerRef.current = null;
       }
-      // Flush on page-turn or unmount: if ≥30 s elapsed, mark as read now
       const entry = hifzPageEntryRef.current;
       if (entry && entry.page === currentPage) {
         const elapsed = Date.now() - entry.enteredAt;
-        if (elapsed >= 30_000) {
-          markRead(currentPage);
+        if (elapsed >= HIFZ_READ_DWELL_MS) {
+          markPageRead(currentPage);
         }
         hifzPageEntryRef.current = null;
       }

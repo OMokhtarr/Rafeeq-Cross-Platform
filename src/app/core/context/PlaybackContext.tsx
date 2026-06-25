@@ -367,7 +367,19 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
             q.setReciter(numericId);
             setCurrentReciterIdRef.current(event.reciter);
           }
-          q.start(verseQueue).catch(() => {});
+          // `aya` carries the cold-list index the native player is already on. When the brain
+          // wakes up later (e.g. the user opens the phone app after selecting in the car), adopt
+          // that position via startAt() so playback continues from where the car is — NOT a
+          // restart from verse 1. Falls back to start() only for a genuine fresh selection.
+          const adoptIdx =
+            event.aya != null && event.aya > 0 && event.aya < verseQueue.length
+              ? event.aya
+              : 0;
+          if (adoptIdx > 0) {
+            q.startAt(verseQueue, adoptIdx).catch(() => {});
+          } else {
+            q.start(verseQueue).catch(() => {});
+          }
           break;
         }
         case "jumpToAya": {

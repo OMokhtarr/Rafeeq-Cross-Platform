@@ -48,6 +48,8 @@ const SurahJuzSelection: React.FC = () => {
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
   const [tab, setTab] = useState<Tab>("surah");
+  const [pendingJuzNum, setPendingJuzNum] = useState<number | null>(null);
+  const [pendingSurahNum, setPendingSurahNum] = useState<number | null>(null);
 
   // Read current page from URL (?page=N passed by PageViewer)
   const currentPage = useMemo(() => {
@@ -184,13 +186,13 @@ const SurahJuzSelection: React.FC = () => {
   );
 
   const highlightSurah = useMemo(
-    () => relevantIds?.surahNum ?? null,
-    [relevantIds],
+    () => pendingSurahNum ?? relevantIds?.surahNum ?? null,
+    [pendingSurahNum, relevantIds],
   );
 
   const highlightJuz = useMemo(
-    () => relevantIds?.juzNum ?? null,
-    [relevantIds],
+    () => pendingJuzNum ?? relevantIds?.juzNum ?? null,
+    [pendingJuzNum, relevantIds],
   );
 
   // ── Auto-scroll to the relevant item whenever the active tab changes ───────
@@ -198,6 +200,9 @@ const SurahJuzSelection: React.FC = () => {
 
   useEffect(() => {
     if (!relevantIds) return;
+    // Clear pending state once URL has updated (so highlight stays green)
+    setPendingSurahNum(null);
+    setPendingJuzNum(null);
     const timer = setTimeout(() => {
       if (tab === "surah") {
         document
@@ -224,7 +229,13 @@ const SurahJuzSelection: React.FC = () => {
     return () => clearTimeout(timer);
   }, [tab, relevantIds]); // re-runs every time tab changes → always scrolls to right place
 
-  const goToPage = (page: number) => {
+  const goToPage = (page: number, itemType?: "surah" | "juz") => {
+    if (itemType === "surah") {
+      setPendingSurahNum(getSuraForPage(page) ?? 1);
+    } else if (itemType === "juz") {
+      const juz = juzs.find((j) => page >= j.start && page <= j.end);
+      if (juz) setPendingJuzNum(juz.num);
+    }
     history.push(`/viewer?page=${page}`);
   };
 
@@ -334,7 +345,7 @@ const SurahJuzSelection: React.FC = () => {
                       className={`sjs-row sjs-row-surah${
                         highlightSurah === s.num ? " sjs-row--highlight" : ""
                       }`}
-                      onClick={() => goToPage(s.startPage)}
+                      onClick={() => goToPage(s.startPage, "surah")}
                     >
                       <span
                         className={
@@ -389,7 +400,7 @@ const SurahJuzSelection: React.FC = () => {
                       className={`sjs-row sjs-row-juz${
                         highlightJuz === j.num ? " sjs-row--highlight" : ""
                       }`}
-                      onClick={() => goToPage(j.start)}
+                      onClick={() => goToPage(j.start, "juz")}
                     >
                       <span className="sjs-num sjs-num-juz">
                         {lang === "ar" ? toHindiNumbers(j.num) : j.num}

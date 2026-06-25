@@ -48,6 +48,8 @@ export interface PlanSession {
   toPage: number;
   /** Actual memorized page segments that make up this session (may be non-contiguous). */
   ranges?: PageRange[];
+  /** Original units selected for this session (to display only what user picked, not extra surahs). */
+  selectedUnits?: MemorizedUnit[];
   done: boolean;
   doneDate?: string;
 }
@@ -95,7 +97,11 @@ async function readHifzFile(fileName: string): Promise<string | null> {
       path: `${HIFZ_DIR}/${fileName}`,
       directory: Directory.Data,
     });
-    return typeof data === "string" ? data : new TextDecoder().decode(data as any);
+    // Data comes back as base64 string; decode it
+    if (typeof data === "string") {
+      return atob(data);
+    }
+    return new TextDecoder().decode(data as any);
   } catch {
     return null;
   }
@@ -105,12 +111,16 @@ async function writeHifzFile(fileName: string, content: string): Promise<void> {
   try {
     await ensureHifzDir();
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    // Encode JSON as base64 (same pattern as audio cache)
+    const base64 = btoa(content);
     await Filesystem.writeFile({
       path: `${HIFZ_DIR}/${fileName}`,
       directory: Directory.Data,
-      data: content,
+      data: base64,
     });
-  } catch {}
+  } catch (error) {
+    console.error(`Failed to write hifz file ${fileName}:`, error);
+  }
 }
 
 // Synchronous fallback (localStorage only, for backward compat and sync reads)
@@ -336,6 +346,55 @@ export async function clearHifzReadingSessionAsync(): Promise<void> {
   } catch {}
 }
 
+/** All page ranges covered by every session in the plan. */
+function planSessionRanges(plan: HifzPlan): PageRange[] {
+  const ranges: PageRange[] = [];
+  for (const s of plan.sessions) {
+    const rs = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
+    for (const r of rs) ranges.push(r);
+  }
+  return ranges;
+}
+
+/** True when `page` falls inside any session of the plan. */
+export function pageInPlan(plan: HifzPlan, page: number): boolean {
+  return planSessionRanges(plan).some((r) => page >= r.from && page <= r.to);
+}
+
+/**
+ * Fast check of the saved cache: has `page` already been recorded as read?
+ * Lets the viewer skip the 30 s dwell timer entirely for pages already marked.
+ */
+export function isPageMarkedRead(page: number): boolean {
+  const existing = loadHifzReadingSession();
+  return existing ? existing.readPages.includes(page) : false;
+}
+
+/**
+ * Record that the user has read `page`. Checks the saved plan to confirm the
+ * page belongs to a session, then appends it to the reading session's readPages
+ * (creating/normalising that store against the full plan). Works regardless of
+ * how the viewer was opened. Returns the updated readPages, or null if the page
+ * isn't part of any session.
+ */
+export function markPageRead(page: number): number[] | null {
+  const plan = loadPlan();
+  if (!plan || !pageInPlan(plan, page)) return null;
+
+  const existing = loadHifzReadingSession();
+  const readPages = existing?.readPages ?? [];
+  if (readPages.includes(page)) return readPages;
+
+  const updated: HifzReadingSession = {
+    ranges: planSessionRanges(plan),
+    readPages: [...readPages, page],
+    sessionIds: plan.sessions.map((s) => s.id),
+  };
+  saveHifzReadingSession(updated);
+  saveHifzReadingSessionAsync(updated).catch(() => {});
+  return updated.readPages;
+}
+
 /** Compute read-page progress (0–100) for a single session. */
 export function sessionReadProgress(
   session: PlanSession,
@@ -429,6 +488,7 @@ export function generateSessions(
       fromPage: segs[0].from,
       toPage: segs[segs.length - 1].to,
       ranges: segs.length === 1 ? undefined : segs,
+      selectedUnits: memorized,
       done: false,
     });
     sessionIndex++;
@@ -559,4 +619,69 @@ export function getSurahsForRanges(
   }
   result.sort((a, b) => a.from - b.from);
   return result;
+}
+
+export function getSurahsForUnits(
+  memorized: MemorizedUnit[],
+  chaptersCache: any[],
+): SurahSegment[] {
+  const result: SurahSegment[] = [];
+  for (const unit of memorized) {
+    if (unit.type === "juz") {
+      // Show all surahs that are fully or partially in this juz
+      const { from, to } = juzToPages(unit.juz);
+      for (const ch of chaptersCache) {
+        const sf: number = ch.pages?.[0] ?? 0;
+        const se: number = ch.pages?.[1] ?? 0;
+        if (sf > to || se < from) continue;
+        result.push({
+          id: ch.id,
+          nameAr: ch.name_arabic ?? `سورة ${ch.id}`,
+          nameEn: ch.name_simple ?? ch.translated_name?.name ?? `Surah ${ch.id}`,
+          from: Math.max(sf, from),
+          to: Math.min(se, to),
+          rangeFrom: from,
+        });
+      }
+    } else if (unit.type === "surah") {
+      // Show only this surah
+      const ch = chaptersCache.find((c: any) => c.id === unit.surah);
+      if (ch) {
+        const sf: number = ch.pages?.[0] ?? 0;
+        const se: number = ch.pages?.[1] ?? 0;
+        result.push({
+          id: ch.id,
+          nameAr: ch.name_arabic ?? `سورة ${ch.id}`,
+          nameEn: ch.name_simple ?? ch.translated_name?.name ?? `Surah ${ch.id}`,
+          from: sf,
+          to: se,
+          rangeFrom: sf,
+        });
+      }
+    } else if (unit.type === "pages") {
+      // For page ranges, show surahs that intersect
+      for (const ch of chaptersCache) {
+        const sf: number = ch.pages?.[0] ?? 0;
+        const se: number = ch.pages?.[1] ?? 0;
+        if (sf > unit.to || se < unit.from) continue;
+        result.push({
+          id: ch.id,
+          nameAr: ch.name_arabic ?? `سورة ${ch.id}`,
+          nameEn: ch.name_simple ?? ch.translated_name?.name ?? `Surah ${ch.id}`,
+          from: Math.max(sf, unit.from),
+          to: Math.min(se, unit.to),
+          rangeFrom: unit.from,
+        });
+      }
+    }
+  }
+  // Deduplicate and sort
+  const seen = new Set<number>();
+  const filtered = result.filter((s) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+  filtered.sort((a, b) => a.from - b.from);
+  return filtered;
 }

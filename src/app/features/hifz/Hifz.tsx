@@ -18,6 +18,7 @@ import {
   countActiveDays,
   computeMaxSessionsPerDay,
   getSurahsForRanges,
+  getSurahsForUnits,
   loadBestPlan,
   loadBestPlanAsync,
   saveBestPlan,
@@ -26,6 +27,8 @@ import {
   saveHifzReadingSessionAsync,
   loadHifzReadingSession,
   loadHifzReadingSessionAsync,
+  clearHifzReadingSession,
+  clearHifzReadingSessionAsync,
   sessionReadProgress,
   HifzPlan,
   HifzGoal,
@@ -89,6 +92,8 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
   night,
 }) => {
   const [mode, setMode] = useState<"juz" | "surah" | "pages">("juz");
+  const [dragStart, setDragStart] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
 
   // multi-select sets for juz and surah
   const [selectedJuzs, setSelectedJuzs] = useState<Set<number>>(new Set());
@@ -265,12 +270,36 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
     </div>
   );
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setDragStart(e.touches[0].clientY);
+    setDragOffset(0);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStart === null) return;
+    const current = e.touches[0].clientY;
+    const offset = Math.max(0, current - dragStart);
+    setDragOffset(offset);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragOffset > 80) {
+      onClose();
+    }
+    setDragStart(null);
+    setDragOffset(0);
+  };
+
   return (
     <div className="hifz-sheet-backdrop" onClick={onClose}>
       <div
         className="hifz-sheet"
         onClick={(e) => e.stopPropagation()}
         dir={lang === "ar" ? "rtl" : "ltr"}
+        style={{ transform: `translateY(${dragOffset}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div className="hifz-sheet-handle" />
         <p className="hifz-sheet-title">{h.addMemorized}</p>
@@ -664,8 +693,26 @@ const SessionCard: React.FC<SessionCardProps> = ({
   // Resolve effective ranges — fall back to single range for old saved plans
   const effectiveRanges: PageRange[] = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
   const multiRange = effectiveRanges.length > 1;
-  const surahs = getSurahsForRanges(effectiveRanges, chapters);
-  const progress = s.done ? 100 : sessionReadProgress(s, readPages);
+  // Use selectedUnits if available (new sessions); fall back to deriving from page ranges (old sessions)
+  const surahs = s.selectedUnits
+    ? getSurahsForUnits(s.selectedUnits, chapters)
+    : getSurahsForRanges(effectiveRanges, chapters);
+  // Progress is computed per page across the session's effective ranges, then
+  // rendered as a single continuous fill (e.g. 2 of 5 pages read = 40%).
+  const readSet = new Set(readPages);
+  let totalPages = 0;
+  let readCount = 0;
+  for (const r of effectiveRanges) {
+    for (let p = r.from; p <= r.to; p++) {
+      totalPages++;
+      if (readSet.has(p)) readCount++;
+    }
+  }
+  const progress = s.done
+    ? 100
+    : totalPages > 0
+    ? Math.round((readCount / totalPages) * 100)
+    : 0;
 
   // Group surahs by which range they belong to (for multi-range display)
   const rangeGroups: Array<{ range: PageRange; surahs: typeof surahs }> = multiRange
@@ -768,7 +815,13 @@ const SessionCard: React.FC<SessionCardProps> = ({
           </button>
         </div>
       </div>
-      <div className="hifz-session-bar-track">
+      <div
+        className="hifz-session-bar-track"
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
           className="hifz-session-bar-fill"
           style={{ width: `${progress}%`, transition: progress > 0 ? "width 0.4s ease" : "none" }}
@@ -1204,12 +1257,17 @@ const Hifz: React.FC = () => {
     unit: "pages",
   });
 
-  // Sync read pages from localStorage when the user returns from the viewer
+  // Sync read pages when the user returns from the viewer. Read sync localStorage
+  // first for an instant update, then reconcile against the async (native) store
+  // which is the source of truth on Android.
   useIonViewDidEnter(() => {
     const rs = loadHifzReadingSession();
-    if (rs && rs.readPages.length > 0) {
-      setReadPages(rs.readPages);
-    }
+    if (rs) setReadPages(rs.readPages);
+    loadHifzReadingSessionAsync()
+      .then((async) => {
+        if (async) setReadPages(async.readPages);
+      })
+      .catch(() => {});
   });
 
   useEffect(() => {
@@ -1307,6 +1365,10 @@ const Hifz: React.FC = () => {
     const updated = { ...plan, sessions };
     savePlan(updated);
     setPlan(updated);
+    // Wipe the saved read-pages cache so every progress bar resets to 0%.
+    clearHifzReadingSession();
+    clearHifzReadingSessionAsync().catch(() => {});
+    setReadPages([]);
   }, [plan]);
 
   const handleStartNewRound = useCallback(() => {
@@ -1334,6 +1396,9 @@ const Hifz: React.FC = () => {
     const updated = { ...plan, sessions, createdAt: new Date().toISOString() };
     savePlan(updated);
     setPlan(updated);
+    // Wipe the saved read-pages cache so every progress bar resets to 0%.
+    clearHifzReadingSession();
+    clearHifzReadingSessionAsync().catch(() => {});
     setReadPages([]);
   }, [plan, chapters]);
 

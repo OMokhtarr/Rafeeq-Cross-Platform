@@ -690,7 +690,7 @@ ion-content::part(scroll) {
 
 /* ── Session progress bar strip ─────────────────────────── */
 .hifz-session-bar-track {
-  height: 3px;
+  height: 4px;
   margin-top: var(--space-3);
   background: var(--color-progress-track);
   border-radius: var(--radius-full);
@@ -701,11 +701,6 @@ ion-content::part(scroll) {
   border-radius: var(--radius-full);
   background: var(--color-quran);
   transition: width 0.7s cubic-bezier(.25,.8,.25,1);
-}
-.hifz-session-next .hifz-session-bar-fill {
-  background: var(--color-quran);
-  opacity: 0.45;
-  width: 30% !important;
 }
 
 /* ── Plan action buttons — now .hifz-header-action-btn ───── */
@@ -733,6 +728,8 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: transform 0.2s ease-out;
+  will-change: transform;
 }
 
 @keyframes hifz-sheet-up {

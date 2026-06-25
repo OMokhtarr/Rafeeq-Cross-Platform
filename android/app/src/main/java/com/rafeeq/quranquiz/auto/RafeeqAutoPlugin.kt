@@ -112,13 +112,24 @@ class RafeeqAutoPlugin : Plugin() {
      * Called by JS (PlaybackContext) as soon as the carAction listener is registered.
      * Flushes any event that arrived before JS was ready.
      */
+    @androidx.media3.common.util.UnstableApi
     @PluginMethod
     fun jsReady(call: PluginCall) {
         jsReady = true
         val pending = pendingEvent
         if (pending != null) {
             pendingEvent = null
-            Log.d("RafeeqAuto", "jsReady: flushing pending event: ${pending.getString("action")}")
+            // For a selectSurah/play that was queued when the surah was selected in the car,
+            // refresh the adopt-index to where native playback ACTUALLY is now. The event was
+            // captured at selection time (index ~0); flushing it as-is would restart the surah
+            // from the beginning when the user opens the phone app minutes later. Reading the
+            // live index here makes the brain adopt the car's current position instead.
+            val action = pending.getString("action")
+            if (action == "selectSurah" || action == "play") {
+                val liveIdx = RafeeqMediaService.instance?.nativeCurrentColdIndex() ?: -1
+                if (liveIdx >= 0) pending.put("aya", liveIdx)
+            }
+            Log.d("RafeeqAuto", "jsReady: flushing pending event: $action aya=${pending.optInt("aya", -1)}")
             // notifyListeners must run on the main thread; PluginMethod threads vary.
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 notifyListeners("carAction", pending)

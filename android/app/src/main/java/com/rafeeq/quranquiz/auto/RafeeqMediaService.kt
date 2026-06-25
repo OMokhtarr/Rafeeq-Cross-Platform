@@ -338,6 +338,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         }
     }
 
+    /** The cold-list index the native player is currently on (verse index == aya - 1). Used by
+     *  the plugin to refresh a pending selectSurah/play event's adopt-index at flush time, so the
+     *  brain picks up where the car ACTUALLY is when the phone app opens — not the index frozen at
+     *  selection time. Returns -1 when native isn't the cold-start driver. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeCurrentColdIndex(): Int =
+        if (!jsDriving && nativeColdStartSura > 0) (player?.currentIndex() ?: -1) else -1
+
     @androidx.media3.common.util.UnstableApi
     fun nativePlay() { requestAudioFocus(); player?.play() }
     @androidx.media3.common.util.UnstableApi
@@ -596,6 +604,19 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 else
                     PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
             )
+            // Slot 3 — page-number pill (display-only). The MediaSession custom-action API has
+            // no label-only control, so this is a no-op action whose LABEL is the current page
+            // ("ص N") and whose icon is transparent — so it reads as a pill, not a button.
+            // Tapping it does nothing (handled as a no-op in onCustomAction). Sits to the right
+            // of the repeat-page button per the requested layout.
+            val pillPage = currentMarker?.page ?: currentPage
+            if (pillPage > 0) {
+                actions.add(
+                    PlaybackStateCompat.CustomAction.Builder(
+                        "pagePill", "ص $pillPage", R.drawable.ic_transparent,
+                    ).build()
+                )
+            }
         }
         return actions
     }
@@ -680,7 +701,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         clientPackageName: String,
         clientUid: Int,
         rootHints: Bundle?
-    ): BrowserRoot {
+    ): BrowserRoot? {
+        // Opt OUT of Android Auto / system playback resumption. On connect (or boot), the
+        // platform probes for a resumable session by calling onGetRoot with EXTRA_RECENT=true;
+        // if we return a root, it then auto-plays the last media. Returning null for that
+        // probe tells the system we have nothing to resume, so connecting to the car never
+        // auto-starts the last surah — playback only begins on an explicit user action.
+        if (rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true) {
+            return null
+        }
         // A media client (Android Auto, the car, or the system media controls) is
         // connecting. Promote to a foreground media service NOW so the MediaSession's
         // transport controls (the car's play button → onPlay()) are reliably routed.
@@ -1095,6 +1124,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         @androidx.media3.common.util.UnstableApi
         override fun onCustomAction(action: String?, extras: Bundle?) {
             if (action == null) return
+            // The page-number pill is display-only — ignore taps.
+            if (action == "pagePill") return
             if (action == "prevPage" || action == "nextPage") {
                 val aya = extras?.getInt("aya", -1) ?: -1
                 val page = extras?.getInt("page", -1) ?: -1
@@ -1204,7 +1235,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // Still notify the brain so it adopts/takes over WHEN available (repeat/range
                 // logic). On a locked MIUI cold start this wake is blocked and simply no-ops —
                 // native playback above already produced sound, so we don't depend on it.
-                dispatchCarEvent("selectSurah", reciter = currentReciter, surah = surahNumber)
+                // `aya` carries the cold-list index the native player is CURRENTLY on so the brain
+                // adopts that position instead of restarting the surah from verse 1 — this is what
+                // makes opening the phone app later pick up where the car already is, rather than
+                // firing a fresh play from the beginning.
+                dispatchCarEvent(
+                    "selectSurah",
+                    reciter = currentReciter,
+                    surah = surahNumber,
+                    aya = player?.currentIndex() ?: 0,
+                )
             }
         }
     }
