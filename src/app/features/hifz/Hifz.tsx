@@ -1297,7 +1297,6 @@ const Hifz: React.FC = () => {
   useEffect(() => {
     const onChange = (e: Event) => {
       const detail = (e as CustomEvent<number[]>).detail;
-      console.log("[HIFZ.page] read-pages-changed event", detail);
       if (Array.isArray(detail)) setReadPages(detail);
     };
     window.addEventListener("hifz-read-pages-changed", onChange);
@@ -1319,7 +1318,6 @@ const Hifz: React.FC = () => {
       // Populate read pages on mount so progress bars are correct immediately,
       // not only after a view re-enter.
       const rs = await loadHifzReadingSessionAsync();
-      console.log("[HIFZ.page] mount readPages", rs?.readPages);
       if (rs) setReadPages(rs.readPages);
     };
 
