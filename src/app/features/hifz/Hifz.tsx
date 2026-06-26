@@ -30,6 +30,7 @@ import {
   clearHifzReadingSession,
   clearHifzReadingSessionAsync,
   sessionReadProgress,
+  isSessionFullyRead,
   HifzPlan,
   HifzGoal,
   BestPlanRecord,
@@ -1307,6 +1308,43 @@ const Hifz: React.FC = () => {
     window.addEventListener("hifz-read-pages-changed", onChange);
     return () => window.removeEventListener("hifz-read-pages-changed", onChange);
   }, []);
+
+  // Auto-complete: when every page of a session has been read, mark it done.
+  useEffect(() => {
+    if (!plan) return;
+    let changed = false;
+    const today = todayStr();
+    const sessions = plan.sessions.map((s) => {
+      if (!s.done && isSessionFullyRead(s, readPages)) {
+        changed = true;
+        return { ...s, done: true, doneDate: today };
+      }
+      return s;
+    });
+    if (!changed) return;
+
+    const updated = { ...plan, sessions };
+    savePlan(updated);
+    savePlanAsync(updated).catch(() => {});
+    setPlan(updated);
+
+    // If this completed the whole plan, record a best run.
+    if (sessions.every((s) => s.done)) {
+      const days = countActiveDays(updated);
+      const pages = countMemorizedPages(updated.memorized, chapters);
+      const record: BestPlanRecord = {
+        completedAt: today,
+        daysToFinish: days,
+        totalPages: pages,
+        totalSessions: sessions.length,
+      };
+      const existing = loadBestPlan();
+      if (!existing || days < existing.daysToFinish) {
+        persistBestPlan(record);
+        setBestPlan(record);
+      }
+    }
+  }, [readPages, plan, chapters]);
 
   useEffect(() => {
     // Load saved plan from storage (web localStorage or native Capacitor Preferences)

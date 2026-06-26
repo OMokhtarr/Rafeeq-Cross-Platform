@@ -405,6 +405,27 @@ export async function markPageRead(page: number): Promise<number[] | null> {
   return updated.readPages;
 }
 
+/**
+ * True when every page in the session's effective ranges has been read. Matches
+ * the per-page progress bar in the UI (gap pages of non-contiguous sessions are
+ * excluded). Used to auto-complete a session once its bar fills.
+ */
+export function isSessionFullyRead(
+  session: PlanSession,
+  readPages: number[],
+): boolean {
+  const ranges = session.ranges ?? [{ from: session.fromPage, to: session.toPage }];
+  const readSet = new Set(readPages);
+  let total = 0;
+  for (const r of ranges) {
+    for (let p = r.from; p <= r.to; p++) {
+      total++;
+      if (!readSet.has(p)) return false;
+    }
+  }
+  return total > 0;
+}
+
 /** Compute read-page progress (0–100) for a single session. */
 export function sessionReadProgress(
   session: PlanSession,
