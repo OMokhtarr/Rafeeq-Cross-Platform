@@ -58,6 +58,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         private const val KEY_QUEUE_URLS = "queue_urls"
         private const val KEY_QUEUE_INDEX = "queue_index"
         private const val KEY_QUEUE_TITLE = "queue_title"
+        // The surah of the persisted queue, so a native fallback (brain died) can restore page
+        // markers / repeat-page / duration without the JS brain. 0 when unknown.
+        private const val KEY_QUEUE_SURA = "queue_sura"
 
         // Home page background (forest-deep, #0d1f14 — see Home.css). Used to tint the
         // media notification card so it matches the app's identity.
@@ -99,6 +102,17 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // native is the playback driver; used to recompute the current page from the player's
     // track index so the page-nav buttons track playback. Cleared when JS takes over.
     private var nativeColdStartSura: Int = 0
+
+    // ── Auto-resume suppression ─────────────────────────────────────────────────
+    // Some head units IGNORE the EXTRA_RECENT opt-out and fire a bare onPlay() right after
+    // connecting, auto-resuming the last media. We suppress that by only honoring onPlay()
+    // once the user has actually interacted (browsed a list or selected a surah). A play that
+    // arrives shortly after connect with no prior interaction is treated as an unwanted
+    // auto-resume and ignored.
+    private var lastConnectMs: Long = 0L
+    private var userInteracted: Boolean = false
+    // How long after a browser connect an uninitiated onPlay() is considered auto-resume.
+    private val AUTO_RESUME_WINDOW_MS = 4000L
 
     // ── Native cold-start duration model ────────────────────────────────────────
     // The exact whole-surah duration (ms) fetched from the QF timestamp endpoint, so the car
@@ -222,7 +236,17 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // wakes), the player self-advances through the persisted flat list and we
                 // must NOT also notify JS — that would double-advance once JS arrives.
                 if (jsDriving) {
-                    dispatchCarEvent("nativeTrackEnded", aya = index)
+                    if (RafeeqAutoPlugin.brainAlive()) {
+                        dispatchCarEvent("nativeTrackEnded", aya = index)
+                    } else {
+                        // The app was closed/terminated, so the brain that was feeding verses
+                        // is gone. Don't let playback die: take over natively and keep going
+                        // from the persisted queue (this is how the car keeps playing after the
+                        // phone app is swiped away, like Spotify/Anghami). Hand the player the
+                        // persisted flat list at the NEXT verse and self-advance from there.
+                        Log.d("RafeeqMedia", "onEnded: brain gone, falling back to native self-advance from index=${index + 1}")
+                        fallbackToNativeAdvance(index + 1)
+                    }
                 }
             }
 
@@ -281,11 +305,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * Persist the last flat queue (resolved URLs/files + display title) so a cold-start
      * car play can begin immediately. Called by the plugin when JS pushes a native queue.
      */
-    fun persistQueue(urls: List<String>, startIndex: Int, title: String) {
+    fun persistQueue(urls: List<String>, startIndex: Int, title: String, sura: Int = 0) {
         prefs.edit()
             .putString(KEY_QUEUE_URLS, urls.joinToString("\n"))
             .putInt(KEY_QUEUE_INDEX, startIndex)
             .putString(KEY_QUEUE_TITLE, title)
+            .putInt(KEY_QUEUE_SURA, sura)
             .apply()
     }
 
@@ -308,9 +333,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * stalling playback after the first ayah.)
      */
     @androidx.media3.common.util.UnstableApi
-    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean) {
+    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean, sura: Int = 0) {
         jsDriving = true
-        persistQueue(urls, startIndex, title)
+        persistQueue(urls, startIndex, title, sura)
     }
 
     /** JS brain feeds a single resolved URL for one verse (it owns progression). */
@@ -368,6 +393,21 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             Log.d("RafeeqMedia", "coldStartPlay: starting persisted queue size=${urls.size} idx=$idx")
             requestAudioFocus()
             jsDriving = false
+            // Restore the page-nav state for the persisted surah so the prev/next-page +
+            // repeat-page buttons appear on this resume path too (not just on a fresh surah
+            // selection). Without this, pageMarkers stays empty and the buttons don't show.
+            val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
+            if (sura > 0) {
+                nativeColdStartSura = sura
+                pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(sura)
+                    .map { PageMarker(it.first, it.second) }
+                currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, idx + 1)
+                repeatPageActive = false
+                player?.setColdRepeatRange(-1, -1)
+                nativeVerseDurationsMs.clear()
+                nativeRangeTotalMs = 0L
+                fetchNativeRangeTotal(currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }, sura)
+            }
             player?.loadList(urls, idx, playWhenReady = true)
             updateTitleMetadata(title)
             // Tell the brain which index ExoPlayer is already playing so it adopts that
@@ -384,7 +424,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 requestAudioFocus()
                 jsDriving = false
                 val title = surahArabicName(1)
-                persistQueue(urls, 0, title)
+                nativeColdStartSura = 1
+                persistQueue(urls, 0, title, sura = 1)
                 player?.loadList(urls, 0, playWhenReady = true)
                 updateTitleMetadata(title)
                 dispatchCarEvent("play", aya = 0)
@@ -393,6 +434,36 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 dispatchCarEvent("play")
             }
         }
+    }
+
+    /**
+     * Take over playback NATIVELY after the JS brain has gone away (app closed/terminated while
+     * audio was JS-driven). Re-arms the persisted flat queue at [nextIndex] so ExoPlayer keeps
+     * self-advancing verse-by-verse with no brain — this is what lets the car keep playing after
+     * the phone app is swiped away (Spotify/Anghami behavior). Restores the surah / page markers
+     * / repeat-page range so the page-nav buttons and duration bar keep working too.
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun fallbackToNativeAdvance(nextIndex: Int) {
+        val persisted = loadPersistedQueue() ?: return
+        val (urls, _, title) = persisted
+        if (nextIndex < 0 || nextIndex >= urls.size) return // end of surah — nothing to continue
+
+        jsDriving = false
+        val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
+        if (sura > 0) {
+            nativeColdStartSura = sura
+            pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(sura)
+                .map { PageMarker(it.first, it.second) }
+            currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, nextIndex + 1)
+            // Re-arm the repeat-page range if the user had it on (state survives in repeatPageActive
+            // from the brain's last updateState). Otherwise leave self-advance linear.
+            if (repeatPageActive) updateNativeRepeatPageRange()
+            else player?.setColdRepeatRange(-1, -1)
+        }
+        requestAudioFocus()
+        player?.loadList(urls, nextIndex, playWhenReady = true)
+        updateTitleMetadata(title)
     }
 
     /**
@@ -604,19 +675,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 else
                     PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
             )
-            // Slot 3 — page-number pill (display-only). The MediaSession custom-action API has
-            // no label-only control, so this is a no-op action whose LABEL is the current page
-            // ("ص N") and whose icon is transparent — so it reads as a pill, not a button.
-            // Tapping it does nothing (handled as a no-op in onCustomAction). Sits to the right
-            // of the repeat-page button per the requested layout.
-            val pillPage = currentMarker?.page ?: currentPage
-            if (pillPage > 0) {
-                actions.add(
-                    PlaybackStateCompat.CustomAction.Builder(
-                        "pagePill", "ص $pillPage", R.drawable.ic_transparent,
-                    ).build()
-                )
-            }
         }
         return actions
     }
@@ -692,7 +750,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         } else {
             MediaButtonReceiver.handleIntent(session, intent)
         }
-        return super.onStartCommand(intent, flags, startId)
+        super.onStartCommand(intent, flags, startId)
+        // START_STICKY so that if the system kills the process while we're a foreground media
+        // service (e.g. the user swipes the app away from Recents), Android keeps/recreates the
+        // service rather than tearing playback down with the Activity. This is what lets car
+        // playback continue after the phone app is closed.
+        return START_STICKY
     }
 
     // ── MediaBrowserServiceCompat ──────────────────────────────────────────────
@@ -710,6 +773,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         if (rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true) {
             return null
         }
+        // Mark the start of a fresh browser connection. An onPlay() that arrives within
+        // AUTO_RESUME_WINDOW_MS with no user interaction since is an auto-resume → suppressed.
+        lastConnectMs = System.currentTimeMillis()
+        userInteracted = false
         // A media client (Android Auto, the car, or the system media controls) is
         // connecting. Promote to a foreground media service NOW so the MediaSession's
         // transport controls (the car's play button → onPlay()) are reliably routed.
@@ -744,6 +811,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 result.sendResult(listOf(item))
             }
             parentId == RECITERS_LIST_ID -> {
+                // The user opened the reciter list — a real interaction, so a later onPlay()
+                // is a genuine press, not an auto-resume.
+                userInteracted = true
                 if (reciters.isEmpty()) {
                     result.detach()
                     pendingReciters.add(result)
@@ -752,6 +822,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 }
             }
             parentId.startsWith(RECITER_PREFIX) -> {
+                userInteracted = true
                 currentReciter = parentId.removePrefix(RECITER_PREFIX)
                 if (surahs.isEmpty()) {
                     result.detach()
@@ -1058,6 +1129,18 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         @androidx.media3.common.util.UnstableApi
         override fun onPlay() {
+            // Suppress auto-resume: some head units fire onPlay() right after connecting,
+            // ignoring the EXTRA_RECENT opt-out. If this play arrives within the post-connect
+            // window with no user interaction since, and nothing is already playing, it's an
+            // unwanted auto-resume — ignore it. A genuine press always follows an interaction
+            // (browsing a list / selecting a surah) or happens well after connect.
+            val sinceConnect = System.currentTimeMillis() - lastConnectMs
+            if (!userInteracted && sinceConnect < AUTO_RESUME_WINDOW_MS && player?.isPlaying() != true) {
+                Log.d("RafeeqMedia", "onPlay: suppressing auto-resume (sinceConnect=${sinceConnect}ms, no interaction)")
+                return
+            }
+            // A real press counts as interaction so subsequent plays in this connection pass.
+            userInteracted = true
             requestAudioFocus()
             if (jsDriving) {
                 // JS brain is alive and owns playback — just resume the native player and
@@ -1124,8 +1207,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         @androidx.media3.common.util.UnstableApi
         override fun onCustomAction(action: String?, extras: Bundle?) {
             if (action == null) return
-            // The page-number pill is display-only — ignore taps.
-            if (action == "pagePill") return
             if (action == "prevPage" || action == "nextPage") {
                 val aya = extras?.getInt("aya", -1) ?: -1
                 val page = extras?.getInt("page", -1) ?: -1
@@ -1186,6 +1267,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             if (mediaId.startsWith(SURAH_PREFIX)) {
                 val surahNumber = mediaId.removePrefix(SURAH_PREFIX).toIntOrNull() ?: return
 
+                // Explicit user selection — any onPlay() from here on is a real press.
+                userInteracted = true
                 requestAudioFocus()
 
                 // Immediately acknowledge the selection so Android Auto exits the
@@ -1227,7 +1310,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     nativeVerseDurationsMs.clear()
                     nativeRangeTotalMs = 0L
                     fetchNativeRangeTotal(reciter, surahNumber)
-                    persistQueue(urls, 0, title)
+                    persistQueue(urls, 0, title, sura = surahNumber)
                     player?.loadList(urls, 0, playWhenReady = true)
                     updateTitleMetadata(title)
                 }

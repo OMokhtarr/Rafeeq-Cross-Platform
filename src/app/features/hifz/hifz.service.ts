@@ -376,12 +376,15 @@ export function isPageMarkedRead(page: number): boolean {
  * (creating/normalising that store against the full plan). Works regardless of
  * how the viewer was opened. Returns the updated readPages, or null if the page
  * isn't part of any session.
+ *
+ * Uses the async plan loader: on Android (and after a cold start) the plan lives
+ * in the native filesystem, NOT localStorage, so the sync loadPlan() would miss it.
  */
-export function markPageRead(page: number): number[] | null {
-  const plan = loadPlan();
+export async function markPageRead(page: number): Promise<number[] | null> {
+  const plan = (await loadPlanAsync()) ?? loadPlan();
   if (!plan || !pageInPlan(plan, page)) return null;
 
-  const existing = loadHifzReadingSession();
+  const existing = (await loadHifzReadingSessionAsync()) ?? loadHifzReadingSession();
   const readPages = existing?.readPages ?? [];
   if (readPages.includes(page)) return readPages;
 
@@ -392,6 +395,13 @@ export function markPageRead(page: number): number[] | null {
   };
   saveHifzReadingSession(updated);
   saveHifzReadingSessionAsync(updated).catch(() => {});
+  // Notify any mounted Hifz view so its progress bars refresh immediately,
+  // independent of Ionic view-lifecycle timing.
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("hifz-read-pages-changed", { detail: updated.readPages }),
+    );
+  }
   return updated.readPages;
 }
 

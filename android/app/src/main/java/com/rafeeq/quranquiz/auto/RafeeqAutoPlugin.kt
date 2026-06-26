@@ -65,6 +65,11 @@ class RafeeqAutoPlugin : Plugin() {
             preLaunchPendingEvent = null
             e
         }
+
+        /** True when the JS brain (WebView) is alive AND has registered its carAction listener,
+         *  i.e. it can actually drive verse progression. False after the app is closed/terminated
+         *  — the service then self-advances natively so playback (e.g. on the car) keeps going. */
+        fun brainAlive(): Boolean = instance?.jsReady == true
     }
 
     // Holds at most one pending event while JS is not yet ready (cold launch).
@@ -255,7 +260,8 @@ class RafeeqAutoPlugin : Plugin() {
         val startIndex = call.getInt("startIndex") ?: 0
         val title = call.getString("title") ?: "رفيق"
         val autoplay = call.getBoolean("autoplay") ?: true
-        service.setNativeQueue(urls, startIndex, title, autoplay)
+        val sura = call.getInt("sura") ?: 0
+        service.setNativeQueue(urls, startIndex, title, autoplay, sura)
         call.resolve()
     }
 

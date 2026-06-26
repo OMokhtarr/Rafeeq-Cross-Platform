@@ -1118,7 +1118,10 @@ export function usePlaybackQueue(
   const setRepeatPageRange = useCallback(
     (range: { first: number; last: number } | null) => {
       repeatPageRangeRef.current = range;
-      setState((s) => ({ ...s, repeatPageActive: range !== null }));
+      const active = range !== null;
+      // Bail out if the flag is unchanged so a redundant call can't trigger a
+      // re-render (and re-fire the caller's effect → infinite update loop).
+      setState((s) => (s.repeatPageActive === active ? s : { ...s, repeatPageActive: active }));
     },
     [],
   );

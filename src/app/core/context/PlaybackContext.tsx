@@ -182,17 +182,23 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   // When repeat-page is enabled and the current verse changes, recompute the page
   // range (first..last queue index for the current page) and push it to the hook.
   // Also clears the range when the toggle is turned off.
+  //
+  // Depends on `setRepeatPageRange` (a stable useCallback), NOT the whole `queue`
+  // object — `queue` is a fresh object literal every render, and depending on it
+  // here re-fired this effect on every render → setRepeatPageRange → setState →
+  // re-render → loop (the "Maximum update depth exceeded" warning).
+  const setRepeatPageRange = queue.setRepeatPageRange;
   useEffect(() => {
     const q = activeQueueRef.current;
     const currentVerse = currentVerseRef.current;
     if (!repeatPageEnabled || q.length === 0 || !currentVerse) {
-      queue.setRepeatPageRange(null);
+      setRepeatPageRange(null);
       return;
     }
     const suraNum = parseInt(currentVerse.split(":")[0], 10);
     const ayaNum = parseInt(currentVerse.split(":")[1], 10);
     if (isNaN(suraNum) || isNaN(ayaNum)) {
-      queue.setRepeatPageRange(null);
+      setRepeatPageRange(null);
       return;
     }
     const currentPage = estimatePageForVerse(suraNum, ayaNum);
@@ -208,9 +214,9 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     if (first !== -1) {
-      queue.setRepeatPageRange({ first, last });
+      setRepeatPageRange({ first, last });
     }
-  }, [repeatPageEnabled, queue]);
+  }, [repeatPageEnabled, setRepeatPageRange]);
 
   // Latest position, read inside the sync push WITHOUT being a dependency. We seed the
   // notification's position only on verse/play-pause/duration changes (and explicit seeks);

@@ -545,6 +545,14 @@ const SetupView: React.FC<SetupViewProps> = ({
 }) => {
   const h = t.hifz;
 
+  // Local mirror of the quantity field so it can be cleared/edited freely.
+  // We only clamp to a valid number on blur, not on every keystroke — otherwise
+  // clearing the box snaps it straight back to 1 and you can't type a new value.
+  const [quantityInput, setQuantityInput] = useState(String(goal.quantity));
+  useEffect(() => {
+    setQuantityInput(String(goal.quantity));
+  }, [goal.quantity]);
+
   const labelForUnit = (u: MemorizedUnit): { primary: string; secondary: string } => {
     if (u.type === "juz") {
       const { from, to } = juzToPages(u.juz);
@@ -628,10 +636,22 @@ const SetupView: React.FC<SetupViewProps> = ({
             className="hifz-input hifz-input-sm"
             min={1}
             max={999}
-            value={goal.quantity}
+            value={quantityInput}
             onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              onUpdateGoal({ ...goal, quantity: isNaN(v) || v < 1 ? 1 : v });
+              const raw = e.target.value;
+              setQuantityInput(raw);
+              // Push valid in-range numbers through immediately; leave the field
+              // alone while it's empty or mid-edit (clamped on blur instead).
+              const v = parseInt(raw, 10);
+              if (!isNaN(v) && v >= 1 && v <= 999) {
+                onUpdateGoal({ ...goal, quantity: v });
+              }
+            }}
+            onBlur={() => {
+              const v = parseInt(quantityInput, 10);
+              const clamped = isNaN(v) || v < 1 ? 1 : v > 999 ? 999 : v;
+              setQuantityInput(String(clamped));
+              onUpdateGoal({ ...goal, quantity: clamped });
             }}
           />
           <div className="hifz-toggle-group hifz-unit-group">
@@ -697,21 +717,21 @@ const SessionCard: React.FC<SessionCardProps> = ({
   const surahs = s.selectedUnits
     ? getSurahsForUnits(s.selectedUnits, chapters)
     : getSurahsForRanges(effectiveRanges, chapters);
-  // Progress is computed per page across the session's effective ranges, then
-  // rendered as a single continuous fill (e.g. 2 of 5 pages read = 40%).
+  // Each page in the session owns an equal slice of the bar, in order. A slice
+  // fills only if that specific page has been read, so the position reflects
+  // exactly which page was read (page 4 of 3–4 fills the right half, not the
+  // left). Rendered as adjacent slices with no gaps, so it reads as one
+  // continuous bar — "segmented as progress only".
   const readSet = new Set(readPages);
-  let totalPages = 0;
-  let readCount = 0;
+  const sessionPages: number[] = [];
   for (const r of effectiveRanges) {
-    for (let p = r.from; p <= r.to; p++) {
-      totalPages++;
-      if (readSet.has(p)) readCount++;
-    }
+    for (let p = r.from; p <= r.to; p++) sessionPages.push(p);
   }
+  const readCount = sessionPages.filter((p) => readSet.has(p)).length;
   const progress = s.done
     ? 100
-    : totalPages > 0
-    ? Math.round((readCount / totalPages) * 100)
+    : sessionPages.length > 0
+    ? Math.round((readCount / sessionPages.length) * 100)
     : 0;
 
   // Group surahs by which range they belong to (for multi-range display)
@@ -822,10 +842,12 @@ const SessionCard: React.FC<SessionCardProps> = ({
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <div
-          className="hifz-session-bar-fill"
-          style={{ width: `${progress}%`, transition: progress > 0 ? "width 0.4s ease" : "none" }}
-        />
+        {sessionPages.map((p) => (
+          <span
+            key={p}
+            className={`hifz-session-bar-slice${s.done || readSet.has(p) ? " filled" : ""}`}
+          />
+        ))}
       </div>
     </div>
   );
@@ -1270,6 +1292,18 @@ const Hifz: React.FC = () => {
       .catch(() => {});
   });
 
+  // Refresh progress the instant a page is marked read in the viewer — this
+  // avoids any race between the async cache write and the view-enter lifecycle.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent<number[]>).detail;
+      console.log("[HIFZ.page] read-pages-changed event", detail);
+      if (Array.isArray(detail)) setReadPages(detail);
+    };
+    window.addEventListener("hifz-read-pages-changed", onChange);
+    return () => window.removeEventListener("hifz-read-pages-changed", onChange);
+  }, []);
+
   useEffect(() => {
     // Load saved plan from storage (web localStorage or native Capacitor Preferences)
     const loadInitial = async () => {
@@ -1282,6 +1316,11 @@ const Hifz: React.FC = () => {
       }
       const best = await loadBestPlanAsync();
       setBestPlan(best);
+      // Populate read pages on mount so progress bars are correct immediately,
+      // not only after a view re-enter.
+      const rs = await loadHifzReadingSessionAsync();
+      console.log("[HIFZ.page] mount readPages", rs?.readPages);
+      if (rs) setReadPages(rs.readPages);
     };
 
     loadInitial();

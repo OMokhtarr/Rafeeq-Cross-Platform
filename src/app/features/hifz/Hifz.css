@@ -689,18 +689,26 @@ ion-content::part(scroll) {
 }
 
 /* ── Session progress bar strip ─────────────────────────── */
+/* One equal slice per page, adjacent (no gaps) so it reads as one continuous
+   bar. A slice fills only when its page is read — the lit position therefore
+   reflects exactly which pages were read, not just how many. */
 .hifz-session-bar-track {
+  display: flex;
   height: 4px;
   margin-top: var(--space-3);
   background: var(--color-progress-track);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
-.hifz-session-bar-fill {
+.hifz-session-bar-slice {
+  flex: 1 1 0;
+  min-width: 0;
   height: 100%;
-  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background 0.4s ease;
+}
+.hifz-session-bar-slice.filled {
   background: var(--color-quran);
-  transition: width 0.7s cubic-bezier(.25,.8,.25,1);
 }
 
 /* ── Plan action buttons — now .hifz-header-action-btn ───── */

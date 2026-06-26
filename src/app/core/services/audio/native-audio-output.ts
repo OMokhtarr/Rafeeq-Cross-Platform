@@ -71,6 +71,9 @@ export async function pushNativeQueue(
     startIndex,
     title,
     autoplay: false,
+    // The surah of this (single-surah) queue, so native can restore page-nav / repeat-page /
+    // duration if it has to self-advance after the app/brain is closed.
+    sura: queue[0]?.sura ?? 0,
   });
 }
 

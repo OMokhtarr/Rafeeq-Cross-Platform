@@ -372,7 +372,7 @@ const PageViewer: React.FC = () => {
     hifzPageEntryRef.current = { page: currentPage, enteredAt: Date.now() };
 
     hifzTimerRef.current = setTimeout(() => {
-      markPageRead(currentPage);
+      markPageRead(currentPage).catch(() => {});
     }, HIFZ_READ_DWELL_MS);
 
     return () => {
@@ -384,7 +384,7 @@ const PageViewer: React.FC = () => {
       if (entry && entry.page === currentPage) {
         const elapsed = Date.now() - entry.enteredAt;
         if (elapsed >= HIFZ_READ_DWELL_MS) {
-          markPageRead(currentPage);
+          markPageRead(currentPage).catch(() => {});
         }
         hifzPageEntryRef.current = null;
       }
