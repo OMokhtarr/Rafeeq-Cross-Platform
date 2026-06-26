@@ -580,7 +580,12 @@ const SetupView: React.FC<SetupViewProps> = ({
     onUpdateMemorized(memorized.filter((_, i) => i !== idx));
   };
 
-  const canGenerate = memorized.length > 0 && goal.quantity >= 1;
+  // The box must hold a valid number too — an empty/invalid field disables generate.
+  const quantityValid = (() => {
+    const v = parseInt(quantityInput, 10);
+    return !isNaN(v) && v >= 1 && v <= 999;
+  })();
+  const canGenerate = memorized.length > 0 && quantityValid;
 
   return (
     <div className="hifz-setup" dir={lang === "ar" ? "rtl" : "ltr"}>
