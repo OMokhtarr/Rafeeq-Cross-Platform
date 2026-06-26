@@ -5,9 +5,10 @@
 
 import React from "react";
 import { IonPage, IonContent } from "@ionic/react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { useLang } from "../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../shared/components/bottom-nav/BottomNavBar";
+import { readQuizPrefill, quizPrefillQuery } from "../../quiz-prefill";
 import "./QuizList.css";
 
 interface QuizEntry {
@@ -23,8 +24,14 @@ const QUIZZES: QuizEntry[] = [
 
 const QuizList: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const { t, isRTL } = useLang();
   const tql = t.quizList;
+
+  // When the user arrived here from a completed Hifz session, carry its page
+  // range on to whichever quiz setup they pick so it's pre-filled there.
+  const prefill = readQuizPrefill(location.search);
+  const prefillQuery = prefill ? quizPrefillQuery(prefill) : "";
 
   return (
     <IonPage>
@@ -57,7 +64,7 @@ const QuizList: React.FC = () => {
                   key={quiz.id}
                   className="ql-card"
                   dir={isRTL ? "rtl" : "ltr"}
-                  onClick={() => history.push(quiz.route)}
+                  onClick={() => history.push(quiz.route + prefillQuery)}
                 >
                   <div className="ql-card-body">
                     <h2 className="ql-card-name">{title}</h2>

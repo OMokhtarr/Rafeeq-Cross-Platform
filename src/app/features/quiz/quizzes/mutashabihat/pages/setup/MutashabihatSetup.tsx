@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { IonPage, IonContent } from "@ionic/react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { Preferences } from "@capacitor/preferences";
 import {
   getChapters,
@@ -13,19 +13,26 @@ import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import InlineSelect from "../../../../../../shared/components/inline-select/InlineSelect";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
+import { readQuizPrefill } from "../../../../quiz-prefill";
 import "./MutashabihatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 const MutashabihatSetup: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const { t, isRTL } = useLang();
   const tq = t.quizSetup;
 
-  const [scopeType, setScopeType] = useState<MutashabihatConfig["scopeType"]>("surah");
+  // Pre-fill from a Hifz session range, if provided in the URL.
+  const prefill = readQuizPrefill(location.search);
+
+  const [scopeType, setScopeType] = useState<MutashabihatConfig["scopeType"]>(
+    prefill ? "page" : "surah",
+  );
   const [selectedSurahs, setSelectedSurahs] = useState<number[]>([]);
-  const [pageFrom, setPageFrom] = useState(1);
-  const [pageTo, setPageTo] = useState(10);
+  const [pageFrom, setPageFrom] = useState(prefill?.fromPage ?? 1);
+  const [pageTo, setPageTo] = useState(prefill?.toPage ?? 10);
   const [pageFilterSurah, setPageFilterSurah] = useState<number | null>(null);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
   const [questionCount, setQuestionCount] = useState(5);

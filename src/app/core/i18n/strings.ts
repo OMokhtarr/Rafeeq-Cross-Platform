@@ -341,6 +341,7 @@ export interface AppStrings {
     sessionsLeft: string;
     streakDays: string;
     openInQuran: string;
+    quizFromSession: string;
     sessionPrevious: string;
     viewAllSessions: string;
     sessionsAll: string;
@@ -718,6 +719,7 @@ const ar: AppStrings = {
     sessionsLeft: "متبقية",
     streakDays: "يوم متتالي",
     openInQuran: "افتح في القرآن",
+    quizFromSession: "اختبر نفسك",
     sessionPrevious: "السابقة",
     viewAllSessions: "عرض جميع الجلسات",
     sessionsAll: "جميع الجلسات",
@@ -1099,6 +1101,7 @@ const en: AppStrings = {
     sessionsLeft: "left",
     streakDays: "day streak",
     openInQuran: "Open in Quran",
+    quizFromSession: "Quiz yourself",
     sessionPrevious: "Previous",
     viewAllSessions: "View All Sessions",
     sessionsAll: "All Sessions",

@@ -693,6 +693,7 @@ interface SessionCardProps {
   variant: "next" | "remaining" | "done";
   onToggle: (id: string) => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
+  onQuiz: (session: PlanSession) => void;
   lang: "ar" | "en";
   h: any;
   chapters: any[];
@@ -706,11 +707,20 @@ const OpenBookIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+const QuizIcon = ({ size = 18 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width={size} height={size} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+    <circle cx="12" cy="12" r="10" />
+  </svg>
+);
+
 const SessionCard: React.FC<SessionCardProps> = ({
   session: s,
   variant,
   onToggle,
   onOpenPage,
+  onQuiz,
   lang,
   h,
   chapters,
@@ -740,6 +750,13 @@ const SessionCard: React.FC<SessionCardProps> = ({
     ? Math.round((readCount / sessionPages.length) * 100)
     : 0;
 
+  // First page the user hasn't read yet — opening jumps straight there so they
+  // resume where they left off. Falls back to the start when all pages are read.
+  const firstUnreadPage = (pages: number[], fallback: number): number =>
+    pages.find((p) => !readSet.has(p)) ?? fallback;
+  // First unread page across the whole session (for the single open button).
+  const resumePage = firstUnreadPage(sessionPages, s.fromPage);
+
   // Group surahs by which range they belong to (for multi-range display)
   const rangeGroups: Array<{ range: PageRange; surahs: typeof surahs }> = multiRange
     ? effectiveRanges.map((r) => ({
@@ -761,7 +778,18 @@ const SessionCard: React.FC<SessionCardProps> = ({
                 <button
                   key={range.from}
                   className="hifz-session-range-btn"
-                  onClick={() => onOpenPage(range.from, s)}
+                  onClick={() =>
+                    onOpenPage(
+                      firstUnreadPage(
+                        Array.from(
+                          { length: range.to - range.from + 1 },
+                          (_, i) => range.from + i,
+                        ),
+                        range.from,
+                      ),
+                      s,
+                    )
+                  }
                   title={h.openInQuran}
                 >
                   <span className="hifz-session-range-surahs">
@@ -820,10 +848,20 @@ const SessionCard: React.FC<SessionCardProps> = ({
         </div>
 
         <div className="hifz-session-actions">
+          {s.done && (
+            <button
+              className="hifz-session-quiz-btn"
+              onClick={() => onQuiz(s)}
+              aria-label={h.quizFromSession}
+              title={h.quizFromSession}
+            >
+              <QuizIcon />
+            </button>
+          )}
           {!multiRange && (
             <button
               className="hifz-session-open-btn"
-              onClick={() => onOpenPage(s.fromPage, s)}
+              onClick={() => onOpenPage(resumePage, s)}
               aria-label={h.openInQuran}
               title={h.openInQuran}
             >
@@ -868,6 +906,7 @@ interface DashboardViewProps {
   onReset: () => void;
   onEdit: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
+  onQuiz: (session: PlanSession) => void;
   onViewAllSessions: () => void;
   onStartNewRound: () => void;
   bestPlan: BestPlanRecord | null;
@@ -885,6 +924,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onReset,
   onEdit,
   onOpenPage,
+  onQuiz,
   onViewAllSessions,
   onStartNewRound,
   bestPlan,
@@ -1097,6 +1137,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 variant="done"
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
+                onQuiz={onQuiz}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1112,6 +1153,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 variant="next"
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
+                onQuiz={onQuiz}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1127,6 +1169,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 variant="remaining"
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
+                onQuiz={onQuiz}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1161,6 +1204,7 @@ interface HifzSessionsViewProps {
   onToggleSession: (id: string) => void;
   onBack: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
+  onQuiz: (session: PlanSession) => void;
   lang: "ar" | "en";
   t: any;
   readPages: number[];
@@ -1172,6 +1216,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
   onToggleSession,
   onBack,
   onOpenPage,
+  onQuiz,
   lang,
   t,
   readPages,
@@ -1209,6 +1254,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
                 variant={getVariant(s)}
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
+                onQuiz={onQuiz}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1250,6 +1296,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
                   variant="done"
                   onToggle={onToggleSession}
                   onOpenPage={onOpenPage}
+                  onQuiz={onQuiz}
                   lang={lang}
                   h={h}
                   chapters={chapters}
@@ -1518,6 +1565,15 @@ const Hifz: React.FC = () => {
     [history, plan],
   );
 
+  // Open the quiz list pre-loaded with this session's page range so the user can
+  // quiz themselves on what they just revised.
+  const handleQuizFromSession = useCallback(
+    (session: PlanSession) => {
+      history.push(`/quiz-list?fromPage=${session.fromPage}&toPage=${session.toPage}`);
+    },
+    [history],
+  );
+
   const h = t.hifz;
   const isRTL = lang === "ar";
 
@@ -1618,6 +1674,7 @@ const Hifz: React.FC = () => {
               onReset={handleReset}
               onEdit={handleEdit}
               onOpenPage={handleOpenPage}
+              onQuiz={handleQuizFromSession}
               onViewAllSessions={() => setView("sessions")}
               onStartNewRound={handleStartNewRound}
               bestPlan={bestPlan}
@@ -1635,6 +1692,7 @@ const Hifz: React.FC = () => {
               onToggleSession={handleToggleSession}
               onBack={() => setView("plan")}
               onOpenPage={handleOpenPage}
+              onQuiz={handleQuizFromSession}
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}
