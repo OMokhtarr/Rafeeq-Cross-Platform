@@ -115,7 +115,7 @@ const MutashabihatSetup: React.FC = () => {
       value: JSON.stringify(config),
     });
 
-    history.push("/mutashabihat-test");
+    history.replace("/mutashabihat-test");
   };
 
   const isReady = () => {
@@ -162,7 +162,7 @@ const MutashabihatSetup: React.FC = () => {
           <div className="ms-setup-header">
             <button
               className="ms-setup-back-btn"
-              onClick={() => history.push("/quiz-list")}
+              onClick={() => history.goBack()}
               aria-label={tq.backToList}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

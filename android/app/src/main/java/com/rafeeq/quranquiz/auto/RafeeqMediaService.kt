@@ -106,13 +106,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // ── Auto-resume suppression ─────────────────────────────────────────────────
     // Some head units IGNORE the EXTRA_RECENT opt-out and fire a bare onPlay() right after
     // connecting, auto-resuming the last media. We suppress that by only honoring onPlay()
-    // once the user has actually interacted (browsed a list or selected a surah). A play that
-    // arrives shortly after connect with no prior interaction is treated as an unwanted
-    // auto-resume and ignored.
-    private var lastConnectMs: Long = 0L
+    // once the user has actually interacted (browsed a list or selected a surah) in this
+    // connection. Reset to false on each fresh browser connect (onGetRoot).
     private var userInteracted: Boolean = false
-    // How long after a browser connect an uninitiated onPlay() is considered auto-resume.
-    private val AUTO_RESUME_WINDOW_MS = 4000L
 
     // ── Native cold-start duration model ────────────────────────────────────────
     // The exact whole-surah duration (ms) fetched from the QF timestamp endpoint, so the car
@@ -298,7 +294,44 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             override fun onError(index: Int, message: String) {
                 Log.e("RafeeqMedia", "player error at index=$index: $message")
             }
+
+            override fun onColdListEnded() {
+                // The whole surah just finished on the native path. Continue with the next surah
+                // (like the JS brain's auto-advance) so playback doesn't stop at a surah boundary.
+                playNextSurahNatively()
+            }
         })
+    }
+
+    /**
+     * Auto-advance to the NEXT surah on the native cold-start path (no JS brain), mirroring the
+     * brain's handleQueueEnded. Builds the next surah's verse URLs, re-arms page markers / duration
+     * and plays from verse 1. Stops after An-Nas (114).
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun playNextSurahNatively() {
+        val current = nativeColdStartSura
+        if (current <= 0) return
+        val next = current + 1
+        if (next > 114) return // after An-Nas, stop
+        val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+        val urls = RafeeqAudioUrls.buildSurahUrls(reciter, next)
+        if (urls.isEmpty()) return
+        Log.d("RafeeqMedia", "playNextSurahNatively: $current -> $next verses=${urls.size}")
+        val title = surahArabicName(next)
+        nativeColdStartSura = next
+        pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(next)
+            .map { PageMarker(it.first, it.second) }
+        currentPage = pageMarkers.firstOrNull()?.page ?: 0
+        repeatPageActive = false
+        player?.setColdRepeatRange(-1, -1)
+        nativeVerseDurationsMs.clear()
+        nativeVerseStartMs.clear()
+        nativeRangeTotalMs = 0L
+        fetchNativeRangeTotal(reciter, next)
+        persistQueue(urls, 0, title, sura = next)
+        player?.loadList(urls, 0, playWhenReady = true)
+        updateTitleMetadata(title)
     }
 
     /**
@@ -405,6 +438,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 repeatPageActive = false
                 player?.setColdRepeatRange(-1, -1)
                 nativeVerseDurationsMs.clear()
+                nativeVerseStartMs.clear()
                 nativeRangeTotalMs = 0L
                 fetchNativeRangeTotal(currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }, sura)
             }
@@ -497,6 +531,42 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         }
     }
 
+    /** Exact verse-start positions (ms on the surah timeline) learned from the timestamp
+     *  endpoint, keyed by cold-list index (== aya-1). Used to publish an ACCURATE landing
+     *  position after a page jump instead of the averaged estimate (which overshoots). */
+    private val nativeVerseStartMs = HashMap<Int, Long>()
+
+    /**
+     * After a page jump lands on `aya`, fetch that verse's EXACT start on the surah timeline
+     * (timestamp_from) off-thread and re-publish the corrected bar position — but only if the
+     * player is still on that verse (the user didn't jump again meanwhile). This fixes the
+     * inaccurate landing time (e.g. Taha's last page showing ~32:00 instead of ~27:07).
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun correctNativeJumpPosition(aya: Int) {
+        val sura = nativeColdStartSura
+        if (sura <= 0 || aya <= 0) return
+        val idx = aya - 1
+        // Use a cached exact start if we already have it.
+        nativeVerseStartMs[idx]?.let { exact ->
+            if (player?.currentIndex() == idx) publishPlaybackState(player?.isPlaying() == true, exact, derivePage = false)
+            return
+        }
+        val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+        nativeDurationExecutor.execute {
+            val start = RafeeqQfApi.fetchVerseStartMs(reciter, sura, aya)
+            if (start >= 0) {
+                mainHandler.post {
+                    nativeVerseStartMs[idx] = start
+                    // Only apply if still on the same surah and verse (no later jump/advance).
+                    if (nativeColdStartSura == sura && player?.currentIndex() == idx) {
+                        publishPlaybackState(player?.isPlaying() == true, start, derivePage = false)
+                    }
+                }
+            }
+        }
+    }
+
     /** Recompute the cold-list index range of the page being looped (native repeat-page).
      *  Cleared when repeat is off. Page = the verses whose Mushaf page == currentPage. */
     /** Skip the native cold list to a verse index, keeping the page + repeat range in sync.
@@ -564,10 +634,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         return nativeElapsedBeforeIndex(idx) + (player?.currentPositionMs() ?: 0L)
     }
 
-    /** Sum of verse durations BEFORE cold-list index `idx` (exact where known, average
-     *  estimate for unplayed verses). Used to seed the bar on a page jump before the new
+    /** Sum of verse durations BEFORE cold-list index `idx`. Prefers the EXACT verse start
+     *  (timestamp_from of verse idx == the elapsed time before it) when we've learned it from the
+     *  timestamp endpoint; otherwise falls back to summing exact-where-known per-verse durations
+     *  and an average estimate for the rest. Used to seed the bar on a page jump before the new
      *  verse's position ticks arrive. */
     private fun nativeElapsedBeforeIndex(idx: Int): Long {
+        // Exact: timestamp_from of verse `idx` is precisely the cumulative time before it.
+        nativeVerseStartMs[idx]?.let { return it }
         val known = nativeVerseDurationsMs.values
         val avg = if (known.isNotEmpty()) known.sum() / known.size else 0L
         var elapsed = 0L
@@ -773,9 +847,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         if (rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true) {
             return null
         }
-        // Mark the start of a fresh browser connection. An onPlay() that arrives within
-        // AUTO_RESUME_WINDOW_MS with no user interaction since is an auto-resume → suppressed.
-        lastConnectMs = System.currentTimeMillis()
+        // Mark the start of a fresh browser connection. An onPlay() with no user interaction
+        // since this point is an auto-resume → suppressed (see SessionCallback.onPlay).
         userInteracted = false
         // A media client (Android Auto, the car, or the system media controls) is
         // connecting. Promote to a foreground media service NOW so the MediaSession's
@@ -1129,14 +1202,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         @androidx.media3.common.util.UnstableApi
         override fun onPlay() {
-            // Suppress auto-resume: some head units fire onPlay() right after connecting,
-            // ignoring the EXTRA_RECENT opt-out. If this play arrives within the post-connect
-            // window with no user interaction since, and nothing is already playing, it's an
-            // unwanted auto-resume — ignore it. A genuine press always follows an interaction
-            // (browsing a list / selecting a surah) or happens well after connect.
-            val sinceConnect = System.currentTimeMillis() - lastConnectMs
-            if (!userInteracted && sinceConnect < AUTO_RESUME_WINDOW_MS && player?.isPlaying() != true) {
-                Log.d("RafeeqMedia", "onPlay: suppressing auto-resume (sinceConnect=${sinceConnect}ms, no interaction)")
+            // Suppress auto-resume on connect. Some head units fire onPlay() after connecting
+            // (ignoring the EXTRA_RECENT opt-out) to resume the last session. We never want that:
+            // playback should only start from an explicit user action. So if nothing is already
+            // playing and the user hasn't interacted yet in this connection (browsed a list or
+            // selected a surah), treat this onPlay() as an unwanted auto-resume and ignore it.
+            // A real play press always follows browsing/selecting (which sets userInteracted) or
+            // resumes something already loaded.
+            if (!userInteracted && player?.isPlaying() != true) {
+                Log.d("RafeeqMedia", "onPlay: suppressing auto-resume (no user interaction yet)")
                 return
             }
             // A real press counts as interaction so subsequent plays in this connection pass.
@@ -1228,10 +1302,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                             player?.jumpToColdIndex(aya - 1)
                         }
                         // Immediately reflect the jumped-to position on the bar (don't wait for
-                        // the next tick). jumpToColdIndex posts async, so compute from aya-1 and
-                        // skip page-derivation (currentPage was already set above).
+                        // the next tick) using the local estimate, then correct it with the EXACT
+                        // verse start from the timestamp endpoint (the estimate uses an averaged
+                        // per-verse duration that overshoots — e.g. Taha's last page landed at
+                        // ~32:00 instead of the true ~27:07). jumpToColdIndex posts async, so we
+                        // compute from aya-1 and skip page-derivation (currentPage set above).
                         val jumpElapsed = nativeElapsedBeforeIndex(aya - 1)
                         publishPlaybackState(true, jumpElapsed, derivePage = false)
+                        correctNativeJumpPosition(aya)
                     }
                 }
             }
@@ -1308,6 +1386,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     player?.setColdRepeatRange(-1, -1)
                     // Reset + fetch the exact whole-surah duration for the bar (off-thread).
                     nativeVerseDurationsMs.clear()
+                    nativeVerseStartMs.clear()
                     nativeRangeTotalMs = 0L
                     fetchNativeRangeTotal(reciter, surahNumber)
                     persistQueue(urls, 0, title, sura = surahNumber)

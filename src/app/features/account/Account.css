@@ -232,6 +232,7 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 
+
 .ac-streak-title {
   margin: 0;
   font-size: var(--text-base);
@@ -335,25 +336,6 @@ ion-content::part(scroll) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ac-streak-row-type {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.ac-streak-row-days {
-  font-family: var(--font-latin);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-gold);
-  flex-shrink: 0;
-}
-
-.ac-streak-row-d {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin-inline-start: 1px;
 }
 
 .ac-streak-empty {
@@ -564,7 +546,36 @@ ion-content::part(scroll) {
   margin: 0 16px;
 }
 
-.ac-row-danger .ac-row-label { color: #e07070; }
+
+/* ── Disabled group ("Coming soon") ── */
+.ac-group-disabled {
+  position: relative;
+  opacity: 0.45;
+}
+.ac-group-disabled .ac-row {
+  cursor: default;
+  pointer-events: none;
+}
+.ac-group-disabled .ac-row:active { background: none; }
+
+.ac-soon-pill {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  padding: 8px 20px;
+  border-radius: var(--radius-full, 999px);
+  border: 1.5px solid var(--color-gold-subtle);
+  background: var(--color-bg-card);
+  color: var(--color-gold);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+}
 
 /* ── Bottom spacer ── */
 .ac-bottom-spacer {

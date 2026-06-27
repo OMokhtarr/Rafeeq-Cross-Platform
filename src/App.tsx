@@ -52,6 +52,7 @@ setupIonicReact({ mode: "md" });
 // can't pop the user to whatever pushed the tab (e.g. a quiz).
 const ROOT_TAB_PATHS = new Set<string>([
   "/",
+  "/viewer",
   "/quiz-list",
   "/azkar",
   "/hifz",

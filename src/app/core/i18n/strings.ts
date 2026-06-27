@@ -248,6 +248,8 @@ export interface AppStrings {
     transliterationDesc: string;
     reciter: string;
     reciterDesc: string;
+    mushafLabel: string;
+    mushafLabelDesc: string;
     tajweed: string;
     tajweedDesc: string;
     autoNextPage: string;
@@ -266,9 +268,14 @@ export interface AppStrings {
     prayerRemindersDesc: string;
     azkarReminders: string;
     azkarRemindersDesc: string;
+    comingSoon: string;
     resetDefaults: string;
     resetDefaultsDesc: string;
     resetButton: string;
+    resetConfirmTitle: string;
+    resetConfirmMessage: string;
+    resetConfirmYes: string;
+    resetConfirmCancel: string;
     language: string;
     languageDesc: string;
     arabic: string;
@@ -615,6 +622,8 @@ const ar: AppStrings = {
     transliterationDesc: "الحروف الرومانية تحت الآيات",
     reciter: "القارئ",
     reciterDesc: "الصوت المستخدم في التلاوة",
+    mushafLabel: "المصحف",
+    mushafLabelDesc: "اختر طريقة عرض المصحف",
     tajweed: "ألوان التجويد",
     tajweedDesc: "تلوين أحكام التجويد في الآيات",
     autoNextPage: "الانتقال التلقائي",
@@ -633,9 +642,14 @@ const ar: AppStrings = {
     prayerRemindersDesc: "قريباً — سيتطلب إذن الموقع",
     azkarReminders: "تذكير الأذكار اليومية",
     azkarRemindersDesc: "تنبيه صباحي ومسائي للأذكار",
+    comingSoon: "قريباً",
     resetDefaults: "استعادة الإعدادات الافتراضية",
     resetDefaultsDesc: "إعادة جميع الإعدادات لقيمها الأصلية",
     resetButton: "إعادة",
+    resetConfirmTitle: "استعادة الإعدادات؟",
+    resetConfirmMessage: "سيتم إعادة جميع الإعدادات إلى قيمها الافتراضية. لا يمكن التراجع عن هذا الإجراء.",
+    resetConfirmYes: "نعم، استعادة",
+    resetConfirmCancel: "إلغاء",
     language: "لغة التطبيق",
     languageDesc: "اختر لغة واجهة التطبيق",
     arabic: "العربية",
@@ -994,6 +1008,8 @@ const en: AppStrings = {
     transliterationDesc: "Roman letters below each verse",
     reciter: "Reciter",
     reciterDesc: "Voice used for recitation",
+    mushafLabel: "Mushaf",
+    mushafLabelDesc: "Choose how the Mushaf is displayed",
     tajweed: "Tajweed Colors",
     tajweedDesc: "Color-code tajweed rules in verses",
     autoNextPage: "Auto-advance",
@@ -1012,9 +1028,14 @@ const en: AppStrings = {
     prayerRemindersDesc: "Coming soon — requires location permission",
     azkarReminders: "Daily Azkar Reminders",
     azkarRemindersDesc: "Morning and evening notifications",
+    comingSoon: "Coming soon",
     resetDefaults: "Restore Defaults",
     resetDefaultsDesc: "Reset all settings to their original values",
     resetButton: "Reset",
+    resetConfirmTitle: "Restore settings?",
+    resetConfirmMessage: "All settings will be reset to their default values. This action cannot be undone.",
+    resetConfirmYes: "Yes, restore",
+    resetConfirmCancel: "Cancel",
     language: "App Language",
     languageDesc: "Choose interface language",
     arabic: "العربية",

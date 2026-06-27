@@ -69,19 +69,19 @@ object RafeeqQfApi {
     }
 
     /**
-     * Whole-surah audio duration in ms for a reciter, via /audio/reciters/{id}/timestamp
-     * ?chapter_number=N (timestamp_to - timestamp_from). The endpoint wants a CHAPTER-reciter
-     * id; for this app's reciters that equals the numeric recitation id, so we resolve the
-     * slug → numeric id first. Returns 0 on any failure (caller falls back to ExoPlayer durations).
+     * GET the timestamp endpoint and return its `result` object, or null on failure.
+     * `query` is e.g. "chapter_number=20" or "verse_key=20:135". Handles auth headers and one
+     * 401-retry (token refresh). The endpoint wants a CHAPTER-reciter id; for this app's reciters
+     * that equals the numeric recitation id, so we resolve the slug → numeric id first.
      */
-    fun fetchChapterDurationMs(reciter: String, chapter: Int): Long {
-        if (!configured()) return 0L
-        val reciterId = RafeeqAudioUrls.timestampReciterId(reciter) ?: return 0L
-        val path = "/audio/reciters/$reciterId/timestamp?chapter_number=$chapter"
+    private fun getTimestampResult(reciter: String, query: String): JSONObject? {
+        if (!configured()) return null
+        val reciterId = RafeeqAudioUrls.timestampReciterId(reciter) ?: return null
+        val path = "/audio/reciters/$reciterId/timestamp?$query"
 
         // One retry: a 401 forces a token refresh.
         for (attempt in 0..1) {
-            val token = getToken(forceRefresh = attempt > 0) ?: return 0L
+            val token = getToken(forceRefresh = attempt > 0) ?: return null
             try {
                 val conn = (URL(BuildConfig.QF_CONTENT_API_BASE + path).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
@@ -99,19 +99,39 @@ object RafeeqQfApi {
                 if (code !in 200..299) {
                     Log.w(TAG, "timestamp HTTP $code for $path")
                     conn.disconnect()
-                    return 0L
+                    return null
                 }
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
                 conn.disconnect()
-                val result = JSONObject(body).optJSONObject("result") ?: return 0L
-                val from = result.optLong("timestamp_from", 0L)
-                val to = result.optLong("timestamp_to", 0L)
-                return (to - from).coerceAtLeast(0L)
+                return JSONObject(body).optJSONObject("result")
             } catch (e: Exception) {
                 Log.w(TAG, "timestamp fetch failed: ${e.message}")
-                return 0L
+                return null
             }
         }
-        return 0L
+        return null
+    }
+
+    /**
+     * Whole-surah audio duration in ms (timestamp_to - timestamp_from for the chapter).
+     * Returns 0 on any failure (caller falls back to ExoPlayer durations).
+     */
+    fun fetchChapterDurationMs(reciter: String, chapter: Int): Long {
+        val result = getTimestampResult(reciter, "chapter_number=$chapter") ?: return 0L
+        val from = result.optLong("timestamp_from", 0L)
+        val to = result.optLong("timestamp_to", 0L)
+        return (to - from).coerceAtLeast(0L)
+    }
+
+    /**
+     * The exact start (ms) of a verse on its surah's full timeline — i.e. timestamp_from for
+     * verse_key "sura:aya". This is the CUMULATIVE position to land on when jumping to that verse
+     * (e.g. a page's first ayah), so the duration bar lands accurately instead of using an
+     * averaged estimate that overshoots. Returns -1 on failure (caller keeps its estimate).
+     */
+    fun fetchVerseStartMs(reciter: String, sura: Int, aya: Int): Long {
+        val result = getTimestampResult(reciter, "verse_key=$sura:$aya") ?: return -1L
+        if (!result.has("timestamp_from")) return -1L
+        return result.optLong("timestamp_from", 0L).coerceAtLeast(0L)
     }
 }

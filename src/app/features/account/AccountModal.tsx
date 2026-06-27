@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./AccountModal.css";
 
 interface Props {
@@ -22,7 +23,10 @@ const AccountModal: React.FC<Props> = ({ title, onClose, children }) => {
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  return (
+  // Portal to document.body so the modal escapes IonContent's stacking context
+  // and renders above the fixed BottomNavBar (which would otherwise overlap the
+  // bottom of the sheet and clip the last content).
+  return createPortal(
     <div className="amod-backdrop" onClick={handleBackdrop} role="dialog" aria-modal>
       <div className="amod-sheet">
         <div className="amod-handle" />
@@ -38,7 +42,8 @@ const AccountModal: React.FC<Props> = ({ title, onClose, children }) => {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

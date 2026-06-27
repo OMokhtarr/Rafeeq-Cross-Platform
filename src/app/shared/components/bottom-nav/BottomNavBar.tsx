@@ -161,6 +161,15 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   const history = useHistory();
   const { t, lang } = useLang();
 
+  // Navigate to a tab with replace (not push) so the current entry is swapped
+  // out rather than stacked on top. Main tab pages must never go back (no
+  // swipe, no hardware back to whatever pushed them, e.g. a Hifz session →
+  // viewer). useHistory is used instead of useIonRouter because BottomNavBar is
+  // rendered deep inside pages where the IonRouterContext is not always present
+  // (it throws "An Ionic Router is required"); the React Router history context
+  // is always available under IonReactRouter.
+  const goToTab = (route: string) => history.replace(route);
+
   const labels: Record<NavTabKey, string> = {
     home: lang === "ar" ? "الرئيسية" : "Home",
     quran: t.tabs.quran,
@@ -189,7 +198,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
               (isActive ? " rfq-tab-active" : "")
             }
             style={{ "--tab-color": tab.color } as React.CSSProperties}
-            onClick={() => !tab.comingSoon && history.replace(route)}
+            onClick={() => !tab.comingSoon && goToTab(route)}
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
             aria-label={

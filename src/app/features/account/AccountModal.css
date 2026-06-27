@@ -88,9 +88,13 @@
 .amod-body {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 16px 18px 32px;
+  /* Bottom padding clears the device home indicator so the last section
+     (Contact) is fully reachable when scrolled to the end. */
+  padding: 16px 18px calc(32px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Rich text (Terms / Privacy) ── */

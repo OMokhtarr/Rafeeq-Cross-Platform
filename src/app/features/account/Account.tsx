@@ -246,18 +246,16 @@ const Account: React.FC = () => {
     active:         lang === "ar" ? "نشط"                                : "Active",
     broken:         lang === "ar" ? "منقطع"                              : "Broken",
     longest:        lang === "ar" ? "أطول سلسلة"                         : "Longest",
-    total:          lang === "ar" ? "المجموع"                            : "Total",
     loading:        lang === "ar" ? "جاري التحميل…"                      : "Loading…",
     noStreak:       lang === "ar" ? "لا توجد سلاسل قراءة بعد — ابدأ اليوم!" : "No reading streaks yet — start today!",
-    quranReading:   lang === "ar" ? "قراءة القرآن"                       : "Quran reading",
     aboutApp:       lang === "ar" ? "عن التطبيق"                         : "About Rafeeq",
     requestFeature: lang === "ar" ? "اقتراح ميزة"                        : "Request a Feature",
     helpCenter:     lang === "ar" ? "مركز المساعدة"                      : "Help Center",
     shareApp:       lang === "ar" ? "مشاركة التطبيق"                     : "Share Application",
     rateApp:        lang === "ar" ? "تقييم التطبيق"                      : "Rate Application",
+    comingSoon:     lang === "ar" ? "قريباً"                             : "Coming soon",
     terms:          lang === "ar" ? "شروط الخدمة"                        : "Terms of Service",
     privacy:        lang === "ar" ? "سياسة الخصوصية"                     : "Privacy Policy",
-    deleteAccount:  lang === "ar" ? "حذف الحساب"                         : "Delete Account",
     retry:          lang === "ar" ? "حاول مجدداً"                        : "Try again",
     notes:          lang === "ar" ? "ملاحظاتي"                           : "My Notes",
     noNotes:        lang === "ar" ? "لا توجد ملاحظات بعد"                : "No notes yet",
@@ -278,18 +276,6 @@ const Account: React.FC = () => {
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
     } catch {
       setNotesError(lang === "ar" ? "تعذر حذف الملاحظة" : "Could not delete note");
-    }
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({
-        title: "Rafeeq",
-        text: lang === "ar" ? "تطبيق رفيق للقرآن الكريم" : "Rafeeq – Quran companion app",
-        url: "https://rafeeqapp.netlify.app",
-      }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText("https://rafeeqapp.netlify.app").catch(() => {});
     }
   };
 
@@ -363,7 +349,7 @@ const Account: React.FC = () => {
                   aria-expanded={streakOpen}
                 >
                   <div className="ac-streak-header-left">
-                    <span className="ac-streak-flame">🔥</span>
+                    <span className="ac-streak-flame">🍃</span>
                     <div>
                       <p className="ac-streak-title">{t.streak}</p>
                       {!streakOpen && !loading && (
@@ -409,30 +395,19 @@ const Account: React.FC = () => {
                             <span className="ac-streak-stat-val">{longestStreak}</span>
                             <span className="ac-streak-stat-lbl">{t.longest}</span>
                           </div>
-                          <div className="ac-streak-stat-div" />
-                          <div className="ac-streak-stat">
-                            <span className="ac-streak-stat-val">{streaks.length}</span>
-                            <span className="ac-streak-stat-lbl">{t.total}</span>
-                          </div>
                         </div>
 
                         {streaks.length > 0 ? (
                           <ul className="ac-streak-list">
                             {streaks.map((s) => (
                               <li key={s.id} className="ac-streak-row">
-                                <span className="ac-streak-row-icon">{s.status === "ACTIVE" ? "🔥" : "📅"}</span>
+                                <span className="ac-streak-row-icon">{s.status === "ACTIVE" ? "🍃" : "🍂"}</span>
                                 <div className="ac-streak-row-info">
                                   <span className="ac-streak-row-range">
                                     {formatDate(s.startDate)}
                                     {s.startDate !== s.endDate && ` — ${formatDate(s.endDate)}`}
                                   </span>
-                                  <span className="ac-streak-row-type">
-                                    {s.type === "QURAN" ? t.quranReading : s.type}
-                                  </span>
                                 </div>
-                                <span className="ac-streak-row-days">
-                                  {s.days}<span className="ac-streak-row-d">{lang === "ar" ? "ي" : "d"}</span>
-                                </span>
                                 <span className={`ac-badge ${s.status === "ACTIVE" ? "ac-badge-active" : "ac-badge-broken"}`}>
                                   {s.status === "ACTIVE" ? t.active : t.broken}
                                 </span>
@@ -556,10 +531,11 @@ const Account: React.FC = () => {
               </button>
             </div>
 
-            {/* ── Share / Rate group ── */}
+            {/* ── Share / Rate group — disabled until the app is published to the stores ── */}
             <p className="ac-section-label">{lang === "ar" ? "مشاركة" : "Share"}</p>
-            <div className="ac-group">
-              <button className="ac-row" onClick={handleShare}>
+            <div className="ac-group ac-group-disabled">
+              <span className="ac-soon-pill">{t.comingSoon}</span>
+              <button className="ac-row" disabled aria-disabled>
                 <span className="ac-row-label">{t.shareApp}</span>
                 <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
@@ -567,7 +543,7 @@ const Account: React.FC = () => {
                 </svg>
               </button>
               <div className="ac-row-divider" />
-              <button className="ac-row" onClick={() => {}}>
+              <button className="ac-row" disabled aria-disabled>
                 <span className="ac-row-label">{t.rateApp}</span>
                 <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -592,15 +568,6 @@ const Account: React.FC = () => {
                 </svg>
               </button>
             </div>
-
-            {/* ── Danger zone ── */}
-            {loggedIn && (
-              <div className="ac-group">
-                <button className="ac-row ac-row-danger" onClick={() => {}}>
-                  <span className="ac-row-label">{t.deleteAccount}</span>
-                </button>
-              </div>
-            )}
 
             <div className="ac-bottom-spacer" />
           </div>

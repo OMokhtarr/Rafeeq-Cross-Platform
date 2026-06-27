@@ -1560,16 +1560,21 @@ const Hifz: React.FC = () => {
       }
       const firstAyah = getPageStart(page);
       const vParam = firstAyah ? `&v=${firstAyah.sura}:${firstAyah.aya}` : "";
-      history.push(`/viewer?page=${page}${vParam}`);
+      // Open the reader as a fresh root: it's the main "Quran" tab page and must
+      // never go back (no swipe, no hardware back to Hifz). replace swaps the
+      // current entry instead of stacking, so there's nothing to go back to.
+      history.replace(`/viewer?page=${page}${vParam}`);
     },
     [history, plan],
   );
 
   // Open the quiz list pre-loaded with this session's page range so the user can
-  // quiz themselves on what they just revised.
+  // quiz themselves on what they just revised. Use replace so the quiz list
+  // becomes a fresh root (same as opening it from the Quiz tab) — this prevents
+  // the back stack from looping back through Hifz.
   const handleQuizFromSession = useCallback(
     (session: PlanSession) => {
-      history.push(`/quiz-list?fromPage=${session.fromPage}&toPage=${session.toPage}`);
+      history.replace(`/quiz-list?fromPage=${session.fromPage}&toPage=${session.toPage}`);
     },
     [history],
   );

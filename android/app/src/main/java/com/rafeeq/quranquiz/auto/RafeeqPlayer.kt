@@ -46,6 +46,11 @@ class RafeeqPlayer(
         fun onPlayingChanged(isPlaying: Boolean)
         /** Fired on a fatal playback error for the current track. */
         fun onError(index: Int, message: String)
+        /** Fired when the cold list reached its end with nothing left to self-advance to (the
+         *  whole surah finished and repeat-page wasn't looping). The service uses this to start
+         *  the NEXT surah natively, so playback continues past the end of a surah without the
+         *  JS brain. */
+        fun onColdListEnded()
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -112,6 +117,11 @@ class RafeeqPlayer(
                             loadInternal(coldList, rf, playWhenReady = true)
                         } else if (currentIndex + 1 < coldList.size) {
                             loadInternal(coldList, currentIndex + 1, playWhenReady = true)
+                        } else {
+                            // End of the cold list (whole surah finished, not looping). Ask the
+                            // service to continue with the next surah natively.
+                            Log.d("RafeeqPlayer", "cold list ended at index=$currentIndex")
+                            callbacks.onColdListEnded()
                         }
                     }
                 }

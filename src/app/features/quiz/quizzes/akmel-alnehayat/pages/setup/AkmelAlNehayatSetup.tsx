@@ -111,7 +111,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
       value: JSON.stringify(quizConfig),
     });
 
-    history.push("/akmel-alnehayat");
+    history.replace("/akmel-alnehayat");
   };
 
   const isReady = () => {
@@ -158,7 +158,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
           <div className="an-setup-header">
             <button
               className="an-setup-back-btn"
-              onClick={() => history.push("/quiz-list")}
+              onClick={() => history.goBack()}
               aria-label={tq.backToList}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -233,7 +233,7 @@ const MutashabihatTest: React.FC = () => {
             <div className="mst-error">
               <div className="mst-error-box">
                 <p>{error}</p>
-                <button onClick={() => history.push("/mutashabihat-setup")}>
+                <button onClick={() => history.replace("/mutashabihat-setup")}>
                   {tt.backToSetup}
                 </button>
               </div>
@@ -263,10 +263,10 @@ const MutashabihatTest: React.FC = () => {
                 </div>
                 <p className="mst-score-pct">{pct}%</p>
                 <div className="mst-complete-actions">
-                  <button onClick={() => history.push("/mutashabihat-setup")}>
+                  <button onClick={() => history.replace("/mutashabihat-setup")}>
                     {tt.newQuiz}
                   </button>
-                  <button onClick={() => history.push("/quiz-list")}>
+                  <button onClick={() => history.replace("/quiz-list")}>
                     {tt.quizListLink}
                   </button>
                 </div>
@@ -607,7 +607,7 @@ const MutashabihatTest: React.FC = () => {
           <QuizExitModal
             isOpen={showExitModal}
             onCancel={() => setShowExitModal(false)}
-            onConfirm={() => history.push("/quiz-list")}
+            onConfirm={() => history.replace("/quiz-list")}
           />
           <BottomNavBar active="quiz" />
         </div>

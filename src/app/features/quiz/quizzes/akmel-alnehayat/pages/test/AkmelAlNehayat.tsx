@@ -379,7 +379,7 @@ const AkmelAlNehayat: React.FC = () => {
             <div className="an-error">
               <div className="an-error-box">
                 <p>{error}</p>
-                <button onClick={() => history.push("/akmel-alnehayat-setup")}>
+                <button onClick={() => history.replace("/akmel-alnehayat-setup")}>
                   {tt.backToSetup}
                 </button>
               </div>
@@ -410,10 +410,10 @@ const AkmelAlNehayat: React.FC = () => {
                 </div>
                 <p className="an-score-pct">{pct}%</p>
                 <div className="an-complete-actions">
-                  <button onClick={() => history.push("/akmel-alnehayat-setup")}>
+                  <button onClick={() => history.replace("/akmel-alnehayat-setup")}>
                     {tt.newQuiz}
                   </button>
-                  <button onClick={() => history.push("/quiz-list")}>
+                  <button onClick={() => history.replace("/quiz-list")}>
                     {tt.quizListLink}
                   </button>
                 </div>
@@ -601,7 +601,7 @@ const AkmelAlNehayat: React.FC = () => {
           <QuizExitModal
             isOpen={showExitModal}
             onCancel={() => setShowExitModal(false)}
-            onConfirm={() => history.push("/quiz-list")}
+            onConfirm={() => history.replace("/quiz-list")}
           />
           <BottomNavBar active="quiz" />
         </div>

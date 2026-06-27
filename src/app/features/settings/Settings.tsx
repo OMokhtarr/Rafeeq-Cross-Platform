@@ -67,6 +67,14 @@ const DEFAULTS: AppSettings = {
 
 const STORAGE_KEY = "rafiq_settings_v1";
 
+// Only the Tajweed mushaf is offered in Settings for now; the other rendering
+// kinds are kept in mushaf.config but hidden from the dropdown.
+const MUSHAF_OPTIONS = [MUSHAFS.qpc_v4_tajweed];
+
+// Strip the trailing "(KFGQPC V4)"-style parenthetical from a mushaf label.
+const cleanMushafLabel = (label: string) =>
+  label.replace(/\s*\([^)]*\)\s*$/, "").trim();
+
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -594,6 +602,7 @@ const Settings: React.FC = () => {
   const [s, setS] = useState<AppSettings>(loadSettings);
   const [saved, setSaved] = useState(false);
   const [tajweedInfoOpen, setTajweedInfoOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -685,12 +694,14 @@ const Settings: React.FC = () => {
               <div className="settings-card">
                 <SelectRow
                   icon={ICONS.book}
-                  label="المصحف"
-                  desc="اختر طريقة عرض المصحف"
+                  label={ts.mushafLabel}
+                  desc={ts.mushafLabelDesc}
                   value={s.mushaf}
-                  options={Object.values(MUSHAFS).map((m) => ({
+                  options={MUSHAF_OPTIONS.map((m) => ({
                     value: m.kind,
-                    label: lang === "ar" ? m.labelAr : m.labelEn,
+                    label: cleanMushafLabel(
+                      lang === "ar" ? m.labelAr : m.labelEn,
+                    ),
                   }))}
                   onChange={(v) => set("mushaf", v as MushafKind)}
                   night={isNight}
@@ -702,13 +713,6 @@ const Settings: React.FC = () => {
                   checked={s.showTajweedColors}
                   onChange={(v) => set("showTajweedColors", v)}
                   onInfo={() => setTajweedInfoOpen(true)}
-                />
-                <ToggleRow
-                  icon={ICONS.book}
-                  label={ts.autoNextPage}
-                  desc={ts.autoNextPageDesc}
-                  checked={s.autoNextPage}
-                  onChange={(v) => set("autoNextPage", v)}
                 />
               </div>
             </div>
@@ -734,26 +738,31 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Notifications ── */}
+            {/* ── Notifications (coming soon — controls disabled) ── */}
             <div className="settings-section">
               <p className="settings-section-title">
                 {ts.sectionNotifications}
               </p>
-              <div className="settings-card">
-                <ToggleRow
-                  icon={ICONS.mosque}
-                  label={ts.prayerReminders}
-                  desc={ts.prayerRemindersDesc}
-                  checked={s.prayerReminders}
-                  onChange={(v) => set("prayerReminders", v)}
-                />
-                <ToggleRow
-                  icon={ICONS.beads}
-                  label={ts.azkarReminders}
-                  desc={ts.azkarRemindersDesc}
-                  checked={s.azkarReminders}
-                  onChange={(v) => set("azkarReminders", v)}
-                />
+              <div className="settings-card settings-card--coming-soon">
+                <span className="settings-coming-soon-badge">
+                  {ts.comingSoon}
+                </span>
+                <div className="settings-card-disabled" aria-hidden="true">
+                  <ToggleRow
+                    icon={ICONS.mosque}
+                    label={ts.prayerReminders}
+                    desc={ts.prayerRemindersDesc}
+                    checked={s.prayerReminders}
+                    onChange={() => {}}
+                  />
+                  <ToggleRow
+                    icon={ICONS.beads}
+                    label={ts.azkarReminders}
+                    desc={ts.azkarRemindersDesc}
+                    checked={s.azkarReminders}
+                    onChange={() => {}}
+                  />
+                </div>
               </div>
             </div>
 
@@ -771,7 +780,10 @@ const Settings: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <button className="settings-action-btn" onClick={resetAll}>
+                  <button
+                    className="settings-action-btn"
+                    onClick={() => setResetConfirmOpen(true)}
+                  >
                     {ts.resetButton}
                   </button>
                 </div>
@@ -796,6 +808,40 @@ const Settings: React.FC = () => {
         lang={lang}
         isRTL={isRTL}
       />
+      {resetConfirmOpen && (
+        <div
+          className="settings-confirm-backdrop"
+          onClick={() => setResetConfirmOpen(false)}
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <div
+            className="settings-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <p className="settings-confirm-title">{ts.resetConfirmTitle}</p>
+            <p className="settings-confirm-body">{ts.resetConfirmMessage}</p>
+            <div className="settings-confirm-actions">
+              <button
+                className="settings-confirm-cancel"
+                onClick={() => setResetConfirmOpen(false)}
+              >
+                {ts.resetConfirmCancel}
+              </button>
+              <button
+                className="settings-confirm-yes"
+                onClick={() => {
+                  setResetConfirmOpen(false);
+                  resetAll();
+                }}
+              >
+                {ts.resetConfirmYes}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </IonPage>
   );
 };
