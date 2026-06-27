@@ -1452,6 +1452,8 @@ const Hifz: React.FC = () => {
     (id: string) => {
       if (!plan) return;
       const today = todayStr();
+      const target = plan.sessions.find((s) => s.id === id);
+      const nowDone = target ? !target.done : false;
       const sessions = plan.sessions.map((s) =>
         s.id === id
           ? { ...s, done: !s.done, doneDate: !s.done ? today : undefined }
@@ -1459,7 +1461,31 @@ const Hifz: React.FC = () => {
       );
       const updated = { ...plan, sessions };
       savePlan(updated);
+      savePlanAsync(updated).catch(() => {});
       setPlan(updated);
+
+      // Keep the read-pages cache in sync with the manual checkmark: marking a
+      // session done fills its pages, un-marking clears them, so the progress
+      // bars (which are driven by readPages) always match the done state.
+      if (target) {
+        const ranges = target.ranges ?? [{ from: target.fromPage, to: target.toPage }];
+        const sessionPages: number[] = [];
+        for (const r of ranges) {
+          for (let p = r.from; p <= r.to; p++) sessionPages.push(p);
+        }
+        setReadPages((prev) => {
+          const next = nowDone
+            ? Array.from(new Set([...prev, ...sessionPages]))
+            : prev.filter((p) => !sessionPages.includes(p));
+          const existing = loadHifzReadingSession();
+          persistHifzReadingSession({
+            ranges: existing?.ranges ?? ranges,
+            readPages: next,
+            sessionIds: existing?.sessionIds ?? [id],
+          });
+          return next;
+        });
+      }
 
       // Check if plan just completed — save best record
       const allDone = sessions.every((s) => s.done);
