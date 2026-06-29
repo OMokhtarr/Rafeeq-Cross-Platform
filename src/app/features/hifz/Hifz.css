@@ -117,6 +117,15 @@ ion-content::part(scroll) {
   background: color-mix(in srgb, #e05a5a 8%, transparent);
 }
 
+.hifz-header-action-btn--delete {
+  background: color-mix(in srgb, #e05a5a 14%, transparent);
+  border: 1.5px solid color-mix(in srgb, #e05a5a 55%, transparent);
+  color: #e05a5a;
+}
+.hifz-header-action-btn--delete:hover {
+  background: color-mix(in srgb, #e05a5a 22%, transparent);
+}
+
 /* ── Setup view ───────────────────────────────────────────── */
 .hifz-setup {
   width: 100%;
@@ -126,17 +135,18 @@ ion-content::part(scroll) {
   box-sizing: border-box;
 }
 
-/* Plan/dashboard: fills the viewport, no scroll */
+/* Plan/dashboard: fills the viewport but scrolls when content is taller than it
+   (e.g. sessions with many surahs) so the action buttons are always reachable. */
 .hifz-plan {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-3));
+  padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
-  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .hifz-setup-header {

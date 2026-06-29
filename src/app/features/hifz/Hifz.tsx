@@ -10,6 +10,8 @@ import {
   loadPlanAsync,
   savePlan,
   savePlanAsync,
+  clearPlan,
+  clearPlanAsync,
   generateSessions,
   juzToPages,
   countMemorizedPages,
@@ -17,8 +19,6 @@ import {
   countSessionsToday,
   countActiveDays,
   computeMaxSessionsPerDay,
-  getSurahsForRanges,
-  getSurahsForUnits,
   loadBestPlan,
   loadBestPlanAsync,
   saveBestPlan,
@@ -46,6 +46,7 @@ import {
   getSurahNameEnglish,
   getSurahStartPage,
   getSurahEndPage,
+  getSuraForPage,
   getPageStart,
   initMetadata,
 } from "../../core/services/data/metadata.service";
@@ -729,10 +730,42 @@ const SessionCard: React.FC<SessionCardProps> = ({
   // Resolve effective ranges — fall back to single range for old saved plans
   const effectiveRanges: PageRange[] = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
   const multiRange = effectiveRanges.length > 1;
-  // Use selectedUnits if available (new sessions); fall back to deriving from page ranges (old sessions)
-  const surahs = s.selectedUnits
-    ? getSurahsForUnits(s.selectedUnits, chapters)
-    : getSurahsForRanges(effectiveRanges, chapters);
+  // Derive surahs from the session's actual page ranges so each card lists only
+  // the surahs its pages cover — not every surah in the plan. Built by walking
+  // each page and grouping consecutive pages by surah, via the metadata
+  // accessors (which have offline fallbacks) so names show even before the
+  // chapters API has loaded.
+  const surahs = useMemo(() => {
+    const segs: Array<{
+      id: number;
+      nameAr: string;
+      nameEn: string;
+      from: number;
+      to: number;
+      rangeFrom: number;
+    }> = [];
+    for (const r of effectiveRanges) {
+      let cur: (typeof segs)[number] | null = null;
+      for (let p = r.from; p <= r.to; p++) {
+        const sura = getSuraForPage(p);
+        if (!sura) continue;
+        if (cur && cur.id === sura) {
+          cur.to = p;
+        } else {
+          cur = {
+            id: sura,
+            nameAr: getSurahNameArabic(sura),
+            nameEn: getSurahNameEnglish(sura),
+            from: p,
+            to: p,
+            rangeFrom: r.from,
+          };
+          segs.push(cur);
+        }
+      }
+    }
+    return segs;
+  }, [effectiveRanges]);
   // Each page in the session owns an equal slice of the bar, in order. A slice
   // fills only if that specific page has been read, so the position reflects
   // exactly which page was read (page 4 of 3–4 fills the right half, not the
@@ -1325,6 +1358,7 @@ const Hifz: React.FC = () => {
   const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
   const [readPages, setReadPages] = useState<number[]>([]);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [memorized, setMemorized] = useState<MemorizedUnit[]>([]);
   const [goal, setGoal] = useState<HifzGoal>({
@@ -1524,6 +1558,19 @@ const Hifz: React.FC = () => {
     setReadPages([]);
   }, [plan]);
 
+  // Delete the whole plan and its read-pages cache, returning to the empty
+  // create-plan setup screen.
+  const handleDeletePlan = useCallback(() => {
+    clearPlan();
+    clearPlanAsync().catch(() => {});
+    clearHifzReadingSession();
+    clearHifzReadingSessionAsync().catch(() => {});
+    setReadPages([]);
+    setPlan(null);
+    setMemorized([]);
+    setView("setup");
+  }, []);
+
   const handleStartNewRound = useCallback(() => {
     if (!plan) return;
     // Save best plan record before resetting if this completion is the best
@@ -1656,6 +1703,18 @@ const Hifz: React.FC = () => {
           <path d="M3.51 15a9 9 0 1 0 .49-3.48" />
         </svg>
       </button>
+      <button
+        className="hifz-header-action-btn hifz-header-action-btn--delete"
+        onClick={() => setShowDeleteConfirm(true)}
+        aria-label={h.planDelete}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        </svg>
+      </button>
     </div>
   ) : <div className="hifz-header-right" />;
 
@@ -1728,6 +1787,27 @@ const Hifz: React.FC = () => {
               t={t}
               readPages={readPages}
             />
+          )}
+
+          {/* ── Delete-plan confirmation dialog ── */}
+          {showDeleteConfirm && (
+            <div className="hifz-confirm-backdrop" onClick={() => setShowDeleteConfirm(false)}>
+              <div className="hifz-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+                <p className="hifz-confirm-title">{t.hifz.deleteConfirmTitle}</p>
+                <p className="hifz-confirm-body">{t.hifz.deleteConfirmBody}</p>
+                <div className="hifz-confirm-actions">
+                  <button className="hifz-confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>
+                    {t.hifz.deleteConfirmNo}
+                  </button>
+                  <button
+                    className="hifz-confirm-yes"
+                    onClick={() => { setShowDeleteConfirm(false); handleDeletePlan(); }}
+                  >
+                    {t.hifz.deleteConfirmYes}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </IonContent>

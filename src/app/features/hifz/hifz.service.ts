@@ -499,6 +499,29 @@ function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Page span covered by a single memorized unit. */
+function unitPageRange(
+  unit: MemorizedUnit,
+  chaptersCache: any[],
+): { from: number; to: number } {
+  if (unit.type === "juz") return juzToPages(unit.juz);
+  if (unit.type === "surah") return surahToPages(unit.surah, chaptersCache);
+  return { from: unit.from, to: unit.to };
+}
+
+/** The memorized units that overlap a session's page span [from, to]. */
+function unitsForSpan(
+  memorized: MemorizedUnit[],
+  from: number,
+  to: number,
+  chaptersCache: any[],
+): MemorizedUnit[] {
+  return memorized.filter((u) => {
+    const r = unitPageRange(u, chaptersCache);
+    return r.from <= to && r.to >= from;
+  });
+}
+
 export function generateSessions(
   memorized: MemorizedUnit[],
   goal: HifzGoal,
@@ -513,13 +536,16 @@ export function generateSessions(
   let sessionIndex = 0;
 
   const pushSession = (segs: PageRange[]) => {
+    const from = segs[0].from;
+    const to = segs[segs.length - 1].to;
     sessions.push({
       id: `session-${sessionIndex}`,
       label: `${sessionIndex + 1}`,
-      fromPage: segs[0].from,
-      toPage: segs[segs.length - 1].to,
+      fromPage: from,
+      toPage: to,
       ranges: segs.length === 1 ? undefined : segs,
-      selectedUnits: memorized,
+      // Only the units this session's pages actually cover — not the whole plan.
+      selectedUnits: unitsForSpan(memorized, from, to, chaptersCache),
       done: false,
     });
     sessionIndex++;

@@ -338,6 +338,7 @@ export interface AppStrings {
     planProgress: (done: string, total: string) => string;
     planReset: string;
     planEdit: string;
+    planDelete: string;
     planEmpty: string;
     backToSetup: string;
     sessionNext: string;
@@ -364,6 +365,10 @@ export interface AppStrings {
     resetConfirmBody: string;
     resetConfirmYes: string;
     resetConfirmNo: string;
+    deleteConfirmTitle: string;
+    deleteConfirmBody: string;
+    deleteConfirmYes: string;
+    deleteConfirmNo: string;
     sessionsUncompleted: string;
     sessionsCompleted: string;
     startNewRound: string;
@@ -723,6 +728,7 @@ const ar: AppStrings = {
     planProgress: (done: string, total: string) => `${done} / ${total} جلسة`,
     planReset: "إعادة الخطة",
     planEdit: "تعديل الإعداد",
+    planDelete: "حذف الخطة",
     planEmpty: "لا توجد جلسات في الخطة",
     backToSetup: "العودة للإعداد",
     sessionNext: "الحالية",
@@ -749,6 +755,10 @@ const ar: AppStrings = {
     resetConfirmBody: "سيتم مسح تقدمك في جميع الجلسات. هل أنت متأكد؟",
     resetConfirmYes: "إعادة",
     resetConfirmNo: "إلغاء",
+    deleteConfirmTitle: "حذف الخطة؟",
+    deleteConfirmBody: "سيتم حذف الخطة وكل تقدمك نهائيًا والعودة إلى صفحة إنشاء خطة جديدة. هل أنت متأكد؟",
+    deleteConfirmYes: "حذف",
+    deleteConfirmNo: "إلغاء",
     sessionsUncompleted: "غير مكتملة",
     sessionsCompleted: "مكتملة",
     startNewRound: "ابدأ جولة جديدة",
@@ -1112,6 +1122,7 @@ const en: AppStrings = {
     planProgress: (done: string, total: string) => `${done} / ${total} sessions`,
     planReset: "Reset Plan",
     planEdit: "Edit Setup",
+    planDelete: "Delete Plan",
     planEmpty: "No sessions in this plan",
     backToSetup: "Back to Setup",
     sessionNext: "Current",
@@ -1138,6 +1149,10 @@ const en: AppStrings = {
     resetConfirmBody: "This will clear your progress on all sessions. Are you sure?",
     resetConfirmYes: "Reset",
     resetConfirmNo: "Cancel",
+    deleteConfirmTitle: "Delete Plan?",
+    deleteConfirmBody: "This permanently deletes the plan and all your progress, returning you to the create-plan screen. Are you sure?",
+    deleteConfirmYes: "Delete",
+    deleteConfirmNo: "Cancel",
     sessionsUncompleted: "Uncompleted",
     sessionsCompleted: "Completed",
     startNewRound: "Start New Round",
