@@ -46,7 +46,6 @@ import {
   getSurahNameEnglish,
   getSurahStartPage,
   getSurahEndPage,
-  getSuraForPage,
   getPageStart,
   initMetadata,
 } from "../../core/services/data/metadata.service";
@@ -731,10 +730,9 @@ const SessionCard: React.FC<SessionCardProps> = ({
   const effectiveRanges: PageRange[] = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
   const multiRange = effectiveRanges.length > 1;
   // Derive surahs from the session's actual page ranges so each card lists only
-  // the surahs its pages cover — not every surah in the plan. Built by walking
-  // each page and grouping consecutive pages by surah, via the metadata
-  // accessors (which have offline fallbacks) so names show even before the
-  // chapters API has loaded.
+  // the surahs its pages cover — not every surah in the plan. Intersect each
+  // surah's true page span with the range (so short surahs that share one page
+  // are all listed, not just one), clamping the shown pages to the range.
   const surahs = useMemo(() => {
     const segs: Array<{
       id: number;
@@ -745,27 +743,23 @@ const SessionCard: React.FC<SessionCardProps> = ({
       rangeFrom: number;
     }> = [];
     for (const r of effectiveRanges) {
-      let cur: (typeof segs)[number] | null = null;
-      for (let p = r.from; p <= r.to; p++) {
-        const sura = getSuraForPage(p);
-        if (!sura) continue;
-        if (cur && cur.id === sura) {
-          cur.to = p;
-        } else {
-          cur = {
-            id: sura,
-            nameAr: getSurahNameArabic(sura),
-            nameEn: getSurahNameEnglish(sura),
-            from: p,
-            to: p,
-            rangeFrom: r.from,
-          };
-          segs.push(cur);
-        }
+      for (let sura = 1; sura <= 114; sura++) {
+        const sf = getSurahStartPage(sura);
+        const se = getSurahEndPage(sura);
+        if (sf > r.to || se < r.from) continue;
+        segs.push({
+          id: sura,
+          nameAr: getSurahNameArabic(sura),
+          nameEn: getSurahNameEnglish(sura),
+          from: Math.max(sf, r.from),
+          to: Math.min(se, r.to),
+          rangeFrom: r.from,
+        });
       }
     }
+    segs.sort((a, b) => a.from - b.from || a.id - b.id);
     return segs;
-  }, [effectiveRanges]);
+  }, [effectiveRanges, chapters]);
   // Each page in the session owns an equal slice of the bar, in order. A slice
   // fills only if that specific page has been read, so the position reflects
   // exactly which page was read (page 4 of 3–4 fills the right half, not the
@@ -940,7 +934,6 @@ interface DashboardViewProps {
   onEdit: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
   onQuiz: (session: PlanSession) => void;
-  onViewAllSessions: () => void;
   onStartNewRound: () => void;
   bestPlan: BestPlanRecord | null;
   lang: "ar" | "en";
@@ -958,7 +951,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onEdit,
   onOpenPage,
   onQuiz,
-  onViewAllSessions,
   onStartNewRound,
   bestPlan,
   lang,
@@ -1112,8 +1104,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
         <div className="hifz-stat-chip hifz-stat-chip-streak">
           <div className="hifz-stat-icon hifz-stat-icon-streak">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M12 2C8 7 6 10 6 14a6 6 0 0 0 12 0c0-4-2-7-6-12zm0 18a4 4 0 0 1-4-4c0-2.5 1-4.5 4-8 3 3.5 4 5.5 4 8a4 4 0 0 1-4 4z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+              <path d="M2 21c0-3 1.85-5.36 5.08-6" />
             </svg>
           </div>
           <span className="hifz-stat-num">{streak}</span>
@@ -1213,18 +1206,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {/* ── View all sessions ── */}
-      <button className="hifz-all-sessions-btn" onClick={onViewAllSessions}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-          <line x1="8" y1="6" x2="21" y2="6" />
-          <line x1="8" y1="12" x2="21" y2="12" />
-          <line x1="8" y1="18" x2="21" y2="18" />
-          <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
-          <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
-          <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
-        </svg>
-        {h.viewAllSessions} ({totalSessions})
-      </button>
     </div>
   );
 };
@@ -1734,6 +1715,22 @@ const Hifz: React.FC = () => {
                   {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
                 </svg>
               </button>
+            ) : view === "plan" && plan ? (
+              <button
+                className="hifz-header-action-btn hifz-header-action-btn--all"
+                onClick={() => setView("sessions")}
+                aria-label={h.viewAllSessions}
+                title={h.viewAllSessions}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
+                </svg>
+              </button>
             ) : <div style={{ width: 44 }} />}
             <div className="hifz-page-header-text">
               <h1>{headerTitle}</h1>
@@ -1765,7 +1762,6 @@ const Hifz: React.FC = () => {
               onEdit={handleEdit}
               onOpenPage={handleOpenPage}
               onQuiz={handleQuizFromSession}
-              onViewAllSessions={() => setView("sessions")}
               onStartNewRound={handleStartNewRound}
               bestPlan={bestPlan}
               lang={lang as "ar" | "en"}

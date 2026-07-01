@@ -103,7 +103,11 @@ object RafeeqQfApi {
                 }
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
                 conn.disconnect()
-                return JSONObject(body).optJSONObject("result")
+                val root = JSONObject(body)
+                // The timestamp fields come back EITHER nested under "result" (chapter_number)
+                // OR at the top level (verse_key). Mirror the web client's `data.result ?? data`
+                // so verse-level lookups (page-jump landing position) resolve correctly.
+                return root.optJSONObject("result") ?: root
             } catch (e: Exception) {
                 Log.w(TAG, "timestamp fetch failed: ${e.message}")
                 return null

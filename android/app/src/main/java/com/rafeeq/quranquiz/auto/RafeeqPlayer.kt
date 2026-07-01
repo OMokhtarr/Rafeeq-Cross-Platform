@@ -51,6 +51,10 @@ class RafeeqPlayer(
          *  the NEXT surah natively, so playback continues past the end of a surah without the
          *  JS brain. */
         fun onColdListEnded()
+        /** Fired right after the player self-advances (or repeat-loops) to a new cold-list index,
+         *  so the service can immediately republish the correct cumulative position instead of
+         *  leaving the bar frozen at the previous verse until the next poll tick. */
+        fun onColdAdvanced(index: Int)
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -115,8 +119,10 @@ class RafeeqPlayer(
                             // Repeat-page on and we just finished the page's last verse → loop
                             // back to the page's first verse.
                             loadInternal(coldList, rf, playWhenReady = true)
+                            callbacks.onColdAdvanced(rf)
                         } else if (currentIndex + 1 < coldList.size) {
                             loadInternal(coldList, currentIndex + 1, playWhenReady = true)
+                            callbacks.onColdAdvanced(currentIndex)
                         } else {
                             // End of the cold list (whole surah finished, not looping). Ask the
                             // service to continue with the next surah natively.

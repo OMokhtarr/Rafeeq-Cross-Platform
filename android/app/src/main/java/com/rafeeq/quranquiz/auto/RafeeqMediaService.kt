@@ -300,6 +300,22 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // (like the JS brain's auto-advance) so playback doesn't stop at a surah boundary.
                 playNextSurahNatively()
             }
+
+            override fun onColdAdvanced(index: Int) {
+                // The player just self-advanced or repeat-looped to `index`. Republish the
+                // cumulative position NOW (don't wait for the next ~1s poll tick) so the bar
+                // doesn't stay frozen at the previous verse — this is what left the bar stuck at
+                // the surah's end when a repeat-page loop rolled back to the page's first verse.
+                // derivePage=false: the page didn't change on a within-range loop, and the async
+                // player index may not be settled yet.
+                mainHandler.post {
+                    val elapsed = nativeElapsedBeforeIndex(index)
+                    publishPlaybackState(player?.isPlaying() == true, elapsed, derivePage = false)
+                    // Snap to the EXACT page/verse start from the timestamp endpoint (the estimate
+                    // can be slightly off); corrects the bar to the precise loop-back position.
+                    correctNativeJumpPosition(index + 1)
+                }
+            }
         })
     }
 
