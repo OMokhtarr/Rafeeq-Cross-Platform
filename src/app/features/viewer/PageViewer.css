@@ -85,12 +85,96 @@
   color: var(--color-gold);
 }
 .toolbar-button.play-button--recite {
+  position: relative;
   background: rgba(212, 180, 140, 0.2);
   color: var(--color-gold, #b8860b);
 }
 [data-theme="night"] .toolbar-button.play-button--recite {
   background: rgba(212, 180, 140, 0.15);
   color: var(--color-gold, #d4b48c);
+}
+
+/* Recite mode listening indicator — pulsing ring + dot so it's obvious
+   the mic is actually capturing, not just that recite mode is toggled on. */
+.toolbar-button.play-button--recite.play-button--listening::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  border: 2px solid #e53935;
+  animation: recite-ring-pulse 1.4s ease-out infinite;
+  pointer-events: none;
+}
+
+.recite-listening-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e53935;
+  border: 2px solid var(--color-bg-toolbar);
+  animation: recite-dot-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes recite-ring-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes recite-dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Recording bar — replaces the entire toolbar row while recite mode is
+   actively capturing, so duration + live transcript have the full width. */
+.recite-recording-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.recite-recording-bar .toolbar-button.play-button {
+  flex-shrink: 0;
+}
+
+.recite-recording-duration {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--color-gold, #b8860b);
+  min-width: 3ch;
+}
+
+.recite-recording-transcript {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  color: var(--color-text-secondary, inherit);
+  opacity: 0.85;
+}
+
+.recite-recording-transcript--warn {
+  color: #e53935;
+  opacity: 1;
 }
 
 /* Stop button — red tint */
@@ -142,6 +226,7 @@
   align-items: center;
   position: relative;
   border-radius: 10px;
+  flex-shrink: 0;
   transition: background-color 0.18s ease;
 }
 
@@ -410,7 +495,9 @@
   cursor: pointer;
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
   min-height: 44px;
-  min-width: 0;
+  /* Never let the pill collapse below a legible width, even when the
+     surah name / meta row would otherwise let it shrink further. */
+  min-width: 180px;
   transition: background 0.18s ease, transform 0.12s ease,
     border-color 0.18s ease;
 }
@@ -442,10 +529,10 @@
   font-weight: 700;
   color: inherit;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.2;
-  flex-shrink: 1;
+  /* Always show the Arabic surah name in full — never shrink or truncate it.
+     English absorbs any tight space instead (see .pill-surah-en). */
+  flex-shrink: 0;
   min-width: 0;
 }
 
@@ -458,7 +545,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
-  flex-shrink: 2;
+  /* English yields all the tight space: it shrinks and truncates first,
+     keeping the Arabic surah name fully visible. */
+  flex-shrink: 1;
   min-width: 0;
   opacity: 0.8;
 }
@@ -468,17 +557,47 @@
 }
 
 .pill-meta {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 5px;
   font-size: 0.7rem;
   color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
-  white-space: nowrap;
   line-height: 1.1;
+  max-width: 100%;
+  min-width: 0;
+  /* Stay on ONE line always — shrinking font is preferred over wrapping,
+     which would grow the card height and hide the Quran text beneath it. */
+  overflow: hidden;
+}
+
+/* Keep each label + its number glued together so the number never wraps
+   away from its label or spills past the card edge on tight screens. */
+.pill-meta-item {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pill-sep {
   opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* On tight screens, shrink the meta text rather than let it overflow the
+   card or wrap onto a second line (which would increase the card height). */
+@media (max-width: 380px) {
+  .pill-meta {
+    gap: 4px;
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .pill-meta {
+    gap: 3px;
+    font-size: 0.56rem;
+  }
 }
 
 [data-theme="night"] .pill-meta {
@@ -500,6 +619,13 @@
   border: none;
   border-radius: 0;
   margin: 0;
+  /* Floor the page (and therefore the fitted verse font, which the JS probe
+     in <MushafPage> derives from this element's width) at 365px so the
+     Quran text never shrinks below a legible size on very narrow screens.
+     Below 365px the parent (.mushaf-container, overflow:hidden) clips a few
+     px symmetrically rather than letting the text keep shrinking — we don't
+     scroll here so the horizontal swipe still turns the page. */
+  min-width: 365px;
   /* Reserve a top + bottom band for the running header/footer.
      - When the chrome (toolbar / bottom nav) is visible, it sits inside
        these bands at a higher z-index and covers the page-edge strips.

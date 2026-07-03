@@ -729,24 +729,55 @@ const SessionCard: React.FC<SessionCardProps> = ({
   // Resolve effective ranges — fall back to single range for old saved plans
   const effectiveRanges: PageRange[] = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
   const multiRange = effectiveRanges.length > 1;
-  // Derive surahs from the session's actual page ranges so each card lists only
-  // the surahs its pages cover — not every surah in the plan. Intersect each
-  // surah's true page span with the range (so short surahs that share one page
-  // are all listed, not just one), clamping the shown pages to the range.
+  // Derive the surahs shown on the card. When the session was built from the
+  // user's selected units, honour their intent: a picked *surah* shows only that
+  // surah's name (never the neighbours that merely share its first/last page); a
+  // picked *juz* or *page range* shows all surahs its pages cover. Falls back to
+  // range-intersection for old plans that have no selectedUnits.
   const surahs = useMemo(() => {
-    const segs: Array<{
+    type Seg = {
       id: number;
       nameAr: string;
       nameEn: string;
       from: number;
       to: number;
       rangeFrom: number;
-    }> = [];
-    for (const r of effectiveRanges) {
-      for (let sura = 1; sura <= 114; sura++) {
-        const sf = getSurahStartPage(sura);
-        const se = getSurahEndPage(sura);
+    };
+    // Candidate surah spans (before clamping to this session's pages). For a
+    // picked surah, only that surah; for a juz/page unit, every surah in it;
+    // for old plans (no units), every surah — all clamped below.
+    const candidates: number[] = [];
+    if (s.selectedUnits && s.selectedUnits.length > 0) {
+      for (const unit of s.selectedUnits) {
+        if (unit.type === "surah") {
+          candidates.push(unit.surah);
+        } else {
+          const { from, to } =
+            unit.type === "juz"
+              ? juzToPages(unit.juz)
+              : { from: unit.from, to: unit.to };
+          for (let sura = 1; sura <= 114; sura++) {
+            const sf = getSurahStartPage(sura);
+            const se = getSurahEndPage(sura);
+            if (sf <= to && se >= from) candidates.push(sura);
+          }
+        }
+      }
+    } else {
+      for (let sura = 1; sura <= 114; sura++) candidates.push(sura);
+    }
+
+    // Clamp each candidate surah to the session's actual page ranges, so the
+    // card shows only the pages this session covers — not the whole surah.
+    const segs: Seg[] = [];
+    const seen = new Set<number>();
+    for (const sura of candidates) {
+      if (seen.has(sura)) continue;
+      const sf = getSurahStartPage(sura);
+      const se = getSurahEndPage(sura);
+      for (const r of effectiveRanges) {
         if (sf > r.to || se < r.from) continue;
+        seen.add(sura);
         segs.push({
           id: sura,
           nameAr: getSurahNameArabic(sura),
@@ -755,11 +786,13 @@ const SessionCard: React.FC<SessionCardProps> = ({
           to: Math.min(se, r.to),
           rangeFrom: r.from,
         });
+        break; // one segment per surah, in the first range it overlaps
       }
     }
+
     segs.sort((a, b) => a.from - b.from || a.id - b.id);
     return segs;
-  }, [effectiveRanges, chapters]);
+  }, [s.selectedUnits, effectiveRanges, chapters]);
   // Each page in the session owns an equal slice of the bar, in order. A slice
   // fills only if that specific page has been read, so the position reflects
   // exactly which page was read (page 4 of 3–4 fills the right half, not the
@@ -977,8 +1010,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const incomplete = sessions.filter((s) => !s.done);
   const nextSession = incomplete[0] ?? null;
   const comingUpSession = incomplete[1] ?? null;
+  // "Previous" shows the most recently completed session — by doneDate, then by
+  // session order for ties — not simply the last done one in list order.
   const doneList = sessions.filter((s) => s.done);
-  const lastDoneSession = doneList[doneList.length - 1] ?? null;
+  const lastDoneSession =
+    doneList.length > 0
+      ? doneList.reduce((latest, s) => {
+          const sd = s.doneDate ?? "";
+          const ld = latest.doneDate ?? "";
+          if (sd > ld) return s;
+          if (sd < ld) return latest;
+          // Same (or missing) date → prefer the later session in plan order.
+          return sessions.indexOf(s) > sessions.indexOf(latest) ? s : latest;
+        })
+      : null;
 
   return (
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>

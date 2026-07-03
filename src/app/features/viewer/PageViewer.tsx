@@ -31,6 +31,8 @@ import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import { useWakeLock } from "../../core/hooks/useWakeLock";
+import { useReciteMode } from "../../core/hooks/useReciteMode";
+import { useFeedbackBeep } from "../../core/hooks/useFeedbackBeep";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import {
   isPageBookmarked,
@@ -156,30 +158,73 @@ const PageViewer: React.FC = () => {
   const sheetDragCurrentY = useRef<number>(0);
   const sheetElRef = useRef<HTMLDivElement>(null);
 
+  // Recite mode: STT + fuzzy verse matching, driven by long-pressing the play button.
+  const recite = useReciteMode(
+    useCallback(
+      (fromPage: number) => {
+        if (fromPage < totalPages) setCurrentPage((p) => p + 1);
+      },
+      [],
+    ),
+    useCallback((page: number) => {
+      setCurrentPage(page);
+    }, []),
+  );
+
+  const beep = useFeedbackBeep();
+
   const handlePlayPressStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
-      setReciteMode((m) => !m);
-      queue.stop();
+      const next = !reciteMode;
+      if (next) {
+        queue.stop();
+        recite.arm(currentPage, verses);
+      } else {
+        recite.disarm();
+      }
+      setReciteMode(next);
       longPressTimerRef.current = null;
     }, 800);
-  }, [queue]);
+  }, [queue, recite, currentPage, verses, reciteMode]);
+
+  // Surface mic permission / capture failures once, when they occur.
+  useEffect(() => {
+    if (recite.status === "mic-error" && recite.micError) {
+      presentToast({
+        message: recite.micError,
+        duration: 2500,
+        position: "bottom",
+      });
+    }
+  }, [recite.status, recite.micError, presentToast]);
+
+  // Chime when recite mode stops listening (manual tap, silence timeout, or
+  // failed identification) so the user notices the mic went off.
+  const prevReciteStatusRef = useRef(recite.status);
+  useEffect(() => {
+    const prev = prevReciteStatusRef.current;
+    prevReciteStatusRef.current = recite.status;
+    if (prev === "recording" && recite.status !== "recording") {
+      if (readSettings().soundEffects) beep("stop");
+    }
+  }, [recite.status, beep]);
 
   const handlePlayPressEnd = useCallback(() => {
     if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
       if (reciteMode) {
-        presentToast({
-          message: t.tabs.comingSoon,
-          duration: 2000,
-          position: "bottom",
-        });
+        if (recite.status === "recording") {
+          recite.stopRecording();
+        } else {
+          recite.startRecording();
+        }
       } else {
         sheetOpenTimeRef.current = Date.now();
         setPlaybackSheetOpen(true);
       }
     }
-  }, [reciteMode, presentToast, t.tabs.comingSoon]);
+  }, [reciteMode, recite]);
 
   // playbackVerse: static grey highlight tracking the currently playing verse
   const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
@@ -321,6 +366,7 @@ const PageViewer: React.FC = () => {
       pageVersesRef.current = pageVerses;
       setVerses(pageVerses);
       setLoading(false);
+      if (reciteMode) recite.syncPage(currentPage, pageVerses);
       if (
         pendingGreenForPage.current === currentPage &&
         pageVerses.length > 0
@@ -580,6 +626,27 @@ const PageViewer: React.FC = () => {
     hintCount,
   ]);
 
+  // While recite mode is active, it fully owns the hide/reveal display —
+  // takes priority over the manual Hifz hint state (they're mutually
+  // exclusive: entering recite mode calls queue.stop() and never touches
+  // the persisted `hidden` Set from VerseVisibilityContext). The hide
+  // button's "show whole page" override further overlays that, without
+  // touching the underlying recitation-progress state.
+  const displayHiddenForPage = reciteMode
+    ? recite.showingAll
+      ? new Set<string>()
+      : recite.reciteHidden
+    : hiddenForPage;
+  const displayPartialTargetForPage = reciteMode
+    ? recite.showingAll
+      ? undefined
+      : recite.recitePartialTarget
+    : partialTargetForPage;
+
+  // In recite mode the top-bar hide button controls recite's own show/hide
+  // (the `showingAll` override) rather than the persisted Hifz hidden state.
+  const hideToggleActive = reciteMode ? !recite.showingAll : anyPageHidden;
+
   const canHint = anyPageHidden;
   const canRevealNextVerse = !!firstHiddenPageKey;
 
@@ -682,6 +749,177 @@ const PageViewer: React.FC = () => {
         >
           {/* ── Toolbar ── */}
           <div className="top-toolbar">
+            {recite.status === "recording" ? (
+              <div className="recite-recording-bar">
+                <button
+                  type="button"
+                  className="toolbar-button play-button play-button--recite play-button--listening"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressStart();
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onPointerLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePlayPressEnd();
+                  }}
+                  onClick={(e) => e.preventDefault()}
+                  aria-label={t.mushaf.stopLabel}
+                >
+                  <span className="recite-listening-dot" aria-hidden="true" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4z" />
+                    <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                </button>
+                <span className="recite-recording-duration">
+                  {formatTime(recite.recordingSeconds * 1000)}
+                </span>
+                <span
+                  className={`recite-recording-transcript${
+                    recite.noMatchHint || recite.rateLimited
+                      ? " recite-recording-transcript--warn"
+                      : ""
+                  }`}
+                >
+                  {recite.rateLimited
+                    ? t.mushaf.rateLimited
+                    : recite.identifying
+                      ? recite.lastChunkText || t.mushaf.identifying
+                      : recite.noMatchHint
+                        ? t.mushaf.noMatch
+                        : recite.lastChunkText || t.mushaf.listening}
+                </span>
+                {!recite.identifying && (
+                  <div
+                    className={`hide-button-group${
+                      !recite.showingAll ? " hide-button-group--active" : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className={`toolbar-button hide-toggle-button ${
+                        !recite.showingAll ? "active" : ""
+                      }`}
+                      onClick={recite.toggleShowAll}
+                      aria-label={
+                        recite.showingAll
+                          ? t.mushaf.toggleHideTitle
+                          : t.mushaf.toggleShowTitle
+                      }
+                      title={
+                        recite.showingAll
+                          ? t.mushaf.toggleHideTitle
+                          : t.mushaf.toggleShowTitle
+                      }
+                      aria-pressed={!recite.showingAll}
+                    >
+                      {!recite.showingAll ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="20"
+                          height="20"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 3l18 18" />
+                          <path d="M10.58 10.58a2 2 0 002.83 2.83" />
+                          <path d="M9.88 4.62A10.94 10.94 0 0112 4.5c5 0 9 4.5 10 7.5a13.16 13.16 0 01-3.05 4.36" />
+                          <path d="M6.61 6.61C4.13 8.13 2.4 10.62 2 12c1 3 5 7.5 10 7.5a10.94 10.94 0 005.39-1.39" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="20"
+                          height="20"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 12s4-7.5 10-7.5S22 12 22 12s-4 7.5-10 7.5S2 12 2 12z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                    {!recite.showingAll && (
+                      <div className="hide-reveal-sidebar" aria-label="Reveal controls">
+                        <button
+                          type="button"
+                          className="hide-reveal-btn"
+                          onClick={recite.revealNextWord}
+                          aria-label="Reveal next word"
+                          title="Reveal next word"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            style={isRTL ? { transform: "scaleX(-1)" } : undefined}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="hide-reveal-btn"
+                          onClick={recite.revealNextVerse}
+                          aria-label="Reveal next verse"
+                          title="Reveal next verse"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            style={isRTL ? { transform: "scaleX(-1)" } : undefined}
+                          >
+                            <polyline points="5 18 11 12 5 6" />
+                            <polyline points="13 18 19 12 13 6" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
             <div className="toolbar-left">
               {!showPlaybackBar && (
                 <button
@@ -743,29 +981,29 @@ const PageViewer: React.FC = () => {
               )}
               <div
                 className={`hide-button-group${
-                  anyPageHidden ? " hide-button-group--active" : ""
+                  hideToggleActive ? " hide-button-group--active" : ""
                 }`}
               >
                 <button
                   type="button"
                   className={`toolbar-button hide-toggle-button ${
-                    anyPageHidden ? "active" : ""
+                    hideToggleActive ? "active" : ""
                   }`}
-                  onClick={togglePageHidden}
+                  onClick={reciteMode ? recite.toggleShowAll : togglePageHidden}
                   disabled={verses.length === 0}
                   title={
-                    anyPageHidden
+                    hideToggleActive
                       ? t.mushaf.toggleShowTitle
                       : t.mushaf.toggleHideTitle
                   }
                   aria-label={
-                    anyPageHidden
+                    hideToggleActive
                       ? t.mushaf.toggleShowTitle
                       : t.mushaf.toggleHideTitle
                   }
-                  aria-pressed={anyPageHidden}
+                  aria-pressed={hideToggleActive}
                 >
-                  {anyPageHidden ? (
+                  {hideToggleActive ? (
                     <svg
                       viewBox="0 0 24 24"
                       width="20"
@@ -1014,15 +1252,15 @@ const PageViewer: React.FC = () => {
                   <span className="pill-surah-en">{pageInfo?.suraName}</span>
                 </span>
                 <span className="pill-meta">
-                  <span>
-                    {t.mushaf.page}{" "}
+                  <span className="pill-meta-item">
+                    {t.mushaf.page}&nbsp;
                     {lang === "ar" ? toHindiNumbers(currentPage) : currentPage}
                   </span>
                   <span className="pill-sep" aria-hidden>
                     |
                   </span>
-                  <span>
-                    {t.mushaf.juz}{" "}
+                  <span className="pill-meta-item">
+                    {t.mushaf.juz}&nbsp;
                     {lang === "ar"
                       ? toHindiNumbers(pageInfo?.juz ?? 0)
                       : pageInfo?.juz ?? 0}
@@ -1030,8 +1268,8 @@ const PageViewer: React.FC = () => {
                   <span className="pill-sep" aria-hidden>
                     |
                   </span>
-                  <span>
-                    {t.mushaf.hizb}{" "}
+                  <span className="pill-meta-item">
+                    {t.mushaf.hizb}&nbsp;
                     {lang === "ar"
                       ? toHindiNumbers(pageInfo?.hizb ?? 0)
                       : pageInfo?.hizb ?? 0}
@@ -1087,6 +1325,8 @@ const PageViewer: React.FC = () => {
                 </svg>
               </button>
             </div>
+              </>
+            )}
           </div>
 
           {/* ── Mushaf Content ── */}
@@ -1133,8 +1373,8 @@ const PageViewer: React.FC = () => {
                   verses={verses}
                   nextPageFirstVerse={nextPageFirstVerse}
                   selected={selected}
-                  hidden={hiddenForPage}
-                  partialTarget={partialTargetForPage}
+                  hidden={displayHiddenForPage}
+                  partialTarget={displayPartialTargetForPage}
                   green={greenVerse ? new Set([greenVerse]) : undefined}
                   onVerseLongPress={handleVerseLongPress}
                   target={

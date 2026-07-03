@@ -16,6 +16,12 @@ import {
 } from "./metadata.service";
 import { MUSHAFS, DEFAULT_MUSHAF } from "../api/mushaf.config";
 import { removeDiacritics } from "../../utils/arabic.util";
+import {
+  normalizeArabic,
+  scoreCorpusAnchors,
+  wordsMatch,
+  type CorpusToken,
+} from "../quran/recite-matcher.service";
 
 /**
  * Aggressive normalization for substring search — strips tashkeel AND
@@ -29,7 +35,7 @@ import { removeDiacritics } from "../../utils/arabic.util";
  * removeDiacritics) and the mini-noon / mini-sad markers, then
  * collapses whitespace.
  */
-function normalizeForSearch(s: string): string {
+export function normalizeForSearch(s: string): string {
   return removeDiacritics(s)
     .replace(/[آأإٱ]/g, "ا") // آ أ إ ٱ → ا
     .replace(/ى/g, "ي") // ى → ي
@@ -470,6 +476,217 @@ export async function searchQuran(query: string): Promise<SearchResult[]> {
 
   results.sort((a, b) => a.sura - b.sura || a.aya - b.aya);
   return results;
+}
+
+/** In-memory cache of the corpus with pre-normalized text, built once and
+ *  reused across every `findVerseByStartingPhrase` call in a session —
+ *  Recite Mode's identify phase calls this once per ~6s chunk, and
+ *  re-normalizing all ~6,200 verses from scratch each time is avoidable
+ *  work since the bundled corpus never changes at runtime. */
+let normalizedCorpusCache: (VerseRow & { normalized: string })[] | null = null;
+
+async function getNormalizedCorpus(): Promise<(VerseRow & { normalized: string })[]> {
+  if (normalizedCorpusCache) return normalizedCorpusCache;
+  await seedTextCorpus().catch(() => {});
+  const rows = await idb.getAll<VerseRow>("verses");
+  normalizedCorpusCache = rows.map((r) => ({
+    ...r,
+    normalized: normalizeForSearch(r.text || ""),
+  }));
+  return normalizedCorpusCache;
+}
+
+/** The whole Quran flattened into one canonical-order token sequence plus
+ *  the indices where each verse starts — the shape the sequence-based
+ *  identify scorer needs. Built once per session (same rationale as the
+ *  normalized-corpus cache) since the bundled text never changes. */
+let corpusSequenceCache: {
+  tokens: CorpusToken[];
+  verseStarts: number[];
+  startIndexByVerse: Map<string, number>;
+} | null = null;
+
+async function getCorpusSequence(): Promise<{
+  tokens: CorpusToken[];
+  verseStarts: number[];
+  startIndexByVerse: Map<string, number>;
+}> {
+  if (corpusSequenceCache) return corpusSequenceCache;
+  const rows = await getNormalizedCorpus();
+  // IDB returns rows in string-key order ("10:1" < "2:1"), so sort into true
+  // canonical order before flattening — sequence matching depends on it.
+  const sorted = [...rows].sort((a, b) => a.sura - b.sura || a.aya - b.aya);
+
+  const tokens: CorpusToken[] = [];
+  const verseStarts: number[] = [];
+  const startIndexByVerse = new Map<string, number>();
+  for (const r of sorted) {
+    const words = normalizeArabic(r.text || "")
+      .split(" ")
+      .filter(Boolean);
+    if (!words.length) continue;
+    startIndexByVerse.set(`${r.sura}:${r.aya}`, tokens.length);
+    verseStarts.push(tokens.length);
+    words.forEach((token, wordIndex) => {
+      tokens.push({ sura: r.sura, aya: r.aya, wordIndex, token });
+    });
+  }
+
+  corpusSequenceCache = { tokens, verseStarts, startIndexByVerse };
+  return corpusSequenceCache;
+}
+
+/**
+ * Locates the verse a spoken phrase most likely starts from, for Recite
+ * Mode's initial "which page am I reciting" detection. Returns null when it
+ * can't *confidently* place the recitation — the caller keeps accumulating
+ * chunks and retries, and gives up (stops recite mode) if it never becomes
+ * confident. It never forces a low-confidence guess: a wrong navigation is
+ * worse than admitting "I can't tell yet."
+ *
+ * Scores every verse by how much of the spoken transcript matches forward
+ * from it as a *contiguous in-order sequence* that flows across verse
+ * boundaries (see `scoreCorpusAnchors`). This deliberately replaces the old
+ * per-verse bag-of-words count, which gave long verses an unfair edge — a
+ * passage spanning several short verses would lose to an unrelated long
+ * verse that merely contained the same words scattered inside it (e.g.
+ * Yunus 10:37 winning over As-Sajdah 32:2–3).
+ *
+ * Several verses across the Quran open with near-identical phrasing (e.g.
+ * many sūrahs open "تنزيل الكتاب…", six open with "الم"), so a short spoken
+ * phrase can score two or more verses almost equally. A tied or near-tied
+ * top score returns null — the caller accumulates more chunks and calls
+ * again, which eliminates the wrong candidates as the recitation continues
+ * past the shared opening.
+ */
+/**
+ * Outcome of an identify attempt:
+ *  - "found": confidently placed → `match` holds the verse/page.
+ *  - "ambiguous": a strong candidate exists but a near-duplicate verse
+ *    elsewhere (mutashabihat) scores just as high — the recitation hasn't yet
+ *    passed the phrasing they share. Making progress; the caller should keep
+ *    going (with more patience than a plain "none").
+ *  - "none": no viable candidate at all (silence, noise, non-Quran speech).
+ */
+export type IdentifyOutcome =
+  | { status: "found"; match: SearchResult }
+  | { status: "ambiguous" }
+  | { status: "none" };
+
+/** Window (in words) used both by the anchor scorer and the head-to-head
+ *  disambiguation — a candidate's "continuation" for comparison. */
+const IDENTIFY_WINDOW = 30;
+
+/** Resolves a chosen sura:aya to a full SearchResult (with page). */
+async function decideVerse(sura: number, aya: number): Promise<IdentifyOutcome> {
+  const row = await findVerseByKey(sura, aya);
+  if (!row) {
+    console.log(`[recite-identify] resolved ${sura}:${aya} but no corpus row found`);
+    return { status: "none" };
+  }
+  console.log(`[recite-identify] decided ${row.sura}:${row.aya} (page ${row.page})`);
+  return {
+    status: "found",
+    match: { verseKey: row.id, sura: row.sura, aya: row.aya, text: row.text, page: row.page },
+  };
+}
+
+export async function findVerseByStartingPhrase(
+  spokenText: string,
+): Promise<IdentifyOutcome> {
+  const { tokens, verseStarts, startIndexByVerse } = await getCorpusSequence();
+  if (!tokens.length) return { status: "none" };
+
+  const ranked = scoreCorpusAnchors(spokenText, tokens, verseStarts);
+  if (!ranked.length) {
+    console.log(`[recite-identify] no sequence anchor matched — waiting for more`);
+    return { status: "none" };
+  }
+
+  const best = ranked[0];
+  // The highest-scoring rival that's an *independent* competitor — far enough
+  // away in the mushaf that its scoring window doesn't overlap the winner's.
+  // Judged by canonical token distance, NOT sura/aya: adjacent verses (even
+  // straddling a sura boundary, e.g. the last verse of Al-Mulk and the first
+  // of Al-Qalam) have overlapping windows and correlated scores, so they must
+  // count as the *same* region — otherwise they'd forever tie as fake
+  // "duplicates" with no unique words to tell them apart. Only a competitor a
+  // full window away means we genuinely can't tell where we are.
+  const bestStart = startIndexByVerse.get(`${best.sura}:${best.aya}`) ?? -1;
+  const rival = ranked.find((c) => {
+    const s = startIndexByVerse.get(`${c.sura}:${c.aya}`);
+    return s !== undefined && Math.abs(s - bestStart) > IDENTIFY_WINDOW;
+  });
+  const rivalScore = rival ? rival.matchedWords : null;
+
+  // Require an absolute number of matched words before trusting an
+  // identification — enough that noise or ordinary (non-Quran) speech
+  // coinciding with a verse opening won't trip it. A fixed floor, NOT a
+  // share of the (ever-growing) transcript: the window only spans ~30 words,
+  // so demanding a ratio of a long buffer becomes impossible to satisfy the
+  // more the user recites.
+  const MIN_MATCHED = 5;
+  if (best.matchedWords < MIN_MATCHED) {
+    console.log(
+      `[recite-identify] best=${best.sura}:${best.aya} matched=${best.matchedWords} ` +
+        `< min ${MIN_MATCHED} — waiting`,
+    );
+    return { status: "none" };
+  }
+
+  // Ambiguous on the raw score: a near-duplicate verse elsewhere is within a
+  // word of the winner. Shared words inflate both equally, so the raw gap is
+  // a weak signal. Decide it with a targeted head-to-head instead — compare
+  // only each candidate's *unique* window words (in one's continuation but
+  // not the other's) against the recitation. Whichever candidate's
+  // discriminating words the reciter actually said wins. This keys entirely
+  // on the divergence point (e.g. 2:38 "خوف عليهم يحزنون" vs 20:123 "يضل
+  // يشقى"), so it resolves as soon as you recite past the shared phrasing and
+  // shrugs off STT noise on the shared part.
+  const ambiguous = rival !== undefined && rivalScore !== null && best.matchedWords - rivalScore <= 1;
+  if (ambiguous && rival) {
+    const windowWords = (sura: number, aya: number): string[] => {
+      const start = startIndexByVerse.get(`${sura}:${aya}`);
+      if (start === undefined) return [];
+      return [
+        ...new Set(tokens.slice(start, start + IDENTIFY_WINDOW).map((tok) => tok.token)),
+      ];
+    };
+    // "Unique" must be fuzzy, not exact: near-duplicate verses differ in
+    // form on shared words too (اهبطوا/اهبطا, تبع/اتبع), and those must NOT
+    // count as discriminating — only genuinely different words (خوف/يضل …).
+    const bestW = windowWords(best.sura, best.aya);
+    const rivalW = windowWords(rival.sura, rival.aya);
+    const bestUnique = bestW.filter((w) => !rivalW.some((r) => wordsMatch(r, w)));
+    const rivalUnique = rivalW.filter((w) => !bestW.some((b) => wordsMatch(b, w)));
+
+    const spoken = [
+      ...new Set(normalizeArabic(spokenText).split(" ").filter((w) => w.length > 2)),
+    ];
+    const countHits = (unique: string[]) =>
+      unique.filter((u) => spoken.some((s) => wordsMatch(u, s))).length;
+    const bestHits = countHits(bestUnique);
+    const rivalHits = countHits(rivalUnique);
+
+    // Need a clear margin on the discriminating words before committing, so a
+    // single garbled/coincidental word can't flip the choice.
+    const DECISIVE_MARGIN = 2;
+    if (Math.abs(bestHits - rivalHits) < DECISIVE_MARGIN) {
+      console.log(
+        `[recite-identify] ambiguous: ${best.sura}:${best.aya} vs ${rival.sura}:${rival.aya} — ` +
+          `unique-word hits ${bestHits}/${rivalHits}, not decisive yet — waiting`,
+      );
+      return { status: "ambiguous" };
+    }
+    const winner = bestHits > rivalHits ? best : rival;
+    console.log(
+      `[recite-identify] head-to-head ${best.sura}:${best.aya}(${bestHits}) vs ` +
+        `${rival.sura}:${rival.aya}(${rivalHits}) → ${winner.sura}:${winner.aya}`,
+    );
+    return decideVerse(winner.sura, winner.aya);
+  }
+
+  return decideVerse(best.sura, best.aya);
 }
 
 async function findVerseByKey(
