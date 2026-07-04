@@ -191,6 +191,10 @@ export interface AppStrings {
     nextVerseTitle: string;
     micLabel: string;
     stopLabel: string;
+    listening: string;
+    noMatch: string;
+    identifying: string;
+    rateLimited: string;
   };
 
   playback: {
@@ -570,6 +574,10 @@ const ar: AppStrings = {
     nextVerseTitle: "إظهار الآية التالية",
     micLabel: "المايكروفون",
     stopLabel: "إيقاف التشغيل",
+    listening: "أستمع… تابع التلاوة",
+    noMatch: "لم يتم التعرف على الآية — تأكد من أنك في الصفحة الصحيحة",
+    identifying: "جاري تحديد الآية…",
+    rateLimited: "تم إبطاء الاستماع مؤقتًا (الحد الأقصى للطلبات)…",
   },
   playback: {
     title: "إعدادات التشغيل",
@@ -961,6 +969,10 @@ const en: AppStrings = {
     nextVerseTitle: "Reveal next verse",
     micLabel: "Microphone",
     stopLabel: "Stop playback",
+    listening: "Listening… keep reciting",
+    noMatch: "Not matching this page — make sure you're on the right page",
+    identifying: "Identifying the verse…",
+    rateLimited: "Slowing down temporarily (rate limit)…",
   },
   playback: {
     title: "Playback Settings",

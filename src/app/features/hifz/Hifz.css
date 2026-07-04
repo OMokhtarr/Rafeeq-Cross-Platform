@@ -10,7 +10,7 @@ ion-content::part(scroll) {
 /* ── Page wrapper ─────────────────────────────────────────── */
 .hifz-page {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   background: var(--color-bg-content);
   color: var(--color-text-primary);
   font-family: var(--font-arabic);
@@ -18,6 +18,7 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
@@ -142,17 +143,22 @@ ion-content::part(scroll) {
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
+  /* Scroll region below the fixed header — only scrolls when content overflows. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-/* Plan/dashboard: fills the viewport but scrolls when content is taller than it
-   (e.g. sessions with many surahs) so the action buttons are always reachable. */
+/* Plan/dashboard: the scroll region below the fixed header. Scrolls only when
+   content is taller than the available space (e.g. sessions with many surahs). */
 .hifz-plan {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1522,6 +1528,10 @@ ion-content::part(scroll) {
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
+  /* Scroll region below the fixed header — only scrolls when content overflows. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .hifz-sessions-header {
