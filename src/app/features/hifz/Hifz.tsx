@@ -1746,7 +1746,7 @@ const Hifz: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent fullscreen scrollY={false}>
         <div className="hifz-page">
           {/* ── Shared page header ── */}
           <div className="hifz-page-header">
