@@ -264,6 +264,16 @@ class RafeeqPlayer(
 
     fun isPlaying(): Boolean = player?.isPlaying == true
 
+    /** True when a track is loaded and playback is only paused (not ended/idle) — i.e. a play
+     *  press should RESUME it rather than reload from the start. False when nothing is prepared,
+     *  so the caller does a fresh (cold) start. */
+    fun isResumable(): Boolean {
+        val p = player ?: return false
+        return p.currentMediaItem != null &&
+            p.playbackState != Player.STATE_IDLE &&
+            p.playbackState != Player.STATE_ENDED
+    }
+
     fun currentPositionMs(): Long = player?.currentPosition ?: 0L
 
     /** The index of the track currently loaded (within the cold list or single load). */

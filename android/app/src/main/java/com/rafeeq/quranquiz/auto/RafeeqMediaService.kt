@@ -1237,8 +1237,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // notify JS so its UI state stays in sync.
                 player?.play()
                 dispatchCarEvent("play")
+            } else if (player?.isResumable() == true) {
+                // A track is already loaded and merely PAUSED (native cold-start playback that
+                // the user paused). Resume it in place — do NOT call coldStartPlay(), which would
+                // reload the persisted queue from its start index and restart the surah from the
+                // beginning. This was the pause→play "restarts from the beginning" bug.
+                player?.play()
             } else {
-                // Cold start: make sound NOW from the persisted queue, then wake the brain.
+                // Nothing loaded yet — genuine cold start: make sound NOW from the persisted
+                // queue, then wake the brain.
                 coldStartPlay()
             }
         }

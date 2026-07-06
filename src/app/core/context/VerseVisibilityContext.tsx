@@ -43,6 +43,7 @@ interface VerseVisibilityCtx {
   hideVerse: (key: VerseKey) => void;
   hideMany: (keys: Iterable<VerseKey>) => void;
   showVerse: (key: VerseKey) => void;
+  showMany: (keys: Iterable<VerseKey>) => void;
   showAll: () => void;
   hiddenCount: number;
 
@@ -122,6 +123,20 @@ export const VerseVisibilityProvider: React.FC<{
     });
   }, []);
 
+  const showMany = useCallback((keys: Iterable<VerseKey>) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const k of keys) {
+        if (next.has(k)) {
+          next.delete(k);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   const showAll = useCallback(() => setHidden(new Set()), []);
 
   const hideSelected = useCallback(() => {
@@ -145,6 +160,7 @@ export const VerseVisibilityProvider: React.FC<{
       hideVerse,
       hideMany,
       showVerse,
+      showMany,
       showAll,
       hiddenCount: hidden.size,
       hideSelected,
@@ -159,6 +175,7 @@ export const VerseVisibilityProvider: React.FC<{
       hideVerse,
       hideMany,
       showVerse,
+      showMany,
       showAll,
       hideSelected,
     ],

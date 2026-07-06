@@ -23,6 +23,7 @@ import {
   estimatePageForVerse,
   getSurahStartPage,
   getSurahNameEnglish,
+  getPageStart,
 } from "../../core/services/data/metadata.service";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { useLang } from "../../core/context/LanguageContext";
@@ -110,7 +111,7 @@ const PageViewer: React.FC = () => {
   const { t, lang, isRTL } = useLang();
   const [presentToast] = useIonToast();
 
-  const { selected, hidden, hideMany, showVerse, showAll, hiddenCount } =
+  const { selected, hidden, hideMany, showVerse, showMany, showAll, hiddenCount } =
     useVerseVisibility();
 
   const initialPage = (() => {
@@ -511,13 +512,19 @@ const PageViewer: React.FC = () => {
       showAll();
       return;
     }
+    // Hide from the start of the current page through the end of the Quran,
+    // leaving all previous pages visible.
+    const pageStart = getPageStart(currentPage);
+    if (!pageStart) return;
     const keys: string[] = [];
     for (const ch of getChapters()) {
+      if (ch.id < pageStart.sura) continue;
       const count: number = ch.verses_count ?? 0;
-      for (let a = 1; a <= count; a++) keys.push(`${ch.id}:${a}`);
+      const fromAya = ch.id === pageStart.sura ? pageStart.aya : 1;
+      for (let a = fromAya; a <= count; a++) keys.push(`${ch.id}:${a}`);
     }
     if (keys.length > 0) hideMany(keys);
-  }, [anyPageHidden, hiddenCount, hideMany, showAll]);
+  }, [anyPageHidden, hiddenCount, hideMany, showAll, currentPage]);
 
   // Index into hiddenOnPage: which hidden verse we're currently revealing word-by-word.
   // hintCount: how many words revealed in that verse.
@@ -626,18 +633,22 @@ const PageViewer: React.FC = () => {
     hintCount,
   ]);
 
-  // While recite mode is active, it fully owns the hide/reveal display —
-  // takes priority over the manual Hifz hint state (they're mutually
-  // exclusive: entering recite mode calls queue.stop() and never touches
-  // the persisted `hidden` Set from VerseVisibilityContext). The hide
+  // While recite mode is actively recording, it fully owns the hide/reveal
+  // display — takes priority over the manual Hifz hint state (they're
+  // mutually exclusive: entering recite mode calls queue.stop() and never
+  // touches the persisted `hidden` Set from VerseVisibilityContext). The hide
   // button's "show whole page" override further overlays that, without
-  // touching the underlying recitation-progress state.
-  const displayHiddenForPage = reciteMode
+  // touching the underlying recitation-progress state. Before recording
+  // starts ("armed", mic shown but not yet listening), the hide button falls
+  // back to normal play-mode behavior — visibility is its job until the user
+  // actually starts reciting.
+  const isRecording = recite.status === "recording";
+  const displayHiddenForPage = isRecording
     ? recite.showingAll
       ? new Set<string>()
       : recite.reciteHidden
     : hiddenForPage;
-  const displayPartialTargetForPage = reciteMode
+  const displayPartialTargetForPage = isRecording
     ? recite.showingAll
       ? undefined
       : recite.recitePartialTarget
@@ -645,13 +656,34 @@ const PageViewer: React.FC = () => {
 
   // In recite mode the top-bar hide button controls recite's own show/hide
   // (the `showingAll` override) rather than the persisted Hifz hidden state.
-  const hideToggleActive = reciteMode ? !recite.showingAll : anyPageHidden;
+  // Hide-mode hides the current page onward, so a session started further
+  // ahead still counts as "active" while browsing back to earlier,
+  // intentionally-unhidden pages — the button reflects the session, not
+  // just this page's own hidden verses.
+  const hideToggleActive = isRecording ? !recite.showingAll : hiddenCount > 0;
 
   const canHint = anyPageHidden;
   const canRevealNextVerse = !!firstHiddenPageKey;
 
+  // If the user navigated forward past earlier hidden pages without using
+  // the reveal controls (e.g. page-flip arrows), those verses are still in
+  // `hidden` with no way to reach them from the current page. Sweep them
+  // into view first so pressing reveal here also catches up everything
+  // before this page.
+  const revealSkippedPriorPages = useCallback(() => {
+    if (hidden.size === 0) return;
+    const keys: string[] = [];
+    for (const k of hidden) {
+      const [s, a] = k.split(":");
+      const page = estimatePageForVerse(parseInt(s, 10), parseInt(a, 10));
+      if (page < currentPage) keys.push(k);
+    }
+    if (keys.length > 0) showMany(keys);
+  }, [hidden, currentPage, showMany]);
+
   const handleRevealNextWord = useCallback(() => {
     if (!anyPageHidden) return;
+    revealSkippedPriorPages();
     if (hintCount < activeWordCount) {
       // Reveal next word in active verse
       setHintCount((n) => n + 1);
@@ -671,10 +703,11 @@ const PageViewer: React.FC = () => {
       preRevealFirstWordRef.current = true;
       setCurrentPage((p) => p + 1);
     }
-  }, [anyPageHidden, hintCount, activeWordCount, hintVerseIndex, hiddenOnPage.length, currentPage, totalPages]);
+  }, [anyPageHidden, revealSkippedPriorPages, hintCount, activeWordCount, hintVerseIndex, hiddenOnPage.length, currentPage, totalPages]);
 
   const handleRevealNextVerse = useCallback(() => {
     if (!firstHiddenPageKey) return;
+    revealSkippedPriorPages();
 
     // If the active verse is partially revealed, finish showing all its words first
     if (hintCount > 0 && hintCount < activeWordCount) {
@@ -706,7 +739,7 @@ const PageViewer: React.FC = () => {
     setRevealedUpToIndex(nextIndex);
     setHintVerseIndex(nextIndex);
     setHintCount(0);
-  }, [firstHiddenPageKey, hintCount, activeWordCount, hintVerseIndex, revealedUpToIndex, hiddenOnPage.length, currentPage, totalPages]);
+  }, [firstHiddenPageKey, revealSkippedPriorPages, hintCount, activeWordCount, hintVerseIndex, revealedUpToIndex, hiddenOnPage.length, currentPage, totalPages]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const x = e.touches[0].clientX;
@@ -989,7 +1022,7 @@ const PageViewer: React.FC = () => {
                   className={`toolbar-button hide-toggle-button ${
                     hideToggleActive ? "active" : ""
                   }`}
-                  onClick={reciteMode ? recite.toggleShowAll : togglePageHidden}
+                  onClick={isRecording ? recite.toggleShowAll : togglePageHidden}
                   disabled={verses.length === 0}
                   title={
                     hideToggleActive
