@@ -240,6 +240,7 @@ export interface AppStrings {
     sectionLanguage: string;
     sectionAppearance: string;
     sectionQuran: string;
+    sectionRecite: string;
     sectionQuiz: string;
     sectionAzkar: string;
     sectionNotifications: string;
@@ -254,6 +255,8 @@ export interface AppStrings {
     reciterDesc: string;
     mushafLabel: string;
     mushafLabelDesc: string;
+    reciteEngine: string;
+    reciteEngineDesc: string;
     tajweed: string;
     tajweedDesc: string;
     autoNextPage: string;
@@ -623,6 +626,7 @@ const ar: AppStrings = {
     sectionLanguage: "اللغة",
     sectionAppearance: "المظهر",
     sectionQuran: "القرآن الكريم",
+    sectionRecite: "التسميع",
     sectionQuiz: "الاختبارات",
     sectionAzkar: "الأذكار",
     sectionNotifications: "التنبيهات",
@@ -637,6 +641,8 @@ const ar: AppStrings = {
     reciterDesc: "الصوت المستخدم في التلاوة",
     mushafLabel: "المصحف",
     mushafLabelDesc: "اختر طريقة عرض المصحف",
+    reciteEngine: "محرك التعرف على التلاوة",
+    reciteEngineDesc: "الخدمة المستخدمة لتحويل تلاوتك إلى نص",
     tajweed: "ألوان التجويد",
     tajweedDesc: "تلوين أحكام التجويد في الآيات",
     autoNextPage: "الانتقال التلقائي",
@@ -1018,6 +1024,7 @@ const en: AppStrings = {
     sectionLanguage: "Language",
     sectionAppearance: "Appearance",
     sectionQuran: "Quran",
+    sectionRecite: "Recitation",
     sectionQuiz: "Quizzes",
     sectionAzkar: "Azkar",
     sectionNotifications: "Notifications",
@@ -1032,6 +1039,8 @@ const en: AppStrings = {
     reciterDesc: "Voice used for recitation",
     mushafLabel: "Mushaf",
     mushafLabelDesc: "Choose how the Mushaf is displayed",
+    reciteEngine: "Recitation recognition engine",
+    reciteEngineDesc: "Service used to turn your recitation into text",
     tajweed: "Tajweed Colors",
     tajweedDesc: "Color-code tajweed rules in verses",
     autoNextPage: "Auto-advance",

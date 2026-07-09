@@ -19,6 +19,10 @@ import {
   DEFAULT_MUSHAF,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
+import {
+  RECITE_ENGINE_OPTIONS,
+  type ReciteEngineChoice,
+} from "../../core/services/audio/stt-engine.config";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -35,6 +39,8 @@ interface AppSettings {
   showTranslation: boolean;
   showTajweedColors: boolean;
   autoNextPage: boolean;
+  /** Recite Mode STT engine ("auto" = streaming when its key is configured). */
+  reciteEngine: ReciteEngineChoice;
   // Quiz
   quizDifficulty: string;
   showHintsDefault: boolean;
@@ -56,6 +62,7 @@ const DEFAULTS: AppSettings = {
   showTranslation: false,
   showTajweedColors: true,
   autoNextPage: false,
+  reciteEngine: "auto",
   quizDifficulty: "medium",
   showHintsDefault: true,
   soundEffects: true,
@@ -713,6 +720,25 @@ const Settings: React.FC = () => {
                   checked={s.showTajweedColors}
                   onChange={(v) => set("showTajweedColors", v)}
                   onInfo={() => setTajweedInfoOpen(true)}
+                />
+              </div>
+            </div>
+
+            {/* ── Recitation (Recite Mode) ── */}
+            <div className="settings-section">
+              <p className="settings-section-title">{ts.sectionRecite}</p>
+              <div className="settings-card">
+                <SelectRow
+                  icon={ICONS.mic}
+                  label={ts.reciteEngine}
+                  desc={ts.reciteEngineDesc}
+                  value={s.reciteEngine}
+                  options={RECITE_ENGINE_OPTIONS.map((e) => ({
+                    value: e.value,
+                    label: lang === "ar" ? e.labelAr : e.labelEn,
+                  }))}
+                  onChange={(v) => set("reciteEngine", v as ReciteEngineChoice)}
+                  night={isNight}
                 />
               </div>
             </div>

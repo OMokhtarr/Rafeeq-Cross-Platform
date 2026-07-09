@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Verse } from "../../shared/models/verse.model";
 import { getPage, findVerseByStartingPhrase } from "../services/data/quran.service";
 import { transcribeChunk, RateLimitedError } from "../services/audio/speech-to-text.service";
+import {
+  openSttStream,
+  type SttStreamEvent,
+  type SttStreamHandle,
+} from "../services/audio/speech-to-text-stream.service";
+import { resolveReciteEngine } from "../services/audio/stt-engine.config";
 import { useMicChunks } from "./useMicChunks";
 import {
   firstWordPosition,
@@ -48,6 +54,12 @@ const WORD_REVEAL_STEP_MS = 160;
  *  never reach the screen; the matcher itself is not held back and
  *  self-corrects via the rewind check if it overshot. */
 const REVEAL_HOLDBACK_WORDS = 2;
+
+/** Holdback while the streaming engine (Deepgram) is driving. Streamed
+ *  interims don't hallucinate a continuation the way chunked Whisper does —
+ *  the only instability is that a window's last word may still be revised —
+ *  so one word of margin suffices, and each final releases it. */
+const STREAM_REVEAL_HOLDBACK_WORDS = 1;
 
 /** Matched words on the current page (after landing on it) beyond which the
  *  identification is considered confirmed — the recitation has tracked well
@@ -151,6 +163,18 @@ function verseKey(sura: number, aya: number) {
   return `${sura}:${aya}`;
 }
 
+/** The user's engine choice from the Settings page (same localStorage
+ *  settings blob PageViewer/useFeedbackBeep read), defaulting to "auto". */
+function readReciteEngineSetting(): string {
+  try {
+    const raw = localStorage.getItem("rafiq_settings_v1");
+    if (raw) return JSON.parse(raw).reciteEngine ?? "auto";
+  } catch {
+    // Unreadable settings — same as unset.
+  }
+  return "auto";
+}
+
 /** Verse keys strictly after `pos.sura:pos.aya` within `verses` (the active verse itself excluded). */
 function keysAfterPosition(verses: Verse[], pos: RecitePosition): Set<string> {
   const keys = new Set<string>();
@@ -207,6 +231,7 @@ export function useReciteMode(
   const [noMatchHint, setNoMatchHint] = useState(false);
   const [identifying, setIdentifying] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const noMatchStreakRef = useRef(0);
 
   // Mutable session state — avoids re-subscribing the mic callback on every match.
@@ -263,6 +288,14 @@ export function useReciteMode(
   // reveal animation catches up.
   const displayPosRef = useRef<RecitePosition | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Streaming-engine session state (Deepgram). streamingModeRef is decided
+  // once per recording session; advancedSinceFinalRef tracks whether any
+  // event since the last settled window advanced the position — a final
+  // that never advanced anything is the streaming analogue of a mismatching
+  // chunk and feeds the wrong-page logic.
+  const streamHandleRef = useRef<SttStreamHandle | null>(null);
+  const streamingModeRef = useRef(false);
+  const advancedSinceFinalRef = useRef(false);
   // Furthest position corroborated by two different chunks. Chunks overlap
   // by half, so real speech at one chunk's tail is re-heard by the next —
   // while a hallucinated tail (Whisper finishing the phrase over silence)
@@ -362,8 +395,11 @@ export function useReciteMode(
       // them (they were never said); the timer restarts on the next match.
       const confirmed = confirmedPosRef.current;
       if (!confirmed || cmpPos(next, confirmed) > 0) {
+        const holdback = streamingModeRef.current
+          ? STREAM_REVEAL_HOLDBACK_WORDS
+          : REVEAL_HOLDBACK_WORDS;
         let probe: RecitePosition | null = next;
-        for (let i = 0; i < REVEAL_HOLDBACK_WORDS && probe; i++) {
+        for (let i = 0; i < holdback && probe; i++) {
           probe = nextWordPosition(combined, probe);
         }
         if (!probe || cmpPos(probe, target) > 0) {
@@ -662,6 +698,38 @@ export function useReciteMode(
     setChunkMsRef.current(IDENTIFY_CHUNK_MS);
   }, []);
 
+  // The tracking match itself, shared by the chunked queue and the
+  // streaming event handler. maxSkip: 0 → strict reveal: only advance
+  // through words the reciter actually said, in order, never revealing an
+  // expected word that hasn't been matched yet ("no showing it before you
+  // recite it"). When the strict pass is stuck — usually the STT garbled
+  // the one word the cursor is waiting on, which no later text could ever
+  // get past — a loose pass may step over a couple of expected words, but
+  // only counts with enough consecutively-matched words as proof the
+  // recitation is genuinely past the stuck word.
+  const matchFromPosition = useCallback(
+    (text: string): { position: RecitePosition; consumed: number } | null => {
+      if (!positionRef.current) return null;
+      const combinedVerses = nextPageVersesRef.current
+        ? [...versesRef.current, ...nextPageVersesRef.current]
+        : versesRef.current;
+      const strict = matchTranscript(text, combinedVerses, positionRef.current, {
+        maxSkip: 0,
+      });
+      if (strict.position) {
+        return { position: strict.position, consumed: strict.consumedTokens };
+      }
+      const loose = matchTranscript(text, combinedVerses, positionRef.current, {
+        maxSkip: LOOSE_MATCH_MAX_SKIP,
+      });
+      if (loose.position && loose.consumedTokens >= LOOSE_MATCH_MIN_CONSUMED) {
+        return { position: loose.position, consumed: loose.consumedTokens };
+      }
+      return null;
+    },
+    [],
+  );
+
   const processQueue = useCallback(async () => {
     if (transcribingRef.current) return;
     const blob = pendingChunksRef.current.shift();
@@ -693,33 +761,12 @@ export function useReciteMode(
 
       if (!text.trim() || !positionRef.current) return;
 
-      // maxSkip: 0 → strict reveal: only advance through words the reciter
-      // actually said, in order, never revealing an expected word that
-      // hasn't been matched yet (no "showing it before you recite it").
-      const strict = matchTranscript(text, combinedVerses, positionRef.current, {
-        maxSkip: 0,
-      });
-      let matchedPos = strict.position;
-      let matchedConsumed = strict.consumedTokens;
-      if (!matchedPos) {
-        // Strict pass stuck — usually the STT garbled the one word the
-        // cursor is waiting on, and no later chunk could ever get past it.
-        // The loose pass may step over a couple of expected words, but only
-        // counts with enough consecutively-matched words as proof the
-        // recitation is genuinely past the stuck word.
-        const loose = matchTranscript(text, combinedVerses, positionRef.current, {
-          maxSkip: LOOSE_MATCH_MAX_SKIP,
-        });
-        if (loose.position && loose.consumedTokens >= LOOSE_MATCH_MIN_CONSUMED) {
-          matchedPos = loose.position;
-          matchedConsumed = loose.consumedTokens;
-        }
-      }
-      if (matchedPos) {
+      const matched = matchFromPosition(text);
+      if (matched) {
         noMatchStreakRef.current = 0;
         recentTextsRef.current = [];
         setNoMatchHint(false);
-        wordsSinceLandingRef.current += matchedConsumed;
+        wordsSinceLandingRef.current += matched.consumed;
         // Everything reached by both this chunk's match and the previous
         // one's has been heard twice (the chunks overlap) — corroborated,
         // so the display may show it without the holdback margin. This is
@@ -728,7 +775,8 @@ export function useReciteMode(
         // doesn't advance.
         const prevEnd = prevChunkEndRef.current;
         if (prevEnd) {
-          const corroborated = cmpPos(prevEnd, matchedPos) <= 0 ? prevEnd : matchedPos;
+          const corroborated =
+            cmpPos(prevEnd, matched.position) <= 0 ? prevEnd : matched.position;
           if (
             !confirmedPosRef.current ||
             cmpPos(corroborated, confirmedPosRef.current) > 0
@@ -736,8 +784,8 @@ export function useReciteMode(
             confirmedPosRef.current = corroborated;
           }
         }
-        prevChunkEndRef.current = matchedPos;
-        setMatchedPosition(matchedPos);
+        prevChunkEndRef.current = matched.position;
+        setMatchedPosition(matched.position);
         return;
       }
 
@@ -780,7 +828,79 @@ export function useReciteMode(
       transcribingRef.current = false;
       if (pendingChunksRef.current.length > 0) processQueue();
     }
-  }, [setMatchedPosition, handleIdentifyChunk, reidentify]);
+  }, [matchFromPosition, setMatchedPosition, handleIdentifyChunk, reidentify]);
+
+  // Streaming pipeline (Deepgram): every Results frame lands here. Interims
+  // are cumulative revisions of the current utterance window, arriving a
+  // few hundred ms behind the voice — they drive the near-live reveal.
+  // A final settles the window; it is the streaming analogue of a chunk:
+  // the unit for identify attempts, for confirming what the interims
+  // matched (releasing the display holdback), and for the wrong-page
+  // detection when nothing in the window matched.
+  const handleStreamEvent = useCallback(
+    (event: SttStreamEvent) => {
+      if (!activeRef.current || !recordingRef.current) return;
+      const text = event.text.trim();
+      if (text) {
+        setLastChunkText(text);
+        lastSpeechAtRef.current = Date.now();
+      }
+
+      if (identifyingRef.current) {
+        // Only finals feed the identify buffer — scoring the whole corpus
+        // on every interim revision would repeat the same work several
+        // times a second for the same words.
+        if (event.isFinal && text) void handleIdentifyChunk(text);
+        return;
+      }
+
+      if (!positionRef.current) return;
+
+      const matched = text ? matchFromPosition(text) : null;
+      if (matched) {
+        noMatchStreakRef.current = 0;
+        recentTextsRef.current = [];
+        setNoMatchHint(false);
+        wordsSinceLandingRef.current += matched.consumed;
+        advancedSinceFinalRef.current = true;
+        setMatchedPosition(matched.position);
+      }
+
+      if (!event.isFinal) return;
+
+      if (advancedSinceFinalRef.current) {
+        // The settled window advanced the position at some point — those
+        // words are confirmed speech; release them from the holdback.
+        advancedSinceFinalRef.current = false;
+        if (
+          !confirmedPosRef.current ||
+          cmpPos(positionRef.current, confirmedPosRef.current) > 0
+        ) {
+          confirmedPosRef.current = positionRef.current;
+        }
+        return;
+      }
+
+      // A settled window that never advanced the position is the streaming
+      // analogue of a mismatching chunk — same guards as the chunked path:
+      // only substantial text counts toward the wrong-page streak.
+      if (!text) return;
+      const usableWords = normalizeArabic(text)
+        .split(" ")
+        .filter((w) => w.length > 2).length;
+      if (usableWords < 3) return;
+
+      recentTextsRef.current = [...recentTextsRef.current, text].slice(-3);
+      noMatchStreakRef.current += 1;
+      if (noMatchStreakRef.current >= NO_MATCH_REIDENTIFY_STREAK) {
+        reidentify(recentTextsRef.current.join(" "));
+        recentTextsRef.current = [];
+      } else if (noMatchStreakRef.current >= NO_MATCH_HINT_STREAK) {
+        setNoMatchHint(true);
+      }
+    },
+    [handleIdentifyChunk, matchFromPosition, setMatchedPosition, reidentify],
+  );
 
   const onChunk = useCallback(
     (blob: Blob) => {
@@ -861,10 +981,37 @@ export function useReciteMode(
     setShowingAll(false);
     setStatus("recording");
     lastSpeechAtRef.current = Date.now();
-    mic.setChunkMs(FIRST_IDENTIFY_CHUNK_MS);
-    // Speech-gated: the first chunk's clock starts when the reciter actually
-    // starts, so pre-recitation silence never eats into it.
-    mic.start(true);
+    streamingModeRef.current =
+      resolveReciteEngine(readReciteEngineSetting()) === "deepgram";
+    advancedSinceFinalRef.current = false;
+    setStreamError(null);
+    if (streamingModeRef.current) {
+      // Streaming engine: one continuous socket, words arrive near-live.
+      // No speech gate or chunk cadence needed — leading silence just
+      // streams until the silence timeout ends the session.
+      openSttStream(handleStreamEvent, (message) => {
+        // Socket died mid-session (auth rejection, network drop) — no more
+        // words will arrive, so surface it instead of sitting there.
+        if (!recordingRef.current) return;
+        setStreamError(message);
+        stopRecordingRef.current();
+      })
+        .then((handle) => {
+          if (recordingRef.current) streamHandleRef.current = handle;
+          else handle.stop();
+        })
+        .catch((err) => {
+          setStreamError(
+            err instanceof Error ? err.message : "Microphone access denied",
+          );
+          stopRecordingRef.current();
+        });
+    } else {
+      mic.setChunkMs(FIRST_IDENTIFY_CHUNK_MS);
+      // Speech-gated: the first chunk's clock starts when the reciter
+      // actually starts, so pre-recitation silence never eats into it.
+      mic.start(true);
+    }
     durationTimerRef.current = setInterval(() => {
       setRecordingSeconds((s) => s + 1);
       // Auto-stop if the user has gone quiet — no recognized speech for a
@@ -873,12 +1020,14 @@ export function useReciteMode(
         stopRecordingRef.current();
       }
     }, 1000);
-  }, [mic, hideWholePage, stopRevealTimer]);
+  }, [mic, hideWholePage, stopRevealTimer, handleStreamEvent]);
 
   const stopRecording = useCallback(() => {
     if (!recordingRef.current) return;
     recordingRef.current = false;
     mic.stop();
+    streamHandleRef.current?.stop();
+    streamHandleRef.current = null;
     clearDurationTimer();
     pendingChunksRef.current = [];
     setRecordingSeconds(0);
@@ -891,6 +1040,14 @@ export function useReciteMode(
     // do. The held word or two — if genuinely recited — is a tap on the
     // reveal button away.
     stopRevealTimer();
+    // Recording no longer owns the page's visibility (the toolbar falls
+    // back to the persisted Hifz hide state once armed) — clear recite's
+    // own hidden/partial state so it can't linger stale into the next
+    // recording, and reset the toggle so the eye icon matches the
+    // now-visible page instead of showing "hidden" from mid-recitation.
+    setReciteHidden(new Set());
+    setRecitePartialTarget(undefined);
+    setShowingAll(false);
     if (activeRef.current) setStatus("armed");
   }, [mic, clearDurationTimer, stopRevealTimer]);
 
@@ -934,6 +1091,9 @@ export function useReciteMode(
     activeRef.current = false;
     recordingRef.current = false;
     mic.stop();
+    streamHandleRef.current?.stop();
+    streamHandleRef.current = null;
+    setStreamError(null);
     clearDurationTimer();
     stopRevealTimer();
     pendingChunksRef.current = [];
@@ -957,8 +1117,8 @@ export function useReciteMode(
   }, [mic, clearDurationTimer, stopRevealTimer]);
 
   useEffect(() => {
-    if (mic.error) setStatus("mic-error");
-  }, [mic.error]);
+    if (mic.error || streamError) setStatus("mic-error");
+  }, [mic.error, streamError]);
 
   // Stop cleanly on unmount (navigating away mid-recitation). mic.stop is
   // read via a ref so this effect doesn't need to depend on the (stable
@@ -972,6 +1132,8 @@ export function useReciteMode(
       clearDurationTimer();
       stopRevealTimer();
       micStopRef.current();
+      streamHandleRef.current?.stop();
+      streamHandleRef.current = null;
     };
   }, [clearDurationTimer, stopRevealTimer]);
 
@@ -979,7 +1141,7 @@ export function useReciteMode(
     status,
     reciteHidden,
     recitePartialTarget,
-    micError: mic.error,
+    micError: mic.error ?? streamError,
     recordingSeconds,
     lastChunkText,
     noMatchHint,

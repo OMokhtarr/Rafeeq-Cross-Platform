@@ -121,23 +121,44 @@ class RafeeqAutoPlugin : Plugin() {
     @PluginMethod
     fun jsReady(call: PluginCall) {
         jsReady = true
-        val pending = pendingEvent
-        if (pending != null) {
+
+        // If native cold-start is currently playing a surah (the car started playback while the
+        // app was closed), the brain must adopt THAT surah + position on wake — regardless of
+        // what event happens to be pending. Otherwise a bare 'play' with an empty in-app queue
+        // makes the brain default to Al-Fatiha (the "header switches to الفاتحة, bar stuck at
+        // 0:00" bug). So synthesize a selectSurah from the live native state and flush that.
+        val svc = RafeeqMediaService.instance
+        val liveSura = svc?.nativeCurrentColdSura() ?: 0
+        val eventToFlush: JSObject? = if (liveSura > 0) {
+            val liveIdx = svc?.nativeCurrentColdIndex() ?: 0
+            val reciter = svc?.nativeCurrentReciter() ?: ""
             pendingEvent = null
-            // For a selectSurah/play that was queued when the surah was selected in the car,
-            // refresh the adopt-index to where native playback ACTUALLY is now. The event was
-            // captured at selection time (index ~0); flushing it as-is would restart the surah
-            // from the beginning when the user opens the phone app minutes later. Reading the
-            // live index here makes the brain adopt the car's current position instead.
-            val action = pending.getString("action")
-            if (action == "selectSurah" || action == "play") {
-                val liveIdx = RafeeqMediaService.instance?.nativeCurrentColdIndex() ?: -1
-                if (liveIdx >= 0) pending.put("aya", liveIdx)
+            JSObject().apply {
+                put("action", "selectSurah")
+                put("surah", liveSura)
+                put("aya", if (liveIdx >= 0) liveIdx else 0)
+                if (reciter.isNotEmpty()) put("reciter", reciter)
             }
-            Log.d("RafeeqAuto", "jsReady: flushing pending event: $action aya=${pending.optInt("aya", -1)}")
+        } else {
+            val pending = pendingEvent
+            if (pending != null) {
+                pendingEvent = null
+                // Refresh a selectSurah/play adopt-index to the live position (falls through here
+                // only when native isn't the current cold-start driver, e.g. JS already drove).
+                val action = pending.getString("action")
+                if (action == "selectSurah" || action == "play") {
+                    val liveIdx = svc?.nativeCurrentColdIndex() ?: -1
+                    if (liveIdx >= 0) pending.put("aya", liveIdx)
+                }
+            }
+            pending
+        }
+
+        if (eventToFlush != null) {
+            Log.d("RafeeqAuto", "jsReady: flushing ${eventToFlush.getString("action")} surah=${eventToFlush.optInt("surah", -1)} aya=${eventToFlush.optInt("aya", -1)}")
             // notifyListeners must run on the main thread; PluginMethod threads vary.
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                notifyListeners("carAction", pending)
+                notifyListeners("carAction", eventToFlush)
             }, 100)
         }
         call.resolve()

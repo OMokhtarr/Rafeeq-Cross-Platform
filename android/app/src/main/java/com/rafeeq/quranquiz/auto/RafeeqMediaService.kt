@@ -420,6 +420,15 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     fun nativeCurrentColdIndex(): Int =
         if (!jsDriving && nativeColdStartSura > 0) (player?.currentIndex() ?: -1) else -1
 
+    /** The surah native cold-start is currently playing, or 0 if native isn't driving. Used so
+     *  the brain, on wake, adopts the RIGHT surah instead of defaulting to Al-Fatiha. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeCurrentColdSura(): Int = if (!jsDriving) nativeColdStartSura else 0
+
+    /** The reciter slug native cold-start is using (empty if unknown), so the brain adopts the
+     *  same reciter on wake. */
+    fun nativeCurrentReciter(): String = currentReciter
+
     @androidx.media3.common.util.UnstableApi
     fun nativePlay() { requestAudioFocus(); player?.play() }
     @androidx.media3.common.util.UnstableApi

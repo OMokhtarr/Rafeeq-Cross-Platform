@@ -238,20 +238,28 @@
   background-color: rgba(212, 180, 140, 0.25);
 }
 
-/* Reveal bar — horizontal row that slides out from the eye button. */
+/* Reveal bar — horizontal row that slides out from the eye button.
+   Always mounted (never conditionally rendered) so the open <-> closed
+   transition can play in both directions — toggling the eye button off
+   collapses the bar back the way it grew out, instead of just vanishing. */
 .hide-reveal-sidebar {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 2px;
-  padding: 0 4px;
+  max-width: 0;
+  padding: 0;
+  opacity: 0;
   overflow: hidden;
-  animation: reveal-bar-in 0.2s ease-out;
+  pointer-events: none;
+  transition: max-width 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
 }
 
-@keyframes reveal-bar-in {
-  from { opacity: 0; max-width: 0; padding: 0; }
-  to   { opacity: 1; max-width: 64px; padding: 0 4px; }
+.hide-reveal-sidebar--open {
+  max-width: 64px;
+  padding: 0 4px;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .hide-reveal-btn {

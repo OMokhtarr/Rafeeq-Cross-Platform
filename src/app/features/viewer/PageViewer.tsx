@@ -338,6 +338,14 @@ const PageViewer: React.FC = () => {
   };
 
   useEffect(() => {
+    // Persist reveal progress on the page we're leaving — otherwise the
+    // reveal-next walk position (local state) is lost and the page would
+    // look fully hidden again on return.
+    if (revealedOnPageRef.current.length > 0) {
+      showMany(revealedOnPageRef.current);
+      revealedOnPageRef.current = [];
+    }
+
     // Fire activity day for the page we're leaving (if user spent ≥10 s on it)
     const prevVerses = pageVersesRef.current;
     const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
@@ -541,6 +549,18 @@ const PageViewer: React.FC = () => {
   const hiddenOnPage = React.useMemo(
     () => pageVerseKeys.filter((k) => hidden.has(k)),
     [pageVerseKeys.join(","), hidden],
+  );
+
+  // Mirrors the verses on the current page that the reveal-next controls have
+  // walked past (but which are still technically in the persisted `hidden`
+  // set — see hiddenForPage below). Read when navigating away so that
+  // progress isn't lost: without this, returning to a page you'd partially
+  // revealed would show it as fully hidden again, since the walk position
+  // is local component state, not persisted.
+  const revealedOnPageRef = useRef<string[]>([]);
+  revealedOnPageRef.current = hiddenOnPage.slice(
+    0,
+    Math.max(hintVerseIndex, revealedUpToIndex),
   );
 
   const firstHiddenPageKey = hiddenOnPage[0] ?? null;
@@ -899,55 +919,61 @@ const PageViewer: React.FC = () => {
                         </svg>
                       )}
                     </button>
-                    {!recite.showingAll && (
-                      <div className="hide-reveal-sidebar" aria-label="Reveal controls">
-                        <button
-                          type="button"
-                          className="hide-reveal-btn"
-                          onClick={recite.revealNextWord}
-                          aria-label="Reveal next word"
-                          title="Reveal next word"
+                    <div
+                      className={`hide-reveal-sidebar${
+                        !recite.showingAll ? " hide-reveal-sidebar--open" : ""
+                      }`}
+                      aria-label="Reveal controls"
+                      aria-hidden={recite.showingAll}
+                    >
+                      <button
+                        type="button"
+                        className="hide-reveal-btn"
+                        onClick={recite.revealNextWord}
+                        tabIndex={!recite.showingAll ? 0 : -1}
+                        aria-label="Reveal next word"
+                        title="Reveal next word"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          style={isRTL ? { transform: "scaleX(-1)" } : undefined}
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="14"
-                            height="14"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            style={isRTL ? { transform: "scaleX(-1)" } : undefined}
-                          >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="hide-reveal-btn"
-                          onClick={recite.revealNextVerse}
-                          aria-label="Reveal next verse"
-                          title="Reveal next verse"
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="hide-reveal-btn"
+                        onClick={recite.revealNextVerse}
+                        tabIndex={!recite.showingAll ? 0 : -1}
+                        aria-label="Reveal next verse"
+                        title="Reveal next verse"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          style={isRTL ? { transform: "scaleX(-1)" } : undefined}
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="14"
-                            height="14"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            style={isRTL ? { transform: "scaleX(-1)" } : undefined}
-                          >
-                            <polyline points="5 18 11 12 5 6" />
-                            <polyline points="13 18 19 12 13 6" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                          <polyline points="5 18 11 12 5 6" />
+                          <polyline points="13 18 19 12 13 6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1071,61 +1097,64 @@ const PageViewer: React.FC = () => {
                   )}
                 </button>
 
-                {anyPageHidden && (
-                  <div
-                    className="hide-reveal-sidebar"
-                    aria-label="Reveal controls"
-                    style={{ order: isRTL ? -1 : 1 }}
+                <div
+                  className={`hide-reveal-sidebar${
+                    anyPageHidden ? " hide-reveal-sidebar--open" : ""
+                  }`}
+                  aria-label="Reveal controls"
+                  aria-hidden={!anyPageHidden}
+                  style={{ order: isRTL ? -1 : 1 }}
+                >
+                  <button
+                    type="button"
+                    className="hide-reveal-btn"
+                    onClick={handleRevealNextWord}
+                    disabled={!canHint}
+                    tabIndex={anyPageHidden ? 0 : -1}
+                    aria-label="Reveal next word"
+                    title="Reveal next word"
                   >
-                    <button
-                      type="button"
-                      className="hide-reveal-btn"
-                      onClick={handleRevealNextWord}
-                      disabled={!canHint}
-                      aria-label="Reveal next word"
-                      title="Reveal next word"
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      style={isRTL ? { transform: "scaleX(-1)" } : undefined}
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={isRTL ? { transform: "scaleX(-1)" } : undefined}
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="hide-reveal-btn"
-                      onClick={handleRevealNextVerse}
-                      disabled={!canRevealNextVerse}
-                      aria-label="Reveal next verse"
-                      title="Reveal next verse"
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="hide-reveal-btn"
+                    onClick={handleRevealNextVerse}
+                    disabled={!canRevealNextVerse}
+                    tabIndex={anyPageHidden ? 0 : -1}
+                    aria-label="Reveal next verse"
+                    title="Reveal next verse"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      style={isRTL ? { transform: "scaleX(-1)" } : undefined}
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={isRTL ? { transform: "scaleX(-1)" } : undefined}
-                      >
-                        <polyline points="5 18 11 12 5 6" />
-                        <polyline points="13 18 19 12 13 6" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+                      <polyline points="5 18 11 12 5 6" />
+                      <polyline points="13 18 19 12 13 6" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
