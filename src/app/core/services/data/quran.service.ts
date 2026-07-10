@@ -593,6 +593,7 @@ async function decideVerse(sura: number, aya: number): Promise<IdentifyOutcome> 
 
 export async function findVerseByStartingPhrase(
   spokenText: string,
+  options: { minMatched?: number; nearPosition?: { sura: number; aya: number } | null } = {},
 ): Promise<IdentifyOutcome> {
   const { tokens, verseStarts, startIndexByVerse } = await getCorpusSequence();
   if (!tokens.length) return { status: "none" };
@@ -624,8 +625,12 @@ export async function findVerseByStartingPhrase(
   // coinciding with a verse opening won't trip it. A fixed floor, NOT a
   // share of the (ever-growing) transcript: the window only spans ~30 words,
   // so demanding a ratio of a long buffer becomes impossible to satisfy the
-  // more the user recites.
-  const MIN_MATCHED = 5;
+  // more the user recites. Callers with a faster/fresher feedback loop
+  // (Deepgram's streaming driver — see
+  // hooks/recite/deepgram/useIdentifySession.ts) may pass a lower value:
+  // they get more attempts per second, so a slightly lower per-attempt bar
+  // still keeps false-identification rare while resolving sooner overall.
+  const MIN_MATCHED = options.minMatched ?? 5;
   if (best.matchedWords < MIN_MATCHED) {
     console.log(
       `[recite-identify] best=${best.sura}:${best.aya} matched=${best.matchedWords} ` +
@@ -672,6 +677,34 @@ export async function findVerseByStartingPhrase(
     // single garbled/coincidental word can't flip the choice.
     const DECISIVE_MARGIN = 2;
     if (Math.abs(bestHits - rivalHits) < DECISIVE_MARGIN) {
+      // The unique-word test can't separate these yet (often 0/0 because the
+      // two candidates are word-for-word identical for many verses — e.g.
+      // "وإذ قلنا للملائكة اسجدوا لآدم…" is verbatim at 2:34 / 17:61 / 18:50 /
+      // 20:116). But this is a *re-identify*, so the caller may already know
+      // roughly where the reciter was tracking a moment ago. If so, prefer the
+      // candidate whose canonical position is closest to that — a re-identify
+      // almost always resumes near where it stalled, not in a distant sura —
+      // and decide now instead of waiting for the reciter to reach a
+      // distinguishing word. A genuine jump to a far-away duplicate still
+      // works: once they recite past the shared text, the normal wrong-page /
+      // re-identify path corrects it.
+      if (options.nearPosition) {
+        const anchor = startIndexByVerse.get(
+          `${options.nearPosition.sura}:${options.nearPosition.aya}`,
+        );
+        const bestIdx = startIndexByVerse.get(`${best.sura}:${best.aya}`);
+        const rivalIdx = startIndexByVerse.get(`${rival.sura}:${rival.aya}`);
+        if (anchor !== undefined && bestIdx !== undefined && rivalIdx !== undefined) {
+          const nearer =
+            Math.abs(bestIdx - anchor) <= Math.abs(rivalIdx - anchor) ? best : rival;
+          console.log(
+            `[recite-identify] ambiguous ${best.sura}:${best.aya} vs ${rival.sura}:${rival.aya}` +
+              ` — tie-broken toward last position ${options.nearPosition.sura}:` +
+              `${options.nearPosition.aya} → ${nearer.sura}:${nearer.aya}`,
+          );
+          return decideVerse(nearer.sura, nearer.aya);
+        }
+      }
       console.log(
         `[recite-identify] ambiguous: ${best.sura}:${best.aya} vs ${rival.sura}:${rival.aya} — ` +
           `unique-word hits ${bestHits}/${rivalHits}, not decisive yet — waiting`,

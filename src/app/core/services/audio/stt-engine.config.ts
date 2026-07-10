@@ -12,26 +12,24 @@
 
 import { isStreamingSttAvailable } from "./speech-to-text-stream.service";
 
-/** Persisted setting values ("auto" defers to key availability). */
-export type ReciteEngineChoice = "auto" | "deepgram" | "groq";
+export type ReciteEngineChoice = "deepgram" | "groq";
 
-/** Engines the hook can actually run. */
-export type ResolvedReciteEngine = "deepgram" | "groq";
+export const DEFAULT_RECITE_ENGINE: ReciteEngineChoice = "deepgram";
 
 export const RECITE_ENGINE_OPTIONS: {
   value: ReciteEngineChoice;
   labelAr: string;
   labelEn: string;
 }[] = [
-  { value: "auto", labelAr: "تلقائي (مستحسن)", labelEn: "Auto (recommended)" },
   { value: "deepgram", labelAr: "Deepgram — بث فوري", labelEn: "Deepgram — live streaming" },
   { value: "groq", labelAr: "Groq Whisper — مقاطع صوتية", labelEn: "Groq Whisper — chunked" },
 ];
 
 export function resolveReciteEngine(
   choice: string | undefined,
-): ResolvedReciteEngine {
+): ReciteEngineChoice {
   if (choice === "groq") return "groq";
-  // "deepgram" and "auto" both want streaming — possible only with a key.
+  // Deepgram (also the default for unset/retired values like the old
+  // "auto") — streaming needs its key in the build to actually run.
   return isStreamingSttAvailable() ? "deepgram" : "groq";
 }

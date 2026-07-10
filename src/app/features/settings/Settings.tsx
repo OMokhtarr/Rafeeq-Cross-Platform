@@ -21,6 +21,7 @@ import {
 } from "../../core/services/api/mushaf.config";
 import {
   RECITE_ENGINE_OPTIONS,
+  DEFAULT_RECITE_ENGINE,
   type ReciteEngineChoice,
 } from "../../core/services/audio/stt-engine.config";
 import "./Settings.css";
@@ -39,7 +40,7 @@ interface AppSettings {
   showTranslation: boolean;
   showTajweedColors: boolean;
   autoNextPage: boolean;
-  /** Recite Mode STT engine ("auto" = streaming when its key is configured). */
+  /** Recite Mode STT engine. */
   reciteEngine: ReciteEngineChoice;
   // Quiz
   quizDifficulty: string;
@@ -62,7 +63,7 @@ const DEFAULTS: AppSettings = {
   showTranslation: false,
   showTajweedColors: true,
   autoNextPage: false,
-  reciteEngine: "auto",
+  reciteEngine: DEFAULT_RECITE_ENGINE,
   quizDifficulty: "medium",
   showHintsDefault: true,
   soundEffects: true,
@@ -89,6 +90,10 @@ function loadSettings(): AppSettings {
       const merged = { ...DEFAULTS, ...JSON.parse(raw) } as AppSettings;
       // Migrate retired mushaf kinds (e.g. "qpc_v1") to the current default.
       if (!(merged.mushaf in MUSHAFS)) merged.mushaf = DEFAULT_MUSHAF;
+      // Migrate retired engine values (e.g. the removed "auto").
+      if (!RECITE_ENGINE_OPTIONS.some((e) => e.value === merged.reciteEngine)) {
+        merged.reciteEngine = DEFAULT_RECITE_ENGINE;
+      }
       return merged;
     }
   } catch (_) {}
