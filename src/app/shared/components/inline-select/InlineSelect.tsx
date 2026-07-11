@@ -111,8 +111,9 @@ const InlineSelect: React.FC<Props> = ({
   const list = open
     ? createPortal(
         <>
-          {/* Transparent backdrop: captures the tap that closes the dropdown and
-              blocks it from falling through to elements behind (e.g. surah cards). */}
+          {/* Transparent backdrop: captures taps outside the list, closes the
+              dropdown, and absorbs the trailing compatibility-click so it can't
+              fall through to elements behind (e.g. surah cards). */}
           <div
             className="isel__backdrop"
             style={{ position: "fixed", inset: 0, zIndex: 9998 }}
@@ -120,6 +121,10 @@ const InlineSelect: React.FC<Props> = ({
               e.preventDefault();
               e.stopPropagation();
               setOpen(false);
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
             }}
           />
         <ul
@@ -149,8 +154,15 @@ const InlineSelect: React.FC<Props> = ({
                 const dy = Math.abs(e.clientY - startY);
                 if (dx < 8 && dy < 8) {
                   onChange(o.value);
-                  setOpen(false);
+                  // Defer close so the list + backdrop stay mounted through any
+                  // trailing touch→click compatibility event (which they then
+                  // absorb), preventing click-through to the surah cards behind.
+                  setTimeout(() => setOpen(false), 60);
                 }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
               }}
             >
               {o.label}
