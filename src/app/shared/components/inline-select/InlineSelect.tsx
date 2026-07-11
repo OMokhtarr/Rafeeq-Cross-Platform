@@ -110,6 +110,18 @@ const InlineSelect: React.FC<Props> = ({
 
   const list = open
     ? createPortal(
+        <>
+          {/* Transparent backdrop: captures the tap that closes the dropdown and
+              blocks it from falling through to elements behind (e.g. surah cards). */}
+          <div
+            className="isel__backdrop"
+            style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+            }}
+          />
         <ul
           ref={listRef}
           className={`isel__list${nightCls}`}
@@ -125,10 +137,12 @@ const InlineSelect: React.FC<Props> = ({
               data-selected={o.value === value ? "true" : undefined}
               className={`isel__option${nightCls}${o.value === value ? " isel__option--active" : ""}`}
               onPointerDown={(e) => {
+                e.stopPropagation();
                 (e.currentTarget as HTMLLIElement).dataset.ptrX = String(e.clientX);
                 (e.currentTarget as HTMLLIElement).dataset.ptrY = String(e.clientY);
               }}
               onPointerUp={(e) => {
+                e.stopPropagation();
                 const startX = parseFloat((e.currentTarget as HTMLLIElement).dataset.ptrX ?? "0");
                 const startY = parseFloat((e.currentTarget as HTMLLIElement).dataset.ptrY ?? "0");
                 const dx = Math.abs(e.clientX - startX);
@@ -160,7 +174,8 @@ const InlineSelect: React.FC<Props> = ({
               )}
             </li>
           ))}
-        </ul>,
+        </ul>
+        </>,
         document.body,
       )
     : null;

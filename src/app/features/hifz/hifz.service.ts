@@ -1,5 +1,9 @@
 import { Capacitor } from "@capacitor/core";
 import { idb } from "../../core/services/storage/idb.service";
+import {
+  getRubStartPages,
+  getHizbStartPages,
+} from "../../core/services/data/metadata.service";
 
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
@@ -530,7 +534,8 @@ export function generateSessions(
   const contiguousRanges = flattenMemorized(memorized, chaptersCache);
   if (contiguousRanges.length === 0) return [];
 
-  const pagesPerSession = unitToPageCount(goal.quantity ?? goal.pagesPerSession ?? 5, goal.unit ?? "pages");
+  const unit = goal.unit ?? "pages";
+  const quantity = Math.max(1, goal.quantity ?? goal.pagesPerSession ?? 5);
 
   const sessions: PlanSession[] = [];
   let sessionIndex = 0;
@@ -551,6 +556,55 @@ export function generateSessions(
     sessionIndex++;
   };
 
+  // Rub'/Hizb goals slice at the real boundary pages (not a fixed page count),
+  // so each session ends exactly on a rub'/hizb boundary. `quantity` is how many
+  // rubs/hizbs go in one session.
+  const boundaryPages =
+    unit === "rub" ? getRubStartPages()
+    : unit === "hizb" ? getHizbStartPages()
+    : null;
+
+  if (boundaryPages) {
+    const boundarySet = new Set(boundaryPages);
+    for (const range of contiguousRanges) {
+      // Pages (within the range) where a new rub'/hizb begins — these split the
+      // range into whole units, plus possibly a partial head/tail.
+      const cuts = Array.from(
+        new Set(boundaryPages.filter((p) => p > range.from && p <= range.to)),
+      ).sort((a, b) => a - b);
+
+      let segStart = range.from;
+
+      // Partial head: if the range doesn't start exactly on a boundary, the
+      // pages before the first boundary are an incomplete unit → own session.
+      if (!boundarySet.has(range.from) && cuts.length > 0) {
+        pushSession([{ from: segStart, to: cuts[0] - 1 }]);
+        segStart = cuts.shift()!;
+      }
+
+      // Whole units: group the remaining boundaries `quantity` at a time.
+      let count = 0;
+      for (const cut of cuts) {
+        count++;
+        if (count >= quantity) {
+          pushSession([{ from: segStart, to: cut - 1 }]);
+          segStart = cut;
+          count = 0;
+        }
+      }
+
+      // Trailing remainder: a final full-or-partial group up to the range end.
+      // If the range ends mid-unit this is a partial tail session; either way
+      // every page is covered.
+      if (segStart <= range.to) {
+        pushSession([{ from: segStart, to: range.to }]);
+      }
+    }
+    return sessions;
+  }
+
+  // Pages/Juz goals: fixed page-count chunks.
+  const pagesPerSession = unitToPageCount(quantity, unit);
   for (const range of contiguousRanges) {
     // Each contiguous memorized block is sliced into sessions independently —
     // sessions never cross the gap between two non-contiguous blocks.

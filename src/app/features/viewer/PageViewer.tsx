@@ -148,7 +148,6 @@ const PageViewer: React.FC = () => {
 
   // Shared playback queue
   const queue = usePlayback();
-  const showPlaybackBar = queue.state.currentVerse !== null;
 
   // Long‑press / short‑tap on the play button
   const [reciteMode, setReciteMode] = useState(false);
@@ -455,6 +454,15 @@ const PageViewer: React.FC = () => {
   useEffect(() => {
     if (!queue.state.currentVerse) setUserPaused(false);
   }, [queue.state.currentVerse]);
+
+  // Show the now-playing toolbar only for GENUINELY active media: while playing/buffering, or
+  // while the user has explicitly paused a live session. A bare non-null currentVerse is NOT
+  // enough — it lingers after an Android Auto session ends (nothing playing, not connected),
+  // which made the bar appear in the Quran viewer with no media and no notification card.
+  const showPlaybackBar =
+    queue.state.isPlaying ||
+    queue.state.isLoading ||
+    (queue.state.currentVerse !== null && userPaused);
 
   // Playback bar controls
   const handlePlayPause = useCallback(() => {

@@ -4,6 +4,17 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m1
 
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: main
+          include: true
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+
     integrations:
       app_store_connect: Rafeeq ASC Key # name you give it in Codemagic UI
 
@@ -24,6 +35,12 @@ workflows:
       - name: Build web assets
         script: npm run build:prod
 
+      - name: Add iOS platform if missing
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
       - name: Sync Capacitor iOS
         script: npx cap sync ios
 
@@ -32,9 +49,28 @@ workflows:
           cd ios/App
           pod install
 
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+
+      - name: Generate export options plist
+        script: |
+          cat > /Users/builder/export_options.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
       - name: Build iOS archive
         script: |
-          xcode-project use-profiles
           xcodebuild archive \
             -workspace ios/App/App.xcworkspace \
             -scheme App \

@@ -19,6 +19,7 @@ import type { Verse } from "../../../../shared/models/verse.model";
 import { getPage, findVerseByStartingPhrase } from "../../../services/data/quran.service";
 import { firstWordPosition, matchTranscript } from "../../../services/quran/recite-matcher.service";
 import { correctMuqattaatOpening } from "./muqattaat";
+import { stripOpeningPhrases } from "./openingPhrases";
 import {
   ESTABLISHED_WORDS_ON_PAGE,
   LOOSE_MATCH_MAX_SKIP,
@@ -246,15 +247,29 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
         }
       }
 
+      // Strip generic openers (isti'adhah / basmalah) the reciter says
+      // before the actual verse — they aren't the verse being sought and
+      // otherwise drag the whole-Quran scorer toward 1:1 / surah heads. See
+      // ./openingPhrases (basmalah is only stripped when real words follow,
+      // so a bare basmalah can still resolve to its own verse). Done first
+      // so what's left is the real recitation the next steps work on.
+      const withoutOpeners = stripOpeningPhrases(combinedBuffer);
+      if (withoutOpeners !== combinedBuffer) {
+        console.log(
+          `[recite-identify] stripped opening phrase: "${combinedBuffer}" -> "${withoutOpeners}"`,
+        );
+      }
+
       // Muqatta'at (disconnected-letter openers like الم، يس، طه) are the
       // one place Deepgram reliably mis-transcribes Quranic text — see
       // ./muqattaat.ts. Only worth checking at the very start of the
       // buffer: these openers are always the first thing recited on the
-      // ~90 verses that have one, never appearing mid-recitation.
-      bufferRef.current = correctMuqattaatOpening(combinedBuffer);
-      if (bufferRef.current !== combinedBuffer) {
+      // ~90 verses that have one, never appearing mid-recitation. Runs on
+      // the opener-stripped text so "بسم الله… الم" still corrects the الم.
+      bufferRef.current = correctMuqattaatOpening(withoutOpeners);
+      if (bufferRef.current !== withoutOpeners) {
         console.log(
-          `[recite-identify] muqatta'at correction: "${combinedBuffer}" -> "${bufferRef.current}"`,
+          `[recite-identify] muqatta'at correction: "${withoutOpeners}" -> "${bufferRef.current}"`,
         );
       }
       chunkCountRef.current += 1;

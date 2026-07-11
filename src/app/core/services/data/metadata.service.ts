@@ -889,6 +889,64 @@ export function getRubEnd(rubNumber: number): { sura: number; aya: number } {
   return getEndFromMapping(rub.verse_mapping);
 }
 
+/**
+ * Start page of every rub' el-hizb, indexed by rub number (1..240) → page.
+ * Uses the real rub verse-mappings when available; otherwise falls back to an
+ * even 604/240 spacing. Result is monotonic (each rub starts on a page ≥ the
+ * previous one) so it can be used to slice memorized ranges at rub boundaries.
+ */
+export function getRubStartPages(): number[] {
+  const pages: number[] = [];
+  if (rubsCache.length >= 240) {
+    const ordered = [...rubsCache].sort(
+      (a, b) => (a.rub_number ?? 0) - (b.rub_number ?? 0),
+    );
+    let prev = 1;
+    for (const r of ordered) {
+      const start = getStartFromMapping(r.verse_mapping);
+      let p = estimatePageForVerse(start.sura, start.aya);
+      if (p < prev) p = prev; // keep monotonic
+      pages.push(p);
+      prev = p;
+    }
+  }
+  if (pages.length < 240) {
+    // Fallback: evenly spaced rub boundaries across the mushaf.
+    pages.length = 0;
+    for (let i = 0; i < 240; i++) {
+      pages.push(Math.min(604, Math.max(1, Math.round((i * 604) / 240) + 1)));
+    }
+  }
+  return pages;
+}
+
+/**
+ * Start page of every hizb, indexed by hizb number (1..60) → page. Prefers the
+ * real hizb mappings; when hizb data is missing it derives each hizb boundary
+ * as the start of every 4th rub (4 rubs = 1 hizb).
+ */
+export function getHizbStartPages(): number[] {
+  const pages: number[] = [];
+  if (hizbsCache.length >= 60) {
+    const ordered = [...hizbsCache].sort(
+      (a, b) => (a.hizb_number ?? 0) - (b.hizb_number ?? 0),
+    );
+    let prev = 1;
+    for (const h of ordered) {
+      const start = getStartFromMapping(h.verse_mapping);
+      let p = estimatePageForVerse(start.sura, start.aya);
+      if (p < prev) p = prev;
+      pages.push(p);
+      prev = p;
+    }
+    return pages;
+  }
+  // No hizb data → one hizb per 4 rubs.
+  const rubStarts = getRubStartPages();
+  for (let i = 0; i < 60; i++) pages.push(rubStarts[i * 4] ?? 1);
+  return pages;
+}
+
 export function getRubNumberForPage(page: number): number {
   if (rubsCache.length === 0) {
     // Fallback: each rub ≈ 2.5 pages

@@ -39,8 +39,23 @@ export interface RangeDurations {
  */
 const AUDIO_RECITER_ID_MAP: Record<string, string> = {};
 
+/**
+ * The timestamp endpoint wants a NUMERIC reciter id, but some code paths (notably the Android
+ * Auto browse tree / cold-start adopt) carry the reciter as a SLUG. If a slug slips through
+ * (e.g. the queue was started from the car without an explicit numeric setReciter), map it to
+ * the numeric id so duration lookups don't silently fail and leave the total at 0.
+ */
+const RECITER_SLUG_TO_ID: Record<string, string> = {
+  "minshawi-murattal": "9",
+  abdul_basit_murattal: "2",
+  sudais: "3",
+  husary: "6",
+  alafasy: "7",
+};
+
 function chapterReciterId(reciterId: string): string {
-  return AUDIO_RECITER_ID_MAP[reciterId] ?? reciterId;
+  const numeric = RECITER_SLUG_TO_ID[reciterId] ?? reciterId;
+  return AUDIO_RECITER_ID_MAP[numeric] ?? numeric;
 }
 
 // ─── IDB cache (meta store) ─────────────────────────────────────────────────────

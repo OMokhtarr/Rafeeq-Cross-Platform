@@ -125,6 +125,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private var nativeRepeatPageFirst: Int = -1
     private var nativeRepeatPageLast: Int = -1
 
+    // ── Brain-stall watchdog ────────────────────────────────────────────────────
+    // When the JS brain is driving and a verse ends, we ask the brain to feed the next verse.
+    // But the WebView is FROZEN while the phone screen is locked (or the app is backgrounded on
+    // some OEMs), so the brain won't respond and playback would stall at the verse boundary.
+    // On each verse-end we arm this watchdog; if the brain hasn't loaded the next verse before it
+    // fires, we self-advance natively (ExoPlayer keeps playing through the lock). Cancelled when
+    // the brain DOES load the next verse (loadNativeTrack) so we never double-advance.
+    private var brainWatchdog: Runnable? = null
+    private val BRAIN_STALL_TIMEOUT_MS = 1500L
+
     // Last metadata pushed to the session. METADATA_KEY_DURATION is what scales the
     // notification's progress bar; re-setting metadata on every verse (even with the same
     // values) makes Android reinitialise the bar — the visible "reset" at each verse start.
@@ -213,6 +223,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     override fun onDestroy() {
         instance = null
+        cancelBrainWatchdog()
         player?.release()
         player = null
         abandonAudioFocus()
@@ -233,7 +244,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // must NOT also notify JS — that would double-advance once JS arrives.
                 if (jsDriving) {
                     if (RafeeqAutoPlugin.brainAlive()) {
+                        // Ask the brain to feed the next verse, but arm a watchdog: if it doesn't
+                        // respond (WebView frozen behind a locked screen / backgrounded), we take
+                        // over natively so playback doesn't stall at the verse boundary.
                         dispatchCarEvent("nativeTrackEnded", aya = index)
+                        armBrainWatchdog(index + 1)
                     } else {
                         // The app was closed/terminated, so the brain that was feeding verses
                         // is gone. Don't let playback die: take over natively and keep going
@@ -391,6 +406,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun loadNativeTrack(url: String, index: Int, title: String, autoplay: Boolean) {
         jsDriving = true
+        // The brain responded with the next verse — cancel any pending stall watchdog.
+        cancelBrainWatchdog()
         // JS brain is now driving — stop the native page-marker derivation; JS owns page
         // markers via updateState() from here on.
         nativeColdStartSura = 0
@@ -523,6 +540,32 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         requestAudioFocus()
         player?.loadList(urls, nextIndex, playWhenReady = true)
         updateTitleMetadata(title)
+    }
+
+    /**
+     * Arm the brain-stall watchdog after asking the JS brain to feed verse [nextIndex]. If the
+     * brain loads it in time, loadNativeTrack() cancels this. If not (WebView frozen behind a
+     * locked screen / backgrounded), the watchdog self-advances natively so playback continues.
+     */
+    @androidx.media3.common.util.UnstableApi
+    private fun armBrainWatchdog(nextIndex: Int) {
+        cancelBrainWatchdog()
+        val wd = Runnable {
+            brainWatchdog = null
+            // Only fire if the brain still hasn't taken over (still jsDriving) and the player
+            // actually stopped at the boundary (not playing) — i.e. it genuinely stalled.
+            if (jsDriving && player?.isPlaying() != true) {
+                Log.d("RafeeqMedia", "brainWatchdog: brain didn't respond, native self-advance to $nextIndex")
+                fallbackToNativeAdvance(nextIndex)
+            }
+        }
+        brainWatchdog = wd
+        mainHandler.postDelayed(wd, BRAIN_STALL_TIMEOUT_MS)
+    }
+
+    private fun cancelBrainWatchdog() {
+        brainWatchdog?.let { mainHandler.removeCallbacks(it) }
+        brainWatchdog = null
     }
 
     /**
