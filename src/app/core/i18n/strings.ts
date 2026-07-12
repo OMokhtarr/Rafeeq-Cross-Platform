@@ -132,6 +132,13 @@ export interface AppStrings {
     pageLabel: string;
     hizbLabel: string;
     comingSoon: string;
+    recite: string;
+    reciteStop: string;
+    reciteListening: string;
+    reciteNoMatch: string;
+    reciteIdentifying: string;
+    reciteRateLimited: string;
+    reciteMicError: string;
   };
 
   mushaf: {
@@ -509,6 +516,13 @@ const ar: AppStrings = {
     pageLabel: "صفحة",
     hizbLabel: "الحزب",
     comingSoon: "قريباً...",
+    recite: "تلاوة",
+    reciteStop: "إيقاف",
+    reciteListening: "أستمع… تابع التلاوة",
+    reciteNoMatch: "لم يتم التعرف على كلامك، حاول مجدداً",
+    reciteIdentifying: "جاري الاستماع…",
+    reciteRateLimited: "تم إبطاء الاستماع مؤقتًا…",
+    reciteMicError: "تعذّر الوصول إلى الميكروفون",
   },
   mushaf: {
     page: "صفحة",
@@ -907,6 +921,13 @@ const en: AppStrings = {
     pageLabel: "Page",
     hizbLabel: "Hizb",
     comingSoon: "Coming soon...",
+    recite: "Recite",
+    reciteStop: "Stop",
+    reciteListening: "Listening… keep reciting",
+    reciteNoMatch: "Didn't catch that — try again",
+    reciteIdentifying: "Listening…",
+    reciteRateLimited: "Slowing down temporarily…",
+    reciteMicError: "Couldn't access the microphone",
   },
   mushaf: {
     page: "Page",

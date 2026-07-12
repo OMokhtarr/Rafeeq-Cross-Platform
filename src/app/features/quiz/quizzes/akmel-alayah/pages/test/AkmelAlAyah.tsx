@@ -24,6 +24,7 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
+import { useQuizRecite } from "../../../../hooks/useQuizRecite";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -190,8 +191,25 @@ const AkmelAlAyah: React.FC = () => {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  // Marks the question correct the moment the target verse is fully
+  // recited, but deliberately leaves the mic running — the user may keep
+  // reciting the rest of the page, which useQuizRecite keeps tracking
+  // until they stop it or reach the end of the page.
+  const handleReciteComplete = useCallback(() => {
+    if (!q || answered) return;
+    const correctAnswer = (q.hiddenPortion ?? q.correctAnswer ?? "").trim();
+    setUserAnswer(correctAnswer);
+    setCorrect(true);
+    setScore((s) => s + 1);
+    setAnswered(true);
+    if (isSoundOn()) beep("correct");
+  }, [q, answered, beep]);
+
+  const recite = useQuizRecite(handleReciteComplete);
+
   const handleSubmit = useCallback(() => {
     if (!userAnswer.trim() || answered || !q) return;
+    recite.stop(); // typing an answer abandons any in-progress recite session
     const correctAnswer = (q.hiddenPortion ?? q.correctAnswer ?? "").trim();
     const user = userAnswer.trim();
     const isCorrect =
@@ -202,10 +220,20 @@ const AkmelAlAyah: React.FC = () => {
     if (isCorrect) setScore((s) => s + 1);
     setAnswered(true);
     if (isSoundOn()) beep(isCorrect ? "correct" : "wrong");
-  }, [userAnswer, answered, q, beep]);
+  }, [userAnswer, answered, q, beep, recite]);
+
+  const handleReciteToggle = useCallback(() => {
+    if (!q) return;
+    if (recite.isArmed) {
+      recite.stop();
+    } else if (!answered) {
+      recite.start({ sura: q.sura, aya: q.aya, page: q.page });
+    }
+  }, [q, answered, recite]);
 
   const handleSkip = () => {
     if (answered || !q) return;
+    recite.stop();
     setSkipped(true);
     setAnswered(true);
     setCorrect(false);
@@ -214,6 +242,7 @@ const AkmelAlAyah: React.FC = () => {
   };
 
   const handleNext = () => {
+    recite.stop();
     if (idx + 1 < questions.length) {
       setIdx((i) => i + 1);
       setUserAnswer("");
@@ -235,6 +264,16 @@ const AkmelAlAyah: React.FC = () => {
       .filter(Boolean);
     if (hintLevel < words.length) setHintLevel((l) => l + 1);
   };
+
+  useEffect(() => {
+    if (recite.micError) {
+      presentToast({
+        message: tt.reciteMicError,
+        duration: 2500,
+        position: "bottom",
+      });
+    }
+  }, [recite.micError, presentToast, tt.reciteMicError]);
 
   const handleExit = () => setShowExitModal(true);
 
@@ -442,16 +481,16 @@ const AkmelAlAyah: React.FC = () => {
                       {tt.skip}
                     </button>
                     <button
-                      className="aa-btn aa-recite"
-                      onClick={() =>
-                        presentToast({
-                          message: tt.comingSoon,
-                          duration: 2000,
-                          position: "bottom",
-                        })
-                      }
-                      aria-label="Recite"
+                      className={`aa-btn aa-recite ${
+                        recite.isArmed ? "aa-recite-active" : ""
+                      }`}
+                      onClick={handleReciteToggle}
+                      disabled={answered && !recite.isArmed}
+                      aria-label={recite.isArmed ? tt.reciteStop : tt.recite}
                     >
+                      {recite.isArmed && (
+                        <span className="aa-recite-dot" aria-hidden="true" />
+                      )}
                       <svg
                         viewBox="0 0 24 24"
                         width="18"
@@ -470,6 +509,26 @@ const AkmelAlAyah: React.FC = () => {
                       </svg>
                     </button>
                   </div>
+
+                  {recite.isArmed && (
+                    <div
+                      className={`aa-recite-status ${
+                        recite.noMatchHint || recite.rateLimited
+                          ? "aa-recite-status--warn"
+                          : ""
+                      }`}
+                    >
+                      <span className="aa-recite-status-text">
+                        {recite.rateLimited
+                          ? tt.reciteRateLimited
+                          : recite.identifying
+                          ? recite.lastChunkText || tt.reciteIdentifying
+                          : recite.noMatchHint
+                          ? tt.reciteNoMatch
+                          : recite.lastChunkText || tt.reciteListening}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Full content – hidden in immersive mode */}
                   {!immersiveMode && (

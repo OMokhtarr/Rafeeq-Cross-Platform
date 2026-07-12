@@ -569,7 +569,19 @@ async function getCorpusSequence(): Promise<{
  *  - "none": no viable candidate at all (silence, noise, non-Quran speech).
  */
 export type IdentifyOutcome =
-  | { status: "found"; match: SearchResult }
+  | {
+      status: "found";
+      match: SearchResult;
+      /** True when the match had no competing near-duplicate elsewhere in
+       *  the Quran — the recited words already pin it to exactly one place.
+       *  False when a rival existed and was resolved by discriminating words
+       *  or position (a mutashabihat passage). Callers use this to decide how
+       *  much more recitation is needed before trusting the landing (see
+       *  ESTABLISHED_WORDS_ON_PAGE in the recite hooks): a unique landing is
+       *  trustworthy almost immediately; an ambiguous one needs the reciter
+       *  to get well past the shared phrasing first. */
+      unique: boolean;
+    }
   | { status: "ambiguous" }
   | { status: "none" };
 
@@ -577,17 +589,28 @@ export type IdentifyOutcome =
  *  disambiguation — a candidate's "continuation" for comparison. */
 const IDENTIFY_WINDOW = 30;
 
-/** Resolves a chosen sura:aya to a full SearchResult (with page). */
-async function decideVerse(sura: number, aya: number): Promise<IdentifyOutcome> {
+/** Resolves a chosen sura:aya to a full SearchResult (with page). `unique`
+ *  records whether this decision had no competing near-duplicate (see
+ *  IdentifyOutcome.unique) — passed by each caller since only they know
+ *  whether a rival was in play. */
+async function decideVerse(
+  sura: number,
+  aya: number,
+  unique: boolean,
+): Promise<IdentifyOutcome> {
   const row = await findVerseByKey(sura, aya);
   if (!row) {
     console.log(`[recite-identify] resolved ${sura}:${aya} but no corpus row found`);
     return { status: "none" };
   }
-  console.log(`[recite-identify] decided ${row.sura}:${row.aya} (page ${row.page})`);
+  console.log(
+    `[recite-identify] decided ${row.sura}:${row.aya} (page ${row.page})` +
+      `${unique ? " [unique]" : " [has rival]"}`,
+  );
   return {
     status: "found",
     match: { verseKey: row.id, sura: row.sura, aya: row.aya, text: row.text, page: row.page },
+    unique,
   };
 }
 
@@ -702,7 +725,8 @@ export async function findVerseByStartingPhrase(
               ` — tie-broken toward last position ${options.nearPosition.sura}:` +
               `${options.nearPosition.aya} → ${nearer.sura}:${nearer.aya}`,
           );
-          return decideVerse(nearer.sura, nearer.aya);
+          // A rival existed (these are exact-text duplicates) — not unique.
+          return decideVerse(nearer.sura, nearer.aya, false);
         }
       }
       console.log(
@@ -716,10 +740,13 @@ export async function findVerseByStartingPhrase(
       `[recite-identify] head-to-head ${best.sura}:${best.aya}(${bestHits}) vs ` +
         `${rival.sura}:${rival.aya}(${rivalHits}) → ${winner.sura}:${winner.aya}`,
     );
-    return decideVerse(winner.sura, winner.aya);
+    // A competing near-duplicate existed and was resolved by discriminating
+    // words — not unique, so the caller should still wait past shared phrasing.
+    return decideVerse(winner.sura, winner.aya, false);
   }
 
-  return decideVerse(best.sura, best.aya);
+  // No independent rival competed with the winner — the passage is unique.
+  return decideVerse(best.sura, best.aya, true);
 }
 
 async function findVerseByKey(

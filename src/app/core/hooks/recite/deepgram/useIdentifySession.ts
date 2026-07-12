@@ -56,6 +56,76 @@ const MAX_IDENTIFY_CHUNKS = 30;
  */
 const IDENTIFY_MIN_MATCHED = 4;
 
+/**
+ * Consecutive spoken words that must follow a verse *on the current page*
+ * before the fast page-first path (see findVerseOnPage) commits to it. Set
+ * equal to the whole-Quran bar: the search space is tiny (~15 verses) so a
+ * false page-local match is unlikely, but demanding a real in-order run
+ * still guards against a couple of stray page words coinciding with noise.
+ */
+const PAGE_FIRST_MIN_CONSUMED = 4;
+
+/**
+ * Words matched since landing after which a *uniquely*-identified page counts
+ * as established (vs. ESTABLISHED_WORDS_ON_PAGE = 15 for an ambiguous one).
+ * A unique landing has no near-duplicate to be confused with, so it needs
+ * only enough words to rule out noise/coincidence — not the long wait an
+ * ambiguous landing needs to get past its duplicate's shared phrasing. Set to
+ * the identify bar (IDENTIFY_MIN_MATCHED) so "identified uniquely" and "one
+ * more solid tracking match" is enough to lock it in.
+ */
+const ESTABLISHED_WORDS_IF_UNIQUE = 4;
+
+/**
+ * Skip budget for the page-first anchor scan — deliberately larger than the
+ * tracking matcher's LOOSE_MATCH_MAX_SKIP. Some verses carry a leading
+ * basmalah in the bundled corpus (e.g. An-Naba' 78:1 is stored as "بسم الله
+ * الرحمن الرحيم عم يتساءلون"), so the reciter's actual first word can sit
+ * several tokens into the verse; a tight skip would miss that start entirely.
+ * The scan is confined to one page (~15 verses), so a generous skip can't
+ * reach a wrong page — at worst it picks a neighbouring verse as the start,
+ * which beginOnPage's own replay then corrects to the true position.
+ */
+const PAGE_FIRST_MAX_SKIP = 4;
+
+/**
+ * Fast page-first identify. Before falling back to the whole-Quran search,
+ * check whether the reciter is simply reciting from the page they armed on —
+ * the overwhelmingly common case. Scans each verse on `pageVerses` as a
+ * candidate start and returns the one the cleaned buffer follows furthest in
+ * order (requiring PAGE_FIRST_MIN_CONSUMED consecutive matches), or null if
+ * the recitation doesn't belong to this page at all — in which case the
+ * caller runs the normal whole-Quran identify.
+ *
+ * This can never place the reciter on the *wrong* page: it only ever returns
+ * a verse that's actually on the page in front of them, and only when their
+ * words genuinely track it. Reciting something off-page just yields null and
+ * the global search takes over (by which point more has been recited, giving
+ * that search more to work with).
+ */
+function findVerseOnPage(
+  cleanedBuffer: string,
+  pageVerses: Verse[],
+): { sura: number; aya: number; consumed: number } | null {
+  let best: { sura: number; aya: number; consumed: number } | null = null;
+  for (const verse of pageVerses) {
+    const from = firstWordPosition(verse);
+    // Loose skip so a garbled/missed word mid-run doesn't abort the follow —
+    // same tolerance the tracking matcher uses.
+    const result = matchTranscript(cleanedBuffer, pageVerses, from, {
+      maxSkip: PAGE_FIRST_MAX_SKIP,
+    });
+    if (
+      result.position &&
+      result.consumedTokens >= PAGE_FIRST_MIN_CONSUMED &&
+      (!best || result.consumedTokens > best.consumed)
+    ) {
+      best = { sura: verse.sura, aya: verse.aya, consumed: result.consumedTokens };
+    }
+  }
+  return best;
+}
+
 export interface IdentifySessionDeps {
   isActive: () => boolean;
   isRecording: () => boolean;
@@ -150,6 +220,22 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
   // a mis-recitation must not end the session).
   const hasIdentifiedRef = useRef(false);
   const wordsSinceLandingRef = useRef(0);
+  // Whether the page we're currently landed on was identified *uniquely* (no
+  // competing near-duplicate anywhere in the Quran — see IdentifyOutcome.
+  // unique). A unique landing needs far fewer matched words before it's
+  // trusted as "established": there's no shared phrasing a wrong page could
+  // hide behind, so once a handful of its words match, it can't be anything
+  // else. An ambiguous landing still needs the full ESTABLISHED_WORDS_ON_PAGE
+  // wait to get past the phrasing its duplicate shares.
+  const landedUniqueRef = useRef(false);
+  // A far-away page a re-identify pointed to while the reciter was already
+  // established on their page — a *candidate* deliberate jump, not yet acted
+  // on. We don't stop the session on the first such match (it could be STT
+  // noise or a similar verse elsewhere); we remember it and only stop once a
+  // second re-identify corroborates the same jump. Cleared whenever a match
+  // lands back on/near the current page (false alarm). See the isMoveAway
+  // block in handleIdentifyChunk.
+  const pendingMoveAwayRef = useRef<number | null>(null);
   // Where tracking was when a *re-identify* began — captured before any
   // reset so the whole-Quran search can break exact-text ties (mutashabihat
   // like 2:34 vs 20:116) toward wherever the reciter just was, instead of
@@ -236,6 +322,9 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
           maxSkip: LOOSE_MATCH_MAX_SKIP,
         });
         if (resume.position && resume.consumedTokens >= LOOSE_MATCH_MIN_CONSUMED) {
+          // Reciter is back on their tracked position — any armed move-away
+          // candidate was a false alarm.
+          pendingMoveAwayRef.current = null;
           identifyingRef.current = false;
           deps.setIdentifying(false);
           deps.onSwitchToTracking();
@@ -274,6 +363,33 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
       }
       chunkCountRef.current += 1;
 
+      // Page-first fast path (initial identify only): the reciter is almost
+      // always reciting from the page they opened to, so check that page
+      // before the whole-Quran search. A hit lands immediately with far less
+      // recited text; a miss falls through to the global search unchanged
+      // (and by then more has been recited, so that search has more to go
+      // on). Skipped on a re-identify — there the resume-check above and
+      // nearPosition already handle "am I still near where I was".
+      if (!hasIdentifiedRef.current) {
+        const onPage = findVerseOnPage(bufferRef.current, deps.getPageVerses());
+        if (onPage) {
+          console.log(
+            `[recite-identify] page-first match ${onPage.sura}:${onPage.aya} ` +
+              `on page ${deps.getPage()} (consumed ${onPage.consumed})`,
+          );
+          // Page-first skips the whole-Quran rival check, so we don't know if
+          // this verse is globally unique — treat it as ambiguous (full
+          // establish wait). Conservative: never shortens the wait without
+          // having actually verified uniqueness.
+          landedUniqueRef.current = false;
+          identifyingRef.current = false;
+          deps.setIdentifying(false);
+          deps.onSwitchToTracking();
+          await beginOnPage(deps.getPage(), onPage.sura, onPage.aya, bufferRef.current);
+          return;
+        }
+      }
+
       const outcome = await findVerseByStartingPhrase(bufferRef.current, {
         minMatched: IDENTIFY_MIN_MATCHED,
         nearPosition: reidentifyFromRef.current,
@@ -291,11 +407,52 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
           hasIdentifiedRef.current &&
           outcome.match.page !== deps.getPage() &&
           outcome.match.page !== deps.getPage() + 1;
-        if (isMoveAway && wordsSinceLandingRef.current >= ESTABLISHED_WORDS_ON_PAGE) {
-          deps.stopRecording();
+        // "Established" = tracked far enough on the current page to trust the
+        // landing. A page identified *uniquely* (no near-duplicate to hide a
+        // wrong landing) needs only ESTABLISHED_WORDS_IF_UNIQUE words; an
+        // ambiguous one needs the full ESTABLISHED_WORDS_ON_PAGE to get past
+        // the shared phrasing. Uses the CURRENT landing's uniqueness.
+        const establishThreshold = landedUniqueRef.current
+          ? ESTABLISHED_WORDS_IF_UNIQUE
+          : ESTABLISHED_WORDS_ON_PAGE;
+        if (isMoveAway && wordsSinceLandingRef.current >= establishThreshold) {
+          // A deliberate jump elsewhere — but don't act on a single sighting.
+          // The reciter may have simply forgotten a couple of verses, or this
+          // could be STT noise / a mutashabihat verse that happens to score
+          // on a far page. Require two consecutive re-identifies to agree on
+          // the same far page (allowing ±1 for a page boundary) before
+          // stopping; the first one just arms the candidate and we keep
+          // identifying so the next recitation cycle can confirm or refute.
+          const pending = pendingMoveAwayRef.current;
+          const corroborated =
+            pending !== null && Math.abs(outcome.match.page - pending) <= 1;
+          if (corroborated) {
+            console.log(
+              `[recite-identify] move-away to page ${outcome.match.page} ` +
+                `corroborated (was ${pending}) — stopping session`,
+            );
+            pendingMoveAwayRef.current = null;
+            deps.stopRecording();
+            return;
+          }
+          console.log(
+            `[recite-identify] possible move-away to page ${outcome.match.page} ` +
+              `— awaiting corroboration, not stopping yet`,
+          );
+          pendingMoveAwayRef.current = outcome.match.page;
+          // Stay in the identify phase (don't relocate, don't stop) so the
+          // next buffer either re-confirms this jump (→ stop above) or comes
+          // back matching the reciter's real page (→ resume-check / relocate,
+          // both of which clear the candidate).
           return;
         }
 
+        // Landed on/near the current page — any pending far-away candidate
+        // was a false alarm (noise or a similar verse), so forget it.
+        pendingMoveAwayRef.current = null;
+        // Remember how confidently this page was identified — drives the
+        // establish threshold above on the next divergence.
+        landedUniqueRef.current = outcome.unique;
         identifyingRef.current = false;
         deps.setIdentifying(false);
         deps.onSwitchToTracking();
@@ -321,7 +478,10 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
         if (hasIdentifiedRef.current) {
           // Mid-session re-search failed — resume tracking from the last
           // known position instead of stopping. A mis-recitation or a few
-          // bad segments must never end the session.
+          // bad segments must never end the session. An uncorroborated
+          // move-away candidate that never got a second sighting is dropped
+          // here too — it never rose above noise.
+          pendingMoveAwayRef.current = null;
           identifyingRef.current = false;
           deps.setIdentifying(false);
           deps.onSwitchToTracking();
@@ -358,6 +518,8 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
     wordsSinceLandingRef.current = 0;
     // Initial identify: no prior tracking position to bias toward.
     reidentifyFromRef.current = null;
+    pendingMoveAwayRef.current = null;
+    landedUniqueRef.current = false;
   }, []);
 
   const reidentify = useCallback(
