@@ -1,8 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import { idb } from "../../core/services/storage/idb.service";
 import {
+  getRubBoundaries,
+  getHizbBoundaries,
   getRubStartPages,
   getHizbStartPages,
+  type UnitBoundary,
 } from "../../core/services/data/metadata.service";
 
 const STORAGE_KEY = "rafiq_hifz_v2";
@@ -54,6 +57,12 @@ export interface PlanSession {
   ranges?: PageRange[];
   /** Original units selected for this session (to display only what user picked, not extra surahs). */
   selectedUnits?: MemorizedUnit[];
+  /**
+   * Exact verse the session begins at (for rub'/hizb sessions whose boundary
+   * falls mid-page). Navigation opens the viewer precisely here rather than at
+   * the page start. Absent for page/juz sessions that begin at a page start.
+   */
+  startVerse?: { sura: number; aya: number };
   done: boolean;
   doneDate?: string;
 }
@@ -540,7 +549,10 @@ export function generateSessions(
   const sessions: PlanSession[] = [];
   let sessionIndex = 0;
 
-  const pushSession = (segs: PageRange[]) => {
+  const pushSession = (
+    segs: PageRange[],
+    startVerse?: { sura: number; aya: number },
+  ) => {
     const from = segs[0].from;
     const to = segs[segs.length - 1].to;
     sessions.push({
@@ -551,53 +563,77 @@ export function generateSessions(
       ranges: segs.length === 1 ? undefined : segs,
       // Only the units this session's pages actually cover — not the whole plan.
       selectedUnits: unitsForSpan(memorized, from, to, chaptersCache),
+      ...(startVerse ? { startVerse } : {}),
       done: false,
     });
     sessionIndex++;
   };
 
-  // Rub'/Hizb goals slice at the real boundary pages (not a fixed page count),
-  // so each session ends exactly on a rub'/hizb boundary. `quantity` is how many
-  // rubs/hizbs go in one session.
-  const boundaryPages =
-    unit === "rub" ? getRubStartPages()
-    : unit === "hizb" ? getHizbStartPages()
+  // Rub'/Hizb goals slice at the real boundary verses (not a fixed page count).
+  // A rub'/hizb mark often falls mid-page, so the boundary page is SHARED: the
+  // ending session includes it (the tail of the previous unit sits there) and
+  // the next session also starts on it, navigating to the exact boundary verse.
+  const boundaries =
+    unit === "rub" ? getRubBoundaries()
+    : unit === "hizb" ? getHizbBoundaries()
     : null;
+  const boundaryPages =
+    boundaries?.map((b) => b.page) ??
+    (unit === "rub" ? getRubStartPages()
+     : unit === "hizb" ? getHizbStartPages()
+     : null);
 
   if (boundaryPages) {
     const boundarySet = new Set(boundaryPages);
+    // Look up the boundary (verse+page) that begins on a given page, if any.
+    const boundaryAt = (page: number): UnitBoundary | undefined =>
+      boundaries?.find((b) => b.page === page);
+
     for (const range of contiguousRanges) {
-      // Pages (within the range) where a new rub'/hizb begins — these split the
-      // range into whole units, plus possibly a partial head/tail.
-      const cuts = Array.from(
-        new Set(boundaryPages.filter((p) => p > range.from && p <= range.to)),
-      ).sort((a, b) => a - b);
-
-      let segStart = range.from;
-
-      // Partial head: if the range doesn't start exactly on a boundary, the
-      // pages before the first boundary are an incomplete unit → own session.
-      if (!boundarySet.has(range.from) && cuts.length > 0) {
-        pushSession([{ from: segStart, to: cuts[0] - 1 }]);
-        segStart = cuts.shift()!;
+      // Boundaries whose start-page is within the range (excluding the range's
+      // own first page) become the cut points; each carries its start verse.
+      const cuts: UnitBoundary[] = (boundaries ?? boundaryPages.map((p) => ({ page: p, sura: 0, aya: 0 })))
+        .filter((b) => b.page > range.from && b.page <= range.to)
+        .sort((a, b) => a.page - b.page);
+      // Drop duplicate pages (keep the first boundary on each page).
+      const uniqueCuts: UnitBoundary[] = [];
+      const seenPages = new Set<number>();
+      for (const c of cuts) {
+        if (seenPages.has(c.page)) continue;
+        seenPages.add(c.page);
+        uniqueCuts.push(c);
       }
 
-      // Whole units: group the remaining boundaries `quantity` at a time.
+      let segStart = range.from;
+      let segStartVerse = boundaryAt(range.from)
+        ? { sura: boundaryAt(range.from)!.sura, aya: boundaryAt(range.from)!.aya }
+        : undefined;
+
+      // Partial head: range starts mid-unit → its own session up to the first cut.
+      if (!boundarySet.has(range.from) && uniqueCuts.length > 0) {
+        const first = uniqueCuts[0];
+        pushSession([{ from: segStart, to: first.page }], segStartVerse); // share boundary page
+        segStart = first.page;
+        segStartVerse = { sura: first.sura, aya: first.aya };
+        uniqueCuts.shift();
+      }
+
+      // Whole units: every `quantity` boundaries closes a session that ENDS on
+      // the boundary page (shared with the next session).
       let count = 0;
-      for (const cut of cuts) {
+      for (const cut of uniqueCuts) {
         count++;
         if (count >= quantity) {
-          pushSession([{ from: segStart, to: cut - 1 }]);
-          segStart = cut;
+          pushSession([{ from: segStart, to: cut.page }], segStartVerse);
+          segStart = cut.page;
+          segStartVerse = { sura: cut.sura, aya: cut.aya };
           count = 0;
         }
       }
 
-      // Trailing remainder: a final full-or-partial group up to the range end.
-      // If the range ends mid-unit this is a partial tail session; either way
-      // every page is covered.
+      // Trailing remainder up to the range end (partial tail or final group).
       if (segStart <= range.to) {
-        pushSession([{ from: segStart, to: range.to }]);
+        pushSession([{ from: segStart, to: range.to }], segStartVerse);
       }
     }
     return sessions;

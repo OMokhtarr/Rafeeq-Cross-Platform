@@ -28,6 +28,12 @@ if (!TOKEN_BROKER_URL) {
     "[quran-api] REACT_APP_TOKEN_BROKER_URL is not set — API calls will fail.",
   );
 }
+if (!CLIENT_ID_HEADER) {
+  console.warn(
+    "[quran-api] REACT_APP_QF_CLIENT_ID is not set — x-client-id header will be " +
+      "omitted, which the QF API rejects with 403 (access denied).",
+  );
+}
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
 
@@ -121,10 +127,22 @@ async function apiFetch<T>(
       });
 
       if (res.status === 401 && attempt === 1) {
+        // Token expired/invalid → drop it and retry once with a fresh token.
         tokenState = null;
         continue;
       }
+      if (res.status === 403) {
+        // Access denied — almost always bad/missing client credentials. This is
+        // not recoverable by retrying, so fail fast with a clear message.
+        const body = await res.text();
+        console.error(
+          "[quran-api] 403 Forbidden — check x-client-id / token-broker client credentials.",
+          body,
+        );
+        throw new QuranApiError(403, `access denied: ${body}`);
+      }
       if (res.status >= 500 || res.status === 429) {
+        // Server error / rate limit → exponential backoff, then retry.
         await sleep(250 * attempt * attempt);
         continue;
       }
@@ -642,13 +660,16 @@ interface ApiHizb {
   verse_mapping: Record<string, string>;
 }
 
-interface ApiHizbsResponse {
-  hizbs: ApiHizb[];
-}
-
 export async function fetchHizbs(): Promise<ApiHizb[]> {
-  const data = await apiFetch<ApiHizbsResponse>("/hizbs", {});
-  return data.hizbs ?? [];
+  // QF v4 has returned this list under different keys across versions
+  // ("hizbs" / "chapters_hizbs" / etc.); accept whichever array is present.
+  const data = await apiFetch<Record<string, unknown>>("/hizbs", {});
+  const arr =
+    (data.hizbs as ApiHizb[]) ??
+    (data.chapters_hizbs as ApiHizb[]) ??
+    (Object.values(data).find((v) => Array.isArray(v)) as ApiHizb[]) ??
+    [];
+  return arr;
 }
 
 export async function fetchHizb(hizbNumber: number): Promise<ApiHizb | null> {
@@ -668,24 +689,52 @@ interface ApiRub {
   verse_mapping: Record<string, string>;
 }
 
-interface ApiRubsResponse {
-  rubs: ApiRub[];
+/** Optional query parameters accepted by the rub' el-hizb endpoints. */
+export interface RubElHizbParams {
+  /** ISO language code for localized fields, e.g. "en", "ar". */
+  language?: string;
+  [key: string]: string | number | undefined;
 }
 
-export async function fetchRubElHizbs(): Promise<ApiRub[]> {
-  const data = await apiFetch<ApiRubsResponse>("/rub_el_hizbs", {});
-  return data.rubs ?? [];
+/**
+ * GET /rub_el_hizbs — list all rub' el-hizb.
+ * Auth headers (x-auth-token, x-client-id) and 401/403/429 handling are applied
+ * by the shared apiFetch. Accepts optional query parameters (e.g. language).
+ */
+export async function fetchRubElHizbs(
+  params: RubElHizbParams = {},
+): Promise<ApiRub[]> {
+  // The QF v4 payload key for this list is "rub_el_hizbs" (not "rubs"); accept
+  // any of the known key names, falling back to the first array in the object.
+  const data = await apiFetch<Record<string, unknown>>("/rub_el_hizbs", params);
+  const arr =
+    (data.rub_el_hizbs as ApiRub[]) ??
+    (data.rubs as ApiRub[]) ??
+    (Object.values(data).find((v) => Array.isArray(v)) as ApiRub[]) ??
+    [];
+  return arr;
 }
 
+/**
+ * GET /rub_el_hizbs/{id} — one rub' el-hizb by number (1..240).
+ * Returns null on 404. Auth headers and 401/403/429 handling come from apiFetch.
+ * Accepts optional query parameters (e.g. language).
+ */
 export async function fetchRubElHizb(
   rubNumber: number,
+  params: RubElHizbParams = {},
 ): Promise<ApiRub | null> {
   try {
-    const data = await apiFetch<{ rub: ApiRub }>(
+    const data = await apiFetch<Record<string, unknown>>(
       `/rub_el_hizbs/${rubNumber}`,
-      {},
+      params,
     );
-    return data.rub ?? null;
+    // Accept either the wrapped ("rub_el_hizb"/"rub") shape or a bare object.
+    return (
+      (data.rub_el_hizb as ApiRub) ??
+      (data.rub as ApiRub) ??
+      ((data as any).rub_number !== undefined ? (data as unknown as ApiRub) : null)
+    );
   } catch (err) {
     if (err instanceof QuranApiNotFound) return null;
     throw err;

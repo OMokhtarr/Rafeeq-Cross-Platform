@@ -890,61 +890,83 @@ export function getRubEnd(rubNumber: number): { sura: number; aya: number } {
 }
 
 /**
- * Start page of every rub' el-hizb, indexed by rub number (1..240) → page.
- * Uses the real rub verse-mappings when available; otherwise falls back to an
- * even 604/240 spacing. Result is monotonic (each rub starts on a page ≥ the
- * previous one) so it can be used to slice memorized ranges at rub boundaries.
+ * Divide each juz' page span into `perJuz` equal parts and return the start
+ * page of every part across all 30 juz. Juz boundaries come from the reliable
+ * hardcoded JUZ_START_PAGES table, so this works with no network and stays
+ * aligned to real juz edges (8 rubs / 2 hizbs per juz). Used as the fallback
+ * when the rub/hizb verse-mapping API data isn't available.
  */
-export function getRubStartPages(): number[] {
-  const pages: number[] = [];
-  if (rubsCache.length >= 240) {
-    const ordered = [...rubsCache].sort(
-      (a, b) => (a.rub_number ?? 0) - (b.rub_number ?? 0),
-    );
-    let prev = 1;
-    for (const r of ordered) {
-      const start = getStartFromMapping(r.verse_mapping);
-      let p = estimatePageForVerse(start.sura, start.aya);
+function subdivideJuz(perJuz: number): number[] {
+  const starts: number[] = [];
+  let prev = 0;
+  for (let j = 0; j < 30; j++) {
+    const from = JUZ_START_PAGES[j];
+    const to = (j < 29 ? JUZ_START_PAGES[j + 1] : 605) - 1;
+    const span = to - from + 1;
+    for (let k = 0; k < perJuz; k++) {
+      let p = from + Math.round((k * span) / perJuz);
+      p = Math.min(604, Math.max(1, p));
       if (p < prev) p = prev; // keep monotonic
-      pages.push(p);
+      starts.push(p);
       prev = p;
     }
   }
-  if (pages.length < 240) {
-    // Fallback: evenly spaced rub boundaries across the mushaf.
-    pages.length = 0;
-    for (let i = 0; i < 240; i++) {
-      pages.push(Math.min(604, Math.max(1, Math.round((i * 604) / 240) + 1)));
-    }
-  }
-  return pages;
+  return starts;
+}
+
+/** A rub'/hizb boundary: the page it starts on and the exact start verse. */
+export interface UnitBoundary {
+  page: number;
+  sura: number;
+  aya: number;
 }
 
 /**
- * Start page of every hizb, indexed by hizb number (1..60) → page. Prefers the
- * real hizb mappings; when hizb data is missing it derives each hizb boundary
- * as the start of every 4th rub (4 rubs = 1 hizb).
+ * Boundaries of every unit in `cache` (rub' or hizb), with the real start verse
+ * and its page. Entries arrive from the API already ordered; we do NOT sort by
+ * `*_number` because that field is often absent. Pages are kept monotonic.
+ * Returns null when the real data isn't loaded (caller uses a page-only fallback).
+ */
+function boundariesFromCache(cache: any[], expected: number): UnitBoundary[] | null {
+  if (cache.length < expected) return null;
+  const out: UnitBoundary[] = [];
+  let prev = 1;
+  for (const u of cache) {
+    const start = getStartFromMapping(u.verse_mapping);
+    let page = estimatePageForVerse(start.sura, start.aya);
+    if (page < prev) page = prev;
+    out.push({ page, sura: start.sura, aya: start.aya });
+    prev = page;
+  }
+  return out;
+}
+
+/** Real rub' boundaries (verse + page), or null if the rub data isn't loaded. */
+export function getRubBoundaries(): UnitBoundary[] | null {
+  return boundariesFromCache(rubsCache, 240);
+}
+
+/** Real hizb boundaries (verse + page), or null if the hizb data isn't loaded. */
+export function getHizbBoundaries(): UnitBoundary[] | null {
+  return boundariesFromCache(hizbsCache, 60);
+}
+
+/**
+ * Start page of every rub' el-hizb (1..240). Uses the real rub verse-mappings
+ * when available; otherwise subdivides each juz into 8 rubs (juz-aligned).
+ */
+export function getRubStartPages(): number[] {
+  const b = getRubBoundaries();
+  return b ? b.map((x) => x.page) : subdivideJuz(8);
+}
+
+/**
+ * Start page of every hizb (1..60). Prefers the real hizb mappings; otherwise
+ * subdivides each juz into 2 hizbs (juz-aligned).
  */
 export function getHizbStartPages(): number[] {
-  const pages: number[] = [];
-  if (hizbsCache.length >= 60) {
-    const ordered = [...hizbsCache].sort(
-      (a, b) => (a.hizb_number ?? 0) - (b.hizb_number ?? 0),
-    );
-    let prev = 1;
-    for (const h of ordered) {
-      const start = getStartFromMapping(h.verse_mapping);
-      let p = estimatePageForVerse(start.sura, start.aya);
-      if (p < prev) p = prev;
-      pages.push(p);
-      prev = p;
-    }
-    return pages;
-  }
-  // No hizb data → one hizb per 4 rubs.
-  const rubStarts = getRubStartPages();
-  for (let i = 0; i < 60; i++) pages.push(rubStarts[i * 4] ?? 1);
-  return pages;
+  const b = getHizbBoundaries();
+  return b ? b.map((x) => x.page) : subdivideJuz(2);
 }
 
 export function getRubNumberForPage(page: number): number {

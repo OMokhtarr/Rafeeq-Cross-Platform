@@ -1658,8 +1658,13 @@ const Hifz: React.FC = () => {
         persistHifzReadingSession({ ranges, readPages: carriedReadPages, sessionIds });
         setReadPages(carriedReadPages);
       }
-      const firstAyah = getPageStart(page);
-      const vParam = firstAyah ? `&v=${firstAyah.sura}:${firstAyah.aya}` : "";
+      // Prefer the session's exact start verse (rub'/hizb boundaries fall
+      // mid-page); otherwise open at the first verse of the page.
+      const startVerse =
+        session?.startVerse && session.fromPage === page
+          ? session.startVerse
+          : getPageStart(page);
+      const vParam = startVerse ? `&v=${startVerse.sura}:${startVerse.aya}` : "";
       // Open the reader as a fresh root: it's the main "Quran" tab page and must
       // never go back (no swipe, no hardware back to Hifz). replace swaps the
       // current entry instead of stacking, so there's nothing to go back to.
