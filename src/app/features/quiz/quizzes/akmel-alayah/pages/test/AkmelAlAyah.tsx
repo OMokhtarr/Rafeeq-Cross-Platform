@@ -24,12 +24,31 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
-import { useQuizRecite } from "../../../../hooks/useQuizRecite";
+import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import type {
   QuizConfig,
   QuizQuestion,
 } from "../../../../../../shared/models/verse.model";
 import "./AkmelAlAyah.css";
+
+interface ReciteStatusProps {
+  recite: UseQuizReciteResult;
+  tt: any;
+}
+
+const ReciteStatus: React.FC<ReciteStatusProps> = ({ recite, tt }) => (
+  <div
+    className={`aa-recite-status ${
+      recite.noMatchHint ? "aa-recite-status--warn" : ""
+    }`}
+  >
+    <span className="aa-recite-status-text">
+      {recite.noMatchHint
+        ? tt.reciteNoMatch
+        : recite.lastChunkText || tt.reciteListening}
+    </span>
+  </div>
+);
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 function isSoundOn(): boolean {
@@ -191,21 +210,32 @@ const AkmelAlAyah: React.FC = () => {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  // Marks the question correct the moment the target verse is fully
-  // recited, but deliberately leaves the mic running — the user may keep
-  // reciting the rest of the page, which useQuizRecite keeps tracking
-  // until they stop it or reach the end of the page.
-  const handleReciteComplete = useCallback(() => {
-    if (!q || answered) return;
+  // recite.stop is reached through a ref since the recite callback is passed
+  // into useQuizRecite, before its result exists.
+  const reciteStopRef = useRef<() => void>(() => {});
+
+  // Marks the question correct, stops the mic, and closes the context so the
+  // result (✅ + answer + Next button) is shown. The user taps Next to move
+  // on. Only ever called when the USER ends the recitation (mic/reset) and
+  // the target verse was recited correctly — never automatically mid-recite.
+  const settleReciteCorrect = useCallback(() => {
+    if (!q) return;
+    reciteStopRef.current();
     const correctAnswer = (q.hiddenPortion ?? q.correctAnswer ?? "").trim();
     setUserAnswer(correctAnswer);
     setCorrect(true);
     setScore((s) => s + 1);
     setAnswered(true);
+    setShowContext(false);
     if (isSoundOn()) beep("correct");
-  }, [q, answered, beep]);
+  }, [q, beep]);
 
-  const recite = useQuizRecite(handleReciteComplete);
+  // The verse reaching its end does NOT auto-settle the answer — the matcher
+  // can hit the end before the user feels finished (a fuzzy/skipped match).
+  // Completion only arms recite.isVerseComplete; the answer is settled when
+  // the user ends the session (presses the mic or reset to close).
+  const recite = useQuizRecite(() => {});
+  reciteStopRef.current = recite.stop;
 
   const handleSubmit = useCallback(() => {
     if (!userAnswer.trim() || answered || !q) return;
@@ -225,11 +255,23 @@ const AkmelAlAyah: React.FC = () => {
   const handleReciteToggle = useCallback(() => {
     if (!q) return;
     if (recite.isArmed) {
-      recite.stop();
+      // Pressing the mic to stop is the decision point: if the target verse
+      // was recited correctly, settle it correct (which stops, closes the
+      // context, and shows the result). Otherwise just stop — the question
+      // stays open for another try, typing, hint, or skip.
+      if (!answered && recite.isVerseComplete) {
+        settleReciteCorrect();
+      } else {
+        recite.stop();
+      }
     } else if (!answered) {
-      recite.start({ sura: q.sura, aya: q.aya, page: q.page });
+      // Recitation is always bounded to the target verse (whether the
+      // context is open or closed): recite the whole verse or just the
+      // hidden continuation being tested.
+      const displayedPortion = q.versePart ?? q.displayedPortion ?? "";
+      recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
     }
-  }, [q, answered, recite]);
+  }, [q, answered, recite, settleReciteCorrect]);
 
   const handleSkip = () => {
     if (answered || !q) return;
@@ -277,19 +319,28 @@ const AkmelAlAyah: React.FC = () => {
 
   const handleExit = () => setShowExitModal(true);
 
+  // Closing the context: if a recitation is running and the target verse was
+  // recited correctly, settle it correct (stops + shows result). Otherwise
+  // just stop the mic and close.
+  const closeContext = useCallback(() => {
+    if (recite.isArmed && !answered && recite.isVerseComplete) {
+      settleReciteCorrect();
+      return;
+    }
+    if (recite.isArmed) recite.stop();
+    setShowContext(false);
+  }, [recite, answered, settleReciteCorrect]);
+
   const handleToggleContext = () => {
-    setShowContext((prev) => !prev);
+    if (showContext) closeContext();
+    else setShowContext(true);
   };
 
-  const getHintText = () => {
-    if (!q || hintLevel === 0) return "";
-    return (q.hiddenPortion ?? q.correctAnswer ?? "")
-      .trim()
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, hintLevel)
-      .join(" ");
-  };
+  // Hint and recitation are INDEPENDENT. The hint counter is only ever
+  // driven by the manual Hint button (hintLevel). Recitation reveals its own
+  // words separately — as green "recited" text on the card (per-word render
+  // below), and as the green highlight in the Mushaf context view (via
+  // recite.livePosition) — without consuming or advancing the hint counter.
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading)
@@ -510,24 +561,11 @@ const AkmelAlAyah: React.FC = () => {
                     </button>
                   </div>
 
-                  {recite.isArmed && (
-                    <div
-                      className={`aa-recite-status ${
-                        recite.noMatchHint || recite.rateLimited
-                          ? "aa-recite-status--warn"
-                          : ""
-                      }`}
-                    >
-                      <span className="aa-recite-status-text">
-                        {recite.rateLimited
-                          ? tt.reciteRateLimited
-                          : recite.identifying
-                          ? recite.lastChunkText || tt.reciteIdentifying
-                          : recite.noMatchHint
-                          ? tt.reciteNoMatch
-                          : recite.lastChunkText || tt.reciteListening}
-                      </span>
-                    </div>
+                  {/* When the context viewer is open, the live recite status
+                      renders next to the Mushaf reveal instead (below), so
+                      it isn't duplicated on the collapsed question card. */}
+                  {recite.isArmed && !immersiveMode && (
+                    <ReciteStatus recite={recite} tt={tt} />
                   )}
 
                   {/* Full content – hidden in immersive mode */}
@@ -537,12 +575,35 @@ const AkmelAlAyah: React.FC = () => {
                         <p className="aa-verse-shared" lang="ar" dir="rtl">
                           {q.versePart ?? q.displayedPortion}
                         </p>
-                        {hintLevel > 0 && (
-                          <span className="aa-hint-inline" lang="ar" dir="rtl">
-                            {" "}
-                            {getHintText()}
-                          </span>
-                        )}
+                        {/* Hidden-portion words revealed so far, per word:
+                            recited words are green, hint-button words use the
+                            hint style. Recitation and hints are independent —
+                            a word can come from either source. */}
+                        {(() => {
+                          const words = (q.hiddenPortion ?? q.correctAnswer ?? "")
+                            .trim()
+                            .split(" ")
+                            .filter(Boolean);
+                          const shown = Math.max(hintLevel, recite.revealedWordCount);
+                          if (shown === 0) return null;
+                          return (
+                            <span lang="ar" dir="rtl">
+                              {words.slice(0, shown).map((w, i) => (
+                                <span
+                                  key={i}
+                                  className={
+                                    i < recite.revealedWordCount
+                                      ? "aa-recited-inline"
+                                      : "aa-hint-inline"
+                                  }
+                                >
+                                  {" "}
+                                  {w}
+                                </span>
+                              ))}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="aa-answer-row">
@@ -626,6 +687,7 @@ const AkmelAlAyah: React.FC = () => {
             {/* Context Viewer – fills remaining space */}
             {showContext && (
               <div className="aa-context-viewer">
+                {recite.isArmed && <ReciteStatus recite={recite} tt={tt} />}
                 <MushafContextViewer
                   verse={{
                     sura: q.sura,
@@ -640,8 +702,9 @@ const AkmelAlAyah: React.FC = () => {
                   hintLevel={hintLevel}
                   showAnswer={answered}
                   isOpen={showContext}
-                  onClose={() => setShowContext(false)}
+                  onClose={closeContext}
                   mode="sidebar"
+                  liveRecitePosition={recite.isArmed ? recite.livePosition : null}
                 />
               </div>
             )}

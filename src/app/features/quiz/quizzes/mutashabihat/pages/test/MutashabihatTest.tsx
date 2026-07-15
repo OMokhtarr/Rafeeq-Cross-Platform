@@ -31,9 +31,28 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
-import { useQuizRecite } from "../../../../hooks/useQuizRecite";
+import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
+
+interface ReciteStatusProps {
+  recite: UseQuizReciteResult;
+  tt: any;
+}
+
+const ReciteStatus: React.FC<ReciteStatusProps> = ({ recite, tt }) => (
+  <div
+    className={`mst-recite-status ${
+      recite.noMatchHint ? "mst-recite-status--warn" : ""
+    }`}
+  >
+    <span className="mst-recite-status-text">
+      {recite.noMatchHint
+        ? tt.reciteNoMatch
+        : recite.lastChunkText || tt.reciteListening}
+    </span>
+  </div>
+);
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 function isSoundOn(): boolean {
@@ -159,20 +178,32 @@ const MutashabihatTest: React.FC = () => {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  // Marks the question correct the moment the target verse is fully
-  // recited, but deliberately leaves the mic running — the user may keep
-  // reciting the rest of the page, which useQuizRecite keeps tracking
-  // until they stop it or reach the end of the page.
-  const handleReciteComplete = useCallback(() => {
-    if (!q || answered) return;
+  // recite.stop is reached through a ref since the recite callback is passed
+  // into useQuizRecite, before its result exists.
+  const reciteStopRef = useRef<() => void>(() => {});
+
+  // Marks the question correct, stops the mic, and closes the context so the
+  // result (✅ + answer + Next button) is shown. The user taps Next to move
+  // on. Only ever called when the USER ends the recitation (mic/reset) and
+  // the target verse was recited correctly — never automatically mid-recite.
+  const settleReciteCorrect = useCallback(() => {
+    if (!q) return;
+    reciteStopRef.current();
     setUserAnswer(q.hiddenPortion ?? "");
     setCorrect(true);
     setScore((s) => s + 1);
     setAnswered(true);
+    setShowContext(false);
+    setSelectedVerseIdx(0);
     if (isSoundOn()) beep("correct");
-  }, [q, answered, beep]);
+  }, [q, beep]);
 
-  const recite = useQuizRecite(handleReciteComplete);
+  // The verse reaching its end does NOT auto-settle the answer — the matcher
+  // can hit the end before the user feels finished (a fuzzy/skipped match).
+  // Completion only arms recite.isVerseComplete; the answer is settled when
+  // the user ends the session (presses the mic or reset to close).
+  const recite = useQuizRecite(() => {});
+  reciteStopRef.current = recite.stop;
 
   const handleSubmit = useCallback(() => {
     if (!userAnswer.trim() || answered || !q) return;
@@ -197,11 +228,37 @@ const MutashabihatTest: React.FC = () => {
   const handleReciteToggle = useCallback(() => {
     if (!q) return;
     if (recite.isArmed) {
-      recite.stop();
+      // Pressing the mic to stop is the decision point: if the target verse
+      // was recited correctly, settle it correct (stops, closes the context,
+      // shows the result). Otherwise just stop — the question stays open.
+      if (!answered && recite.isVerseComplete) {
+        settleReciteCorrect();
+      } else {
+        recite.stop();
+      }
     } else if (!answered) {
-      recite.start({ sura: q.sura, aya: q.aya, page: q.page });
+      // Recitation is always bounded to the target verse. The snippet
+      // boundary must match what's shown: the context viewer reveals the
+      // shared phrase (sharedPhraseRaw); the card shows displayedPortion.
+      const displayedPortion = showContext
+        ? q.sharedPhraseRaw ?? q.displayedPortion ?? ""
+        : q.displayedPortion ?? "";
+      recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
     }
-  }, [q, answered, recite]);
+  }, [q, answered, recite, showContext, settleReciteCorrect]);
+
+  // Closing the context: if reciting and the target verse was recited
+  // correctly, settle it correct (stops + shows result). Otherwise stop and
+  // close.
+  const closeContext = useCallback(() => {
+    if (recite.isArmed && !answered && recite.isVerseComplete) {
+      settleReciteCorrect();
+      return;
+    }
+    if (recite.isArmed) recite.stop();
+    setShowContext(false);
+    setSelectedVerseIdx(0);
+  }, [recite, answered, settleReciteCorrect]);
 
   const handleSkip = () => {
     if (answered || !q) return;
@@ -238,13 +295,15 @@ const MutashabihatTest: React.FC = () => {
   const handleExit = () => setShowExitModal(true);
 
   const handleToggleContext = () => {
-    setShowContext((prev) => !prev);
+    if (showContext) closeContext();
+    else setShowContext(true);
   };
 
-  const getHintText = () => {
-    if (!q || hintLevel === 0) return "";
-    return q.hints.slice(0, hintLevel).join(" ");
-  };
+  // Hint and recitation are INDEPENDENT. The hint counter is only ever
+  // driven by the manual Hint button (hintLevel). Recitation reveals its own
+  // words separately — green "recited" text on the card, and the green
+  // highlight in the Mushaf context view (via recite.livePosition) — without
+  // consuming or advancing the hint counter.
 
   // ── Loading / error / complete screens ────────────────────────────────────
 
@@ -433,8 +492,6 @@ const MutashabihatTest: React.FC = () => {
                             selectedVerseIdx === ti ? "active-chip" : ""
                           }`}
                           onClick={() => {
-                            console.log("Chip clicked:", ti, toolbarVerses[ti]);
-
                             setSelectedVerseIdx(ti);
                             if (!showContext) setShowContext(true);
                           }}
@@ -532,24 +589,11 @@ const MutashabihatTest: React.FC = () => {
                     </button>
                   </div>
 
-                  {recite.isArmed && (
-                    <div
-                      className={`mst-recite-status ${
-                        recite.noMatchHint || recite.rateLimited
-                          ? "mst-recite-status--warn"
-                          : ""
-                      }`}
-                    >
-                      <span className="mst-recite-status-text">
-                        {recite.rateLimited
-                          ? tt.reciteRateLimited
-                          : recite.identifying
-                          ? recite.lastChunkText || tt.reciteIdentifying
-                          : recite.noMatchHint
-                          ? tt.reciteNoMatch
-                          : recite.lastChunkText || tt.reciteListening}
-                      </span>
-                    </div>
+                  {/* When the context viewer is open, the live recite status
+                      renders next to the Mushaf reveal instead (below), so
+                      it isn't duplicated on the collapsed question card. */}
+                  {recite.isArmed && !immersiveMode && (
+                    <ReciteStatus recite={recite} tt={tt} />
                   )}
 
                   {/* Full content – hidden in immersive mode */}
@@ -559,12 +603,30 @@ const MutashabihatTest: React.FC = () => {
                         <p className="mst-verse-shared" lang="ar" dir="rtl">
                           {q.displayedPortion}
                         </p>
-                        {hintLevel > 0 && (
-                          <span className="mst-hint-inline" lang="ar" dir="rtl">
-                            {" "}
-                            {getHintText()}
-                          </span>
-                        )}
+                        {/* Hidden-portion words revealed so far, per word:
+                            recited words are green, hint-button words use the
+                            hint style. Recitation and hints are independent. */}
+                        {(() => {
+                          const shown = Math.max(hintLevel, recite.revealedWordCount);
+                          if (shown === 0) return null;
+                          return (
+                            <span lang="ar" dir="rtl">
+                              {q.hints.slice(0, shown).map((w: string, i: number) => (
+                                <span
+                                  key={i}
+                                  className={
+                                    i < recite.revealedWordCount
+                                      ? "mst-recited-inline"
+                                      : "mst-hint-inline"
+                                  }
+                                >
+                                  {" "}
+                                  {w}
+                                </span>
+                              ))}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="mst-answer-row">
@@ -648,6 +710,9 @@ const MutashabihatTest: React.FC = () => {
             {/* Context Viewer – fills remaining space */}
             {showContext && (
               <div className="mst-context-viewer">
+                {recite.isArmed && selectedVerseIdx === 0 && (
+                  <ReciteStatus recite={recite} tt={tt} />
+                )}
                 <MushafContextViewer
                   key={selectedVerseIdx} // ← forces re‑mount when selected verse changes
                   verse={toolbarVerses[selectedVerseIdx]}
@@ -656,8 +721,11 @@ const MutashabihatTest: React.FC = () => {
                   hintLevel={hintLevel}
                   showAnswer={answered && selectedVerseIdx === 0}
                   isOpen={showContext}
-                  onClose={() => setShowContext(false)}
+                  onClose={closeContext}
                   mode="sidebar"
+                  liveRecitePosition={
+                    recite.isArmed && selectedVerseIdx === 0 ? recite.livePosition : null
+                  }
                 />
               </div>
             )}

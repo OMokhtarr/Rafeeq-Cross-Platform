@@ -438,6 +438,14 @@ ion-content::part(scroll) {
   font-weight: 600;
   border-bottom: 2px dashed var(--color-gold);
 }
+/* Words revealed by RECITATION (not the hint button) — green, distinct from
+   the gold hint words. */
+.mst-recited-inline {
+  font-family: var(--font-arabic-display);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: #1faa5a;
+  font-weight: 600;
+}
 
 .mst-prompt {
   color: var(--color-text-muted);
@@ -956,12 +964,16 @@ ion-content::part(scroll) {
   overflow: hidden;
   margin-top: 8px;
 }
-.mst-context-viewer > div,
+.mst-context-viewer > div:not(.mst-recite-status),
 .mst-context-viewer .mcv-container {
   flex: 1;
   min-height: 0;
   height: 100%;
   width: 100%;
+}
+.mst-context-viewer .mst-recite-status {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
 }
 
 /* Responsive */

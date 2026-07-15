@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Verse } from "../../shared/models/verse.model";
 import { getPage } from "../services/data/quran.service";
-import { resolveReciteEngine } from "../services/audio/stt-engine.config";
 import {
   firstWordPosition,
   verseWordCount,
@@ -9,39 +8,30 @@ import {
 } from "../services/quran/recite-matcher.service";
 import { SILENCE_TIMEOUT_MS, type ReciteDriverDeps } from "./recite/shared/reciteCore";
 import { useRevealAnimator } from "./recite/shared/useRevealAnimator";
-import { useGroqDriver } from "./recite/groq/groqDriver";
 import { useDeepgramDriver } from "./recite/deepgram/deepgramDriver";
 
 /**
  * USE RECITE MODE
  *
  * Orchestrates Recite Mode: listens to the mic, transcribes recitation via
- * whichever STT engine is selected (see ../services/audio/stt-engine.config
- * and Settings), and fuzzy-matches the running transcript against the
- * current (and, near the bottom, next) page's verses to figure out how far
- * the user has recited. Exposes hide/reveal state in the same shape
- * PageViewer's existing manual hint system already knows how to render
- * (`partialTarget` + a set of fully-hidden verse keys), but kept entirely
- * separate from the persisted Hifz `hidden` state — this is a transient,
- * in-session reveal that must not touch `rafiq_hidden_verses_v1`.
+ * Deepgram's live-streaming STT (./recite/deepgram/deepgramDriver.ts), and
+ * fuzzy-matches the running transcript against the current (and, near the
+ * bottom, next) page's verses to figure out how far the user has recited.
+ * Exposes hide/reveal state in the same shape PageViewer's existing manual
+ * hint system already knows how to render (`partialTarget` + a set of fully-
+ * hidden verse keys), but kept entirely separate from the persisted Hifz
+ * `hidden` state — this is a transient, in-session reveal that must not
+ * touch `rafiq_hidden_verses_v1`.
  *
  * This hook itself only owns: session/page state, the shared position/
  * display machinery (./recite/shared/useRevealAnimator.ts — arm, manual
- * reveal buttons, and page navigation all need one true position regardless
- * of which engine is active, so this part is NOT forked per engine), and
- * lifecycle (arm/disarm/start/stop).
- *
- * Everything about *how recognized text turns into a match* — chunk cadence
- * vs. streaming, identify-phase timing, re-search patience, and reveal
- * holdback/corroboration tuning — lives in its own folder, fully separate
- * from the other engine's, including its own copy of the identify-session
- * algorithm:
- *   ./recite/groq/groqDriver.ts + groq/useIdentifySession.ts
- *   ./recite/deepgram/deepgramDriver.ts + deepgram/useIdentifySession.ts
- * Editing one engine's folder cannot affect the other's. Both still import
- * the position-math helpers and driver contract types from
- * ./recite/shared/reciteCore.ts, and drive the one shared reveal animator
- * above via the holdback amount they each pass to `advanceTo`.
+ * reveal buttons, and page navigation), and lifecycle (arm/disarm/start/stop).
+ * Everything about *how recognized text turns into a match* — identify-phase
+ * timing, re-search patience, and reveal holdback/corroboration tuning —
+ * lives in ./recite/deepgram/deepgramDriver.ts + deepgram/useIdentifySession.ts,
+ * which still import the position-math helpers and driver contract types
+ * from ./recite/shared/reciteCore.ts and drive the shared reveal animator
+ * above via the holdback amount passed to `advanceTo`.
  */
 
 /**
@@ -73,8 +63,6 @@ export interface UseReciteModeResult {
   noMatchHint: boolean;
   /** True while recording has started but the starting verse hasn't been located yet. */
   identifying: boolean;
-  /** True while backing off after Groq returned 429 (rate limited) — transcription is paused. */
-  rateLimited: boolean;
   /** True while the whole-page reveal override is active (toggled by the hide button). */
   showingAll: boolean;
   /** Toggles between showing the whole page and showing only what's been revealed by recitation so far. */
@@ -102,19 +90,6 @@ export interface UseReciteModeResult {
 
 function verseKey(sura: number, aya: number) {
   return `${sura}:${aya}`;
-}
-
-/** The user's engine choice from the Settings page (same localStorage
- *  settings blob PageViewer/useFeedbackBeep read). Unset/unreadable falls
- *  through to resolveReciteEngine's default (Deepgram). */
-function readReciteEngineSetting(): string | undefined {
-  try {
-    const raw = localStorage.getItem("rafiq_settings_v1");
-    if (raw) return JSON.parse(raw).reciteEngine;
-  } catch {
-    // Unreadable settings — same as unset.
-  }
-  return undefined;
 }
 
 /** Verse keys strictly after `pos.sura:pos.aya` within `verses` (the active verse itself excluded). */
@@ -152,7 +127,6 @@ export function useReciteMode(
   const [showingAll, setShowingAll] = useState(false);
   const [noMatchHint, setNoMatchHint] = useState(false);
   const [identifying, setIdentifying] = useState(false);
-  const [rateLimited, setRateLimited] = useState(false);
 
   // Mutable session state — avoids re-subscribing driver callbacks on every match.
   const versesRef = useRef<Verse[]>([]);
@@ -166,18 +140,15 @@ export function useReciteMode(
   // Timestamp (ms) of the last chunk that produced real transcript text —
   // drives the "stopped talking" auto-stop.
   const lastSpeechAtRef = useRef(0);
-  // Which engine's driver.start()/stop() owns the current session.
-  const engineRef = useRef<"deepgram" | "groq">("deepgram");
   // Holds the latest stopRecording — lets the silence timer and driver
   // error callbacks auto-stop without a forward reference to a function
   // declared later.
   const stopRecordingRef = useRef<() => void>(() => {});
-  // Holds both drivers' .stop() — stopRecording needs to stop whichever
-  // engine is active, but the drivers themselves are constructed from
-  // driverDeps.stopRecording (via stopRecordingRef above), so the drivers
-  // can't be constructed before stopRecording exists. Broken via the same
-  // ref-indirection pattern as stopRecordingRef.
-  const driverStopRef = useRef({ groq: () => {}, deepgram: () => {} });
+  // Holds the driver's .stop() — stopRecording needs to stop it, but the
+  // driver itself is constructed from driverDeps.stopRecording (via
+  // stopRecordingRef above), so it can't be constructed before stopRecording
+  // exists. Broken via the same ref-indirection pattern as stopRecordingRef.
+  const driverStopRef = useRef<() => void>(() => {});
 
   // Position has moved past the last verse on this page (matched across the
   // page boundary within one chunk) — reveal the whole page and ask
@@ -326,8 +297,7 @@ export function useReciteMode(
   const stopRecording = useCallback(() => {
     if (!recordingRef.current) return;
     recordingRef.current = false;
-    driverStopRef.current.groq();
-    driverStopRef.current.deepgram();
+    driverStopRef.current();
     if (durationTimerRef.current !== null) {
       clearInterval(durationTimerRef.current);
       durationTimerRef.current = null;
@@ -376,15 +346,12 @@ export function useReciteMode(
     setIdentifying,
     setLastChunkText: (text) => setLastChunkText(text),
     setNoMatchHint,
-    setRateLimited,
     touchLastSpeechAt,
     stopRecording: () => stopRecordingRef.current(),
   };
 
-  const groqDriver = useGroqDriver(driverDeps);
   const deepgramDriver = useDeepgramDriver(driverDeps);
-  const activeDriver = engineRef.current === "deepgram" ? deepgramDriver : groqDriver;
-  driverStopRef.current = { groq: groqDriver.stop, deepgram: deepgramDriver.stop };
+  driverStopRef.current = deepgramDriver.stop;
 
   const clearDurationTimer = useCallback(() => {
     if (durationTimerRef.current !== null) {
@@ -420,7 +387,6 @@ export function useReciteMode(
     setLastChunkText("");
     setRecordingSeconds(0);
     setNoMatchHint(false);
-    setRateLimited(false);
     setIdentifying(true);
     // Starting to recite: hide the page and reveal word-by-word as matched.
     reveal.reset(versesRef.current.length ? firstWordPosition(versesRef.current[0]) : null);
@@ -429,8 +395,7 @@ export function useReciteMode(
     setStatus("recording");
     lastSpeechAtRef.current = Date.now();
 
-    engineRef.current = resolveReciteEngine(readReciteEngineSetting());
-    (engineRef.current === "deepgram" ? deepgramDriver : groqDriver).start();
+    deepgramDriver.start();
 
     durationTimerRef.current = setInterval(() => {
       setRecordingSeconds((s) => s + 1);
@@ -440,7 +405,7 @@ export function useReciteMode(
         stopRecordingRef.current();
       }
     }, 1000);
-  }, [deepgramDriver, groqDriver, hideWholePage, reveal]);
+  }, [deepgramDriver, hideWholePage, reveal]);
 
   const syncPage = useCallback(
     (page: number, verses: Verse[]) => {
@@ -478,7 +443,6 @@ export function useReciteMode(
   const disarm = useCallback(() => {
     activeRef.current = false;
     recordingRef.current = false;
-    groqDriver.stop();
     deepgramDriver.stop();
     clearDurationTimer();
     reveal.reset(null);
@@ -487,13 +451,12 @@ export function useReciteMode(
     setRecordingSeconds(0);
     setLastChunkText("");
     setNoMatchHint(false);
-    setRateLimited(false);
     setShowingAll(false);
     setIdentifying(false);
     setStatus("idle");
-  }, [clearDurationTimer, deepgramDriver, groqDriver, reveal]);
+  }, [clearDurationTimer, deepgramDriver, reveal]);
 
-  const micError = activeDriver.micError;
+  const micError = deepgramDriver.micError;
   useEffect(() => {
     if (micError) setStatus("mic-error");
   }, [micError]);
@@ -506,8 +469,7 @@ export function useReciteMode(
       activeRef.current = false;
       recordingRef.current = false;
       clearDurationTimer();
-      driverStopRef.current.groq();
-      driverStopRef.current.deepgram();
+      driverStopRef.current();
     };
   }, [clearDurationTimer]);
 
@@ -520,7 +482,6 @@ export function useReciteMode(
     lastChunkText,
     noMatchHint,
     identifying,
-    rateLimited,
     showingAll,
     toggleShowAll,
     revealNextWord,

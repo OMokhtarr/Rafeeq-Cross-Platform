@@ -1,18 +1,13 @@
 /**
  * RECITE CORE — shared, engine-agnostic types and pure helpers.
  *
- * Both STT drivers (Groq chunked — ../groq/groqDriver.ts, Deepgram
- * streaming — ../deepgram/deepgramDriver.ts) operate on the same
- * position/reveal state machine. This module holds only what's identical
- * for every engine: the position math, the identify-outcome guard values,
- * and the whole-Quran search entry point. Engine-specific timing/holdback
- * constants live in each driver's own folder so tuning one engine never
- * risks the other.
+ * Used by the Deepgram streaming driver (../deepgram/deepgramDriver.ts) for
+ * the position/reveal state machine: the position math, the identify-outcome
+ * guard values, and the whole-Quran search entry point.
  */
 
 import type { Verse } from "../../../../shared/models/verse.model";
 import {
-  matchTranscript,
   verseWordCount,
   type RecitePosition,
 } from "../../../services/quran/recite-matcher.service";
@@ -21,12 +16,11 @@ import type { RevealAnimator } from "./useRevealAnimator";
 export type { RecitePosition, RevealAnimator };
 
 /**
- * Contract every engine driver (groqDriver, deepgramDriver) is built
- * against. `useReciteMode` constructs one of these per recording session
- * (whichever engine is selected) and hands it the pieces of session state
- * both engines share — the position/reveal machinery, page navigation, and
- * the handful of UI flags — so a driver only has to implement how *its*
- * transcription source turns into "text was recognized."
+ * Contract the Deepgram driver is built against. `useReciteMode` constructs
+ * one of these per recording session and hands it the pieces of session
+ * state — the position/reveal machinery, page navigation, and the handful
+ * of UI flags — so the driver only has to implement how its transcription
+ * source turns into "text was recognized."
  */
 export interface ReciteDriverDeps {
   isActive: () => boolean;
@@ -45,7 +39,6 @@ export interface ReciteDriverDeps {
   setIdentifying: (v: boolean) => void;
   setLastChunkText: (text: string) => void;
   setNoMatchHint: (v: boolean) => void;
-  setRateLimited: (v: boolean) => void;
   touchLastSpeechAt: () => void;
   stopRecording: () => void;
 }
@@ -62,19 +55,6 @@ export interface ReciteDriver {
   /** Ends the session (called from stopRecording/disarm/unmount). */
   stop: () => void;
 }
-
-/** Give up (stop, or resume tracking if mid-session) after this many
- *  identify attempts that yield *no* viable candidate — silence, noise, or
- *  non-Quran speech. Shared: the identify algorithm and its patience are
- *  the same regardless of which engine is feeding it text. */
-export const MAX_NO_PROGRESS_CHUNKS = 3;
-
-/** Hard ceiling on identify attempts even while progressing. Near-duplicate
- *  verses (mutashabihat, e.g. 2:38 vs 20:123) stay "ambiguous" until the
- *  recitation passes the shared phrasing, so we allow more attempts than
- *  the no-progress limit — but not forever, in case the STT never
- *  disambiguates. */
-export const MAX_IDENTIFY_CHUNKS = 8;
 
 /** The strict (maxSkip: 0) reveal pass can get permanently stuck when the
  *  STT garbles one expected word — no later input can ever advance past it.
@@ -93,14 +73,6 @@ export const LOOSE_MATCH_MIN_CONSUMED = 3;
  *  means the reciter deliberately moved to another passage, and the session
  *  stops instead of chasing them around the mushaf. */
 export const ESTABLISHED_WORDS_ON_PAGE = 15;
-
-/** Consecutive mismatched segments (chunks or streaming finals) before
- *  flagging `noMatchHint`, and before giving up on the current page and
- *  re-searching the whole Quran — a run this long means the recitation has
- *  likely moved to a verse the current page/position can no longer
- *  explain. */
-export const NO_MATCH_HINT_STREAK = 2;
-export const NO_MATCH_REIDENTIFY_STREAK = 4;
 
 /** Stop capturing after this long with no recognized speech — the user has
  *  stopped reciting, so there's no point holding the mic open. */
@@ -132,34 +104,6 @@ export function nextWordPosition(
 export interface MatchOutcome {
   position: RecitePosition;
   consumed: number;
-}
-
-/**
- * The tracking match itself, shared by every engine. maxSkip: 0 → strict
- * reveal: only advance through words the reciter actually said, in order,
- * never revealing an expected word that hasn't been matched yet ("no
- * showing it before you recite it"). When the strict pass is stuck —
- * usually the STT garbled the one word the cursor is waiting on, which no
- * later text could ever get past — a loose pass may step over a couple of
- * expected words, but only counts with enough consecutively-matched words
- * as proof the recitation is genuinely past the stuck word.
- */
-export function matchFromPosition(
-  text: string,
-  combinedVerses: Verse[],
-  from: RecitePosition,
-): MatchOutcome | null {
-  const strict = matchTranscript(text, combinedVerses, from, { maxSkip: 0 });
-  if (strict.position) {
-    return { position: strict.position, consumed: strict.consumedTokens };
-  }
-  const loose = matchTranscript(text, combinedVerses, from, {
-    maxSkip: LOOSE_MATCH_MAX_SKIP,
-  });
-  if (loose.position && loose.consumedTokens >= LOOSE_MATCH_MIN_CONSUMED) {
-    return { position: loose.position, consumed: loose.consumedTokens };
-  }
-  return null;
 }
 
 /** Word-count guard applied to every "did this text actually fail to

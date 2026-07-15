@@ -4,14 +4,7 @@
  * Real-time transcription for Recite Mode over Deepgram's websocket
  * streaming API (nova-3, Arabic). Words arrive a few hundred ms after
  * they're spoken — first as `interim` revisions of the current utterance
- * window, then as a settled `final` — instead of waiting for the chunked
- * Whisper pipeline's 4s boundaries.
- *
- * This complements (does not replace) the chunked Groq service in
- * speech-to-text.service.ts: Recite Mode uses this stream when
- * REACT_APP_DEEPGRAM_API_KEY is configured and falls back to the chunked
- * pipeline otherwise, so the two engines can be A/B'd by adding/removing
- * the key.
+ * window, then as a settled `final`.
  */
 
 const DEEPGRAM_API_KEY = process.env.REACT_APP_DEEPGRAM_API_KEY ?? "";
@@ -22,10 +15,6 @@ const STREAM_URL = "wss://api.deepgram.com/v1/listen";
  *  webm/opus fragments directly, so small timeslices stream near-live
  *  without any PCM re-encoding. */
 const RECORDER_TIMESLICE_MS = 250;
-
-export function isStreamingSttAvailable(): boolean {
-  return DEEPGRAM_API_KEY.length > 0;
-}
 
 export interface SttStreamEvent {
   /** Transcript of the current utterance window. Interims are cumulative

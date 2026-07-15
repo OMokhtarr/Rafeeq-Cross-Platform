@@ -223,6 +223,23 @@
   color: var(--color-quran) !important;
 }
 
+/* Live recite highlight: a word the reciter has just said correctly. A
+   saturated green (distinct from the standard --color-quran revealed-word
+   ink) with a soft glow, so the user gets immediate "you're on track"
+   feedback as they read — both for words already shown and ones just
+   revealed. */
+.mushaf-word-recited {
+  color: #1faa5a !important;
+  -webkit-text-fill-color: #1faa5a !important;
+  text-shadow: 0 0 6px rgba(31, 170, 90, 0.4);
+  transition: color 0.1s ease, text-shadow 0.1s ease;
+}
+[data-theme="night"] .mushaf-word-recited {
+  color: #3ddc84 !important;
+  -webkit-text-fill-color: #3ddc84 !important;
+  text-shadow: 0 0 7px rgba(61, 220, 132, 0.45);
+}
+
 /* Decorative surah header. The ink (frame fill + name text) is forced to
    pure monochrome — black on day, white on night — to match the printed
    Mushaf's ornamental style. The background follows the page parchment so

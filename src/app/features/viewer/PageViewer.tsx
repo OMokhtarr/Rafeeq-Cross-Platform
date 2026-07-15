@@ -856,18 +856,14 @@ const PageViewer: React.FC = () => {
                 </span>
                 <span
                   className={`recite-recording-transcript${
-                    recite.noMatchHint || recite.rateLimited
-                      ? " recite-recording-transcript--warn"
-                      : ""
+                    recite.noMatchHint ? " recite-recording-transcript--warn" : ""
                   }`}
                 >
-                  {recite.rateLimited
-                    ? t.mushaf.rateLimited
-                    : recite.identifying
-                      ? recite.lastChunkText || t.mushaf.identifying
-                      : recite.noMatchHint
-                        ? t.mushaf.noMatch
-                        : recite.lastChunkText || t.mushaf.listening}
+                  {recite.identifying
+                    ? recite.lastChunkText || t.mushaf.identifying
+                    : recite.noMatchHint
+                      ? t.mushaf.noMatch
+                      : recite.lastChunkText || t.mushaf.listening}
                 </span>
                 {!recite.identifying && (
                   <div

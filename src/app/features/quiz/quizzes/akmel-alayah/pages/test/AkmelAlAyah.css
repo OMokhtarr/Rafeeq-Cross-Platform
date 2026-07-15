@@ -227,6 +227,14 @@ ion-content::part(scroll) {
   font-weight: 600;
   border-bottom: 1.5px dashed var(--color-gold);
 }
+/* Words revealed by RECITATION (not the hint button) — green, to read as
+   "you said this correctly", visually distinct from gold hint words. */
+.aa-recited-inline {
+  font-family: var(--font-arabic-display);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: #1faa5a;
+  font-weight: 600;
+}
 .prompt {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
@@ -478,12 +486,16 @@ ion-content::part(scroll) {
   border: 1.5px solid var(--color-border-card);
   overflow: hidden;
 }
-.aa-context-viewer > div,
+.aa-context-viewer > div:not(.aa-recite-status),
 .aa-context-viewer .mcv-container {
   flex: 1;
   min-height: 0;
   height: 100%;
   width: 100%;
+}
+.aa-context-viewer .aa-recite-status {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
 }
 
 /* Loading / Error / Complete */

@@ -42,6 +42,14 @@ interface Props {
   mode?: "sidebar";
   grey?: Set<string>;
   hideAfterTarget?: boolean;
+  /** Live recite position (page mode): the verse + word the matcher is
+   *  currently on. As it moves past the target verse into later verses on
+   *  the page, each is revealed word-by-word up to `wordIndex` (the verse
+   *  the position is inside) with earlier verses fully shown — independent
+   *  of the manual "reveal next verse" button. `wordIndex` is 0-based, one
+   *  past the last revealed word. The revealed extent is remembered as a
+   *  high-water mark, so it stays on screen after recitation stops. */
+  liveRecitePosition?: { sura: number; aya: number; wordIndex: number } | null;
 }
 
 const MushafContextViewer: React.FC<Props> = ({
@@ -51,6 +59,7 @@ const MushafContextViewer: React.FC<Props> = ({
   showAnswer,
   isOpen,
   onClose,
+  liveRecitePosition,
 }) => {
   const { t } = useLang();
   const [currentPage, setCurrentPage] = useState(verse.page);
@@ -59,6 +68,16 @@ const MushafContextViewer: React.FC<Props> = ({
   const [internalHint, setInternalHint] = useState(externalHintLevel ?? 0);
   const [revealedNextCount, setRevealedNextCount] = useState(0);
   const [bigTextMode, setBigTextMode] = useState(false);
+  // Furthest point reached by live recitation, as a monotonic high-water
+  // mark. It only ever moves forward and is NOT cleared when
+  // liveRecitePosition goes null (recitation stopped) — so words revealed
+  // by reciting stay on screen after the mic is turned off. Reset only when
+  // the question (target verse) changes or the viewer reopens.
+  const [reciteHighWater, setReciteHighWater] = useState<{
+    sura: number;
+    aya: number;
+    wordIndex: number;
+  } | null>(null);
   const { hidden: globalHidden, showVerse } = useVerseVisibility();
   const mushafPageRef = useRef<HTMLDivElement>(null);
 
@@ -92,9 +111,44 @@ const MushafContextViewer: React.FC<Props> = ({
     setInternalHint(externalHintLevel ?? 0);
   }, [verse.sura, verse.aya]); // eslint-disable-line
 
+  // Live-follow the caller's hint level once it moves past what's shown
+  // here — recite mode drives this prop upward word-by-word while
+  // listening, and the viewer should reveal along with it.
+  useEffect(() => {
+    setInternalHint((current) =>
+      externalHintLevel != null && externalHintLevel > current
+        ? externalHintLevel
+        : current,
+    );
+  }, [externalHintLevel]);
+
   useEffect(() => {
     setRevealedNextCount(0);
   }, [verse.sura, verse.aya, isOpen]);
+
+  // New question / reopened viewer — forget the previous recitation's reach.
+  useEffect(() => {
+    setReciteHighWater(null);
+  }, [verse.sura, verse.aya, isOpen]);
+
+  // Advance the high-water mark forward only. A backward/equal live position
+  // (or null, when recitation stops) never retracts what's already shown.
+  useEffect(() => {
+    if (!liveRecitePosition) return;
+    setReciteHighWater((hw) => {
+      if (
+        !hw ||
+        liveRecitePosition.sura > hw.sura ||
+        (liveRecitePosition.sura === hw.sura && liveRecitePosition.aya > hw.aya) ||
+        (liveRecitePosition.sura === hw.sura &&
+          liveRecitePosition.aya === hw.aya &&
+          liveRecitePosition.wordIndex > hw.wordIndex)
+      ) {
+        return liveRecitePosition;
+      }
+      return hw;
+    });
+  }, [liveRecitePosition]);
 
   const handleVerseTap = (key: string) => {
     if (globalHidden.has(key)) showVerse(key);
@@ -206,11 +260,15 @@ const MushafContextViewer: React.FC<Props> = ({
     const targetKey = `${verse.sura}:${verse.aya}`;
     const set = new Set<string>(globalHidden);
     set.delete(targetKey);
+    // `cutoff` = the last verse revealed in full via the manual "reveal next
+    // verse" button. Verses strictly after it are hidden. (Recitation is
+    // bounded to the target verse and reveals its words through partialTarget,
+    // not by unhiding later verses.)
     const cutoff = lastRevealed ?? { sura: verse.sura, aya: verse.aya };
     for (const v of verses) {
-      const after =
+      const afterCutoff =
         v.sura > cutoff.sura || (v.sura === cutoff.sura && v.aya > cutoff.aya);
-      if (after) set.add(`${v.sura}:${v.aya}`);
+      if (afterCutoff) set.add(`${v.sura}:${v.aya}`);
     }
     return set;
   }, [globalHidden, verses, lastRevealed, verse.sura, verse.aya]);
@@ -227,9 +285,24 @@ const MushafContextViewer: React.FC<Props> = ({
     }
   };
 
+  // How many target-verse words the live recitation has revealed (persistent
+  // high-water, so the reveal doesn't retract when the mic stops). Recitation
+  // is always bounded to the target verse now.
+  const recitedWordCount =
+    reciteHighWater &&
+    reciteHighWater.sura === verse.sura &&
+    reciteHighWater.aya === verse.aya
+      ? reciteHighWater.wordIndex
+      : 0;
+
+  // Reveal is the union of the hint reveal (snippet + manual hint) and the
+  // recitation reveal — the two are independent sources, both un-hide words.
   const effectiveReveal = showAnswer
     ? targetWordCount
-    : Math.min(targetWordCount, snippetWordCount + internalHint);
+    : Math.min(
+        targetWordCount,
+        Math.max(snippetWordCount + internalHint, recitedWordCount),
+      );
 
   const partialTarget = useMemo(() => {
     if (!targetOnPage || !targetVerse) return undefined;
@@ -237,16 +310,32 @@ const MushafContextViewer: React.FC<Props> = ({
       (w) => w.charType === "end",
     );
     const hiddenPositions = new Set<number>();
+    // Green highlight for recited words (words 0..recitedWordCount-1). Uses
+    // the persistent high-water so the last recited word stays green after
+    // the mic stops. Distinct from the hint reveal — recited words are green,
+    // hinted-only words use the hint style.
+    const recitedPositions = new Set<number>();
     for (let i = 0; i < wordEntries.length; i++) {
       if (i >= effectiveReveal) hiddenPositions.add(wordEntries[i].position);
+      if (i < recitedWordCount) recitedPositions.add(wordEntries[i].position);
     }
     return {
       sura: verse.sura,
       aya: verse.aya,
       revealedWordCount: effectiveReveal,
       hiddenPositions,
+      recitedPositions,
     };
-  }, [targetOnPage, targetVerse, effectiveReveal, verse.sura, verse.aya]);
+  }, [
+    targetOnPage,
+    targetVerse,
+    effectiveReveal,
+    recitedWordCount,
+    verse.sura,
+    verse.aya,
+  ]);
+
+  const partialForPage = partialTarget;
 
   const canHint = targetOnPage && effectiveReveal < targetWordCount;
 
@@ -333,7 +422,7 @@ const MushafContextViewer: React.FC<Props> = ({
               verses={verses}
               hidden={mergedHidden}
               grey={greySet}
-              partialTarget={partialTarget}
+              partialTarget={partialForPage}
               onVerseTap={handleVerseTap}
               bigTextMode={bigTextMode}
             />

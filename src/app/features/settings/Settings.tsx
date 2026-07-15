@@ -90,7 +90,7 @@ function loadSettings(): AppSettings {
       const merged = { ...DEFAULTS, ...JSON.parse(raw) } as AppSettings;
       // Migrate retired mushaf kinds (e.g. "qpc_v1") to the current default.
       if (!(merged.mushaf in MUSHAFS)) merged.mushaf = DEFAULT_MUSHAF;
-      // Migrate retired engine values (e.g. the removed "auto").
+      // Migrate retired engine values (e.g. the removed "groq"/"auto").
       if (!RECITE_ENGINE_OPTIONS.some((e) => e.value === merged.reciteEngine)) {
         merged.reciteEngine = DEFAULT_RECITE_ENGINE;
       }
