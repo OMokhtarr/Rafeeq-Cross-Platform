@@ -260,9 +260,10 @@ const AkmelAlAyah: React.FC = () => {
       // context, and shows the result). Otherwise just stop — the question
       // stays open for another try, typing, hint, or skip.
       if (!answered && recite.isVerseComplete) {
-        settleReciteCorrect();
+        settleReciteCorrect(); // plays the "correct" sound itself
       } else {
         recite.stop();
+        if (isSoundOn()) beep("stop"); // "we stopped listening"
       }
     } else if (!answered) {
       // Recitation is always bounded to the target verse (whether the
@@ -270,8 +271,9 @@ const AkmelAlAyah: React.FC = () => {
       // hidden continuation being tested.
       const displayedPortion = q.versePart ?? q.displayedPortion ?? "";
       recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
+      if (isSoundOn()) beep("start"); // "we started listening"
     }
-  }, [q, answered, recite, settleReciteCorrect]);
+  }, [q, answered, recite, settleReciteCorrect, beep]);
 
   const handleSkip = () => {
     if (answered || !q) return;
@@ -324,12 +326,15 @@ const AkmelAlAyah: React.FC = () => {
   // just stop the mic and close.
   const closeContext = useCallback(() => {
     if (recite.isArmed && !answered && recite.isVerseComplete) {
-      settleReciteCorrect();
+      settleReciteCorrect(); // plays the "correct" sound itself
       return;
     }
-    if (recite.isArmed) recite.stop();
+    if (recite.isArmed) {
+      recite.stop();
+      if (isSoundOn()) beep("stop");
+    }
     setShowContext(false);
-  }, [recite, answered, settleReciteCorrect]);
+  }, [recite, answered, settleReciteCorrect, beep]);
 
   const handleToggleContext = () => {
     if (showContext) closeContext();

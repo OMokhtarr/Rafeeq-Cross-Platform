@@ -11,6 +11,10 @@ import {
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
 const HIFZ_READING_KEY = "rafiq_hifz_reading_v1";
+// Dates (YYYY-MM-DD) on which a session was completed. Accumulates over the
+// lifetime of the app and is NEVER cleared by plan reset / new round / delete,
+// so the streak survives those actions.
+const HIFZ_STREAK_KEY = "rafiq_hifz_streak_dates_v1";
 
 // Hifz data store name in IndexedDB (created on demand)
 const HIFZ_STORE = "hifz";
@@ -663,6 +667,66 @@ export function countMemorizedPages(
 ): number {
   const ranges = flattenMemorized(memorized, chaptersCache);
   return ranges.reduce((s, r) => s + (r.to - r.from + 1), 0);
+}
+
+// ─── Persistent streak dates ──────────────────────────────────────────────────
+// The streak must survive plan reset / new round / delete, so completed-days are
+// stored separately from the plan's session state.
+
+export function loadStreakDates(): string[] {
+  try {
+    const raw = localStorage.getItem(HIFZ_STREAK_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStreakDates(dates: string[]): void {
+  try {
+    localStorage.setItem(HIFZ_STREAK_KEY, JSON.stringify(dates));
+  } catch {}
+}
+
+/** Record today's date as an active (session-completed) day. Idempotent. */
+export function recordStreakDay(date: string): void {
+  const dates = loadStreakDates();
+  if (!dates.includes(date)) {
+    dates.push(date);
+    saveStreakDates(dates);
+  }
+}
+
+/** Longest run of consecutive days ending today (or yesterday) from a date set. */
+function streakFromDateSet(doneDates: Set<string>): number {
+  let streak = 0;
+  const d = new Date();
+  const todayIso = d.toISOString().slice(0, 10);
+  // If nothing done today, start from yesterday so a past streak still shows.
+  if (!doneDates.has(todayIso)) {
+    d.setDate(d.getDate() - 1);
+  }
+  while (true) {
+    const ds = d.toISOString().slice(0, 10);
+    if (doneDates.has(ds)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/**
+ * Streak from the persistent active-days store, merged with the current plan's
+ * completed dates. This keeps the streak intact across plan reset / new round /
+ * delete (which clear session doneDates but not the persistent store).
+ */
+export function computeStreakPersistent(sessions: PlanSession[]): number {
+  const dates = new Set(loadStreakDates());
+  for (const s of sessions) if (s.done && s.doneDate) dates.add(s.doneDate);
+  return streakFromDateSet(dates);
 }
 
 export function computeStreak(sessions: PlanSession[]): number {

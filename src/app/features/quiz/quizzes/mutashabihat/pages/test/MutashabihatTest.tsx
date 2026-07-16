@@ -232,9 +232,10 @@ const MutashabihatTest: React.FC = () => {
       // was recited correctly, settle it correct (stops, closes the context,
       // shows the result). Otherwise just stop — the question stays open.
       if (!answered && recite.isVerseComplete) {
-        settleReciteCorrect();
+        settleReciteCorrect(); // plays the "correct" sound itself
       } else {
         recite.stop();
+        if (isSoundOn()) beep("stop"); // "we stopped listening"
       }
     } else if (!answered) {
       // Recitation is always bounded to the target verse. The snippet
@@ -244,21 +245,25 @@ const MutashabihatTest: React.FC = () => {
         ? q.sharedPhraseRaw ?? q.displayedPortion ?? ""
         : q.displayedPortion ?? "";
       recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
+      if (isSoundOn()) beep("start"); // "we started listening"
     }
-  }, [q, answered, recite, showContext, settleReciteCorrect]);
+  }, [q, answered, recite, showContext, settleReciteCorrect, beep]);
 
   // Closing the context: if reciting and the target verse was recited
   // correctly, settle it correct (stops + shows result). Otherwise stop and
   // close.
   const closeContext = useCallback(() => {
     if (recite.isArmed && !answered && recite.isVerseComplete) {
-      settleReciteCorrect();
+      settleReciteCorrect(); // plays the "correct" sound itself
       return;
     }
-    if (recite.isArmed) recite.stop();
+    if (recite.isArmed) {
+      recite.stop();
+      if (isSoundOn()) beep("stop");
+    }
     setShowContext(false);
     setSelectedVerseIdx(0);
-  }, [recite, answered, settleReciteCorrect]);
+  }, [recite, answered, settleReciteCorrect, beep]);
 
   const handleSkip = () => {
     if (answered || !q) return;

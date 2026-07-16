@@ -15,7 +15,8 @@ import {
   generateSessions,
   juzToPages,
   countMemorizedPages,
-  computeStreak,
+  computeStreakPersistent,
+  recordStreakDay,
   countSessionsToday,
   countActiveDays,
   computeMaxSessionsPerDay,
@@ -1002,7 +1003,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const planPct = totalSessions ? (doneSessions / totalSessions) * 100 : 0;
   const memorizedPages = countMemorizedPages(plan.memorized, chapters);
   const quranPct = (memorizedPages / 604) * 100;
-  const streak = computeStreak(sessions);
+  const streak = computeStreakPersistent(sessions);
   const todaySessions = countSessionsToday(sessions);
   const daysActive = countActiveDays(plan);
   const maxSessionsPerDay = computeMaxSessionsPerDay(sessions);
@@ -1436,6 +1437,9 @@ const Hifz: React.FC = () => {
     savePlanAsync(updated).catch(() => {});
     setPlan(updated);
 
+    // A session auto-completed today → keep the persistent streak in step.
+    recordStreakDay(today);
+
     // If this completed the whole plan, record a best run.
     if (sessions.every((s) => s.done)) {
       const days = countActiveDays(updated);
@@ -1463,6 +1467,11 @@ const Hifz: React.FC = () => {
         setMemorized(saved.memorized);
         setGoal(saved.goal);
         setView("plan");
+        // Seed the persistent streak store from any already-completed sessions,
+        // so existing users' streaks aren't lost the first time they reset.
+        for (const s of saved.sessions) {
+          if (s.done && s.doneDate) recordStreakDay(s.doneDate);
+        }
       }
       const best = await loadBestPlanAsync();
       setBestPlan(best);
@@ -1524,6 +1533,10 @@ const Hifz: React.FC = () => {
       savePlan(updated);
       savePlanAsync(updated).catch(() => {});
       setPlan(updated);
+
+      // Record today in the persistent streak store when completing a session,
+      // so the streak survives later plan resets / new rounds / deletes.
+      if (nowDone) recordStreakDay(today);
 
       // Keep the read-pages cache in sync with the manual checkmark: marking a
       // session done fills its pages, un-marking clears them, so the progress

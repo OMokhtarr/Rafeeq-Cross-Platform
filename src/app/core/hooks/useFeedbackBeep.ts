@@ -5,12 +5,13 @@
  * assets while still respecting the `soundEffects` setting.
  *  - correct: short ascending two-tone (G5 → C6)
  *  - wrong:   short descending tone  (A4 → E4)
+ *  - start:   soft rising two-tone (A4 → E5) — "we started listening"
  *  - stop:    soft descending two-tone (E5 → A4) — "we stopped listening"
  */
 
 import { useCallback, useRef } from "react";
 
-type Tone = "correct" | "wrong" | "stop";
+type Tone = "correct" | "wrong" | "start" | "stop";
 
 export function useFeedbackBeep() {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -39,15 +40,20 @@ export function useFeedbackBeep() {
             { f: 784, t: 0, d: 0.12 }, // G5
             { f: 1046, t: 0.12, d: 0.18 }, // C6
           ]
-        : tone === "stop"
+        : tone === "start"
           ? [
-              { f: 659, t: 0, d: 0.12 }, // E5
-              { f: 440, t: 0.12, d: 0.2 }, // A4
-            ]
-          : [
               { f: 440, t: 0, d: 0.12 }, // A4
-              { f: 330, t: 0.12, d: 0.18 }, // E4
-            ];
+              { f: 659, t: 0.12, d: 0.2 }, // E5
+            ]
+          : tone === "stop"
+            ? [
+                { f: 659, t: 0, d: 0.12 }, // E5
+                { f: 440, t: 0.12, d: 0.2 }, // A4
+              ]
+            : [
+                { f: 440, t: 0, d: 0.12 }, // A4
+                { f: 330, t: 0.12, d: 0.18 }, // E4
+              ];
 
     for (const note of seq) {
       const osc = ctx.createOscillator();

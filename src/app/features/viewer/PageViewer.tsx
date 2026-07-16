@@ -198,14 +198,17 @@ const PageViewer: React.FC = () => {
     }
   }, [recite.status, recite.micError, presentToast]);
 
-  // Chime when recite mode stops listening (manual tap, silence timeout, or
-  // failed identification) so the user notices the mic went off.
+  // Chime when recite mode starts/stops listening (manual tap, silence
+  // timeout, or failed identification) so the user hears the mic go on/off.
   const prevReciteStatusRef = useRef(recite.status);
   useEffect(() => {
     const prev = prevReciteStatusRef.current;
     prevReciteStatusRef.current = recite.status;
-    if (prev === "recording" && recite.status !== "recording") {
-      if (readSettings().soundEffects) beep("stop");
+    const soundOn = readSettings().soundEffects;
+    if (prev !== "recording" && recite.status === "recording") {
+      if (soundOn) beep("start"); // "we started listening"
+    } else if (prev === "recording" && recite.status !== "recording") {
+      if (soundOn) beep("stop"); // "we stopped listening"
     }
   }, [recite.status, beep]);
 
