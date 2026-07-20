@@ -282,7 +282,8 @@ class RafeeqAutoPlugin : Plugin() {
         val title = call.getString("title") ?: "رفيق"
         val autoplay = call.getBoolean("autoplay") ?: true
         val sura = call.getInt("sura") ?: 0
-        service.setNativeQueue(urls, startIndex, title, autoplay, sura)
+        val reciter = call.getString("reciter") ?: ""
+        service.setNativeQueue(urls, startIndex, title, autoplay, sura, reciter)
         call.resolve()
     }
 

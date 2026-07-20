@@ -74,6 +74,9 @@ export async function pushNativeQueue(
     // The surah of this (single-surah) queue, so native can restore page-nav / repeat-page /
     // duration if it has to self-advance after the app/brain is closed.
     sura: queue[0]?.sura ?? 0,
+    // The reciter (numeric id or slug), so a native stall fallback keeps the SAME reciter when
+    // it rebuilds the surah URLs — otherwise it could switch to the default reciter.
+    reciter,
   });
 }
 

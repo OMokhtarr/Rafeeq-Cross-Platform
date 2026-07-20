@@ -125,6 +125,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private var nativeRepeatPageFirst: Int = -1
     private var nativeRepeatPageLast: Int = -1
 
+    // The surah/aya the JS brain is currently playing, captured from every updateState() tick
+    // (verseKey). This is the AUTHORITATIVE current position while the brain drives — the
+    // persisted queue only reflects where playback STARTED, so the stall fallback rebuilds from
+    // these instead (otherwise it could resume the wrong surah, e.g. switch surahs mid-page when
+    // the phone locks). 0 until the brain reports a verse.
+    private var brainSura: Int = 0
+    private var brainAya: Int = 0
+
     // ── Brain-stall watchdog ────────────────────────────────────────────────────
     // When the JS brain is driving and a verse ends, we ask the brain to feed the next verse.
     // But the WebView is FROZEN while the phone screen is locked (or the app is backgrounded on
@@ -397,8 +405,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * stalling playback after the first ayah.)
      */
     @androidx.media3.common.util.UnstableApi
-    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean, sura: Int = 0) {
+    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean, sura: Int = 0, reciter: String = "") {
         jsDriving = true
+        // Remember the reciter the brain is playing so a stall fallback (locked screen / closed
+        // app) rebuilds the surah URLs with the SAME reciter instead of the default.
+        if (reciter.isNotEmpty()) currentReciter = reciter
         persistQueue(urls, startIndex, title, sura)
     }
 
@@ -513,33 +524,77 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     }
 
     /**
-     * Take over playback NATIVELY after the JS brain has gone away (app closed/terminated while
-     * audio was JS-driven). Re-arms the persisted flat queue at [nextIndex] so ExoPlayer keeps
-     * self-advancing verse-by-verse with no brain — this is what lets the car keep playing after
-     * the phone app is swiped away (Spotify/Anghami behavior). Restores the surah / page markers
-     * / repeat-page range so the page-nav buttons and duration bar keep working too.
+     * Take over playback NATIVELY after the JS brain went away or froze (app closed/terminated, or
+     * the WebView suspended behind a locked screen) while audio was JS-driven. Rebuilds the CURRENT
+     * surah's verse URLs and continues from the next verse, so ExoPlayer self-advances with no
+     * brain — this is what lets playback keep going after the phone is locked / the app is swiped
+     * away (Spotify/Anghami behavior).
+     *
+     * IMPORTANT: it resumes from the surah/aya the brain was ACTUALLY playing (brainSura/brainAya
+     * from updateState), NOT the persisted queue — the persisted queue only records where playback
+     * STARTED, so relying on it could switch to the wrong surah mid-page when the phone locks.
+     * `nextIndexHint` (the ended cold index + 1) is only a fallback when we have no live brain verse.
      */
     @androidx.media3.common.util.UnstableApi
-    private fun fallbackToNativeAdvance(nextIndex: Int) {
-        val persisted = loadPersistedQueue() ?: return
-        val (urls, _, title) = persisted
-        if (nextIndex < 0 || nextIndex >= urls.size) return // end of surah — nothing to continue
+    private fun fallbackToNativeAdvance(nextIndexHint: Int) {
+        // Resolve the surah + next aya from the brain's last-reported verse.
+        var sura = brainSura
+        var nextAya = brainAya + 1
+        if (sura <= 0) {
+            // No live brain verse — fall back to the persisted queue's surah + the hinted index.
+            sura = prefs.getInt(KEY_QUEUE_SURA, 0)
+            nextAya = nextIndexHint + 1
+        }
+        if (sura <= 0) return
+
+        val count = RafeeqAudioUrls.SURAH_VERSE_COUNTS[sura] ?: return
+        var crossedSurah = false
+        // Crossed the end of the surah → continue with the next surah's verse 1 (after An-Nas, stop).
+        if (nextAya > count) {
+            if (sura >= 114) return
+            sura += 1
+            nextAya = 1
+            crossedSurah = true
+        }
+
+        val startIndex = nextAya - 1
+        // Prefer the PERSISTED queue's URLs when we're continuing the SAME surah the brain
+        // persisted — those were resolved by the JS side with the exact reciter (including ones
+        // the native URL builder doesn't know). Only rebuild natively when we cross into a new
+        // surah (nothing persisted for it) or the persisted queue doesn't match.
+        val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+        val persistedSura = prefs.getInt(KEY_QUEUE_SURA, 0)
+        val persisted = loadPersistedQueue()
+        val urls: List<String> = if (!crossedSurah && persisted != null && persistedSura == sura &&
+            startIndex < persisted.first.size) {
+            persisted.first
+        } else {
+            RafeeqAudioUrls.buildSurahUrls(reciter, sura)
+        }
+        if (urls.isEmpty() || startIndex < 0 || startIndex >= urls.size) return
 
         jsDriving = false
-        val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
-        if (sura > 0) {
-            nativeColdStartSura = sura
-            pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(sura)
-                .map { PageMarker(it.first, it.second) }
-            currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, nextIndex + 1)
-            // Re-arm the repeat-page range if the user had it on (state survives in repeatPageActive
-            // from the brain's last updateState). Otherwise leave self-advance linear.
-            if (repeatPageActive) updateNativeRepeatPageRange()
-            else player?.setColdRepeatRange(-1, -1)
-        }
+        nativeColdStartSura = sura
+        pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(sura)
+            .map { PageMarker(it.first, it.second) }
+        currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, nextAya)
+        // Re-arm the repeat-page range if the user had it on; otherwise self-advance linearly.
+        if (repeatPageActive) updateNativeRepeatPageRange()
+        else player?.setColdRepeatRange(-1, -1)
+        // Refresh the duration total for the (possibly new) surah.
+        nativeVerseDurationsMs.clear()
+        nativeVerseStartMs.clear()
+        nativeRangeTotalMs = 0L
+        fetchNativeRangeTotal(reciter, sura)
+
+        // Keep brain state in sync with where native now is, so a later handoff adopts correctly.
+        brainSura = sura
+        brainAya = nextAya
+
         requestAudioFocus()
-        player?.loadList(urls, nextIndex, playWhenReady = true)
-        updateTitleMetadata(title)
+        persistQueue(urls, startIndex, surahArabicName(sura), sura)
+        player?.loadList(urls, startIndex, playWhenReady = true)
+        updateTitleMetadata(surahArabicName(sura))
     }
 
     /**
@@ -1029,6 +1084,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         if (newPageMarkers != null) pageMarkers = newPageMarkers
         if (newCurrentPage > 0) currentPage = newCurrentPage
         this.repeatPageActive = repeatPageActive
+
+        // Track the brain's current verse so a stall fallback resumes the RIGHT surah/aya
+        // (verseKey is "sura:aya"). The persisted queue only reflects the start position.
+        val kp = verseKey.split(":")
+        if (kp.size == 2) {
+            kp[0].toIntOrNull()?.let { brainSura = it }
+            kp[1].toIntOrNull()?.let { brainAya = it }
+        }
 
         Log.d("RafeeqMedia", "updateState: isPlaying=$isPlaying surah=$surahName verse=$verseKey page=$currentPage markers=${pageMarkers.size} -> ${pageMarkers.map { "p${it.page}a${it.aya}" }} repeatPage=$repeatPageActive")
 

@@ -94,6 +94,8 @@ export interface DrivingModePlugin {
     /** Surah of the (single-surah) queue, so native can self-advance with page-nav/repeat
      *  intact if the app/brain is closed mid-playback. */
     sura?: number;
+    /** Reciter (numeric id or slug) so a native stall fallback keeps the same reciter. */
+    reciter?: string;
   }): Promise<void>;
 
   nativePlay(): Promise<void>;
