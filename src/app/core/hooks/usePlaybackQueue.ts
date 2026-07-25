@@ -98,6 +98,12 @@ export interface PlaybackControls {
   setReciter: (reciter: string) => void;
   setRepeatVerse: (mode: RepeatMode) => void;
   setRepeatRange: (mode: RepeatMode) => void;
+  /** Current range-repeat mode (1..3 | "loop"), read for syncing native fallback behavior. */
+  getRepeatRange: () => RepeatMode;
+  /** Full range passes still to play, INCLUDING the one currently in progress. Returns -1 for
+   *  "loop" (infinite). Lets the native stall fallback stop a finite Nx range after exactly N
+   *  passes even while the phone is locked. */
+  getRangeRemainingPasses: () => number;
   resumeSession: (session: {
     queue: VerseKey[];
     verseKey: string;
@@ -1143,6 +1149,15 @@ export function usePlaybackQueue(
   const setRepeatRange = useCallback((m: RepeatMode) => {
     repeatRangeRef.current = m;
   }, []);
+  const getRepeatRange = useCallback((): RepeatMode => repeatRangeRef.current, []);
+  const getRangeRemainingPasses = useCallback((): number => {
+    const mode = repeatRangeRef.current;
+    if (mode === "loop") return -1; // infinite
+    const target = Math.max(1, mode);
+    // rangePassCountRef counts COMPLETED passes (incremented at the range end). The pass in
+    // progress isn't counted yet, so passes still to play (current + future) = target - completed.
+    return Math.max(0, target - rangePassCountRef.current);
+  }, []);
 
   return {
     state,
@@ -1164,6 +1179,8 @@ export function usePlaybackQueue(
     setReciter,
     setRepeatVerse,
     setRepeatRange,
+    getRepeatRange,
+    getRangeRemainingPasses,
     resumeSession,
   };
 }

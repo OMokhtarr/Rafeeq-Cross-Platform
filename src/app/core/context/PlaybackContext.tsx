@@ -282,6 +282,13 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         pageMarkers,
         currentPage,
         repeatPageActive,
+        // Range info so a native stall fallback (screen locked / app backgrounded) continues the
+        // SELECTED RANGE and stops/loops at its end, instead of running past it into the surah.
+        queueIndex: queue.state.currentIndex,
+        queueLength: queue.queue.length,
+        rangeLoops: queue.getRepeatRange() === "loop",
+        // Remaining full passes for a finite Nx range (-1 = loop), so native stops after exactly N.
+        rangeRemainingPasses: queue.getRangeRemainingPasses(),
       }).catch(() => {});
     },
     [isNative, currentReciterId, queue.queue, queue.state],

@@ -28,9 +28,21 @@ const InlineSelect: React.FC<Props> = ({
   const [listStyle, setListStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  // Timestamp of the last close driven by something other than the trigger's
+  // own click (backdrop tap, option pick, outside tap). The trailing
+  // touch→click compatibility event can land on the trigger after the backdrop
+  // unmounts; without this guard that click would immediately reopen the list,
+  // making a single tap look like retract-then-expand.
+  const closedAtRef = useRef(0);
 
   const selected = options.find((o) => o.value === value);
   const nightCls = night ? " isel--night" : "";
+
+  // Close and mark the moment, so a trailing click on the trigger is ignored.
+  const closeExternally = () => {
+    closedAtRef.current = Date.now();
+    setOpen(false);
+  };
 
   // Position the portal list under the trigger whenever it opens
   useLayoutEffect(() => {
@@ -68,7 +80,7 @@ const InlineSelect: React.FC<Props> = ({
         triggerRef.current?.contains(e.target as Node) ||
         listRef.current?.contains(e.target as Node)
       ) return;
-      setOpen(false);
+      closeExternally();
     };
     // Track whether the touch started inside the list so we can
     // ignore scroll events that are part of scrolling within it.
@@ -82,7 +94,7 @@ const InlineSelect: React.FC<Props> = ({
       // closing while the user is scrolling inside the dropdown.
       if (touchInsideList) return;
       if (listRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
+      closeExternally();
     };
     // Defer registration by one tick so the tap that opened the dropdown
     // has finished bubbling before we start listening for outside clicks.
@@ -120,7 +132,7 @@ const InlineSelect: React.FC<Props> = ({
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setOpen(false);
+              closeExternally();
             }}
             onClick={(e) => {
               e.preventDefault();
@@ -157,7 +169,7 @@ const InlineSelect: React.FC<Props> = ({
                   // Defer close so the list + backdrop stay mounted through any
                   // trailing touch→click compatibility event (which they then
                   // absorb), preventing click-through to the surah cards behind.
-                  setTimeout(() => setOpen(false), 60);
+                  setTimeout(closeExternally, 60);
                 }
               }}
               onClick={(e) => {
@@ -165,7 +177,7 @@ const InlineSelect: React.FC<Props> = ({
                 e.stopPropagation();
               }}
             >
-              {o.label}
+              <span className="isel__option-label" dir="auto">{o.label}</span>
               {o.value === value && (
                 <svg
                   viewBox="0 0 12 10"
@@ -198,12 +210,18 @@ const InlineSelect: React.FC<Props> = ({
         ref={triggerRef}
         type="button"
         className={`isel__trigger${nightCls}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          // Ignore the trailing compatibility-click that follows a close the
+          // backdrop (or an option pick) already handled — otherwise it
+          // reopens the list the user just retracted.
+          if (Date.now() - closedAtRef.current < 350) return;
+          setOpen((o) => !o);
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
       >
-        <span className="isel__label">{selected?.label ?? value}</span>
+        <span className="isel__label" dir="auto">{selected?.label ?? value}</span>
         <svg
           className={`isel__arrow${open ? " isel__arrow--open" : ""}`}
           viewBox="0 0 10 6"

@@ -29,6 +29,17 @@ export interface DrivingModePlaybackState {
   currentPage?: number;
   /** Whether repeat-page mode is active (loop current page indefinitely). */
   repeatPageActive?: boolean;
+  /** Current index within the active queue (the selected range). Lets a native stall fallback
+   *  continue the persisted RANGE from the exact position and stop/loop at the range end,
+   *  instead of playing past it into the rest of the surah. */
+  queueIndex?: number;
+  /** Queue length (number of verses in the selected range). */
+  queueLength?: number;
+  /** Whether the range loops at its end ("loop") vs. plays once. True = loop. */
+  rangeLoops?: boolean;
+  /** Full range passes still to play, including the one in progress. -1 = loop (infinite). Lets
+   *  the native stall fallback stop a finite Nx range after exactly N passes while locked. */
+  rangeRemainingPasses?: number;
 }
 
 export type CarActionType =

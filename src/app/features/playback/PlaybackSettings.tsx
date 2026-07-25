@@ -29,7 +29,12 @@ import {
   getRubNumberForPage,
   estimatePageForVerse,
 } from "../../core/services/data/metadata.service";
-import { fetchRecitations } from "../../core/services/api/quran-api.client";
+import {
+  fetchRecitations,
+  type ApiRecitation,
+} from "../../core/services/api/quran-api.client";
+import { isNetworkReachable } from "../../core/services/api/network.service";
+import { useOfflineGuard } from "../../core/hooks/useOfflineGuard";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import "./PlaybackSettings.css";
 
@@ -80,6 +85,28 @@ function savePrefs(p: Partial<StoredPlaybackPrefs>) {
 }
 
 type VerseKeyLocal = VerseKey;
+
+// Localized labels for a recitation style, so the dropdown distinguishes otherwise-identical
+// reciter names (e.g. Al-Minshawi has both a Murattal and a Mujawwad recording). The API returns
+// the style in English regardless of language, so we translate the common ones ourselves.
+const STYLE_LABELS: Record<string, { ar: string; en: string }> = {
+  murattal: { ar: "مرتل", en: "Murattal" },
+  mujawwad: { ar: "مجود", en: "Mujawwad" },
+  muallim: { ar: "معلم", en: "Mu‘allim" },
+};
+
+function reciterLabel(r: ApiRecitation, isAr: boolean): string {
+  const name = r.translated_name?.name ?? r.reciter_name;
+  const style = r.style?.trim();
+  if (!style) return name;
+  const key = style.toLowerCase();
+  const localized = STYLE_LABELS[key]
+    ? isAr
+      ? STYLE_LABELS[key].ar
+      : STYLE_LABELS[key].en
+    : style; // unknown style — show the API value as-is
+  return `${name} — ${localized}`;
+}
 
 function expandRange(
   start: VerseKeyLocal,
@@ -145,14 +172,39 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const { t, lang, isRTL } = useLang();
   const { isNight } = useTheme();
   const queue = usePlayback();
+  const { notifyOffline } = useOfflineGuard();
   const tp = t.playback;
 
   const nightCls = "";
 
+  // The page to open the range selection on. Priority:
+  //  1. currentPage prop (the page the viewer is showing when it opens this sheet),
+  //  2. the page of the verse currently playing (so it reflects where you actually are),
+  //  3. a ?page= URL query,
+  //  4. page 1.
+  // Previously this used only the URL query, so opening without ?page= always fell back to
+  // page 1 (the first surah) instead of the page the user is on.
   const startPageQuery = useMemo(() => {
+    if (
+      typeof currentPageProp === "number" &&
+      currentPageProp >= 1 &&
+      currentPageProp <= 604
+    ) {
+      return currentPageProp;
+    }
+    const playing = queue.state.currentVerse;
+    if (playing) {
+      const [s, a] = playing.split(":").map((n) => parseInt(n, 10));
+      if (Number.isFinite(s) && Number.isFinite(a)) {
+        const p = estimatePageForVerse(s, a);
+        if (p >= 1 && p <= 604) return p;
+      }
+    }
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
     return Number.isFinite(raw) && raw >= 1 && raw <= 604 ? raw : 1;
+    // currentPageProp / the playing verse are read once at mount for the initial range (they
+    // seed the useState initializers below), so only location.search is a dependency here.
   }, [location.search]);
 
   const [prefs, setPrefs] = useState<StoredPlaybackPrefs>(loadPrefs);
@@ -187,7 +239,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
         if (cancelled) return;
         const options = list.map((r) => ({
           value: String(r.id),
-          label: r.translated_name?.name ?? r.reciter_name,
+          label: reciterLabel(r, lang === "ar"),
         }));
         setReciters(options);
         if (
@@ -315,6 +367,22 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setPendingQuick("all");
   };
 
+  // Quick-select buttons live inside a scrollable sheet. On mobile webviews, a plain onClick
+  // is withheld until the browser decides the tap wasn't the start of a scroll, so the green
+  // is-active highlight only appeared after a later interaction. Firing on pointerup with a
+  // small movement threshold (a real tap, not a drag) commits the selection immediately.
+  const quickTap = (fn: () => void) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      (e.currentTarget as HTMLButtonElement).dataset.px = String(e.clientX);
+      (e.currentTarget as HTMLButtonElement).dataset.py = String(e.clientY);
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
+      const x0 = parseFloat((e.currentTarget as HTMLButtonElement).dataset.px ?? "0");
+      const y0 = parseFloat((e.currentTarget as HTMLButtonElement).dataset.py ?? "0");
+      if (Math.abs(e.clientX - x0) < 8 && Math.abs(e.clientY - y0) < 8) fn();
+    },
+  });
+
   // Downloads
   const surahOptions = useMemo(
     () =>
@@ -330,6 +398,11 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
 
   const startSurahDownload = async (sura: number, versesCount: number) => {
     if (surahDownloads[sura]?.abortController) return;
+    // Downloading recitations is the one thing here that cannot work offline.
+    if (!(await isNetworkReachable())) {
+      notifyOffline(t.offline.download);
+      return;
+    }
     const ctrl = new AbortController();
     setSurahDownloads((prev) => ({
       ...prev,
@@ -661,7 +734,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "page" || activeQuick === "page" ? " is-active" : ""
               }`}
-              onClick={() => setRangeToPage(currentPage)}
+              {...quickTap(() => setRangeToPage(currentPage))}
             >
               {tp.quickPage(String(currentPage))}
             </button>
@@ -670,7 +743,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "fromPage" || activeQuick === "fromPage" ? " is-active" : ""
               }`}
-              onClick={() => setRangeFromPage(currentPage)}
+              {...quickTap(() => setRangeFromPage(currentPage))}
             >
               {tp.quickFromPage(String(currentPage))}
             </button>
@@ -681,10 +754,10 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
                 className={`pb-seg-btn${nightCls}${
                   activeQuick === `surah-${s}` ? " is-active" : ""
                 }`}
-                onClick={() => {
+                {...quickTap(() => {
                   setRangeToSurah(s);
                   setActiveQuick(`surah-${s}`);
-                }}
+                })}
               >
                 {tp.quickSurah(
                   lang === "ar"
@@ -698,7 +771,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "juz" || activeQuick === "juz" ? " is-active" : ""
               }`}
-              onClick={() => setRangeToJuz(currentJuz)}
+              {...quickTap(() => setRangeToJuz(currentJuz))}
             >
               {tp.quickJuz(String(currentJuz))}
             </button>
@@ -707,7 +780,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "hizb" || activeQuick === "hizb" ? " is-active" : ""
               }`}
-              onClick={() => setRangeToHizb(currentHizb)}
+              {...quickTap(() => setRangeToHizb(currentHizb))}
             >
               {tp.quickHizb(String(currentHizb))}
             </button>
@@ -716,7 +789,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "rub" || activeQuick === "rub" ? " is-active" : ""
               }`}
-              onClick={() => setRangeToRub(currentRub)}
+              {...quickTap(() => setRangeToRub(currentRub))}
             >
               {lang === "ar"
                 ? `ربع ${toHindiNumbers(currentRub)}`
@@ -727,7 +800,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
               className={`pb-seg-btn${nightCls}${
                 pendingQuick === "all" || activeQuick === "all" ? " is-active" : ""
               }`}
-              onClick={setRangeToAll}
+              {...quickTap(setRangeToAll)}
             >
               {tp.quickAll}
             </button>

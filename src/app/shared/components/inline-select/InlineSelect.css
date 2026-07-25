@@ -108,6 +108,14 @@
   color: var(--color-gold, #d4b48c);
 }
 
+.isel__option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .isel__check {
   flex-shrink: 0;
   color: var(--color-gold, #d4b48c);

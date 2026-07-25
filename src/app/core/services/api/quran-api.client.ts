@@ -46,6 +46,68 @@ interface TokenState {
 let tokenState: TokenState | null = null;
 let tokenInflight: Promise<string> | null = null;
 
+// ─── Timeouts & offline circuit breaker ──────────────────────────────────────
+
+/**
+ * Max wait for any single request. Without this a dead connection hangs on the
+ * OS-level TCP timeout (30 s+ on Android), which is what made offline cold
+ * start feel frozen. Long enough for a slow-but-real 3G handshake.
+ */
+const REQUEST_TIMEOUT_MS = 4000;
+
+/**
+ * Once a request fails for want of a network, every later call would rediscover
+ * the same timeout one at a time. Latch that state so subsequent calls fail
+ * instantly, and clear it when the browser reports connectivity is back.
+ */
+let offlineUntilOnline = false;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    offlineUntilOnline = false;
+  });
+}
+
+/** True when the failure means "no usable connection", not "server said no". */
+function isNetworkFailure(err: unknown): boolean {
+  return (
+    err instanceof TypeError || // fetch's own "Failed to fetch"
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof QuranApiError && err.status === 0)
+  );
+}
+
+/** Marks the client offline so later calls short-circuit instead of hanging. */
+function markOffline(): void {
+  offlineUntilOnline = true;
+}
+
+/** Cheap pre-flight: skip the request entirely when we know it cannot succeed. */
+function assertMaybeOnline(): void {
+  // navigator.onLine is only trustworthy in the negative: false definitely
+  // means no connection, while true merely means an interface exists (WiFi
+  // with no internet, captive portal, dead mobile data all report true).
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    throw new QuranApiOffline();
+  }
+  if (offlineUntilOnline) throw new QuranApiOffline();
+}
+
+/** fetch() that gives up after `ms` instead of hanging on a dead socket. */
+async function timedFetch(
+  url: string,
+  init: RequestInit = {},
+  ms = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getAccessToken(forceRefresh = false): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000);
   if (!forceRefresh && tokenState && tokenState.expiresAt - 60 > nowSec) {
@@ -53,8 +115,21 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   }
   if (tokenInflight) return tokenInflight;
 
+  assertMaybeOnline();
+
   tokenInflight = (async () => {
-    const res = await fetch(TOKEN_BROKER_URL, { method: "POST" });
+    let res: Response;
+    try {
+      res = await timedFetch(TOKEN_BROKER_URL, { method: "POST" });
+    } catch (err) {
+      // Timed out or could not reach the broker at all — treat as offline so
+      // callers stop retrying and fall back to cached data straight away.
+      if (isNetworkFailure(err)) {
+        markOffline();
+        throw new QuranApiOffline();
+      }
+      throw err;
+    }
     if (!res.ok) {
       throw new QuranApiError(
         res.status,
@@ -96,6 +171,17 @@ export class QuranApiNotFound extends QuranApiError {
   }
 }
 
+/**
+ * No usable network. Thrown without touching the wire, so callers that have an
+ * offline fallback (IDB cache, bundled corpus) reach it immediately.
+ */
+export class QuranApiOffline extends QuranApiError {
+  constructor() {
+    super(0, "offline: no usable network connection");
+    this.name = "QuranApiOffline";
+  }
+}
+
 // ─── Generic fetch with retry ─────────────────────────────────────────────────
 
 async function apiFetch<T>(
@@ -110,6 +196,8 @@ async function apiFetch<T>(
     console.log("[quran-api]", url.toString());
   }
 
+  assertMaybeOnline();
+
   let attempt = 0;
   let lastErr: unknown = null;
 
@@ -117,7 +205,7 @@ async function apiFetch<T>(
     attempt++;
     try {
       const token = await getAccessToken(attempt > 1);
-      const res = await fetch(url.toString(), {
+      const res = await timedFetch(url.toString(), {
         headers: {
           accept: "application/json",
           authorization: `Bearer ${token}`,
@@ -167,6 +255,12 @@ async function apiFetch<T>(
     } catch (err) {
       lastErr = err;
       if (err instanceof QuranApiError && err.status < 500) throw err;
+      // A timeout or "failed to fetch" means there is no usable connection —
+      // retrying just pays the same wait again. Latch offline and give up now.
+      if (isNetworkFailure(err)) {
+        markOffline();
+        throw new QuranApiOffline();
+      }
       await sleep(250 * attempt * attempt);
     }
   }
@@ -612,16 +706,22 @@ interface RecitationsResponse {
   recitations: ApiRecitation[];
 }
 
-const RECITATIONS_IDB_KEY = "recitations_v1";
+// The cache key is per-language: the API returns localized reciter names, so caching under a
+// single key made the first-fetched language (usually English) stick for every later call,
+// leaving the dropdown in English even in Arabic mode.
+function recitationsIdbKey(language: string): string {
+  return `recitations_v1_${language}`;
+}
 
 export async function fetchRecitations(
   language = "en",
 ): Promise<ApiRecitation[]> {
-  // 1. Try IDB cache first (works offline)
+  const cacheKey = recitationsIdbKey(language);
+  // 1. Try IDB cache first (works offline), scoped to THIS language.
   try {
     const cached = await idb.get<{ key: string; value: ApiRecitation[] }>(
       "meta",
-      RECITATIONS_IDB_KEY,
+      cacheKey,
     );
     if (cached?.value?.length) return cached.value;
   } catch {}
@@ -633,10 +733,8 @@ export async function fetchRecitations(
     });
     const list = data.recitations ?? [];
     if (list.length > 0) {
-      // Persist to IDB for offline use
-      idb
-        .put("meta", { key: RECITATIONS_IDB_KEY, value: list })
-        .catch(() => {});
+      // Persist to IDB (per-language) for offline use
+      idb.put("meta", { key: cacheKey, value: list }).catch(() => {});
     }
     return list;
   } catch (err) {
@@ -644,7 +742,7 @@ export async function fetchRecitations(
     try {
       const cached = await idb.get<{ key: string; value: ApiRecitation[] }>(
         "meta",
-        RECITATIONS_IDB_KEY,
+        cacheKey,
       );
       if (cached?.value?.length) return cached.value;
     } catch {}

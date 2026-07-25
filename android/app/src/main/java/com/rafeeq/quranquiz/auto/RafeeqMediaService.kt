@@ -132,6 +132,19 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // the phone locks). 0 until the brain reports a verse.
     private var brainSura: Int = 0
     private var brainAya: Int = 0
+    // The brain's position within the SELECTED RANGE (the persisted queue), so a stall fallback
+    // continues the range and stops/loops at its end rather than overrunning it into the surah.
+    private var brainQueueIndex: Int = -1
+    private var brainQueueLength: Int = 0
+    private var brainRangeLoops: Boolean = true
+    // Full range passes still to play for a finite Nx range (includes the pass in progress);
+    // -1 = loop (infinite). The stall fallback decrements this at each range end and stops at 0.
+    private var brainRangeRemainingPasses: Int = -1
+    // True when the native player is playing a BOUNDED range (a stall fallback continuing the
+    // selected page/hizb/rub). While true, reaching the end of the cold list must NOT roll into
+    // the next surah — the range simply ends. False for whole-surah cold-start playback, where
+    // rolling to the next surah IS desired.
+    private var nativeRangeBounded: Boolean = false
 
     // ── Brain-stall watchdog ────────────────────────────────────────────────────
     // When the JS brain is driving and a verse ends, we ask the brain to feed the next verse.
@@ -319,8 +332,19 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             }
 
             override fun onColdListEnded() {
-                // The whole surah just finished on the native path. Continue with the next surah
-                // (like the JS brain's auto-advance) so playback doesn't stop at a surah boundary.
+                // Reached the end of the cold list. If we're playing a BOUNDED range (stall
+                // fallback for a selected page/hizb/rub), never roll into the next surah — instead
+                // decide whether to loop the range again (infinite loop, or a finite Nx with passes
+                // remaining) or stop (finite Nx exhausted / play-once).
+                if (nativeRangeBounded) {
+                    if (shouldLoopRangeAtEnd()) {
+                        Log.d("RafeeqMedia", "onColdListEnded: bounded range — loop again (remain=$brainRangeRemainingPasses)")
+                        replayBoundedRangeFromStart()
+                    } else {
+                        Log.d("RafeeqMedia", "onColdListEnded: bounded range finished — stop")
+                    }
+                    return
+                }
                 playNextSurahNatively()
             }
 
@@ -358,6 +382,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         if (urls.isEmpty()) return
         Log.d("RafeeqMedia", "playNextSurahNatively: $current -> $next verses=${urls.size}")
         val title = surahArabicName(next)
+        nativeRangeBounded = false // whole surah — may roll into the next
         nativeColdStartSura = next
         pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(next)
             .map { PageMarker(it.first, it.second) }
@@ -417,6 +442,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun loadNativeTrack(url: String, index: Int, title: String, autoplay: Boolean) {
         jsDriving = true
+        // The brain driving playback IS a user-initiated action (the user pressed play in the
+        // app). Mark interaction so the auto-resume guard in onPlay() doesn't suppress a later
+        // notification play/pause resume — that guard is only meant to block a bare onPlay() that
+        // a head unit fires on connect, never a real phone playback resume.
+        userInteracted = true
         // The brain responded with the next verse — cancel any pending stall watchdog.
         cancelBrainWatchdog()
         // JS brain is now driving — stop the native page-marker derivation; JS owns page
@@ -479,6 +509,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             Log.d("RafeeqMedia", "coldStartPlay: starting persisted queue size=${urls.size} idx=$idx")
             requestAudioFocus()
             jsDriving = false
+            nativeRangeBounded = false // car cold-start resume keeps its historical whole-surah behavior
             // Restore the page-nav state for the persisted surah so the prev/next-page +
             // repeat-page buttons appear on this resume path too (not just on a fresh surah
             // selection). Without this, pageMarkers stays empty and the buttons don't show.
@@ -537,64 +568,97 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      */
     @androidx.media3.common.util.UnstableApi
     private fun fallbackToNativeAdvance(nextIndexHint: Int) {
-        // Resolve the surah + next aya from the brain's last-reported verse.
-        var sura = brainSura
-        var nextAya = brainAya + 1
-        if (sura <= 0) {
-            // No live brain verse — fall back to the persisted queue's surah + the hinted index.
-            sura = prefs.getInt(KEY_QUEUE_SURA, 0)
-            nextAya = nextIndexHint + 1
-        }
-        if (sura <= 0) return
+        // The persisted queue IS the selected range (its verses, in order). Continue THAT range —
+        // this is the only way to respect a partial range (page / hizb / rub). Playing the whole
+        // surah would overrun the range ("jumps far away from what I added").
+        val persisted = loadPersistedQueue() ?: return
+        val (urls, _, title) = persisted
+        if (urls.isEmpty()) return
 
-        val count = RafeeqAudioUrls.SURAH_VERSE_COUNTS[sura] ?: return
-        var crossedSurah = false
-        // Crossed the end of the surah → continue with the next surah's verse 1 (after An-Nas, stop).
-        if (nextAya > count) {
-            if (sura >= 114) return
-            sura += 1
-            nextAya = 1
-            crossedSurah = true
-        }
+        // Where are we within the range? Prefer the brain's live queue index; else fall back to
+        // the ended cold index (they're the same numbering when native is walking the queue).
+        val curIdx = if (brainQueueIndex >= 0) brainQueueIndex else nextIndexHint - 1
+        var nextIdx = curIdx + 1
 
-        val startIndex = nextAya - 1
-        // Prefer the PERSISTED queue's URLs when we're continuing the SAME surah the brain
-        // persisted — those were resolved by the JS side with the exact reciter (including ones
-        // the native URL builder doesn't know). Only rebuild natively when we cross into a new
-        // surah (nothing persisted for it) or the persisted queue doesn't match.
-        val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
-        val persistedSura = prefs.getInt(KEY_QUEUE_SURA, 0)
-        val persisted = loadPersistedQueue()
-        val urls: List<String> = if (!crossedSurah && persisted != null && persistedSura == sura &&
-            startIndex < persisted.first.size) {
-            persisted.first
-        } else {
-            RafeeqAudioUrls.buildSurahUrls(reciter, sura)
+        if (nextIdx >= urls.size) {
+            // Reached the END of the selected range on the very first stalled boundary. Decide
+            // loop / count-down / stop exactly like a subsequent range end (see onRangeEnded).
+            if (!shouldLoopRangeAtEnd()) {
+                Log.d("RafeeqMedia", "fallback: range finished — stop")
+                player?.pause()
+                return
+            }
+            nextIdx = 0 // loop the range from its first verse
         }
-        if (urls.isEmpty() || startIndex < 0 || startIndex >= urls.size) return
 
         jsDriving = false
-        nativeColdStartSura = sura
-        pageMarkers = RafeeqAudioUrls.pageMarkersForSurah(sura)
-            .map { PageMarker(it.first, it.second) }
-        currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, nextAya)
-        // Re-arm the repeat-page range if the user had it on; otherwise self-advance linearly.
-        if (repeatPageActive) updateNativeRepeatPageRange()
-        else player?.setColdRepeatRange(-1, -1)
-        // Refresh the duration total for the (possibly new) surah.
-        nativeVerseDurationsMs.clear()
-        nativeVerseStartMs.clear()
-        nativeRangeTotalMs = 0L
-        fetchNativeRangeTotal(reciter, sura)
+        // This is a BOUNDED range (the selected page/hizb/rub) — don't let it roll into the next
+        // surah when it ends. Only whole-surah cold starts clear this.
+        nativeRangeBounded = true
+        // Restore page-nav so the notification's page buttons keep working. Do NOT re-fetch the
+        // whole-chapter duration here — the brain already set the RANGE total (range-relative) in
+        // the notification metadata; fetching the chapter total would wrongly show the FULL surah
+        // duration for a partial range. We keep lastMetaDurationMs as-is.
+        val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
+        if (sura > 0) {
+            nativeColdStartSura = sura
+            // Keep the brain's RANGE-scoped page markers (set via updateState) — do NOT replace
+            // them with the whole surah's pages, which would show pages outside the selected range.
+            if (brainAya > 0) currentPage = RafeeqAudioUrls.estimatePageForVerse(sura, brainAya)
+        }
 
-        // Keep brain state in sync with where native now is, so a later handoff adopts correctly.
-        brainSura = sura
-        brainAya = nextAya
+        // Keep the live position in sync so a later handoff (unlock) adopts the right spot, and
+        // so a subsequent stall continues correctly.
+        brainQueueIndex = nextIdx
+
+        // Bound ExoPlayer's self-advance. IMPORTANT: only an INFINITE loop uses the player's own
+        // repeat range (efficient, no per-lap callback). A FINITE Nx range must NOT — the player
+        // would loop forever — so we leave it unbounded and count the laps in onColdListEnded.
+        //  - repeat-page on            → loop just the current page (narrowest).
+        //  - else infinite range loop  → loop the whole range [0, last] in the player.
+        //  - else (finite Nx / once)   → no player loop; onColdListEnded counts down / stops.
+        if (repeatPageActive && sura > 0) updateNativeRepeatPageRange()
+        else if (brainRangeLoops && brainRangeRemainingPasses < 0) player?.setColdRepeatRange(0, urls.lastIndex)
+        else player?.setColdRepeatRange(-1, -1)
 
         requestAudioFocus()
-        persistQueue(urls, startIndex, surahArabicName(sura), sura)
-        player?.loadList(urls, startIndex, playWhenReady = true)
-        updateTitleMetadata(surahArabicName(sura))
+        persistQueue(urls, nextIdx, title, sura)
+        player?.loadList(urls, nextIdx, playWhenReady = true)
+        updateTitleMetadata(title)
+    }
+
+    /**
+     * Decide whether a BOUNDED range should loop again now that it hit its end, decrementing the
+     * finite pass counter as a side effect. Returns true to loop (replay from verse 1), false to
+     * stop. Mirrors the JS brain's range-repeat: "loop" is infinite; a finite Nx stops once the
+     * remaining-pass count reaches 0.
+     */
+    private fun shouldLoopRangeAtEnd(): Boolean {
+        // Infinite loop (rangeLoops with no finite count) → always loop.
+        if (brainRangeLoops && brainRangeRemainingPasses < 0) return true
+        // Finite Nx: one pass just completed. Decrement; loop only if passes still remain.
+        if (brainRangeRemainingPasses > 0) {
+            brainRangeRemainingPasses -= 1
+            return brainRangeRemainingPasses > 0
+        }
+        // Play-once (or count exhausted) → stop.
+        return false
+    }
+
+    /** Reload the persisted bounded range from its first verse (a range loop lap). Used by the
+     *  finite-Nx path, where the player has no internal repeat range so the service drives each
+     *  lap and can stop at the exact count. */
+    @androidx.media3.common.util.UnstableApi
+    private fun replayBoundedRangeFromStart() {
+        val persisted = loadPersistedQueue() ?: return
+        val (urls, _, title) = persisted
+        if (urls.isEmpty()) return
+        brainQueueIndex = 0
+        val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
+        persistQueue(urls, 0, title, sura)
+        player?.setColdRepeatRange(-1, -1) // finite: no internal loop; we drive each lap
+        player?.loadList(urls, 0, playWhenReady = true)
+        updateTitleMetadata(title)
     }
 
     /**
@@ -1079,11 +1143,25 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         durationMs: Long,
         newPageMarkers: List<PageMarker>?,
         newCurrentPage: Int,
-        repeatPageActive: Boolean = false
+        repeatPageActive: Boolean = false,
+        queueIndex: Int = -1,
+        queueLength: Int = 0,
+        rangeLoops: Boolean = true,
+        rangeRemainingPasses: Int = -1
     ) {
         if (newPageMarkers != null) pageMarkers = newPageMarkers
         if (newCurrentPage > 0) currentPage = newCurrentPage
         this.repeatPageActive = repeatPageActive
+
+        // Track the brain's live position WITHIN THE SELECTED RANGE so a stall fallback continues
+        // the persisted range from the exact queue index and stops/loops at its end — instead of
+        // running past the range into the rest of the surah (the "jumps far away" bug).
+        if (queueIndex >= 0) brainQueueIndex = queueIndex
+        if (queueLength > 0) brainQueueLength = queueLength
+        brainRangeLoops = rangeLoops
+        // Remaining full passes for a finite Nx range (-1 = loop). Lets the stall fallback stop
+        // after exactly N passes even while locked.
+        brainRangeRemainingPasses = rangeRemainingPasses
 
         // Track the brain's current verse so a stall fallback resumes the RIGHT surah/aya
         // (verseKey is "sura:aya"). The persisted queue only reflects the start position.
@@ -1513,6 +1591,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     // is the sole MediaSession writer (publishPlaybackState). If the WebView is
                     // alive (or wakes), the brain can still take over via dispatchCarEvent below.
                     jsDriving = false
+                    nativeRangeBounded = false // whole surah selected in the car — may roll over
                     // Compute the page-nav markers natively so prev/next-page + repeat-page
                     // buttons appear even without the WebView/brain (cold start).
                     nativeColdStartSura = surahNumber

@@ -236,10 +236,14 @@ class RafeeqAutoPlugin : Plugin() {
         } else null
 
         val repeatPageActive = call.getBoolean("repeatPageActive") ?: false
+        val queueIndex = call.getInt("queueIndex") ?: -1
+        val queueLength = call.getInt("queueLength") ?: 0
+        val rangeLoops = call.getBoolean("rangeLoops") ?: true
+        val rangeRemainingPasses = call.getInt("rangeRemainingPasses") ?: -1
 
-        Log.d("RafeeqAuto", "updatePlaybackState: markersArr=${markersArr?.length() ?: "null"} parsed=${pageMarkers?.size ?: "null"} page=$currentPage surah=$surahName repeatPage=$repeatPageActive")
+        Log.d("RafeeqAuto", "updatePlaybackState: markersArr=${markersArr?.length() ?: "null"} parsed=${pageMarkers?.size ?: "null"} page=$currentPage surah=$surahName repeatPage=$repeatPageActive qIdx=$queueIndex qLen=$queueLength loops=$rangeLoops remain=$rangeRemainingPasses")
 
-        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage, repeatPageActive)
+        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage, repeatPageActive, queueIndex, queueLength, rangeLoops, rangeRemainingPasses)
         call.resolve()
     }
 

@@ -26,6 +26,22 @@ export interface AppStrings {
     bismillah: string;
   };
 
+  /** Shown when a feature that needs the network is used while offline. */
+  offline: {
+    /** Generic message for any online-only action. */
+    message: string;
+    /** Audio recitation download / streaming. */
+    download: string;
+    /** Recite mode (needs live speech-to-text). */
+    recite: string;
+    /** Sign-in and account sync. */
+    account: string;
+    /** Tafsir and translation fetching. */
+    tafsir: string;
+    /** Full-text search that needs pages not yet cached. */
+    search: string;
+  };
+
   azkar: {
     title: string;
     subtitle: string;
@@ -362,6 +378,11 @@ export interface AppStrings {
     sessionsDone: string;
     sessionsLeft: string;
     streakDays: string;
+    streakInfoTitle: string;
+    streakInfoBody: (n: number) => string;
+    streakInfoOk: string;
+    streakRecoverAvailable: (n: number) => string;
+    streakRecoverNeeded: (n: number) => string;
     openInQuran: string;
     quizFromSession: string;
     sessionPrevious: string;
@@ -370,6 +391,8 @@ export interface AppStrings {
     daysActive: string;
     todaySessions: string;
     bestPlan: string;
+    latestPlan: string;
+    sessionsWord: string;
     bestPlanDays: string;
     bestPlanPages: string;
     bestPlanNone: string;
@@ -409,6 +432,14 @@ const ar: AppStrings = {
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  offline: {
+    message: "هذه الميزة تتطلب الاتصال بالإنترنت",
+    download: "تحميل التلاوات يتطلب الاتصال بالإنترنت",
+    recite: "وضع التسميع يتطلب الاتصال بالإنترنت",
+    account: "تسجيل الدخول يتطلب الاتصال بالإنترنت",
+    tafsir: "التفسير والترجمة يتطلبان الاتصال بالإنترنت",
+    search: "البحث في هذه الصفحات يتطلب الاتصال بالإنترنت",
   },
   azkar: {
     title: "الأذكار",
@@ -766,6 +797,14 @@ const ar: AppStrings = {
     sessionsDone: "مكتملة",
     sessionsLeft: "متبقية",
     streakDays: "يوم متتالي",
+    streakInfoTitle: "سلسلة المواظبة",
+    streakInfoBody: (n) =>
+      `حافظ على سلسلتك بإتمام جلسة واحدة على الأقل كل يوم. إذا فاتك يوم، يمكنك استعادة السلسلة بإكمال ${n} جلسات في اليوم التالي.`,
+    streakInfoOk: "حسنًا",
+    streakRecoverAvailable: (n) =>
+      `فاتك يوم أمس! أكمل ${n} جلسات اليوم لاستعادة سلسلتك ومتابعتها.`,
+    streakRecoverNeeded: (n) =>
+      n === 1 ? "بقيت جلسة واحدة لاستعادة السلسلة." : `بقيت ${n} جلسات لاستعادة السلسلة.`,
     openInQuran: "افتح في القرآن",
     quizFromSession: "اختبر نفسك",
     sessionPrevious: "السابقة",
@@ -774,6 +813,8 @@ const ar: AppStrings = {
     daysActive: "يوم منذ البداية",
     todaySessions: "جلسة اليوم",
     bestPlan: "أفضل خطة",
+    latestPlan: "آخر خطة",
+    sessionsWord: "جلسة",
     bestPlanDays: "يوم",
     bestPlanPages: "ص",
     bestPlanNone: "لا يوجد بعد",
@@ -813,6 +854,14 @@ const en: AppStrings = {
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  offline: {
+    message: "This feature is only available when connected to the Internet",
+    download: "Downloading recitations requires an Internet connection",
+    recite: "Recite mode requires an Internet connection",
+    account: "Signing in requires an Internet connection",
+    tafsir: "Tafsir and translation require an Internet connection",
+    search: "Searching these pages requires an Internet connection",
   },
   azkar: {
     title: "Azkar",
@@ -1174,6 +1223,14 @@ const en: AppStrings = {
     sessionsDone: "done",
     sessionsLeft: "left",
     streakDays: "day streak",
+    streakInfoTitle: "Streak",
+    streakInfoBody: (n) =>
+      `Keep your streak by completing at least one session every day. If you miss a day, you can win the streak back by completing ${n} sessions the next day.`,
+    streakInfoOk: "Got it",
+    streakRecoverAvailable: (n) =>
+      `You missed yesterday! Complete ${n} sessions today to recover your streak and keep it going.`,
+    streakRecoverNeeded: (n) =>
+      n === 1 ? "1 more session to recover your streak." : `${n} more sessions to recover your streak.`,
     openInQuran: "Open in Quran",
     quizFromSession: "Quiz yourself",
     sessionPrevious: "Previous",
@@ -1182,6 +1239,8 @@ const en: AppStrings = {
     daysActive: "days active",
     todaySessions: "today",
     bestPlan: "Best Plan",
+    latestPlan: "Latest Plan",
+    sessionsWord: "sessions",
     bestPlanDays: "d",
     bestPlanPages: "pg",
     bestPlanNone: "None yet",

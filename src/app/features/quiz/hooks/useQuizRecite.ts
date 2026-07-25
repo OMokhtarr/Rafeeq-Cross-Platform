@@ -14,6 +14,8 @@ import {
 import { matchFromPosition } from "../../../core/hooks/recite/deepgram/matchFromPosition";
 import { cmpPos } from "../../../core/hooks/recite/shared/reciteCore";
 import { useRevealAnimator } from "../../../core/hooks/recite/shared/useRevealAnimator";
+import { useLang } from "../../../core/context/LanguageContext";
+import { isNetworkReachable } from "../../../core/services/api/network.service";
 import type { Verse } from "../../../shared/models/verse.model";
 
 /**
@@ -143,6 +145,7 @@ export function useQuizRecite(
   /** Called once the target verse has been fully recited (session keeps running). */
   onVerseComplete: () => void,
 ): UseQuizReciteResult {
+  const { t } = useLang();
   const [status, setStatus] = useState<QuizReciteStatus>("idle");
   const [micError, setMicError] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -298,6 +301,17 @@ export function useQuizRecite(
    *  set: opens the Deepgram stream and wires it to `handleEvent`. */
   const beginSession = useCallback(
     async (handleEvent: (text: string, isFinal: boolean) => void) => {
+      // Recite matching runs on a live streaming STT service. Check before
+      // asking for the microphone, so an offline user gets a clear reason
+      // instead of a mic prompt followed by a socket failure.
+      if (!(await isNetworkReachable())) {
+        setMicError(t.offline.recite);
+        setStatus("mic-error");
+        activeRef.current = false;
+        recordingRef.current = false;
+        return;
+      }
+
       recordingRef.current = true;
       setRecordingSeconds(0);
       lastSpeechAtRef.current = Date.now();
@@ -340,7 +354,7 @@ export function useQuizRecite(
         }
       }, 1000);
     },
-    [],
+    [t],
   );
 
   const startVerseMode = useCallback(

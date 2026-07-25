@@ -1,0 +1,52 @@
+/**
+ * Offline notice toast.
+ *
+ * Deliberately quiet: this reuses the app's card surface and gold-tinted
+ * border rather than a warning colour, because being offline is an expected
+ * state in an offline-first Quran app, not a failure the user must act on.
+ * Works in both day and night themes via tokens only — no hard-coded colours.
+ */
+
+.rafeeq-offline-toast {
+  --background: var(--color-bg-card);
+  --color: var(--color-text-primary);
+  --border-color: var(--color-border-card);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-radius: var(--radius-lg);
+  --box-shadow: var(--shadow-card);
+  --max-width: var(--max-width-mobile, 600px);
+
+  /* Sit above the fixed BottomNavBar instead of behind it. */
+  --start: var(--space-4);
+  --end: var(--space-4);
+
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-normal);
+
+  /* The nav bar overlays the bottom of IonContent at all times, so lift the
+     toast clear of it rather than letting it overlap. */
+  transform: translateY(calc(-1 * var(--bottom-nav-height)));
+}
+
+/* Latin copy reads better in the body serif than the Arabic display face. */
+:root[lang="en"] .rafeeq-offline-toast {
+  font-family: var(--font-latin);
+  font-size: var(--text-sm);
+}
+
+.rafeeq-offline-toast::part(message) {
+  /* A hairline gold rule on the leading edge marks this as a status notice
+     without shouting — the only decorative move here, and it earns its place
+     by encoding "informational", matching the gold used for section titles. */
+  border-inline-start: 2px solid var(--color-gold);
+  padding-inline-start: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rafeeq-offline-toast {
+    transition: none;
+  }
+}

@@ -10,11 +10,20 @@ import {
 
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
+// The most recently completed plan (not necessarily the fastest). Shown next to
+// the best-plan duration so the user can compare their latest run to their best.
+const LATEST_PLAN_KEY = "rafiq_hifz_latest_v1";
 const HIFZ_READING_KEY = "rafiq_hifz_reading_v1";
 // Dates (YYYY-MM-DD) on which a session was completed. Accumulates over the
 // lifetime of the app and is NEVER cleared by plan reset / new round / delete,
 // so the streak survives those actions.
 const HIFZ_STREAK_KEY = "rafiq_hifz_streak_dates_v1";
+// Missed days the user has "bought back" by completing extra sessions the next
+// day. Stored separately from real active-days so recovery is auditable and,
+// like the streak store, is never cleared by plan reset / new round / delete.
+const HIFZ_STREAK_FREEZE_KEY = "rafiq_hifz_streak_freeze_v1";
+// How many sessions must be completed on a recovery day to bridge one missed day.
+export const STREAK_RECOVERY_THRESHOLD = 2;
 
 // Hifz data store name in IndexedDB (created on demand)
 const HIFZ_STORE = "hifz";
@@ -277,6 +286,62 @@ export async function saveBestPlanAsync(record: BestPlanRecord): Promise<void> {
   } catch {}
 }
 
+// Latest plan functions — same shape/storage as best plan, but always overwritten
+// with the most recent completion (best plan only updates when faster).
+export function loadLatestPlan(): BestPlanRecord | null {
+  try {
+    const raw = localStorage.getItem(LATEST_PLAN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as BestPlanRecord;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadLatestPlanAsync(): Promise<BestPlanRecord | null> {
+  try {
+    let record: BestPlanRecord | null = null;
+
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      const json = await readHifzFile("latest-plan.json");
+      record = json ? (JSON.parse(json) as BestPlanRecord) : null;
+    } else {
+      const rec = await idb.get<{ data: string }>(HIFZ_STORE, "latest-plan");
+      record = rec ? (JSON.parse(rec.data) as BestPlanRecord) : null;
+    }
+
+    // Fallback: check localStorage key if nothing found in the platform store.
+    if (!record) {
+      const oldJson = localStorage.getItem(LATEST_PLAN_KEY);
+      if (oldJson) {
+        record = JSON.parse(oldJson) as BestPlanRecord;
+        if (record) saveLatestPlanAsync(record).catch(() => {});
+      }
+    }
+
+    return record;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLatestPlan(record: BestPlanRecord): void {
+  try {
+    localStorage.setItem(LATEST_PLAN_KEY, JSON.stringify(record));
+  } catch {}
+}
+
+export async function saveLatestPlanAsync(record: BestPlanRecord): Promise<void> {
+  try {
+    const json = JSON.stringify(record);
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      await writeHifzFile("latest-plan.json", json);
+    } else {
+      await idb.put(HIFZ_STORE, { id: "latest-plan", data: json });
+    }
+  } catch {}
+}
+
 // ─── Hifz Reading Session ─────────────────────────────────────────────────────
 // Tracks which pages the user has actively read (≥30 s each) when navigating
 // from a Hifz session open button. Written by the viewer; read back by Hifz.
@@ -457,6 +522,33 @@ export function sessionReadProgress(
     if (readSet.has(p)) count++;
   }
   return Math.round((count / total) * 100);
+}
+
+/**
+ * Overall plan completeness (0–100) by pages read: unique read plan-pages ÷
+ * unique total plan-pages. A page counts as read if it's in `readPages` or lies
+ * in a session marked done. Sessions may share boundary pages, so pages are
+ * de-duplicated across the whole plan.
+ */
+export function planReadProgress(plan: HifzPlan, readPages: number[]): number {
+  const readSet = new Set(readPages);
+  const allPages = new Set<number>();
+  const donePages = new Set<number>();
+  for (const s of plan.sessions) {
+    const ranges = s.ranges ?? [{ from: s.fromPage, to: s.toPage }];
+    for (const r of ranges) {
+      for (let p = r.from; p <= r.to; p++) {
+        allPages.add(p);
+        if (s.done) donePages.add(p);
+      }
+    }
+  }
+  if (allPages.size === 0) return 0;
+  let read = 0;
+  for (const p of allPages) {
+    if (donePages.has(p) || readSet.has(p)) read++;
+  }
+  return Math.round((read / allPages.size) * 100);
 }
 
 // ─── Quran page ranges ────────────────────────────────────────────────────────
@@ -718,15 +810,127 @@ function streakFromDateSet(doneDates: Set<string>): number {
   return streak;
 }
 
-/**
- * Streak from the persistent active-days store, merged with the current plan's
- * completed dates. This keeps the streak intact across plan reset / new round /
- * delete (which clear session doneDates but not the persistent store).
- */
-export function computeStreakPersistent(sessions: PlanSession[]): number {
+// ─── Streak freeze / recovery ─────────────────────────────────────────────────
+// A missed day breaks the streak. The user can "buy it back" by completing
+// STREAK_RECOVERY_THRESHOLD sessions the following day; the missed day is then
+// added to the freeze store, which counts toward the streak just like an active
+// day, reconnecting the run.
+
+function loadFreezeDates(): string[] {
+  try {
+    const raw = localStorage.getItem(HIFZ_STREAK_FREEZE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFreezeDates(dates: string[]): void {
+  try {
+    localStorage.setItem(HIFZ_STREAK_FREEZE_KEY, JSON.stringify(dates));
+  } catch {}
+}
+
+function addFreezeDate(date: string): void {
+  const dates = loadFreezeDates();
+  if (!dates.includes(date)) {
+    dates.push(date);
+    saveFreezeDates(dates);
+  }
+}
+
+function isoDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** All days that count toward the streak: real active days + frozen days. */
+function allStreakDates(sessions: PlanSession[]): Set<string> {
   const dates = new Set(loadStreakDates());
   for (const s of sessions) if (s.done && s.doneDate) dates.add(s.doneDate);
-  return streakFromDateSet(dates);
+  for (const f of loadFreezeDates()) dates.add(f);
+  return dates;
+}
+
+/**
+ * Streak from the persistent active-days store, merged with the current plan's
+ * completed dates and any frozen (recovered) days. This keeps the streak intact
+ * across plan reset / new round / delete, and across a single recovered miss.
+ */
+export function computeStreakPersistent(sessions: PlanSession[]): number {
+  return streakFromDateSet(allStreakDates(sessions));
+}
+
+export interface StreakRecoveryInfo {
+  /** True when yesterday was missed but a prior streak exists to reconnect. */
+  recoverable: boolean;
+  /** The streak length that would be restored if recovery completes. */
+  restorableStreak: number;
+  /** Sessions completed today so far. */
+  sessionsToday: number;
+  /** Sessions still needed today to recover the streak. */
+  needed: number;
+  /** Whether the recovery has already been applied (streak reconnected). */
+  recovered: boolean;
+}
+
+/**
+ * Describe whether the streak was broken by exactly one missed day (yesterday)
+ * and can be recovered by finishing STREAK_RECOVERY_THRESHOLD sessions today.
+ * Only a single-day gap is recoverable; older breaks are permanent.
+ */
+export function streakRecoveryInfo(sessions: PlanSession[]): StreakRecoveryInfo {
+  const dates = allStreakDates(sessions);
+  const yesterday = isoDaysAgo(1);
+  const dayBefore = isoDaysAgo(2);
+  const sessionsToday = countSessionsToday(sessions);
+  const none: StreakRecoveryInfo = {
+    recoverable: false,
+    restorableStreak: 0,
+    sessionsToday,
+    needed: 0,
+    recovered: false,
+  };
+
+  // Already bridged yesterday → recovery has happened.
+  if (dates.has(yesterday)) {
+    return { ...none, recovered: loadFreezeDates().includes(yesterday) };
+  }
+  // Recoverable only if the run was alive the day before the miss.
+  if (!dates.has(dayBefore)) return none;
+
+  // Length of the streak that ends at dayBefore (what we'd restore, +1 bridge
+  // +1 for today once the threshold is met).
+  let priorStreak = 0;
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  while (dates.has(d.toISOString().slice(0, 10))) {
+    priorStreak++;
+    d.setDate(d.getDate() - 1);
+  }
+
+  return {
+    recoverable: true,
+    restorableStreak: priorStreak + 1 + (sessionsToday > 0 ? 1 : 0),
+    sessionsToday,
+    needed: Math.max(0, STREAK_RECOVERY_THRESHOLD - sessionsToday),
+    recovered: false,
+  };
+}
+
+/**
+ * If the streak is recoverable and enough sessions were completed today, bridge
+ * yesterday into the freeze store so the streak reconnects. Idempotent; safe to
+ * call whenever a session/page is completed. Returns true when it recovers.
+ */
+export function tryRecoverStreak(sessions: PlanSession[]): boolean {
+  const info = streakRecoveryInfo(sessions);
+  if (info.recoverable && info.needed === 0) {
+    addFreezeDate(isoDaysAgo(1));
+    return true;
+  }
+  return false;
 }
 
 export function computeStreak(sessions: PlanSession[]): number {

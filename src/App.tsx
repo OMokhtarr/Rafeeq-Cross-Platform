@@ -8,6 +8,7 @@ import {
   seedTextCorpus,
 } from "./app/core/services/data/quran.service";
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
+import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 
@@ -134,33 +135,41 @@ const App: React.FC = () => {
     done: 0,
     total: 604,
   });
+  // Only true once a preload is genuinely under way, so the progress bar is
+  // never left stranded at 0% on an offline launch where it never starts.
+  const [preloading, setPreloading] = useState(false);
 
   useEffect(() => {
-    // Seed Quran text corpus (works offline from bundled JSON)
-    seedTextCorpus().catch(() => {});
+    let cancelled = false;
 
-    // Quick network check to avoid long timeouts when offline
-    const networkOk = navigator.onLine;
+    (async () => {
+      // Seed Quran text corpus (works offline from bundled JSON)
+      seedTextCorpus().catch(() => {});
 
-    if (!networkOk) {
-      // Skip API preloads entirely – metadata will load from IDB
+      // Metadata is cache-first and falls back to static page starts, so it is
+      // safe to start regardless of connectivity.
       initMetadata().catch(() => {});
-      return;
-    }
 
-    // Online path: init metadata, then preload pages and fonts
-    initMetadata()
-      .then(() => {
-        // Start page preload
-        preloadAllPages((done, total) => {
-          setPreloadProgress({ done, total });
-        });
-        // Start font preload in background (doesn't block UI)
-        preloadAllPageFonts().catch(() => {});
-      })
-      .catch((err) => {
-        console.error("Metadata init failed:", err);
+      // Only the *preloads* need the network. navigator.onLine can't be trusted
+      // when true (WiFi with no internet, captive portals and dead mobile data
+      // all report online), so verify with a short probe before committing to
+      // 604 pages of fetches. Offline, this costs ~2 s in the background and
+      // never blocks the UI.
+      const online = await isNetworkReachable();
+      if (cancelled || !online) return;
+
+      // Start page preload
+      setPreloading(true);
+      preloadAllPages((done, total) => {
+        if (!cancelled) setPreloadProgress({ done, total });
       });
+      // Start font preload in background (doesn't block UI)
+      preloadAllPageFonts().catch(() => {});
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -200,7 +209,7 @@ const App: React.FC = () => {
         <VerseVisibilityProvider>
           <PlaybackProvider>
             <IonApp>
-              {preloadProgress.done < preloadProgress.total && (
+              {preloading && preloadProgress.done < preloadProgress.total && (
                 <div className="global-preload-bar">
                   <div
                     className="global-preload-fill"

@@ -19,6 +19,7 @@ import {
   NetworkError,
   SessionExpiredError,
 } from "../../core/services/auth/oauth.service";
+import { useOfflineGuard } from "../../core/hooks/useOfflineGuard";
 import AccountModal from "./AccountModal";
 import GoalsCard from "./GoalsCard";
 import "./Account.css";
@@ -93,7 +94,8 @@ const TERMS_SECTIONS = [
 
 const Account: React.FC = () => {
   const history = useHistory();
-  const { lang, isRTL } = useLang();
+  const { lang, isRTL, t: strings } = useLang();
+  const { guard } = useOfflineGuard();
 
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const [loading, setLoading] = useState(false);
@@ -197,7 +199,9 @@ const Account: React.FC = () => {
     };
   }, [loadUserData]);
 
-  const handleLogin = () => signIn();
+  // OAuth needs a live round-trip to the identity provider, so there is no
+  // offline path here — tell the user rather than opening a browser that fails.
+  const handleLogin = () => guard(strings.offline.account, () => signIn());
   const handleLogout = async () => {
     await signOut();
     setLoggedIn(false);
