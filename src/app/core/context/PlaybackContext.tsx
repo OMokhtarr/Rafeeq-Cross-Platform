@@ -18,6 +18,7 @@ import {
   estimatePageForVerse,
 } from "../services/data/metadata.service";
 import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 const PlaybackContext = createContext<PlaybackControls | null>(null);
 
@@ -459,6 +460,33 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       listenerRef.current?.remove();
       listenerRef.current = null;
+    };
+  }, [isNative]);
+
+  // On app resume (phone unlocked / brought back to foreground), the native player may have
+  // advanced the range while the WebView was frozen. Re-sync the brain to native's actual
+  // position so playback continues from where it IS now — not where it was when locked.
+  useEffect(() => {
+    if (!isNative) return;
+    let handle: { remove: () => void } | null = null;
+    // Fire on both the Capacitor app resume and the WebView becoming visible; syncFromNative is
+    // idempotent (no-ops when native isn't driving), so double-firing is harmless.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        queueRef.current?.syncFromNative().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    CapApp.addListener("resume", () => {
+      queueRef.current?.syncFromNative().catch(() => {});
+    })
+      .then((h) => {
+        handle = h;
+      })
+      .catch(() => {});
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      handle?.remove();
     };
   }, [isNative]);
 

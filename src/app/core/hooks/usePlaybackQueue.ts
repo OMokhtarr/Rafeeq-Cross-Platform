@@ -35,6 +35,7 @@ import {
   nativeResume as nativeOutResume,
   nativeSeek as nativeOutSeek,
   nativeSetSpeed as nativeOutSetSpeed,
+  nativeGetState as nativeOutGetState,
 } from "../services/audio/native-audio-output";
 import { recordRecitationSession } from "../services/storage/recitation-history.service";
 
@@ -110,6 +111,9 @@ export interface PlaybackControls {
     elapsedSeconds: number;
     reciter: string;
   }) => Promise<void>;
+  /** After the WebView was frozen (phone locked) while native kept advancing the range, re-sync
+   *  the brain to native's actual position so playback continues from there, not the lock point. */
+  syncFromNative: () => Promise<void>;
 }
 
 export interface UsePlaybackQueueOptions {
@@ -387,8 +391,16 @@ export function usePlaybackQueue(
       void playIndexRef.current(0);
       return;
     }
-    // Queue finished with no remaining repeat passes. Give the caller a chance to
-    // continue (e.g. auto-play the next surah). If it handles continuation, don't stop.
+    // A FINITE repeat (1×/2×/3×) has played its chosen number of times — STOP here. The user
+    // asked for exactly this range, this many times; do NOT auto-advance into the next surah.
+    // Only "loop" continues (infinitely), and it never reaches this branch. onQueueEnded (the
+    // auto-next-surah continuation) is therefore intentionally NOT called for a finite count.
+    if (repeatRange !== "loop") {
+      stop();
+      return;
+    }
+    // (Unreachable for "loop" — it loops above — but kept for safety.) Give the caller a chance
+    // to continue; if it doesn't, stop.
     if (onQueueEndedRef.current?.()) return;
     stop();
   }, [stop]);
@@ -1121,6 +1133,37 @@ export function usePlaybackQueue(
     [stop, playIndex],
   );
 
+  // ─── syncFromNative ──────────────────────────────────────────────────────────
+  // After the WebView was frozen (phone locked / backgrounded), the native player may have
+  // advanced the range on its own (the brain-stall fallback). On resume the brain is stuck at the
+  // verse it froze on, so playback would jump BACK there. This re-syncs the brain to where native
+  // ACTUALLY is: if native is driving and ahead of us, adopt its index (and in-verse offset) and
+  // take back control from there — no rewind, no lost verses.
+  const syncFromNative = useCallback(async () => {
+    if (!isNativeOutput()) return;
+    if (queueRef.current.length === 0) return;
+    const st = await nativeOutGetState();
+    if (!st.nativeDriving) return; // brain never lost control — nothing to adopt
+    const idx = st.coldIndex;
+    if (idx < 0 || idx >= queueRef.current.length) return;
+    // Adopt native's index. Recompute elapsed-before for the range-relative position, load that
+    // verse through the brain (which flips native back into JS-driven mode), then seek to the
+    // in-verse offset native was at so audio continues seamlessly.
+    verseRepeatCountRef.current = 0;
+    indexRef.current = idx;
+    let elapsed = 0;
+    for (let i = 0; i < idx; i++) elapsed += verseDurationsRef.current[i] ?? 0;
+    elapsedBeforeCurrentVerseRef.current = elapsed;
+    const offsetSec = Math.max(0, st.positionMs / 1000);
+    setState((s) => ({
+      ...s,
+      positionMs: Math.round((elapsed + offsetSec) * 1000),
+      durationMs: Math.round(totalRangeDurationRef.current * 1000),
+    }));
+    await playIndex(idx);
+    if (st.positionMs > 0) nativeOutSeek(Math.round(st.positionMs));
+  }, [playIndex]);
+
   const setRepeatPageRange = useCallback(
     (range: { first: number; last: number } | null) => {
       repeatPageRangeRef.current = range;
@@ -1182,5 +1225,6 @@ export function usePlaybackQueue(
     getRepeatRange,
     getRangeRemainingPasses,
     resumeSession,
+    syncFromNative,
   };
 }

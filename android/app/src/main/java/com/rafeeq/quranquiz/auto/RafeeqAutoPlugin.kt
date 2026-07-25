@@ -321,6 +321,24 @@ class RafeeqAutoPlugin : Plugin() {
         call.resolve()
     }
 
+    /**
+     * Report the native player's current position so the JS brain can re-sync after the WebView
+     * was frozen (phone locked / backgrounded) while native kept advancing the range. Returns:
+     *   nativeDriving — true if native (not the brain) is currently the playback driver,
+     *   coldIndex     — the cold-list/queue index native is on (== brain queue index; -1 if n/a),
+     *   positionMs    — the current verse's in-verse position (for a precise resume seek).
+     */
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun getNativeState(call: PluginCall) {
+        val service = RafeeqMediaService.instance
+        val ret = JSObject()
+        ret.put("nativeDriving", service?.isNativeDriving() ?: false)
+        ret.put("coldIndex", service?.nativeCurrentColdIndex() ?: -1)
+        ret.put("positionMs", service?.nativeCurrentVersePositionMs() ?: 0L)
+        call.resolve(ret)
+    }
+
     /** Play a one-shot intro (bismillah); 'nativeIntroEnded' fires when it finishes. */
     @androidx.media3.common.util.UnstableApi
     @PluginMethod

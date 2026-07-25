@@ -478,6 +478,17 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     fun nativeCurrentColdIndex(): Int =
         if (!jsDriving && nativeColdStartSura > 0) (player?.currentIndex() ?: -1) else -1
 
+    /** True when the NATIVE player (not the JS brain) is currently driving playback — i.e. the
+     *  brain-stall fallback took over while the WebView was frozen. The brain uses this on wake
+     *  to decide whether it must re-sync to native's advanced position. */
+    @androidx.media3.common.util.UnstableApi
+    fun isNativeDriving(): Boolean = !jsDriving && nativeColdStartSura > 0
+
+    /** The current verse's in-verse position (ms) on the native player, for a precise resume seek
+     *  when the brain re-adopts after being frozen. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeCurrentVersePositionMs(): Long = player?.currentPositionMs() ?: 0L
+
     /** The surah native cold-start is currently playing, or 0 if native isn't driving. Used so
      *  the brain, on wake, adopts the RIGHT surah instead of defaulting to Al-Fatiha. */
     @androidx.media3.common.util.UnstableApi

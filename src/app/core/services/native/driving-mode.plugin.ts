@@ -114,6 +114,17 @@ export interface DrivingModePlugin {
   nativeSeek(options: { positionMs: number }): Promise<void>;
   nativeSetSpeed(options: { speed: number }): Promise<void>;
 
+  /** Read the native player's position so the brain can re-sync after the WebView was frozen
+   *  (phone locked) while native kept advancing the range. */
+  getNativeState(): Promise<{
+    /** True if native (not the brain) is currently the playback driver. */
+    nativeDriving: boolean;
+    /** Cold-list/queue index native is on (== brain queue index; -1 if not native-driving). */
+    coldIndex: number;
+    /** Current verse's in-verse position (ms). */
+    positionMs: number;
+  }>;
+
   /** Play a one-shot intro (bismillah); a 'nativeIntroEnded' carAction follows. */
   playNativeIntro(options: { url: string }): Promise<void>;
 
@@ -137,6 +148,11 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
     nativePause: async () => {},
     nativeSeek: async () => {},
     nativeSetSpeed: async () => {},
+    getNativeState: async () => ({
+      nativeDriving: false,
+      coldIndex: -1,
+      positionMs: 0,
+    }),
     playNativeIntro: async () => {},
     addListener: async (_event: string, _handler: () => void) => ({ remove: () => {} }),
     removeAllListeners: async () => {},

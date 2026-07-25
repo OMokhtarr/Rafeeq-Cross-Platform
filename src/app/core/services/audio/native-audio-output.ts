@@ -130,3 +130,17 @@ export function nativeSeek(positionMs: number): void {
 export function nativeSetSpeed(speed: number): void {
   void DrivingMode.nativeSetSpeed({ speed }).catch(() => {});
 }
+
+/** Read the native player's position so the brain can re-sync after the WebView was frozen
+ *  (phone locked) while native kept advancing the range. */
+export async function nativeGetState(): Promise<{
+  nativeDriving: boolean;
+  coldIndex: number;
+  positionMs: number;
+}> {
+  try {
+    return await DrivingMode.getNativeState();
+  } catch {
+    return { nativeDriving: false, coldIndex: -1, positionMs: 0 };
+  }
+}
