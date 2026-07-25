@@ -16,6 +16,9 @@ import {
   juzToPages,
   countMemorizedPages,
   computeStreakPersistent,
+  streakRecoveryInfo,
+  tryRecoverStreak,
+  STREAK_RECOVERY_THRESHOLD,
   recordStreakDay,
   countSessionsToday,
   countActiveDays,
@@ -24,6 +27,9 @@ import {
   loadBestPlanAsync,
   saveBestPlan,
   saveBestPlanAsync,
+  loadLatestPlanAsync,
+  saveLatestPlan,
+  saveLatestPlanAsync,
   saveHifzReadingSession,
   saveHifzReadingSessionAsync,
   loadHifzReadingSession,
@@ -32,6 +38,7 @@ import {
   clearHifzReadingSessionAsync,
   sessionReadProgress,
   isSessionFullyRead,
+  planReadProgress,
   HifzPlan,
   HifzGoal,
   BestPlanRecord,
@@ -67,6 +74,11 @@ function persistPlan(plan: HifzPlan): void {
 function persistBestPlan(record: BestPlanRecord): void {
   saveBestPlan(record);
   saveBestPlanAsync(record).catch(() => {}); // Fire and forget for native
+}
+
+function persistLatestPlan(record: BestPlanRecord): void {
+  saveLatestPlan(record);
+  saveLatestPlanAsync(record).catch(() => {}); // Fire and forget for native
 }
 
 function persistHifzReadingSession(session: any): void {
@@ -695,6 +707,8 @@ interface SessionCardProps {
   onToggle: (id: string) => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
   onQuiz: (session: PlanSession) => void;
+  /** Mark/unmark a set of pages (one surah's span) as read. */
+  onToggleSurah: (pages: number[], read: boolean) => void;
   lang: "ar" | "en";
   h: any;
   chapters: any[];
@@ -716,12 +730,36 @@ const QuizIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+// Small round tick next to a surah name — marks that surah's pages read/unread.
+const SurahTick: React.FC<{
+  checked: boolean;
+  label: string;
+  onToggle: () => void;
+}> = ({ checked, label, onToggle }) => (
+  <button
+    type="button"
+    className={`hifz-surah-tick${checked ? " checked" : ""}`}
+    onClick={(e) => {
+      e.stopPropagation();
+      onToggle();
+    }}
+    aria-pressed={checked}
+    aria-label={label}
+    title={label}
+  >
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  </button>
+);
+
 const SessionCard: React.FC<SessionCardProps> = ({
   session: s,
   variant,
   onToggle,
   onOpenPage,
   onQuiz,
+  onToggleSurah,
   lang,
   h,
   chapters,
@@ -811,6 +849,16 @@ const SessionCard: React.FC<SessionCardProps> = ({
     ? Math.round((readCount / sessionPages.length) * 100)
     : 0;
 
+  // Pages spanned by a single displayed surah segment.
+  const surahPages = (su: { from: number; to: number }): number[] => {
+    const out: number[] = [];
+    for (let p = su.from; p <= su.to; p++) out.push(p);
+    return out;
+  };
+  // A surah is "ticked" when every page of its span has been read.
+  const surahDone = (su: { from: number; to: number }): boolean =>
+    s.done || surahPages(su).every((p) => readSet.has(p));
+
   // First page the user hasn't read yet — opening jumps straight there so they
   // resume where they left off. Falls back to the start when all pages are read.
   const firstUnreadPage = (pages: number[], fallback: number): number =>
@@ -881,10 +929,21 @@ const SessionCard: React.FC<SessionCardProps> = ({
               ))}
             </div>
           ) : surahs.length > 0 ? (
-            // Single contiguous range: plain labels, single open button in actions
+            // Single contiguous range: plain labels, single open button in actions.
+            // When the session spans multiple surahs, each gets its own tick to
+            // mark just that surah's pages read.
             <div className="hifz-session-surahs">
               {surahs.map((su) => (
                 <span key={su.id} className="hifz-session-surah-item">
+                  {surahs.length > 1 && (
+                    <SurahTick
+                      checked={surahDone(su)}
+                      label={lang === "ar" ? su.nameAr : su.nameEn}
+                      onToggle={() =>
+                        onToggleSurah(surahPages(su), !surahDone(su))
+                      }
+                    />
+                  )}
                   <span
                     className="hifz-session-surah-name"
                     {...(lang === "ar" ? { lang: "ar", dir: "rtl" } : {})}
@@ -968,8 +1027,10 @@ interface DashboardViewProps {
   onEdit: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
   onQuiz: (session: PlanSession) => void;
+  onToggleSurah: (pages: number[], read: boolean) => void;
   onStartNewRound: () => void;
   bestPlan: BestPlanRecord | null;
+  latestPlan: BestPlanRecord | null;
   lang: "ar" | "en";
   t: any;
   readPages: number[];
@@ -985,8 +1046,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onEdit,
   onOpenPage,
   onQuiz,
+  onToggleSurah,
   onStartNewRound,
   bestPlan,
+  latestPlan,
   lang,
   t,
   readPages,
@@ -995,16 +1058,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const h = t.hifz;
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
+  const [showStreakInfo, setShowStreakInfo] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
   const doneSessions = sessions.filter((s) => s.done).length;
   const totalSessions = sessions.length;
-  const planPct = totalSessions ? (doneSessions / totalSessions) * 100 : 0;
+  // Plan completeness by pages read (partial sessions count), not done/total.
+  const planPct = planReadProgress(plan, readPages);
   const memorizedPages = countMemorizedPages(plan.memorized, chapters);
   const quranPct = (memorizedPages / 604) * 100;
   const streak = computeStreakPersistent(sessions);
   const todaySessions = countSessionsToday(sessions);
+  const recovery = streakRecoveryInfo(sessions);
   const daysActive = countActiveDays(plan);
   const maxSessionsPerDay = computeMaxSessionsPerDay(sessions);
 
@@ -1053,8 +1119,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         onScroll={() => {
           const el = heroScrollRef.current;
           if (!el) return;
-          const page = Math.round(el.scrollLeft / el.offsetWidth);
-          setHeroPage(page);
+          // RTL-safe page detection: scrollLeft's sign/origin varies across
+          // engines in RTL, so derive the page from the fraction scrolled
+          // (|scrollLeft| ÷ maxScroll) rather than scrollLeft alone.
+          const maxScroll = el.scrollWidth - el.clientWidth;
+          const pageCount = el.children.length;
+          const page =
+            maxScroll <= 0
+              ? 0
+              : Math.round(
+                  (Math.abs(el.scrollLeft) / maxScroll) * (pageCount - 1),
+                );
+          setHeroPage(Math.min(Math.max(page, 0), pageCount - 1));
         }}
       >
         {/* Page 1: Plan + Quran donuts */}
@@ -1074,11 +1150,27 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             size={100}
           />
         </div>
-        {/* Page 2: Days active + best plan */}
-        <div className="hifz-hero-page hifz-hero-page-stats">
+        {/* Page 2: Days active + latest plan + best plan */}
+        <div className="hifz-hero-page hifz-hero-page-stats hifz-hero-page-stats--tri">
           <div className="hifz-hero-big-stat">
             <span className="hifz-hero-big-num">{daysActive}</span>
             <span className="hifz-hero-big-lbl">{h.daysActive}</span>
+          </div>
+          <div className="hifz-hero-stat-divider" />
+          <div className="hifz-hero-big-stat">
+            {latestPlan ? (
+              <>
+                <span className="hifz-hero-big-num">{latestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
+                <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
+                <span className="hifz-hero-big-sub">{latestPlan.totalPages}{h.bestPlanPages} · {latestPlan.totalSessions} {h.sessionsWord}</span>
+              </>
+            ) : (
+              <>
+                <span className="hifz-hero-big-num">—</span>
+                <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
+                <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
+              </>
+            )}
           </div>
           <div className="hifz-hero-stat-divider" />
           <div className="hifz-hero-big-stat">
@@ -1086,7 +1178,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <>
                 <span className="hifz-hero-big-num">{bestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
                 <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
-                <span className="hifz-hero-big-sub">{bestPlan.totalPages}{h.bestPlanPages} · {bestPlan.totalSessions} sessions</span>
+                <span className="hifz-hero-big-sub">{bestPlan.totalPages}{h.bestPlanPages} · {bestPlan.totalSessions} {h.sessionsWord}</span>
               </>
             ) : (
               <>
@@ -1157,8 +1249,73 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <span className="hifz-stat-num">{streak}</span>
           <span className="hifz-stat-lbl">{h.streakDays}</span>
+          {/* Info button — explains recovery; highlighted when a miss is recoverable. */}
+          <button
+            type="button"
+            className={
+              "hifz-streak-info-btn" +
+              (recovery.recoverable ? " hifz-streak-info-btn--alert" : "")
+            }
+            onClick={() => setShowStreakInfo(true)}
+            aria-label={h.streakInfoTitle}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* ── Streak recovery info dialog ── */}
+      {showStreakInfo && (
+        <div className="hifz-confirm-backdrop" onClick={() => setShowStreakInfo(false)}>
+          <div className="hifz-confirm-dialog hifz-streak-info-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="hifz-streak-info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+                <path d="M2 21c0-3 1.85-5.36 5.08-6" />
+              </svg>
+            </div>
+            <p className="hifz-confirm-title">{h.streakInfoTitle}</p>
+            {recovery.recoverable ? (
+              <>
+                <p className="hifz-confirm-body">
+                  {h.streakRecoverAvailable(STREAK_RECOVERY_THRESHOLD)}
+                </p>
+                <div className="hifz-streak-recover-progress">
+                  <div className="hifz-streak-recover-bar">
+                    <div
+                      className="hifz-streak-recover-fill"
+                      style={{
+                        width: `${Math.min(100, (recovery.sessionsToday / STREAK_RECOVERY_THRESHOLD) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="hifz-streak-recover-count">
+                    {recovery.sessionsToday} / {STREAK_RECOVERY_THRESHOLD}
+                  </span>
+                </div>
+                {recovery.needed > 0 && (
+                  <p className="hifz-streak-recover-hint">
+                    {h.streakRecoverNeeded(recovery.needed)}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="hifz-confirm-body">
+                {h.streakInfoBody(STREAK_RECOVERY_THRESHOLD)}
+              </p>
+            )}
+            <div className="hifz-confirm-actions">
+              <button className="hifz-confirm-yes" onClick={() => setShowStreakInfo(false)}>
+                {h.streakInfoOk}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Session context row: previous / up next / coming up ── */}
       {sessions.length === 0 && (
@@ -1211,6 +1368,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
                 onQuiz={onQuiz}
+                onToggleSurah={onToggleSurah}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1227,6 +1385,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
                 onQuiz={onQuiz}
+                onToggleSurah={onToggleSurah}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1243,6 +1402,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
                 onQuiz={onQuiz}
+                onToggleSurah={onToggleSurah}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1266,6 +1426,7 @@ interface HifzSessionsViewProps {
   onBack: () => void;
   onOpenPage: (page: number, session?: PlanSession) => void;
   onQuiz: (session: PlanSession) => void;
+  onToggleSurah: (pages: number[], read: boolean) => void;
   lang: "ar" | "en";
   t: any;
   readPages: number[];
@@ -1278,6 +1439,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
   onBack,
   onOpenPage,
   onQuiz,
+  onToggleSurah,
   lang,
   t,
   readPages,
@@ -1316,6 +1478,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
                 onToggle={onToggleSession}
                 onOpenPage={onOpenPage}
                 onQuiz={onQuiz}
+                onToggleSurah={onToggleSurah}
                 lang={lang}
                 h={h}
                 chapters={chapters}
@@ -1358,6 +1521,7 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
                   onToggle={onToggleSession}
                   onOpenPage={onOpenPage}
                   onQuiz={onQuiz}
+                  onToggleSurah={onToggleSurah}
                   lang={lang}
                   h={h}
                   chapters={chapters}
@@ -1384,6 +1548,7 @@ const Hifz: React.FC = () => {
   const [chapters, setChapters] = useState<any[]>([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
+  const [latestPlan, setLatestPlan] = useState<BestPlanRecord | null>(null);
   const [readPages, setReadPages] = useState<number[]>([]);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1437,8 +1602,10 @@ const Hifz: React.FC = () => {
     savePlanAsync(updated).catch(() => {});
     setPlan(updated);
 
-    // A session auto-completed today → keep the persistent streak in step.
+    // A session auto-completed today → keep the persistent streak in step, and
+    // attempt to recover a missed day if enough sessions were finished today.
     recordStreakDay(today);
+    tryRecoverStreak(sessions);
 
     // If this completed the whole plan, record a best run.
     if (sessions.every((s) => s.done)) {
@@ -1455,6 +1622,9 @@ const Hifz: React.FC = () => {
         persistBestPlan(record);
         setBestPlan(record);
       }
+      // The latest run is always the most recent completion.
+      persistLatestPlan(record);
+      setLatestPlan(record);
     }
   }, [readPages, plan, chapters]);
 
@@ -1475,6 +1645,8 @@ const Hifz: React.FC = () => {
       }
       const best = await loadBestPlanAsync();
       setBestPlan(best);
+      const latest = await loadLatestPlanAsync();
+      setLatestPlan(latest);
       // Populate read pages on mount so progress bars are correct immediately,
       // not only after a view re-enter.
       const rs = await loadHifzReadingSessionAsync();
@@ -1536,7 +1708,12 @@ const Hifz: React.FC = () => {
 
       // Record today in the persistent streak store when completing a session,
       // so the streak survives later plan resets / new rounds / deletes.
-      if (nowDone) recordStreakDay(today);
+      if (nowDone) {
+        recordStreakDay(today);
+        // If yesterday was missed but recoverable, completing enough sessions
+        // today bridges the gap and reconnects the streak.
+        tryRecoverStreak(sessions);
+      }
 
       // Keep the read-pages cache in sync with the manual checkmark: marking a
       // session done fills its pages, un-marking clears them, so the progress
@@ -1577,9 +1754,34 @@ const Hifz: React.FC = () => {
           persistBestPlan(record);
           setBestPlan(record);
         }
+        // The latest run is always the most recent completion.
+        persistLatestPlan(record);
+        setLatestPlan(record);
       }
     },
     [plan, chapters],
+  );
+
+  // Mark/unmark a single surah's pages as read (per-surah tick in a multi-surah
+  // session). Updates the shared readPages cache, which drives the session bars
+  // and the overall plan percentage. Records a streak day when marking read.
+  const handleToggleSurah = useCallback(
+    (pages: number[], read: boolean) => {
+      setReadPages((prev) => {
+        const next = read
+          ? Array.from(new Set([...prev, ...pages]))
+          : prev.filter((p) => !pages.includes(p));
+        const existing = loadHifzReadingSession();
+        persistHifzReadingSession({
+          ranges: existing?.ranges ?? [],
+          readPages: next,
+          sessionIds: existing?.sessionIds ?? [],
+        });
+        return next;
+      });
+      if (read) recordStreakDay(todayStr());
+    },
+    [],
   );
 
   const handleReset = useCallback(() => {
@@ -1627,6 +1829,9 @@ const Hifz: React.FC = () => {
       saveBestPlan(record);
       setBestPlan(record);
     }
+    // The latest run is always the most recent completion.
+    persistLatestPlan(record);
+    setLatestPlan(record);
     // Reset all sessions and start fresh from today
     const sessions = plan.sessions.map((s) => ({
       ...s,
@@ -1827,8 +2032,10 @@ const Hifz: React.FC = () => {
               onEdit={handleEdit}
               onOpenPage={handleOpenPage}
               onQuiz={handleQuizFromSession}
+              onToggleSurah={handleToggleSurah}
               onStartNewRound={handleStartNewRound}
               bestPlan={bestPlan}
+              latestPlan={latestPlan}
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}
@@ -1844,6 +2051,7 @@ const Hifz: React.FC = () => {
               onBack={() => setView("plan")}
               onOpenPage={handleOpenPage}
               onQuiz={handleQuizFromSession}
+              onToggleSurah={handleToggleSurah}
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}

@@ -645,9 +645,31 @@ ion-content::part(scroll) {
 
 .hifz-session-surah-item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* Per-surah tick in multi-surah sessions */
+.hifz-surah-tick {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border-card);
+  background: transparent;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.hifz-surah-tick.checked {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: #fff;
 }
 
 .hifz-session-surah-name {
@@ -1262,6 +1284,20 @@ ion-content::part(scroll) {
   padding: var(--space-5) var(--space-4);
 }
 
+/* Three stats in one row (Days · Latest · Best) — tighten so they fit. */
+.hifz-hero-page-stats--tri {
+  padding: var(--space-5) var(--space-2);
+}
+.hifz-hero-page-stats--tri .hifz-hero-big-stat {
+  padding: var(--space-2) var(--space-1);
+}
+.hifz-hero-page-stats--tri .hifz-hero-big-num {
+  font-size: 2rem;
+}
+.hifz-hero-page-stats--tri .hifz-hero-big-sub {
+  font-size: 0.62rem;
+}
+
 .hifz-hero-big-stat {
   flex: 1;
   display: flex;
@@ -1402,6 +1438,81 @@ ion-content::part(scroll) {
 
 .hifz-stat-chip-streak {
   border-color: rgba(224, 122, 58, 0.25);
+  position: relative;
+}
+
+/* ── Streak info button (top corner of the streak chip) ─── */
+.hifz-streak-info-btn {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.hifz-streak-info-btn:active {
+  background: rgba(224, 122, 58, 0.12);
+}
+/* Pulse when a missed day is recoverable, to draw attention. */
+.hifz-streak-info-btn--alert {
+  color: #e07a3a;
+  animation: hifz-streak-pulse 1.6s ease-in-out infinite;
+}
+@keyframes hifz-streak-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.18); opacity: 0.7; }
+}
+
+/* ── Streak info dialog ──────────────────────────────────── */
+.hifz-streak-info-dialog {
+  text-align: center;
+}
+.hifz-streak-info-icon {
+  display: flex;
+  justify-content: center;
+  color: #e07a3a;
+  margin-bottom: var(--space-2);
+}
+.hifz-streak-recover-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-1);
+}
+.hifz-streak-recover-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-border-card);
+  overflow: hidden;
+}
+.hifz-streak-recover-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #e07a3a;
+  transition: width 0.3s ease;
+}
+.hifz-streak-recover-count {
+  font-family: var(--font-latin);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  min-width: 2.5em;
+}
+.hifz-streak-recover-hint {
+  font-size: var(--text-sm);
+  color: #e07a3a;
+  font-family: var(--font-arabic);
+  margin: 0;
 }
 
 .hifz-stat-num {
