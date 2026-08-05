@@ -30,7 +30,41 @@ class MainActivity : BridgeActivity() {
         // Required so Android Auto car controls (which are not user gestures
         // from the WebView's perspective) can trigger el.play() successfully.
         bridge.webView.settings.mediaPlaybackRequiresUserGesture = false
+        applyCappedTextZoom()
         enableEdgeToEdge()
+    }
+
+    /**
+     * Honour the device font-size setting, but cap it.
+     *
+     * Android applies the system font scale to the WebView as `textZoom`
+     * (100 = normal, up to ~200 with accessibility sizes). Every typography
+     * token in the app is rem-based, so the whole UI multiplies by this value.
+     * Past ~130% the dense Arabic mushaf and quiz layouts stop fitting, so we
+     * clamp there: users who enlarged their text still get larger text in
+     * Rafeeq, but layouts never reach the point where controls become
+     * unreachable.
+     *
+     * Re-applied in onConfigurationChanged because the user can change the
+     * font size while the app is running.
+     */
+    private fun applyCappedTextZoom() {
+        val systemScale = resources.configuration.fontScale
+        val cappedScale = systemScale.coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE)
+        bridge.webView.settings.textZoom = (cappedScale * 100).toInt()
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyCappedTextZoom()
+    }
+
+    companion object {
+        /** Never shrink below the designed size, even if the user picked "Small". */
+        private const val MIN_FONT_SCALE = 1.0f
+
+        /** Ceiling for text growth — beyond this, dense layouts break. */
+        private const val MAX_FONT_SCALE = 1.3f
     }
 
     override fun onNewIntent(intent: android.content.Intent?) {

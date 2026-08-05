@@ -11,6 +11,16 @@
     color var(--transition-theme);
 }
 
+/* Night: the reading surface goes pure black, matching the bottom nav.
+   Scoped to the viewer (rather than changing the global token) because
+   --color-mushaf-bg is shared with MushafContextViewer and --color-bg-content
+   with every other page. Overriding the variable here also carries into
+   MushafPage.css, which derives its --sh-bg from it. */
+[data-theme="night"] .mushaf-container {
+  --color-mushaf-bg: #0a0a0a;
+  background-color: #0a0a0a;
+}
+
 /* Top Toolbar — design system components-toolbar.html
    Day: flat white, 1px parchment-edge border, navy text
    Night: navy gradient, 3px gold border, white text */
@@ -30,8 +40,10 @@
     border-color var(--transition-theme);
 }
 
+/* Night: match the bottom nav's pure black (#0a0a0a) so the toolbar,
+   mushaf surface and nav read as one continuous black field. */
 [data-theme="night"] .top-toolbar {
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
+  background: #0a0a0a;
   color: white;
 }
 

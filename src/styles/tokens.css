@@ -97,7 +97,13 @@
   /* ── BOTTOM NAV ───────────────────────────────────
      Single source of truth for the persistent BottomNavBar height.
      Pages that render the nav reserve this much space so content is
-     never hidden behind it. Includes the iOS home-indicator safe area. */
+     never hidden behind it. Includes the iOS home-indicator safe area.
+
+     Deliberately in px, NOT em: the reserve is subtracted from a fixed
+     viewport, so growing it with the text only squeezes the scrollable
+     region above it. Text growth is bounded by the textZoom cap instead
+     (MainActivity.applyCappedTextZoom / -webkit-text-size-adjust), which
+     keeps the nav's own content inside this height. */
   --bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 

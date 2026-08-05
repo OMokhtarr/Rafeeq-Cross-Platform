@@ -1,5 +1,21 @@
 @import "./styles/tokens.css";
 
+/* ── Text scaling ───────────────────────────────────────────
+   The app honours the OS text-size setting, capped so dense
+   layouts (mushaf, quiz grids) never break.
+
+   Android: capped natively via WebView textZoom in MainActivity.
+   iOS/web: capped here. -webkit-text-size-adjust bounds how far
+   the platform may inflate text — iOS respects a percentage, so
+   130% matches the native Android ceiling. Without this, iOS
+   Dynamic Type / Larger Accessibility Sizes can push well past
+   2x and overflow the same layouts.
+   ─────────────────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 130%;
+  text-size-adjust: 130%;
+}
+
 html,
 body,
 #root {

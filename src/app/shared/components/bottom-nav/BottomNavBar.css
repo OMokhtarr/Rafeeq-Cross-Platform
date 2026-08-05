@@ -37,15 +37,18 @@
     color var(--transition-base, 0.2s ease),
     transform var(--transition-fast, 0.15s ease);
   color: var(--color-tab-inactive, rgba(255, 255, 255, 0.4));
+  /* Required for the label's ellipsis: a flex child defaults to
+     min-width:auto and would otherwise refuse to shrink below its
+     text, widening the whole row when the OS enlarges text. */
+  position: relative;
+  min-width: 0;
+  min-height: var(--touch-target, 44px);
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 [data-theme="day"] .rfq-tab {
   color: #000000;
-  position: relative;
-  min-width: 0;
-  min-height: 44px;
-  font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .rfq-tab:active:not(:disabled) {
@@ -78,10 +81,14 @@
   color: var(--color-steel-blue, #c8d6e5);
 }
 
-/* Icon container */
+/* Icon container
+   Sized in em so the icon keeps its visual proportion to the label
+   when the OS text size grows, rather than shrinking against it. */
 .rfq-tab-icon-box {
-  width: 34px;
-  height: 34px;
+  width: 2.4em;
+  height: 2.4em;
+  max-width: 34px;
+  max-height: 34px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -135,13 +142,18 @@
   background: rgba(0, 0, 0, 0.07);
 }
 
-/* Labels */
+/* Labels
+   Five tabs share the width, so an enlarged label must be allowed to
+   shrink and ellipsize rather than force the row wider than the screen. */
 .rfq-tab-label-primary {
   font-family: var(--font-arabic, "Scheherazade New", "Amiri", serif);
   font-size: 0.7rem;
   color: inherit;
   line-height: 1;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: opacity var(--transition-base, 0.2s ease);
 }
 

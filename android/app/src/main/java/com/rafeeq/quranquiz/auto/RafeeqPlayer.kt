@@ -60,6 +60,17 @@ class RafeeqPlayer(
     private val main = Handler(Looper.getMainLooper())
     private var player: ExoPlayer? = null
 
+    // ── Thread-safe snapshots of ExoPlayer state ────────────────────────────────
+    // ExoPlayer MUST be accessed on the main thread; touching it from a binder / Capacitor
+    // plugin thread throws "Player is accessed on the wrong thread" (and crashed the app on
+    // play / getNativeState). These @Volatile fields are written ONLY on the main thread (from
+    // the poller + listeners) and read from any thread by the public getters, so cross-thread
+    // callers never touch ExoPlayer directly.
+    @Volatile private var cachedPositionMs: Long = 0L
+    @Volatile private var cachedIsPlaying: Boolean = false
+    @Volatile private var cachedPlaybackState: Int = Player.STATE_IDLE
+    @Volatile private var cachedHasMediaItem: Boolean = false
+
     // The flat list of resolved URLs the player can walk on its own during cold start,
     // before the JS brain is alive. When JS is driving, it loads one URL at a time and
     // this stays empty.
@@ -77,6 +88,12 @@ class RafeeqPlayer(
     private val positionPoller = object : Runnable {
         override fun run() {
             val p = player ?: return
+            // Runs on the main thread — safe to read ExoPlayer. Refresh the cached snapshot so
+            // off-thread getters have a recent value.
+            cachedPositionMs = p.currentPosition
+            cachedIsPlaying = p.isPlaying
+            cachedPlaybackState = p.playbackState
+            cachedHasMediaItem = p.currentMediaItem != null
             if (p.isPlaying) {
                 val dur = if (p.duration == C.TIME_UNSET) 0L else p.duration
                 callbacks.onPosition(p.currentPosition, dur)
@@ -99,6 +116,11 @@ class RafeeqPlayer(
             .build()
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
+                // On the main thread — refresh the cached snapshot (the poller stops when paused,
+                // so listeners keep the caches fresh too).
+                cachedPlaybackState = state
+                cachedHasMediaItem = player?.currentMediaItem != null
+                cachedPositionMs = player?.currentPosition ?: cachedPositionMs
                 if (state == Player.STATE_ENDED) {
                     // One-shot intro (bismillah): fire its completion and stop — do not
                     // advance any queue. The brain will load the first real verse next.
@@ -134,6 +156,8 @@ class RafeeqPlayer(
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                cachedIsPlaying = isPlaying
+                cachedPositionMs = player?.currentPosition ?: cachedPositionMs
                 callbacks.onPlayingChanged(isPlaying)
                 if (isPlaying) {
                     main.removeCallbacks(positionPoller)
@@ -251,10 +275,22 @@ class RafeeqPlayer(
         p.setMediaItem(MediaItem.fromUri(Uri.parse(src)))
         p.prepare()
         p.playWhenReady = playWhenReady
+        // Seed the caches immediately (all on the main thread here) so getters are correct before
+        // the first listener callback / poll tick.
+        cachedHasMediaItem = true
+        cachedPlaybackState = p.playbackState
+        cachedPositionMs = 0L
+        cachedIsPlaying = playWhenReady
     }
 
-    fun play() = main.post { player?.playWhenReady = true }
-    fun pause() = main.post { player?.playWhenReady = false }
+    fun play() = main.post {
+        player?.playWhenReady = true
+        cachedIsPlaying = true
+    }
+    fun pause() = main.post {
+        player?.playWhenReady = false
+        cachedIsPlaying = false
+    }
 
     fun seekTo(positionMs: Long) = main.post { player?.seekTo(positionMs) }
 
@@ -262,19 +298,20 @@ class RafeeqPlayer(
         player?.setPlaybackSpeed(if (speed > 0f) speed else 1f)
     }
 
-    fun isPlaying(): Boolean = player?.isPlaying == true
+    // These getters may be called from ANY thread (Capacitor plugin, MediaSession binder), so
+    // they read the @Volatile snapshots — NEVER the ExoPlayer instance directly (which would throw
+    // "Player is accessed on the wrong thread").
+    fun isPlaying(): Boolean = cachedIsPlaying
 
     /** True when a track is loaded and playback is only paused (not ended/idle) — i.e. a play
      *  press should RESUME it rather than reload from the start. False when nothing is prepared,
      *  so the caller does a fresh (cold) start. */
-    fun isResumable(): Boolean {
-        val p = player ?: return false
-        return p.currentMediaItem != null &&
-            p.playbackState != Player.STATE_IDLE &&
-            p.playbackState != Player.STATE_ENDED
-    }
+    fun isResumable(): Boolean =
+        cachedHasMediaItem &&
+            cachedPlaybackState != Player.STATE_IDLE &&
+            cachedPlaybackState != Player.STATE_ENDED
 
-    fun currentPositionMs(): Long = player?.currentPosition ?: 0L
+    fun currentPositionMs(): Long = cachedPositionMs
 
     /** The index of the track currently loaded (within the cold list or single load). */
     fun currentIndex(): Int = currentIndex
@@ -284,5 +321,9 @@ class RafeeqPlayer(
         player?.release()
         player = null
         coldList = emptyList()
+        cachedIsPlaying = false
+        cachedHasMediaItem = false
+        cachedPlaybackState = Player.STATE_IDLE
+        cachedPositionMs = 0L
     }
 }
