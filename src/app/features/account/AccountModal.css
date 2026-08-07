@@ -94,7 +94,7 @@
   -ms-overflow-style: none;
   /* Bottom padding clears the device home indicator so the last section
      (Contact) is fully reachable when scrolled to the end. */
-  padding: 16px 18px calc(32px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 18px calc(32px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 /* ── Rich text (Terms / Privacy) ── */

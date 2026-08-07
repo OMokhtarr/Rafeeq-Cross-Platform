@@ -104,12 +104,12 @@
      region above it. Text growth is bounded by the textZoom cap instead
      (MainActivity.applyCappedTextZoom / -webkit-text-size-adjust), which
      keeps the nav's own content inside this height. */
-  --bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  --bottom-nav-height: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 @media (min-width: 480px) {
   :root {
-    --bottom-nav-height: calc(70px + env(safe-area-inset-bottom, 0px));
+    --bottom-nav-height: calc(70px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   }
 }
 

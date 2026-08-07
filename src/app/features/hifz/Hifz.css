@@ -802,7 +802,7 @@ ion-content::part(scroll) {
   max-height: 88vh;
   background: var(--color-bg-content);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--space-4) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   box-sizing: border-box;
   animation: hifz-sheet-up 0.25s ease;
   display: flex;
