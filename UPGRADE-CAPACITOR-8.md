@@ -56,6 +56,14 @@ cd android && ./gradlew assembleDebug
 
 First run downloads Gradle 8.14.3 and the SDK 36 platform — expect it to be slow.
 
+If the build fails with an out-of-memory / GC-overhead error, raise the heap in
+`android/gradle.properties`: `org.gradle.jvmargs=-Xmx4g` (currently `-Xmx1536m`,
+which is tight for AGP 8.13 + SDK 36).
+
+`electron/` still has untracked leftovers on disk (`node_modules/`, `build/`,
+`electon.zip`) — the tracked files are gone, so the folder is safe to delete
+manually. `.gitignore` still lists electron paths; harmless, remove whenever.
+
 ---
 
 ## 4. What to actually verify (ordered by risk)
@@ -70,8 +78,11 @@ versions) and it drives `RafeeqMediaService` / `RafeeqPlayer`. Check:
 - notification progress bar still scales (the duration/timestamp path)
 
 If something regresses, step `media3Version` back in `android/variables.gradle`
-(1.10.1 → 1.9.4 → …) — that's why it's a variable now. Don't go below 1.4.x; it
-won't build against compileSdk 36.
+(1.10.1 → 1.9.4 → …) — that's why it's a variable now. **1.3.1 remains a valid
+last resort**: the old pin existed because Media3 1.4+ *requires* compileSdk ≥ 35,
+not the other way round, so the older library still builds fine against SDK 36.
+It's the exact version that shipped, so it isolates "Media3 upgrade broke it" from
+"SDK 36 broke it" — at the cost of two years of fixes.
 
 **Edge-to-edge / safe areas — second highest.** targetSdk 36 forces edge-to-edge
 on Android 15+. The app now reads `var(--safe-area-inset-*, env(...), 0px)`
