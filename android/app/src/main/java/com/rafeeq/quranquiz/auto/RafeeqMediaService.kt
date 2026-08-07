@@ -76,6 +76,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var hasAudioFocus = false
+    // Whether a focus GAIN should auto-resume playback. Set true ONLY when a transient loss
+    // (a phone call, a notification beep) interrupts playback that was ACTUALLY playing at the
+    // time; cleared on manual pause/stop and on permanent loss. This is what stops the "media
+    // restarts by itself after a call even though the app is closed" bug: if the user had paused
+    // (or nothing was playing) before the call, there's nothing to resume when the call ends.
+    private var resumeOnFocusGain = false
 
     // Native playback engine (the "dumb" player). Drives actual audio output so
     // Android Auto cold start works without a running WebView.
@@ -155,6 +161,19 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // the brain DOES load the next verse (loadNativeTrack) so we never double-advance.
     private var brainWatchdog: Runnable? = null
     private val BRAIN_STALL_TIMEOUT_MS = 1500L
+    // After the brain ACKs (it's alive, just resolving a slow verse) we give it a much longer grace
+    // window before rescuing playback. A normal download finishes well within this; only a hung
+    // fetch (flaky mobile data, no error, no loadNativeTrack) exceeds it — at which point the user
+    // has heard silence the whole time and a native takeover (same position, same bounded range) is
+    // the right recovery, not a bug. One extension only — a dead brain that acked once must not be
+    // able to keep extending forever.
+    private val BRAIN_STALL_EXTENDED_MS = 13500L
+    // Set true when the brain ACKs a 'nativeTrackEnded' (it does so synchronously, before it
+    // downloads the next verse). A frozen/dead WebView can't run JS, so it never acks. The
+    // watchdog uses this to tell "brain alive but the next verse's download is slow" (do NOT
+    // self-advance — that jumps to a different range) from "brain is genuinely gone" (self-advance
+    // so car playback continues). Reset the moment we arm a new watchdog.
+    @Volatile private var brainAckedThisEnd: Boolean = false
 
     // Last metadata pushed to the session. METADATA_KEY_DURATION is what scales the
     // notification's progress bar; re-setting metadata on every verse (even with the same
@@ -501,7 +520,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun nativePlay() { requestAudioFocus(); player?.play() }
     @androidx.media3.common.util.UnstableApi
-    fun nativePause() { player?.pause() }
+    fun nativePause() { resumeOnFocusGain = false; cancelBrainWatchdog(); player?.pause() }
     @androidx.media3.common.util.UnstableApi
     fun nativeSeek(positionMs: Long) { player?.seekTo(positionMs) }
     @androidx.media3.common.util.UnstableApi
@@ -680,10 +699,28 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     private fun armBrainWatchdog(nextIndex: Int) {
         cancelBrainWatchdog()
+        // Fresh boundary: assume no ack until the brain sends one.
+        brainAckedThisEnd = false
         val wd = Runnable {
             brainWatchdog = null
-            // Only fire if the brain still hasn't taken over (still jsDriving) and the player
-            // actually stopped at the boundary (not playing) — i.e. it genuinely stalled.
+            // If the brain ACKED, it's alive and simply resolving the next verse (a slow download
+            // can exceed this short timeout). Don't self-advance now — that would fight the brain and
+            // jump to a different range. But don't give up entirely either: a hung fetch (flaky data,
+            // no error) would otherwise stall forever. Re-arm ONCE with a long grace window; if even
+            // that expires with no verse loaded, native rescues playback (same position/range).
+            if (brainAckedThisEnd) {
+                Log.d("RafeeqMedia", "brainWatchdog: brain acked (alive, slow verse) — extending grace window")
+                val ext = Runnable {
+                    brainWatchdog = null
+                    if (jsDriving && player?.isPlaying() != true) {
+                        Log.d("RafeeqMedia", "brainWatchdog(extended): brain acked but never loaded — native rescue to $nextIndex")
+                        fallbackToNativeAdvance(nextIndex)
+                    }
+                }
+                brainWatchdog = ext
+                mainHandler.postDelayed(ext, BRAIN_STALL_EXTENDED_MS)
+                return@Runnable
+            }
             if (jsDriving && player?.isPlaying() != true) {
                 Log.d("RafeeqMedia", "brainWatchdog: brain didn't respond, native self-advance to $nextIndex")
                 fallbackToNativeAdvance(nextIndex)
@@ -696,6 +733,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private fun cancelBrainWatchdog() {
         brainWatchdog?.let { mainHandler.removeCallbacks(it) }
         brainWatchdog = null
+    }
+
+    /**
+     * The brain acknowledged (synchronously) that it received the verse-end and is alive. Mark it
+     * so the watchdog won't self-advance while the brain resolves a slow (uncached) next verse.
+     * If the brain's `loadNativeTrack` lands first, cancelBrainWatchdog() already handled it; this
+     * covers the window where the ack arrives before the URL is ready.
+     */
+    fun onBrainAckTrackEnded() {
+        brainAckedThisEnd = true
     }
 
     /**
@@ -965,26 +1012,39 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     when (focusChange) {
                         AudioManager.AUDIOFOCUS_LOSS -> {
                             // Permanent loss (e.g. another app takes over): pause via JS so
-                            // the in-app play/pause button reflects the paused state.
+                            // the in-app play/pause button reflects the paused state. A permanent
+                            // loss is NOT a resumable interruption — never auto-resume after it.
                             hasAudioFocus = false
+                            resumeOnFocusGain = false
                             player?.pause()
                             if (jsDriving) dispatchCarEvent("pause")
                         }
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                            // Transient loss (e.g. notification sound, system UI): pause the
-                            // native player silently. Do NOT notify JS — this is a momentary
-                            // interruption (a few hundred ms). Telling JS would flip the
-                            // in-app button to paused and prevent auto-resume on focus regain.
+                            // Transient loss (e.g. phone call, notification sound): pause the native
+                            // player silently. Remember whether playback was ACTUALLY playing at the
+                            // moment of the interruption — only then should focus-regain resume it.
+                            // (If the user had already paused, or nothing was playing, a call ending
+                            // must NOT start audio — this is the "restarts by itself after a call"
+                            // fix.) Do NOT notify JS: this is momentary and telling JS would flip the
+                            // in-app button and defeat the resume.
+                            resumeOnFocusGain = player?.isPlaying() == true
                             hasAudioFocus = false
+                            // Cancel any pending stall watchdog so it can't self-advance (and thus
+                            // start audio) mid-call. Resume, if warranted, happens on focus GAIN.
+                            cancelBrainWatchdog()
                             player?.pause()
                         }
                         AudioManager.AUDIOFOCUS_GAIN -> {
-                            // Focus returned after a transient loss: resume automatically so
-                            // playback continues without the user having to press play again.
+                            // Focus returned. Only resume if a transient loss interrupted playback
+                            // that was actually running (resumeOnFocusGain). Otherwise stay paused —
+                            // don't resurrect audio the user had stopped before the interruption.
                             hasAudioFocus = true
-                            if (player?.isPlaying() == false) {
-                                player?.play()
+                            if (resumeOnFocusGain) {
+                                resumeOnFocusGain = false
+                                if (player?.isPlaying() == false) {
+                                    player?.play()
+                                }
                             }
                         }
                     }
@@ -1456,6 +1516,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         @androidx.media3.common.util.UnstableApi
         override fun onPause() {
+            // A deliberate pause clears the resume-after-interruption flag so a later focus GAIN
+            // (e.g. a call that arrives while paused) can't auto-resume what the user paused.
+            resumeOnFocusGain = false
+            // Also cancel any pending stall watchdog: if the user pauses right at a verse boundary,
+            // the watchdog would otherwise see (jsDriving && !isPlaying) and self-advance — starting
+            // audio the user just stopped.
+            cancelBrainWatchdog()
             player?.pause()
             dispatchCarEvent("pause")
         }
@@ -1484,6 +1551,8 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         @androidx.media3.common.util.UnstableApi
         override fun onStop() {
+            resumeOnFocusGain = false
+            cancelBrainWatchdog()
             player?.pause()
             dispatchCarEvent("stop")
         }

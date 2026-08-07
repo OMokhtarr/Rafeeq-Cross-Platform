@@ -78,6 +78,13 @@ export interface DrivingModePlugin {
   /** Signal to native that the JS carAction listener is registered and ready to receive events. */
   jsReady(): Promise<void>;
 
+  /** Acknowledge — synchronously, before any async verse resolution — that the brain received a
+   *  'nativeTrackEnded' event and is alive. Native's stall watchdog only self-advances if NO ack
+   *  arrives (a truly frozen WebView can't run JS at all, so it never acks); this stops the
+   *  watchdog from firing merely because the next verse's download is slow (>timeout), which
+   *  otherwise made native take over the persisted queue and jump to a different range. */
+  ackTrackEnded(): Promise<void>;
+
   setContentTree(options: {
     reciters: ReciterItem[];
     surahs: SurahItem[];
@@ -140,6 +147,7 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
   // On web/Electron: no-op stub so the app doesn't crash
   web: {
     jsReady: async () => {},
+    ackTrackEnded: async () => {},
     setContentTree: async () => {},
     updatePlaybackState: async () => {},
     loadNativeTrack: async () => {},

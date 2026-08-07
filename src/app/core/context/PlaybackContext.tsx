@@ -423,6 +423,10 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           break;
         }
         case "nativeTrackEnded": {
+          // Immediately tell native we're alive (before any async verse resolution below), so its
+          // stall watchdog doesn't self-advance the persisted queue just because the next verse's
+          // download is slow — which made playback jump to a different range on uncached pages.
+          DrivingMode.ackTrackEnded().catch(() => {});
           // The native ExoPlayer finished the current verse. Let the brain apply
           // repeat/range/page logic and feed the next verse.
           q.notifyTrackEnded();
