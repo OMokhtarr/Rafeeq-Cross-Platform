@@ -32,7 +32,12 @@ ion-content::part(scroll) {
   padding: 12px 16px;
   background: var(--color-bg-content);
   border-bottom: 1.5px solid var(--color-border-card);
+  /* Capped so enlarged OS text can't let the header eat the scroll region
+     below it. It stays fixed at normal sizes and only gives way when the
+     text would otherwise squeeze the content out of reach. */
   flex-shrink: 0;
+  max-height: 22vh;
+  overflow-y: auto;
   box-sizing: border-box;
   transition: background var(--transition-theme), border-color var(--transition-theme);
 }

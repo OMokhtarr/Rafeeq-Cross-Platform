@@ -39,7 +39,12 @@ ion-content::part(scroll) {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   box-sizing: border-box;
+  /* Capped so enlarged OS text can't let the header eat the scroll region
+     below it. It stays fixed at normal sizes and only gives way when the
+     text would otherwise squeeze the content out of reach. */
   flex-shrink: 0;
+  max-height: 22vh;
+  overflow-y: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;

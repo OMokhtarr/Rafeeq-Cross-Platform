@@ -85,7 +85,11 @@ ion-content::part(scroll) {
 }
 
 .an-scope-section {
-  flex-shrink: 0;
+  /* Shrinkable + scrollable: at large OS text this block competed with
+     the surah list for the same fixed column. */
+  flex-shrink: 1;
+  max-height: 30%;
+  overflow-y: auto;
 }
 
 .an-label {
@@ -145,7 +149,9 @@ ion-content::part(scroll) {
 /* ── Scrollable selection zone ── */
 .an-scroll-zone {
   flex: 1;
-  min-height: 0;
+  /* Floor the list so enlarged text can't squeeze it to a few pixels.
+     Paired with the shrinkable footer above. */
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   border: 1.5px solid var(--color-border-card);
@@ -376,7 +382,14 @@ ion-content::part(scroll) {
 
 /* ── Footer ── */
 .an-footer {
-  flex-shrink: 0;
+  /* Allowed to shrink, and capped at 45% of the column. With enlarged OS
+     text this footer would otherwise grow past half the screen, crushing
+     the surah list and overlapping it. Shrinking keeps the list usable;
+     the footer's own content stays reachable because it scrolls
+     internally when squeezed. */
+  flex-shrink: 1;
+  max-height: 45%;
+  overflow-y: auto;
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   padding: 10px 16px calc(var(--bottom-nav-height) + 12px);
