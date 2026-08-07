@@ -110,7 +110,13 @@ class RafeeqPlayer(
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .build(),
-                /* handleAudioFocus = */ true,
+                // handleAudioFocus = false: the SERVICE (RafeeqMediaService) owns the single
+                // AudioFocusRequest so there's exactly one focus owner for this app. Letting
+                // ExoPlayer ALSO manage focus created two competing requests from the same app
+                // (their grants/losses cross-fire) and, worse, gave ExoPlayer its own unconditional
+                // resume-on-focus-gain — which auto-restarted playback after a phone call even when
+                // the app had been closed. The service's listener now gates resume on a flag.
+                /* handleAudioFocus = */ false,
             )
             .setHandleAudioBecomingNoisy(true)
             .build()

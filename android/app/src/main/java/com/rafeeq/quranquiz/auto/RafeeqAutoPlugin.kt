@@ -164,6 +164,20 @@ class RafeeqAutoPlugin : Plugin() {
         call.resolve()
     }
 
+    /**
+     * The brain received a 'nativeTrackEnded' and is alive (it acks synchronously, before it
+     * resolves the next verse). Tell the service so its stall watchdog knows the brain is
+     * responsive and must NOT self-advance the persisted queue — even if the next verse's
+     * download is slow. A frozen WebView never reaches this, so the watchdog still fires when the
+     * brain is genuinely dead/suspended.
+     */
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun ackTrackEnded(call: PluginCall) {
+        RafeeqMediaService.instance?.onBrainAckTrackEnded()
+        call.resolve()
+    }
+
     @PluginMethod
     fun setContentTree(call: PluginCall) {
         ensureService()
