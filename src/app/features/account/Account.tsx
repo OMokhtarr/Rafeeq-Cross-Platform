@@ -34,7 +34,7 @@ type ModalType =
 
 /** Public account-deletion page. Google Play also requires this URL on the
  *  listing itself, where it must be reachable without installing the app. */
-const DELETE_ACCOUNT_URL = "https://rafeeq.app/delete-account.html";
+const DELETE_ACCOUNT_URL = "https://rafeeqapp-deleteaccount.netlify.app/";
 
 const PRIVACY_SECTIONS = [
   {
