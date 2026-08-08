@@ -21,6 +21,16 @@ def qfEnv = { String key ->
     return ""
 }
 
+// Release signing. Credentials live in android/keystore.properties (gitignored) so the
+// upload key never enters version control. If that file is absent — a fresh clone, or CI
+// without the secret — release builds simply fall back to unsigned rather than failing the
+// whole configuration phase, which would also break assembleDebug.
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     namespace "com.rafeeq.quranquiz"
     ndkVersion = "27.0.12077973"
@@ -58,8 +68,24 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            if (keystoreProps.containsKey("storeFile")) {
+                storeFile rootProject.file(keystoreProps["storeFile"])
+                storePassword keystoreProps["storePassword"]
+                keyAlias keystoreProps["keyAlias"]
+                keyPassword keystoreProps["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Only attach the signing config when credentials were actually loaded;
+            // otherwise Gradle fails with a confusing "storeFile is null" error.
+            if (keystoreProps.containsKey("storeFile")) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
