@@ -7,9 +7,38 @@
  * window, then as a settled `final`.
  */
 
-const DEEPGRAM_API_KEY = process.env.REACT_APP_DEEPGRAM_API_KEY ?? "";
+const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 
 const STREAM_URL = "wss://api.deepgram.com/v1/listen";
+
+/**
+ * Fetch a short-lived Deepgram JWT from our token broker.
+ *
+ * The raw Deepgram API key must never reach the client: CRA inlines
+ * REACT_APP_* values into the bundle, so a key here is extractable from any
+ * installed APK. The broker holds the key as a Worker secret and mints a JWT
+ * that is only needed for the WebSocket handshake.
+ */
+async function fetchDeepgramToken(): Promise<string> {
+  if (!TOKEN_BROKER_URL) {
+    throw new Error("Token broker is not configured");
+  }
+  // TOKEN_BROKER_URL may or may not carry a trailing slash.
+  const base = TOKEN_BROKER_URL.replace(/\/+$/, "");
+  const res = await fetch(`${base}/deepgram/token`, { method: "POST" });
+  if (!res.ok) {
+    throw new Error(
+      res.status === 503
+        ? "Speech recognition is not available right now"
+        : `Could not start speech recognition (${res.status})`,
+    );
+  }
+  const { access_token: accessToken } = (await res.json()) as {
+    access_token?: string;
+  };
+  if (!accessToken) throw new Error("Speech recognition token was empty");
+  return accessToken;
+}
 
 /** MediaRecorder delivery cadence. Deepgram accepts containerized
  *  webm/opus fragments directly, so small timeslices stream near-live
@@ -49,9 +78,9 @@ export async function openSttStream(
   onEvent: (event: SttStreamEvent) => void,
   onError: (message: string) => void,
 ): Promise<SttStreamHandle> {
-  if (!DEEPGRAM_API_KEY) {
-    throw new Error("Deepgram API key is not configured");
-  }
+  // Mint the token before opening the mic, so a broker failure doesn't leave
+  // the recording indicator on while we bail out.
+  const deepgramToken = await fetchDeepgramToken();
 
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -63,11 +92,13 @@ export async function openSttStream(
     smart_format: "false",
     endpointing: "300",
   });
-  // Browser WebSockets can't set an Authorization header; Deepgram accepts
-  // the key through the subprotocol list instead.
+  // Browser WebSockets can't set an Authorization header; Deepgram accepts the
+  // credential through the subprotocol list instead. Ephemeral JWTs use
+  // "bearer" — "token" is for raw API keys and 401s with a JWT (verified
+  // against the live API).
   const socket = new WebSocket(`${STREAM_URL}?${params.toString()}`, [
-    "token",
-    DEEPGRAM_API_KEY,
+    "bearer",
+    deepgramToken,
   ]);
 
   let stopped = false;

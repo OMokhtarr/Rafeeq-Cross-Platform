@@ -1,4 +1,3 @@
-import { quranClient, isSdkAvailable } from "./quran-sdk-client";
 import * as fallback from "./quran-api.client";
 import type {
   PageTranslation,
@@ -9,24 +8,21 @@ import type {
 
 export type { AudioTimestampResult } from "./quran-api.client";
 
+/**
+ * Dispatches to the custom client in quran-api.client.ts, which authenticates
+ * through our token broker.
+ *
+ * This used to try the @quranjs/api SDK first. That path required
+ * REACT_APP_QF_CLIENT_SECRET in the browser bundle — where CRA inlines it,
+ * making the OAuth client secret extractable from any installed APK. The SDK
+ * path was already dead in practice: it calls oauth2.quran.foundation directly,
+ * which CORS blocks from a browser, so every call fell through to here anyway.
+ * The name is kept so the 15 exports below stay untouched.
+ */
 async function trySdkOrFallback<Args extends any[], Return>(
   methodName: string,
   ...args: Args
 ): Promise<Return> {
-  if (isSdkAvailable()) {
-    try {
-      const fn = (quranClient as any)[methodName];
-      if (typeof fn === "function") {
-        return await fn(...args);
-      }
-    } catch (err) {
-      console.warn(
-        `SDK call "${methodName}" failed, falling back to custom client.`,
-        err,
-      );
-    }
-  }
-
   const fallbackFn = (fallback as any)[methodName];
   if (typeof fallbackFn !== "function") {
     throw new Error(`No implementation for "${methodName}".`);

@@ -1,16 +1,18 @@
 /**
- * Quran Foundation OAuth2 & Content token broker.
+ * Quran Foundation OAuth2 & Content token broker, plus Deepgram ephemeral tokens.
  *
  * Runs as a Cloudflare Worker. Holds the client_id/secret as Worker secrets,
  * and can exchange:
  *   - Client credentials for a machine‑to‑machine content token (default)
  *   - Authorization code for a user access token ( /oauth2/token )
+ *   - The Deepgram API key for a short‑lived JWT ( /deepgram/token )
  *
  * Deploy:
  *   wrangler secret put QF_CLIENT_ID
  *   wrangler secret put QF_CLIENT_SECRET
  *   wrangler secret put QF_TOKEN_URL        # e.g. https://oauth2.quran.foundation/oauth2/token
  *   wrangler secret put QF_OAUTH_CLIENT_ID  # (optional) same as QF_CLIENT_ID for OAuth2
+ *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
  *   wrangler deploy
  */
@@ -21,6 +23,7 @@ export interface Env {
   QF_TOKEN_URL: string; // for client credentials (content)
   QF_OAUTH_CLIENT_ID?: string; // for OAuth2 user login (defaults to QF_CLIENT_ID)
   QF_OAUTH_TOKEN_URL?: string; // defaults to QF_TOKEN_URL
+  DEEPGRAM_API_KEY?: string; // recite mode STT; never shipped to the client
   ALLOWED_ORIGIN: string;
 }
 
@@ -60,6 +63,11 @@ export default {
     // ── OAuth2 User Token Exchange ( /oauth2/token ) ──────────────────────
     if (url.pathname === "/oauth2/token") {
       return handleOAuthToken(req, env, corsHeaders);
+    }
+
+    // ── Deepgram ephemeral token ( /deepgram/token ) ──────────────────────
+    if (url.pathname === "/deepgram/token") {
+      return handleDeepgramToken(env, corsHeaders);
     }
 
     // ── Default: Content API client credentials ───────────────────────────
@@ -172,6 +180,82 @@ async function handleOAuthToken(
   } catch (err) {
     return new Response(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+  }
+}
+
+/**
+ * Mint a short-lived Deepgram JWT for recite mode.
+ *
+ * The real DEEPGRAM_API_KEY stays a Worker secret. Previously it was inlined into
+ * the JS bundle by CRA and sent as a WebSocket subprotocol, which made it
+ * extractable from any installed APK — anyone could bill recitation minutes to
+ * this account.
+ *
+ * Deepgram's grant endpoint returns a JWT that is only needed for the initial
+ * WebSocket handshake; the socket then stays open as normal. The default TTL is
+ * 30s, which is plenty — the client fetches one immediately before connecting.
+ * Deliberately NOT cached: these are per-connection and short-lived by design.
+ */
+async function handleDeepgramToken(
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  if (!env.DEEPGRAM_API_KEY) {
+    return new Response(JSON.stringify({ error: "STT not configured" }), {
+      status: 503,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+  }
+
+  try {
+    const res = await fetch("https://api.deepgram.com/v1/auth/grant", {
+      method: "POST",
+      headers: {
+        authorization: `Token ${env.DEEPGRAM_API_KEY}`,
+        "content-type": "application/json",
+      },
+      // 60s: comfortably covers a slow handshake without widening the window
+      // much if a token is ever intercepted.
+      body: JSON.stringify({ ttl_seconds: 60 }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Deepgram grant error", res.status, text);
+      // Deliberately vague to the client — never echo upstream auth errors,
+      // which can leak key state.
+      return new Response(JSON.stringify({ error: "token grant failed" }), {
+        status: 502,
+        headers: { "content-type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const tok = (await res.json()) as {
+      access_token: string;
+      expires_in?: number;
+    };
+
+    return new Response(
+      JSON.stringify({
+        access_token: tok.access_token,
+        expires_in: tok.expires_in ?? 30,
+      }),
+      {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          // Never let a CDN or the browser reuse a one-shot credential.
+          "cache-control": "no-store",
+          ...corsHeaders,
+        },
+      },
+    );
+  } catch (err) {
+    console.error("Deepgram grant threw", err);
+    return new Response(JSON.stringify({ error: "token grant failed" }), {
+      status: 502,
       headers: { "content-type": "application/json", ...corsHeaders },
     });
   }
