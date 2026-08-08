@@ -7,58 +7,61 @@ Branch: `upgrade-capacitor-8` (branched from `main` after merging
 **31 Aug 2026**. The project was on API 34. SDK 36 support arrives in Capacitor 8,
 so this is a 5 → 8 upgrade, not a one-line bump.
 
-The file edits are done and committed. What remains is toolchain installation and
-verification, which has to happen on your machine.
+**Status: the upgrade builds and is signed.** Toolchains are installed, `npm install`,
+`cap sync android`, `assembleDebug` and `bundleRelease` all pass, and the resulting
+AAB reports `targetSdkVersion 36`. What remains is **on-device** testing, which
+needs real hardware.
 
 ---
 
-## 1. Prerequisites (blocking — nothing installs without these)
+## 1. Toolchain — done
 
-| Tool | You had | Required |
+| Tool | Was | Now |
 |---|---|---|
-| Node | 20.20.1 | **≥ 22** (Capacitor 8 CLI hard requirement) |
-| JDK | 17 | **21** |
-| Android Studio | — | **Otter (2025.2.1)** or newer, for AGP 8.13 |
+| Node | 20.20.1 | **22.11.0** (installed via nvm-windows) |
+| JDK | 17 | **21.0.10** (Android Studio's bundled JBR — nothing to install) |
 
-- Node 22: install via your usual manager, then `node -v` to confirm.
-- JDK 21: simplest is the one bundled with Android Studio Otter. Point Gradle at it
-  via *Settings → Build Tools → Gradle → Gradle JDK*, or set `JAVA_HOME`.
+`nvm use 22.11.0` is already active. `engines.node` is declared in `package.json`,
+so npm fails loudly if a shell falls back to Node 20.
 
-`engines.node` is now declared in `package.json`, so npm will complain loudly
-rather than failing in a confusing way if Node is too old.
+**Building from a terminal requires `JAVA_HOME` pointing at JDK 21** — the machine's
+`JAVA_HOME` still points at JDK 17, and Gradle on 17 fails with
+`invalid source release: 21`. Android Studio uses its own JBR and is unaffected.
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+```
+
+Making that permanent (System → Environment Variables) is worth doing, since
+otherwise every new terminal hits the same error.
 
 ---
 
-## 2. Install and sync
+## 2. Install and sync — done, repeat as needed
 
 ```bash
-# from the project root, on branch upgrade-capacitor-8
-rm -rf node_modules package-lock.json    # the Cap 5 tree cannot be incrementally upgraded
 npm install
 npx cap sync android
 ```
 
-`cap sync` regenerates `android/app/capacitor.build.gradle` (currently still says
-Java 17 — that file is generated, do not hand-edit it; sync rewrites it to
-Capacitor 8's values).
+`cap sync` regenerates `android/app/capacitor.build.gradle` — it now carries Java 21.
+Never hand-edit that file; sync rewrites it.
 
-If `npm install` reports peer-dependency conflicts, read them before reaching for
-`--legacy-peer-deps`; Ionic 7 with React 18 was fine on the versions checked.
+The install pulled 1418 packages cleanly. Deprecation warnings (eslint 8, uuid,
+svgo, workbox) are pre-existing and unrelated to this upgrade.
 
 ---
 
-## 3. Build
+## 3. Build — verified
 
 ```bash
-npm run android:sync
-cd android && ./gradlew assembleDebug
+npm run build:prod
+npx cap sync android
+cd android && ./gradlew assembleDebug     # or bundleRelease for a signed AAB
 ```
 
-First run downloads Gradle 8.14.3 and the SDK 36 platform — expect it to be slow.
-
-If the build fails with an out-of-memory / GC-overhead error, raise the heap in
-`android/gradle.properties`: `org.gradle.jvmargs=-Xmx4g` (currently `-Xmx1536m`,
-which is tight for AGP 8.13 + SDK 36).
+Confirmed output: `android/app/build/outputs/bundle/release/Rafeeq-1.1.0-release.aab`
+(10.29 MB), signed with the upload key, `targetSdkVersion:'36'`, `minSdkVersion:'26'`.
 
 `electron/` still has untracked leftovers on disk (`node_modules/`, `build/`,
 `electon.zip`) — the tracked files are gone, so the folder is safe to delete
@@ -102,12 +105,32 @@ plus `-webkit-text-size-adjust`) — `--bottom-nav-height` was touched.
 
 ---
 
-## 5. Not done yet — still required before Play submission
+## 5. Release signing — done
 
-- **Release signing.** There is still no `signingConfigs.release`; `bundleRelease`
-  produces an **unsigned** AAB that Play rejects. Needs an upload keystore, a
-  gitignored `keystore.properties`, and Play App Signing enrolment.
-  ⚠️ Back the keystore up permanently — losing it means you cannot update the app.
+`bundleRelease` now produces a **signed** AAB. Setup:
+
+- `android/rafeeq-upload.jks` — 4096-bit RSA upload key, alias `rafeeq-upload`,
+  valid to 2053 (Play requires validity past 2033).
+- `android/keystore.properties` — credentials, read by `signingConfigs.release`.
+- Both are **gitignored** (`keystore.properties`, `*.jks`, `*.keystore`), so the
+  key never enters version control. Verified: `git check-ignore` matches both.
+- The config guards on the file existing, so a fresh clone or CI without the
+  secret still builds (unsigned) rather than failing configuration.
+
+> ⚠️ **Back up `rafeeq-upload.jks` and `keystore.properties` now**, somewhere off
+> this machine. If you lose them you cannot ship updates to an existing Play
+> listing — Google cannot reset an upload key you never registered, and even with
+> Play App Signing a lost upload key means a support request at best.
+>
+> They are gitignored, so `git push` will **not** back them up for you.
+
+Enrol in **Play App Signing** when you create the listing: Google then holds the
+real app signing key and this `.jks` is only the upload key, which is recoverable.
+
+---
+
+## 6. Not done yet — still required before Play submission
+
 - **Play Console:** foreground-service (`mediaPlayback`) declaration + likely a demo
   video; Data safety form (`RECORD_AUDIO`, Quran Foundation account sync); account
   deletion URL; a **publicly hosted** privacy policy (`privacy.html` is only in the
@@ -120,7 +143,7 @@ plus `-webkit-text-size-adjust`) — `--bottom-nav-height` was touched.
 
 ---
 
-## 6. Notes / decisions taken
+## 7. Notes / decisions taken
 
 - **minSdk stays 26** (Capacitor 8's floor is 24). The Auto path and Media3 already
   assumed 26; lowering it would widen the device matrix with no tested benefit.
@@ -137,3 +160,22 @@ plus `-webkit-text-size-adjust`) — `--bottom-nav-height` was touched.
 - **iOS untouched.** Capacitor 8 also wants iOS deployment target 14+ and Xcode 16+.
   There is no `ios/` directory checked in, so `cap add ios` will scaffold it at
   Cap 8 defaults when needed.
+
+### Fixes that only surfaced by actually building
+
+- **`MainActivity.onNewIntent`** — API 36 tightened the signature; the `Intent`
+  parameter is no longer nullable. Was `Intent?`, now `Intent`.
+- **Gradle heap** — raised 1536m → 4g in `gradle.properties`. AGP 8.13 + compileSdk
+  36 needs the headroom.
+- **`org.gradle.java.home` is not read from `local.properties`** — only from
+  `gradle.properties` or the environment. Putting it there silently does nothing;
+  use `JAVA_HOME` (see section 1).
+
+### Environment quirk worth knowing
+
+`npm install` fails with `ERR_INVALID_ARG_TYPE: The "file" argument must be of type
+string` when the `ComSpec` environment variable is unset — npm passes it to `spawn()`
+for every package install script, so *any* package with an install script dies and the
+error names whichever one ran first (`sharp`, `core-js`, …). It is not a bad
+dependency. Fix: ensure `ComSpec=C:\Windows\System32\cmd.exe`. Normal Windows shells
+set this already; it only bites in stripped-down environments.
