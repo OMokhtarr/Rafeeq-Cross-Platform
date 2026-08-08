@@ -24,16 +24,14 @@ needs real hardware.
 `nvm use 22.11.0` is already active. `engines.node` is declared in `package.json`,
 so npm fails loudly if a shell falls back to Node 20.
 
-**Building from a terminal requires `JAVA_HOME` pointing at JDK 21** — the machine's
-`JAVA_HOME` still points at JDK 17, and Gradle on 17 fails with
-`invalid source release: 21`. Android Studio uses its own JBR and is unaffected.
+**`JAVA_HOME` is now set permanently** at **User** scope to
+`C:\Program Files\Android\Android Studio\jbr` (JDK 21). Verified in the registry at
+`HKCU:\Environment`. The Machine-scope value still points at JDK 17 and was left
+alone; User scope takes precedence, so any newly opened terminal builds without
+setup. Terminals already open when it was set keep the old value until restarted.
 
-```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-```
-
-Making that permanent (System → Environment Variables) is worth doing, since
-otherwise every new terminal hits the same error.
+To undo: delete the User `JAVA_HOME` variable and the machine falls back to JDK 17
+(at which point Gradle fails with `invalid source release: 21`).
 
 ---
 
@@ -87,15 +85,36 @@ not the other way round, so the older library still builds fine against SDK 36.
 It's the exact version that shipped, so it isolates "Media3 upgrade broke it" from
 "SDK 36 broke it" — at the cost of two years of fixes.
 
-**Edge-to-edge / safe areas — second highest.** targetSdk 36 forces edge-to-edge
-on Android 15+. The app now reads `var(--safe-area-inset-*, env(...), 0px)`
+**Edge-to-edge / safe areas — CHECKED ON EMULATOR, PASSED.** targetSdk 36 forces
+edge-to-edge on Android 15+. The app now reads `var(--safe-area-inset-*, env(...), 0px)`
 everywhere, with the variables supplied by Capacitor's System Bars plugin.
 
-Check on a gesture-navigation device **and** a 3-button-navigation device:
-- `BottomNavBar` clears the system nav bar; content is not hidden under it
-- status bar does not overlap headers (Home, Search, SearchResults)
-- modals reach the bottom correctly (`NoteModal`, `VerseActionSheet`, `AccountModal`)
+Verified on the `Pixel_8_Pro` AVD (android-36.1, **API 36 / Android 16**), debug APK,
+both navigation modes:
+
+| Screen | Gesture nav | 3-button nav |
+|---|---|---|
+| Home (Basmalah) | pass | pass |
+| Quran / mushaf (Al-Fatihah, Tajweed) | — | pass |
+| Settings (long scroll + header) | — | pass |
+
+In every case the `BottomNavBar` sat directly above the system nav bar with no
+overlap and no dead gap, and headers cleared the status bar. No layout regression
+from the safe-area rework.
+
+Still worth a glance on **real hardware** (emulators model insets well but not
+perfectly), and these were not exercised:
+- modals at the bottom edge (`NoteModal`, `VerseActionSheet`, `AccountModal`)
 - the mushaf page viewer's bottom controls
+- a device with a notch/cutout, which the Pixel 8 Pro AVD does not have
+
+One red herring seen while testing: toggling the navigation mode with the app in
+the foreground produced
+`InvalidStateError: Failed to execute 'transaction' on 'IDBDatabase': The database
+connection is closing.` and a stuck "Loading page…". That is the WebView being torn
+down mid-transaction by the configuration change — a force-stop and relaunch renders
+Al-Fatihah correctly. Not caused by this upgrade (it touched no JS), but it is a
+genuine rough edge in `idb.service.ts` if a real config change ever hits mid-read.
 
 **Text scaling.** Re-check the 130% cap still holds (`MainActivity.applyCappedTextZoom`
 plus `-webkit-text-size-adjust`) — `--bottom-nav-height` was touched.
