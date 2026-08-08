@@ -24,7 +24,17 @@ import AccountModal from "./AccountModal";
 import GoalsCard from "./GoalsCard";
 import "./Account.css";
 
-type ModalType = "about" | "request" | "terms" | "privacy" | null;
+type ModalType =
+  | "about"
+  | "request"
+  | "terms"
+  | "privacy"
+  | "deleteAccount"
+  | null;
+
+/** Public account-deletion page. Google Play also requires this URL on the
+ *  listing itself, where it must be reachable without installing the app. */
+const DELETE_ACCOUNT_URL = "https://rafeeq.app/delete-account.html";
 
 const PRIVACY_SECTIONS = [
   {
@@ -32,32 +42,65 @@ const PRIVACY_SECTIONS = [
     body: "Rafeeq (\"the App\") is committed to protecting your privacy. This policy explains how we handle your data.",
   },
   {
-    heading: "1. Data We Collect",
-    body: "Locally stored data: Your preferences, bookmarks, recitation progress, and cached audio files are stored on your device only. This data never leaves your device and is not accessible to us.\nAccount data (optional): If you sign in with a Quran Foundation account, your reading streaks, bookmarks, and activity may be synced to your account. This data is managed by the Quran Foundation under their own privacy policy.",
+    heading: "1. Data stored on your device",
+    body: "Your preferences, bookmarks, notes, reading position, memorisation progress and streaks, plus cached Quran text, translations, fonts and downloaded audio are stored only on your device. Uninstalling the App, or clearing its storage in Android settings, removes all of it permanently.",
   },
   {
-    heading: "2. How We Use Data",
-    body: "Local data is used solely to provide app functionality (remembering settings, resuming recitation, displaying bookmarks). No personal data is sold, shared, or used for advertising.",
+    heading: "2. Recite Mode and your microphone",
+    body: "Recite Mode is the only feature that sends audio off your device, it is never on by default, and it runs only while you are actively using it.\nTo turn speech into text, the App streams your microphone audio in real time to Deepgram, a speech-recognition provider based in the United States. Audio is streamed for transcription only: the App does not record your voice to a file, does not keep the audio, and does not send it anywhere else. The transcribed text is used only to follow along with the verse on screen and is discarded when the session ends. Android asks for microphone permission the first time you use Recite Mode; if you decline, the rest of the App works normally.",
   },
   {
-    heading: "3. Third‑Party Services",
-    body: "The App integrates with the Quran Foundation API to fetch Quranic content, recitations, and (optionally) to sync your activity. Please refer to the Quran Foundation's privacy policy for details on how they handle your data.",
+    heading: "3. Signing in (optional)",
+    body: "You may sign in with a Quran Foundation account. Sign-in is optional and the App is fully usable without it. When you sign in, your basic profile, reading streaks and daily activity, memorisation goals, and notes sync to your Quran Foundation account, held by them under their own privacy policy. Sign-in tokens are stored on your device and erased when you sign out.",
   },
   {
-    heading: "4. Data Security",
-    body: "We do not collect or store your personal information on external servers. Any synced data is protected by the authentication mechanisms provided by the Quran Foundation.",
+    heading: "4. Services the App connects to",
+    body: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent unless you are signed in.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS).",
   },
   {
-    heading: "5. Children's Privacy",
-    body: "The App does not knowingly collect any personal information from children under the age of 13.",
+    heading: "5. What the App does not do",
+    body: "No advertising and no advertising identifiers. No analytics or behavioural tracking. No selling or sharing of personal data. No access to your location, contacts, photos, files, or call history.",
   },
   {
-    heading: "6. Changes",
-    body: "We may update this policy from time to time. Continued use of the App after changes constitutes acceptance of the new policy.",
+    heading: "6. Deleting your data",
+    body: "On-device data: uninstall the App, or clear its storage from Android Settings → Apps → Rafeeq → Storage. Account data: see \"Delete Account & Data\" in this menu.",
+  },
+  {
+    heading: "7. Children's Privacy",
+    body: "The App is suitable for all ages and does not knowingly collect personal information from children under 13. Recite Mode requires microphone permission, which on most devices must be granted by the device owner.",
+  },
+  {
+    heading: "8. Changes",
+    body: "If this policy changes materially — particularly regarding what data leaves your device — the date above will change and the change will be described in the store listing's release notes.",
   },
   {
     heading: "Contact",
     body: "If you have questions about this policy, please contact us at or.mokhtar@gmail.com.",
+  },
+];
+
+/** Shown by the "Delete Account & Data" row. Google Play requires an in-app
+ *  deletion route for any app offering sign-in, plus the public URL above. */
+const DELETE_ACCOUNT_SECTIONS = [
+  {
+    heading: null,
+    body: "Rafeeq does not run its own account system. Signing in is optional and uses a Quran Foundation account, so account data is held by the Quran Foundation. The steps below cover both the data on your device and the data synced to that account.",
+  },
+  {
+    heading: "1. Delete data stored on your device",
+    body: "Bookmarks, notes, memorisation progress, streaks, preferences, and cached Quran text and audio live only on your device. Uninstall Rafeeq, or open Android Settings → Apps → Rafeeq → Storage and tap Clear storage. This is immediate and irreversible; no request to us is needed.",
+  },
+  {
+    heading: "2. Sign out",
+    body: "Choose Sign Out at the top of this screen to erase your sign-in tokens from this device. Signing out does not delete data already synced to your Quran Foundation account — use step 3 for that.",
+  },
+  {
+    heading: "3. Request deletion of synced account data",
+    body: "If you signed in, your basic profile, reading streaks and daily activity, memorisation goals, and notes may be stored against your Quran Foundation account. Contact the Quran Foundation directly at quran.foundation, or email or.mokhtar@gmail.com with the subject \"Rafeeq account deletion request\" and the email address you signed in with, and we will forward and follow up on your request. We aim to acknowledge within 7 days; deletion is completed by the Quran Foundation under their retention policy.",
+  },
+  {
+    heading: "Recite Mode audio",
+    body: "Nothing to delete — recitation audio is transcribed live and is never saved by the App.",
   },
 ];
 
@@ -253,6 +296,7 @@ const Account: React.FC = () => {
     loading:        lang === "ar" ? "جاري التحميل…"                      : "Loading…",
     noStreak:       lang === "ar" ? "لا توجد سلاسل قراءة بعد — ابدأ اليوم!" : "No reading streaks yet — start today!",
     aboutApp:       lang === "ar" ? "عن التطبيق"                         : "About Rafeeq",
+    deleteAccount:  lang === "ar" ? "حذف الحساب والبيانات"               : "Delete Account & Data",
     requestFeature: lang === "ar" ? "اقتراح ميزة"                        : "Request a Feature",
     helpCenter:     lang === "ar" ? "مركز المساعدة"                      : "Help Center",
     shareApp:       lang === "ar" ? "مشاركة التطبيق"                     : "Share Application",
@@ -571,6 +615,15 @@ const Account: React.FC = () => {
                   {isRTL ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 18l6-6-6-6" />}
                 </svg>
               </button>
+              {/* Google Play requires an in-app route to account deletion for any app
+                  offering sign-in — a listing URL alone is not sufficient. */}
+              <div className="ac-row-divider" />
+              <button className="ac-row" onClick={() => setModal("deleteAccount")}>
+                <span className="ac-row-label">{t.deleteAccount}</span>
+                <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  {isRTL ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 18l6-6-6-6" />}
+                </svg>
+              </button>
             </div>
 
             <div className="ac-bottom-spacer" />
@@ -633,13 +686,28 @@ const Account: React.FC = () => {
 
         {modal === "terms" && (
           <AccountModal title={t.terms} onClose={() => setModal(null)}>
-            <ProseContent sections={TERMS_SECTIONS} updated="12 May 2026" />
+            <ProseContent sections={TERMS_SECTIONS} updated="8 August 2026" />
           </AccountModal>
         )}
 
         {modal === "privacy" && (
           <AccountModal title={t.privacy} onClose={() => setModal(null)}>
-            <ProseContent sections={PRIVACY_SECTIONS} updated="12 May 2026" />
+            <ProseContent sections={PRIVACY_SECTIONS} updated="8 August 2026" />
+          </AccountModal>
+        )}
+
+        {modal === "deleteAccount" && (
+          <AccountModal title={t.deleteAccount} onClose={() => setModal(null)}>
+            <ProseContent
+              sections={DELETE_ACCOUNT_SECTIONS}
+              updated="8 August 2026"
+            />
+            <button
+              className="amod-request-submit"
+              onClick={() => window.open(DELETE_ACCOUNT_URL, "_blank")}
+            >
+              {lang === "ar" ? "فتح صفحة الحذف" : "Open deletion page"}
+            </button>
           </AccountModal>
         )}
 

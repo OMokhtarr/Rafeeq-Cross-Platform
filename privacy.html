@@ -4,72 +4,227 @@
     <meta charset="utf-8" />
     <title>Rafeeq – Privacy Policy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        max-width: 700px;
+        margin: 2rem auto;
+        padding: 0 1rem 4rem;
+        line-height: 1.6;
+        color: #1a1a1a;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+      h2 {
+        margin-top: 2rem;
+      }
+      .updated {
+        color: #666;
+        font-size: 0.9rem;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.95rem;
+      }
+      th {
+        background: #f5f5f5;
+      }
+      .callout {
+        background: #f7f7f7;
+        border-left: 4px solid #888;
+        padding: 0.75rem 1rem;
+        margin: 1rem 0;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #121212;
+          color: #e8e8e8;
+        }
+        th {
+          background: #1f1f1f;
+        }
+        th,
+        td {
+          border-color: #333;
+        }
+        .callout {
+          background: #1c1c1c;
+          border-left-color: #555;
+        }
+        .updated {
+          color: #999;
+        }
+        a {
+          color: #7db8ff;
+        }
+      }
+    </style>
   </head>
-  <body
-    style="
-      font-family: sans-serif;
-      max-width: 700px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    "
-  >
+  <body>
     <h1>Privacy Policy</h1>
-    <p><strong>Last updated:</strong> [12-May-2026]</p>
+    <p class="updated"><strong>Last updated:</strong> 8 August 2026</p>
 
     <p>
-      Rafeeq ("the App") is committed to protecting your privacy. This policy
-      explains how we handle your data.
+      Rafeeq ("the App") is a Quran reader, memorisation aid, and quiz app. This
+      policy explains exactly what data the App handles, what stays on your
+      device, and what is sent elsewhere.
     </p>
 
-    <h2>1. Data We Collect</h2>
     <p>
-      <strong>Locally stored data:</strong> Your preferences, bookmarks,
-      recitation progress, and cached audio files are stored on your device
-      only. This data never leaves your device and is not accessible to us.<br />
-      <strong>Account data (optional):</strong> If you sign in with a Quran
-      Foundation account, your reading streaks, bookmarks, and activity may be
-      synced to your account. This data is managed by the Quran Foundation under
-      their own privacy policy.
+      You can use almost all of the App without an account and without granting
+      any permissions. The two features that send data off your device —
+      signing in, and Recite Mode — are both optional and are described below.
     </p>
 
-    <h2>2. How We Use Data</h2>
+    <h2>1. Data stored on your device</h2>
     <p>
-      Local data is used solely to provide app functionality (remembering
-      settings, resuming recitation, displaying bookmarks). No personal data is
-      sold, shared, or used for advertising.
+      The following are stored locally on your device and are not transmitted to
+      us or to anyone else:
+    </p>
+    <ul>
+      <li>App preferences (language, night mode, mushaf style, font size)</li>
+      <li>Bookmarks, notes, and reading position</li>
+      <li>Memorisation (Hifz) plans, progress, and streaks</li>
+      <li>Quran text, translations, and fonts cached for offline reading</li>
+      <li>Downloaded recitation audio files</li>
+    </ul>
+    <p>
+      Uninstalling the App, or clearing its storage from Android settings,
+      removes all of this permanently.
     </p>
 
-    <h2>3. Third‑Party Services</h2>
+    <h2>2. Recite Mode and your microphone</h2>
+    <div class="callout">
+      <strong>Recite Mode sends your voice to a third party.</strong> This is the
+      only feature that transmits audio, it is never on by default, and it runs
+      only while you are actively using it.
+    </div>
     <p>
-      The App integrates with the Quran Foundation API to fetch Quranic content,
-      recitations, and (optionally) to sync your activity. Please refer to the
-      Quran Foundation's privacy policy for details on how they handle your
-      data.
+      Recite Mode listens to your recitation and follows along with the text. To
+      turn speech into text, the App streams your microphone audio in real time
+      to
+      <a href="https://deepgram.com/privacy" target="_blank" rel="noopener"
+        >Deepgram</a
+      >, a speech-recognition provider based in the United States.
+    </p>
+    <ul>
+      <li>
+        Audio is streamed live for transcription only. The App does not record
+        your voice to a file, does not keep the audio, and does not send it
+        anywhere else.
+      </li>
+      <li>
+        The transcribed text is used only to match your recitation against the
+        verse on screen, and is discarded when the session ends.
+      </li>
+      <li>
+        Android asks for microphone permission the first time you use Recite
+        Mode. If you decline, the rest of the App works normally.
+      </li>
+      <li>
+        Deepgram processes the audio under its own privacy policy and its
+        retention settings. We do not use your recitation to train any model.
+      </li>
+    </ul>
+
+    <h2>3. Signing in (optional)</h2>
+    <p>
+      You may sign in with a Quran Foundation account. Sign-in is optional; the
+      App is fully usable without it.
+    </p>
+    <p>When you sign in, the following sync to your Quran Foundation account:</p>
+    <ul>
+      <li>Your basic profile information from that account</li>
+      <li>Reading streaks and daily activity</li>
+      <li>Memorisation goals</li>
+      <li>Notes you create</li>
+    </ul>
+    <p>
+      This data is held by the Quran Foundation under
+      <a href="https://quran.foundation/privacy" target="_blank" rel="noopener"
+        >their privacy policy</a
+      >. Sign-in tokens are stored on your device and are erased when you sign
+      out.
     </p>
 
-    <h2>4. Data Security</h2>
+    <h2>4. Services the App connects to</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Purpose</th>
+          <th>What is sent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Quran Foundation</td>
+          <td>Quran text, translations, tafsir, recitation audio</td>
+          <td>Nothing that identifies you (unless signed in)</td>
+        </tr>
+        <tr>
+          <td>Deepgram</td>
+          <td>Speech recognition for Recite Mode</td>
+          <td>Live microphone audio, only while Recite Mode is running</td>
+        </tr>
+        <tr>
+          <td>jsDelivr (CDN)</td>
+          <td>Mushaf fonts</td>
+          <td>Nothing beyond a standard web request</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>All connections use encrypted transport (HTTPS/WSS).</p>
+
+    <h2>5. What the App does not do</h2>
+    <ul>
+      <li>No advertising, and no advertising identifiers</li>
+      <li>No analytics or behavioural tracking SDKs</li>
+      <li>No selling or sharing of personal data</li>
+      <li>
+        No access to your location, contacts, photos, files, or call history
+      </li>
+    </ul>
+
+    <h2>6. Deleting your data</h2>
     <p>
-      We do not collect or store your personal information on external servers.
-      Any synced data is protected by the authentication mechanisms provided by
-      the Quran Foundation.
+      <strong>On-device data:</strong> uninstall the App, or clear its storage
+      from Android Settings → Apps → Rafeeq → Storage.
+    </p>
+    <p>
+      <strong>Account data:</strong> see our
+      <a href="./delete-account.html">account deletion page</a> for how to
+      request deletion of data synced to your Quran Foundation account.
     </p>
 
-    <h2>5. Children's Privacy</h2>
+    <h2>7. Children's privacy</h2>
     <p>
-      The App does not knowingly collect any personal information from children
-      under the age of 13.
+      The App is suitable for all ages and does not knowingly collect personal
+      information from children under 13. Recite Mode requires microphone
+      permission, which on most devices requires the device owner to grant it.
     </p>
 
-    <h2>6. Changes</h2>
+    <h2>8. Changes to this policy</h2>
     <p>
-      We may update this policy from time to time. Continued use of the App
-      after changes constitutes acceptance of the new policy.
+      If this policy changes materially — particularly regarding what data
+      leaves your device — the "Last updated" date above will change and the
+      change will be described in the app listing's release notes.
     </p>
 
     <h2>Contact</h2>
     <p>
-      If you have questions about this policy, please contact us at
-      [or.mokhtar@gmail.com].
+      Questions about this policy:
+      <a href="mailto:or.mokhtar@gmail.com">or.mokhtar@gmail.com</a>
     </p>
   </body>
 </html>
