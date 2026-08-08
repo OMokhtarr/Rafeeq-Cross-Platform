@@ -97,36 +97,41 @@ Required because the app declares `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
 
 ---
 
-## 4. Account deletion (required — the app offers sign-in)
+## 4. Account deletion — WRITTEN, needs hosting
 
-Play requires both an **in-app** path and a **publicly reachable web URL** for
-deletion requests, and the URL must be usable *without* installing the app.
+Play requires both an **in-app** path and a **publicly reachable web URL**, and the
+URL must be usable *without* installing the app. Both now exist:
 
-Sign-in is via Quran Foundation, so the account itself is theirs — but Google holds
-**you** responsible for providing the route. Minimum viable:
+- **`delete-account.html`** — separates on-device data (immediate, self-service:
+  uninstall or clear storage) from Quran Foundation account data (request-based,
+  with a contact address and a 7-day acknowledgement commitment).
+- **In-app:** Account → LEGAL → **"Delete Account & Data"**, showing the same
+  content plus an "Open deletion page" button. Verified rendering on the emulator.
 
-1. A page (alongside the privacy policy) explaining how to request deletion,
-   naming Quran Foundation as the account holder and giving a contact address.
-2. In-app: the sign-out control in Account already clears local tokens
-   (`oauth.service.ts` removes access/refresh/id tokens). Add a "Delete my account"
-   link pointing at the same page.
-
-⚠️ This is the item most likely to fail review if skipped.
+- [ ] **Host `delete-account.html`** and put the URL in the Play Console's
+      "Data deletion" field.
+- [ ] If the hosted URL is not `https://rafeeq.app/delete-account.html`, update
+      `DELETE_ACCOUNT_URL` at the top of `src/app/features/account/Account.tsx`.
 
 ---
 
-## 5. Privacy policy
+## 5. Privacy policy — REWRITTEN, needs hosting
 
-`privacy.html` exists in the repo but is **not published anywhere** — the listing
-needs a live URL. Before submitting:
+`privacy.html` has been rewritten against what the app actually does. The previous
+version claimed local data "never leaves your device" and never mentioned the
+microphone, speech recognition, or Deepgram — a direct contradiction with the Data
+safety answers above, and a likely rejection.
 
-- [ ] Host it (GitHub Pages, Cloudflare Pages, or alongside the token broker)
-- [ ] Fix the literal brackets in `Last updated: [12-May-2026]`
-- [ ] **Add the Deepgram disclosure** — the current text says data "never leaves your
-      device", which is now inaccurate: recite mode streams microphone audio to
-      Deepgram. This contradiction between the policy and the Data safety form is
-      exactly what reviewers flag.
-- [ ] Add the account-deletion section from item 4
+Now covered: on-device storage, the Deepgram audio stream (opt-in, live-only, never
+stored), optional Quran Foundation sync with its real scopes, a table of every
+outbound host, an explicit "what the app does not do", and deletion routes. The
+same corrected text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and
+the bracketed date/contact placeholders are fixed here and in `terms.html`.
+
+- [ ] **Host `privacy.html`** (GitHub Pages, Cloudflare Pages, or alongside the
+      token broker) and put the URL in the listing.
+- [ ] Confirm the Deepgram privacy-policy link and the Quran Foundation
+      privacy-policy link both resolve.
 
 ---
 
