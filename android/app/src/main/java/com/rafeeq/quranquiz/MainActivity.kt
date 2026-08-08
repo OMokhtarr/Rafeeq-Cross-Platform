@@ -67,7 +67,8 @@ class MainActivity : BridgeActivity() {
         private const val MAX_FONT_SCALE = 1.3f
     }
 
-    override fun onNewIntent(intent: android.content.Intent?) {
+    // API 36 tightened this signature: the Intent parameter is no longer nullable.
+    override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         // Re-apply show-when-locked when the activity is re-used (singleTask re-entry).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

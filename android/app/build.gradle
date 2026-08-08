@@ -21,6 +21,16 @@ def qfEnv = { String key ->
     return ""
 }
 
+// Release signing. Credentials live in android/keystore.properties (gitignored) so the
+// upload key never enters version control. If that file is absent — a fresh clone, or CI
+// without the secret — release builds simply fall back to unsigned rather than failing the
+// whole configuration phase, which would also break assembleDebug.
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     namespace "com.rafeeq.quranquiz"
     ndkVersion = "27.0.12077973"
@@ -58,8 +68,24 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            if (keystoreProps.containsKey("storeFile")) {
+                storeFile rootProject.file(keystoreProps["storeFile"])
+                storePassword keystoreProps["storePassword"]
+                keyAlias keystoreProps["keyAlias"]
+                keyPassword keystoreProps["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Only attach the signing config when credentials were actually loaded;
+            // otherwise Gradle fails with a confusing "storeFile is null" error.
+            if (keystoreProps.containsKey("storeFile")) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -95,12 +121,12 @@ android {
     }
     
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '21'
     }
 
     packagingOptions {
@@ -127,10 +153,10 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.media:media:1.7.0"
     // Media3 ExoPlayer as the native Android playback engine (used behind the
-    // existing MediaBrowserServiceCompat session). Pinned to 1.3.1 — the last
-    // release that builds against compileSdk 34. 1.4.x+ requires compileSdk 35.
-    implementation "androidx.media3:media3-exoplayer:1.3.1"
-    implementation "androidx.media3:media3-session:1.3.1"
+    // existing MediaBrowserServiceCompat session). Unpinned from 1.3.1 now that
+    // compileSdk is 36 — the old pin existed only because 1.4.x+ needs compileSdk 35+.
+    implementation "androidx.media3:media3-exoplayer:$rootProject.ext.media3Version"
+    implementation "androidx.media3:media3-session:$rootProject.ext.media3Version"
     testImplementation "junit:junit:$rootProject.ext.junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.androidxEspressoCoreVersion"

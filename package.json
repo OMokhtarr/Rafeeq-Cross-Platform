@@ -14,9 +14,6 @@
     "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug bundleRelease",
     "android:open": "npx cap open android",
     "android:run": "npx cap run android",
-    "electron:dev": "concurrently \"react-scripts start\" \"wait-on http://localhost:3000 && npx cap open @capacitor-community/electron\"",
-    "electron:sync": "npm run build:prod && npx cap sync @capacitor-community/electron",
-    "electron:build": "npm run electron:sync && cd electron && npm run electron:build",
     "analyze": "npm run build:prod -- --stats-json && npx webpack-bundle-analyzer build/stats.json",
     "lighthouse": "npx lighthouse http://localhost:8100 --view",
     "test": "react-scripts test",
@@ -24,16 +21,16 @@
     "understand": "set GRAPH_DIR=%CD%&& \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard/node_modules/.bin/vite.cmd\" \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard\" --host 127.0.0.1 --config \"C:/Users/HP/.claude/plugins/cache/understand-anything/understand-anything/2.7.5/packages/dashboard/vite.config.ts\""
   },
   "dependencies": {
-    "@capacitor/android": "^5.7.8",
-    "@capacitor/app": "^5.0.8",
-    "@capacitor/cli": "^5.7.8",
-    "@capacitor/core": "^5.7.8",
-    "@capacitor/filesystem": "^5.2.2",
-    "@capacitor/haptics": "^5.0.8",
-    "@capacitor/ios": "^5.7.8",
-    "@capacitor/preferences": "^5.0.8",
-    "@capacitor/splash-screen": "^5.0.8",
-    "@capacitor/status-bar": "^5.0.8",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@ionic/react": "^7.0.0",
     "@ionic/react-router": "^8.7.18",
     "@quranjs/api": "^2.2.0",
@@ -46,18 +43,18 @@
     "react-scripts": "5.0.1"
   },
   "devDependencies": {
-    "@capacitor-community/electron": "^5.0.1",
     "@capacitor/assets": "^3.0.5",
     "@playwright/test": "^1.40.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
-    "concurrently": "^8.2.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "4.9.5",
-    "wait-on": "^7.2.0",
     "webpack-bundle-analyzer": "^4.10.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   },
   "browserslist": {
     "production": [

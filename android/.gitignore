@@ -99,3 +99,11 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Release signing — NEVER commit these.
+# The upload keystore and its passwords are what authorise Play Store updates;
+# losing the .jks means you can no longer update the app, and leaking it lets
+# someone else sign as you. Keep offline backups of the .jks outside this repo.
+keystore.properties
+*.jks
+*.keystore

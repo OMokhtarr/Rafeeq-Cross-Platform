@@ -723,7 +723,7 @@
   bottom: 0;
   /* Default centered; .align-start / .align-end override per page parity. */
   text-align: center;
-  padding: 6px 20px max(12px, env(safe-area-inset-bottom, 0px));
+  padding: 6px 20px max(12px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-muted, #8a8170);
@@ -1461,7 +1461,7 @@
 .selection-bar {
   position: absolute;
   inset-inline: 12px;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   background: var(--color-bg-toolbar, #fdfaf3);
   border: 1.5px solid var(--color-gold, #d4b48c);
   border-radius: 14px;
