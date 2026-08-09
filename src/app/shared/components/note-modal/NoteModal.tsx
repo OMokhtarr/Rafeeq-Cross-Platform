@@ -7,8 +7,7 @@ import {
   fetchNotesForVerse,
   updateNote,
   type Note,
-} from "../../../core/services/api/user-api.client";
-import { getStoredAccessToken } from "../../../core/services/auth/oauth.service";
+} from "../../../core/services/storage/notes.service";
 import "./NoteModal.css";
 
 type View = "list" | "compose";
@@ -32,7 +31,6 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
 
   // compose / edit state
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -51,7 +49,6 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
     edit:          lang === "ar" ? "تعديل" : "Edit",
     cancel:        lang === "ar" ? "إلغاء" : "Cancel",
     close:         lang === "ar" ? "إغلاق" : "Close",
-    loginRequired: lang === "ar" ? "سجّل الدخول لإضافة ملاحظات" : "Sign in to add notes",
     errorLoad:     lang === "ar" ? "تعذر تحميل الملاحظات" : "Could not load notes",
     errorSave:     lang === "ar" ? "تعذر حفظ الملاحظة" : "Could not save note",
     errorMinLen:   lang === "ar" ? "يجب أن تتكون الملاحظة من 6 أحرف على الأقل" : "Note must be at least 6 characters",
@@ -59,7 +56,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
     back:          lang === "ar" ? "رجوع" : "Back",
   };
 
-  // Check login state and load notes whenever modal opens
+  // Load this verse's notes from local storage whenever the modal opens
   useEffect(() => {
     if (!open || !verseKey) return;
     setView(initialView);
@@ -67,15 +64,11 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
     setDraftText("");
     setError(null);
 
-    getStoredAccessToken().then((token) => {
-      setLoggedIn(!!token);
-      if (!token) return;
-      setLoading(true);
-      fetchNotesForVerse(verseKey)
-        .then((data) => setNotes(data))
-        .catch(() => setError(t.errorLoad))
-        .finally(() => setLoading(false));
-    });
+    setLoading(true);
+    fetchNotesForVerse(verseKey)
+      .then((data) => setNotes(data))
+      .catch(() => setError(t.errorLoad))
+      .finally(() => setLoading(false));
   }, [open, verseKey]); // intentionally omits t.errorLoad — stable string, no re-fetch needed
 
   // Focus textarea when entering compose view
@@ -169,7 +162,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
           </h3>
 
           <div className="nm-header-actions">
-            {view === "list" && loggedIn && (
+            {view === "list" && (
               <button
                 className={`nm-add-btn${nightClass}`}
                 onClick={() => openCompose()}
@@ -190,9 +183,7 @@ const NoteModal: React.FC<Props> = ({ initialView, open, verseKey, onClose }) =>
         {/* ── List view ── */}
         {view === "list" && (
           <div className="nm-body">
-            {!loggedIn ? (
-              <p className="nm-empty">{t.loginRequired}</p>
-            ) : loading ? (
+            {loading ? (
               <div className="nm-loading">
                 <span className="nm-spinner" aria-hidden="true" />
                 <span>{lang === "ar" ? "جاري التحميل…" : "Loading…"}</span>

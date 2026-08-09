@@ -34,8 +34,6 @@ export interface AppStrings {
     download: string;
     /** Recite mode (needs live speech-to-text). */
     recite: string;
-    /** Sign-in and account sync. */
-    account: string;
     /** Tafsir and translation fetching. */
     tafsir: string;
     /** Full-text search that needs pages not yet cached. */
@@ -437,7 +435,6 @@ const ar: AppStrings = {
     message: "هذه الميزة تتطلب الاتصال بالإنترنت",
     download: "تحميل التلاوات يتطلب الاتصال بالإنترنت",
     recite: "وضع التسميع يتطلب الاتصال بالإنترنت",
-    account: "تسجيل الدخول يتطلب الاتصال بالإنترنت",
     tafsir: "التفسير والترجمة يتطلبان الاتصال بالإنترنت",
     search: "البحث في هذه الصفحات يتطلب الاتصال بالإنترنت",
   },
@@ -859,7 +856,6 @@ const en: AppStrings = {
     message: "This feature is only available when connected to the Internet",
     download: "Downloading recitations requires an Internet connection",
     recite: "Recite mode requires an Internet connection",
-    account: "Signing in requires an Internet connection",
     tafsir: "Tafsir and translation require an Internet connection",
     search: "Searching these pages requires an Internet connection",
   },

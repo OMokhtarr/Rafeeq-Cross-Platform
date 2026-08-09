@@ -14,7 +14,8 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName
 
 ## 1. What the app actually collects
 
-Established by auditing the manifest, the OAuth scopes, and every outbound host.
+Established by auditing the manifest and every outbound host. The app has no
+sign-in, so there are no user OAuth scopes to audit.
 
 **Permissions declared** (`AndroidManifest.xml`):
 
@@ -30,13 +31,13 @@ Established by auditing the manifest, the OAuth scopes, and every outbound host.
 | Host | Purpose | Data sent |
 |---|---|---|
 | `apis.quran.foundation` | Quran text, translations, tafsir, audio timestamps | none personal (via token broker) |
-| `oauth2.quran.foundation` | optional user sign-in | OAuth code exchange |
 | `verses.quran.foundation` | recitation audio files | none |
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
-**OAuth scopes requested:** `openid profile offline_access` plus
-`streak`, `goal`, `note`, `activity_day` (read/create/update/delete variants).
+**User sign-in:** none. The app has no accounts and requests no OAuth user
+scopes — the token broker only ever fetches machine-to-machine tokens for the
+content API. Notes, bookmarks, and both streaks (Hifz and quiz) are local-only.
 
 ---
 
@@ -55,17 +56,13 @@ Established by auditing the manifest, the OAuth scopes, and every outbound host.
 > If their default retains audio/transcripts, "processed ephemerally" no longer holds
 > and you must disclose retention instead.
 
-### Personal info → Name / Email (only if signed in)
-- Collected: **Yes** · Shared: **No**
-- Optional: **Yes** — sign-in is not required to use the app.
-- Purpose: **Account management, App functionality**
-- Note: handled by Quran Foundation under their privacy policy; the `profile` scope
-  is requested at sign-in.
+### Personal info → Name / Email
+- Collected: **No** — the app has no sign-in and never asks for a name or email.
 
 ### App activity → Other user-generated content
-- Covers streaks, goals, notes, reading activity synced under the OAuth scopes above.
-- Collected: **Yes** · Shared: **No** · Optional: **Yes** (sign-in only)
-- Purpose: **App functionality**
+- Notes, bookmarks, and the Hifz and quiz streaks stay on the device and are never
+  transmitted, so under Play's definition this is **not collected**.
+- Collected: **No**
 
 ### Not collected
 No location, contacts, photos, files, financial info, health data, or advertising
@@ -97,21 +94,64 @@ Required because the app declares `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
 
 ---
 
-## 4. Account deletion — WRITTEN, needs hosting
+## 4. Account deletion — NOT REQUIRED (no account creation)
 
-Play requires both an **in-app** path and a **publicly reachable web URL**, and the
-URL must be usable *without* installing the app. Both now exist:
+Play's deletion requirement is triggered by **account creation**, not by storing
+data. Rafeeq has no sign-in and creates no user identity, so neither the in-app
+deletion path nor the public deletion URL applies. Google's definition:
 
-- **`delete-account.html`** — separates on-device data (immediate, self-service:
-  uninstall or clear storage) from Quran Foundation account data (request-based,
-  with a contact address and a 7-day acknowledgement commitment).
-- **In-app:** Account → LEGAL → **"Delete Account & Data"**, showing the same
-  content plus an "Open deletion page" button. Verified rendering on the emulator.
+> "If your app allows users to create an account from within your app, our User
+> data policy requires that it must also allow users to request for their account
+> to be deleted." … "Accounts that are created and operated offline are not app
+> accounts and do not fall within policy scope."
 
-- [ ] **Host `delete-account.html`** and put the URL in the Play Console's
-      "Data deletion" field.
-- [ ] If the hosted URL is not `https://rafeeq.app/delete-account.html`, update
-      `DELETE_ACCOUNT_URL` at the top of `src/app/features/account/Account.tsx`.
+Apple's Guideline 5.1.1(v) uses the same trigger, so the iOS build is equally
+out of scope.
+
+The in-app "Delete Account & Data" row and its modal have been removed.
+`delete-account.html` is **kept in the repo, unhosted and unlinked** — see below.
+
+> ⚠️ **This reverses the moment sign-in is added.** Sign in with Google or Apple
+> counts as account creation on both stores (Google names "SSO" in its list of
+> account mechanisms; Apple treats social login the same as email signup). If
+> sign-in ships — especially with any server-side backup of user data — you must
+> restore: an in-app deletion path, a hosted public deletion URL for Play, actual
+> deletion of the server-side record, and **Apple token revocation via their REST
+> API** for Sign in with Apple.
+>
+> Note also **Apple Guideline 4.8**: adding Google Sign-In *alone* obliges you to
+> offer Sign in with Apple as an equivalent option. Adding one means adding both.
+
+### Recovering the sign-in code
+
+All sign-in files were deleted from the working tree but remain in git history.
+To restore them:
+
+```bash
+# The last commit where the auth stack was intact:
+git show d1aba6f --stat
+
+git checkout d1aba6f -- src/app/core/services/auth/oauth.service.ts
+git checkout d1aba6f -- src/app/core/services/auth/AuthCallback.tsx
+git checkout d1aba6f -- src/app/core/services/api/user-api.client.ts   # QF user API
+git checkout d1aba6f -- delete-account.html                            # deletion page
+git checkout d1aba6f -- index.html                                     # OAuth relay page
+```
+
+Also needed when re-adding sign-in:
+- The `com.rafeeq.quranquiz` deep-link `<intent-filter>` in
+  `android/app/src/main/AndroidManifest.xml` (removed; see history).
+- The `appUrlOpen` listener and `/auth/callback` route in `src/App.tsx`.
+- `token-broker/src/index.ts` still exposes `/oauth2/token` — it was left in
+  place and is simply unused, so no broker redeploy is needed to restore it.
+
+Bear in mind the old stack was **Quran Foundation OAuth**, not Google/Apple. It
+is a reference for the wiring (PKCE, token storage, deep-link callback), not a
+drop-in for a different identity provider.
+
+**Data deletion (as distinct from account deletion)** is still answered on the
+data-safety form: users uninstall or clear storage, which removes everything,
+since nothing leaves the device. `privacy.html` §6 states this.
 
 ---
 
@@ -123,10 +163,10 @@ microphone, speech recognition, or Deepgram — a direct contradiction with the 
 safety answers above, and a likely rejection.
 
 Now covered: on-device storage, the Deepgram audio stream (opt-in, live-only, never
-stored), optional Quran Foundation sync with its real scopes, a table of every
-outbound host, an explicit "what the app does not do", and deletion routes. The
-same corrected text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and
-the bracketed date/contact placeholders are fixed here and in `terms.html`.
+stored), an explicit "no account required" section, a table of every outbound host,
+an explicit "what the app does not do", and deletion routes. The same corrected
+text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and the bracketed
+date/contact placeholders are fixed here and in `terms.html`.
 
 - [ ] **Host `privacy.html`** (GitHub Pages, Cloudflare Pages, or alongside the
       token broker) and put the URL in the listing.

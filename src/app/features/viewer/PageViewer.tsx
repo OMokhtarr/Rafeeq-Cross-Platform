@@ -35,12 +35,8 @@ import { useWakeLock } from "../../core/hooks/useWakeLock";
 import { useReciteMode } from "../../core/hooks/useReciteMode";
 import { useFeedbackBeep } from "../../core/hooks/useFeedbackBeep";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
-import {
-  isPageBookmarked,
-  recordActivityDay,
-} from "../../core/services/api/user-api.client";
+import { isPageBookmarked } from "../../core/services/storage/notes.service";
 import { markPageRead, isPageMarkedRead } from "../hifz/hifz.service";
-import { readSelectedMushaf } from "../../core/services/data/quran.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
 import "./PageViewer.css";
@@ -301,22 +297,6 @@ const PageViewer: React.FC = () => {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Fire activity day when user navigates away from the viewer
-  useEffect(() => {
-    return () => {
-      const prevVerses = pageVersesRef.current;
-      const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
-      if (prevVerses.length > 0 && elapsed >= 10) {
-        const first = prevVerses[0];
-        const last = prevVerses[prevVerses.length - 1];
-        const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
-        const mushafKind = readSelectedMushaf();
-        const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
-        recordActivityDay([range], elapsed, mushafId);
-      }
-    };
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const raw = parseInt(params.get("page") || "", 10);
@@ -332,13 +312,6 @@ const PageViewer: React.FC = () => {
   }, [location.search]);
 
   // Maps our internal mushaf kind to the QF numeric mushafId (integers only)
-  const QF_MUSHAF_IDS: Record<string, number> = {
-    qpc_v4_tajweed: 2,
-    uthmani: 1,
-    indopak: 4,
-    imlaei: 3,
-  };
-
   useEffect(() => {
     // Persist reveal progress on the page we're leaving — otherwise the
     // reveal-next walk position (local state) is lost and the page would
@@ -346,18 +319,6 @@ const PageViewer: React.FC = () => {
     if (revealedOnPageRef.current.length > 0) {
       showMany(revealedOnPageRef.current);
       revealedOnPageRef.current = [];
-    }
-
-    // Fire activity day for the page we're leaving (if user spent ≥10 s on it)
-    const prevVerses = pageVersesRef.current;
-    const elapsed = Math.round((Date.now() - pageEntryTime.current) / 1000);
-    if (prevVerses.length > 0 && elapsed >= 10) {
-      const first = prevVerses[0];
-      const last = prevVerses[prevVerses.length - 1];
-      const range = `${first.sura}:${first.aya}-${last.sura}:${last.aya}`;
-      const mushafKind = readSelectedMushaf();
-      const mushafId = QF_MUSHAF_IDS[mushafKind] ?? 2;
-      recordActivityDay([range], elapsed, mushafId);
     }
 
     // Reset timer for the new page

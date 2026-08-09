@@ -43,7 +43,6 @@ rafeeq/
 │       │   ├── hooks/          # Reusable hooks (usePlaybackQueue, useAudioPlayer, …)
 │       │   ├── services/
 │       │   │   ├── api/        # Quran SDK client + font loader
-│       │   │   ├── auth/       # OAuth service + callback handler
 │       │   │   ├── data/       # Quran service, metadata service
 │       │   │   ├── audio/      # Audio cache service (IndexedDB blob storage)
 │       │   │   └── storage/    # IndexedDB wrapper, recitation history
@@ -55,7 +54,7 @@ rafeeq/
 │       │   ├── quiz/           # Three quiz modes (akmel-alayah, mutashabihat, akmel-alnehayat)
 │       │   ├── azkar/          # Daily remembrances
 │       │   ├── playback/       # Reciter & playback settings
-│       │   ├── account/        # User account & goals
+│       │   ├── account/        # Streaks, notes & app info
 │       │   ├── bookmarks/      # Saved verses
 │       │   └── settings/       # App-wide settings
 │       └── shared/
@@ -103,20 +102,21 @@ Main routes:
 /akmel-alayah-setup  →  /akmel-alayah        → "Complete the verse" quiz
 /mutashabihat-setup  →  /mutashabihat-test   → "Similar verses" quiz
 /akmel-alnehayat-setup  →  /akmel-alnehayat  → "Beginning to ending" quiz
-/account                                     → User account & goals
+/account                                     → Streaks, notes & app info
 /bookmarks                                   → Saved verses
 /settings                                    → App-wide settings
 /playback                                    → Reciter & playback settings
-/auth/callback                               → OAuth deep-link handler
 ```
 
 ### Audio Playback
 
 `PlaybackContext` + the `usePlaybackQueue` hook manage verse-by-verse recitation. Audio files are downloaded as MP3 blobs, stored in IndexedDB, and served locally on subsequent plays. Over 200 reciters are supported.
 
-### Authentication
+### Local User Data
 
-OAuth 2.0 flow is handled by `oauth.service.ts`. On native platforms the callback is received via a deep link using the scheme `com.rafeeq.quranquiz://callback`. On web the browser redirects to `/auth/callback`.
+The app has no accounts and no sign-in. Notes and bookmarks live in `notes.service.ts`, the Hifz streak in `hifz.service.ts`, and the quiz streak in `quiz-streak.service.ts` — all backed by local storage on the device.
+
+Since there is no server, `backup.service.ts` provides the cross-device path: **Account → Backup** exports every user-created store to a JSON file (content caches are excluded) and restores it on another device. The Hifz stores are dual-written to localStorage *and* IndexedDB/filesystem, so backup reads and writes them through the async loaders.
 
 ---
 
@@ -226,4 +226,4 @@ All Quran text, fonts, translations, and audio are cached locally in IndexedDB. 
 
 ### Capacitor App ID
 
-`com.rafeeq.quranquiz` — used as the iOS bundle ID, Android application ID, and OAuth redirect scheme.
+`com.rafeeq.quranquiz` — used as the iOS bundle ID and Android application ID.

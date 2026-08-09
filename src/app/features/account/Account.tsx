@@ -4,24 +4,29 @@ import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
-  fetchStreaks,
-  fetchUserProfile,
   fetchAllNotes,
   deleteNote,
-  type Streak,
-  type UserProfile,
   type Note,
-} from "../../core/services/api/user-api.client";
+} from "../../core/services/storage/notes.service";
 import {
-  signIn,
-  signOut,
-  getStoredRefreshToken,
-  NetworkError,
-  SessionExpiredError,
-} from "../../core/services/auth/oauth.service";
-import { useOfflineGuard } from "../../core/hooks/useOfflineGuard";
+  computeQuizStreak,
+  computeLongestQuizStreak,
+} from "../../core/services/storage/quiz-streak.service";
+import {
+  loadPlanAsync,
+  computeStreakPersistent,
+  type PlanSession,
+} from "../hifz/hifz.service";
+import {
+  exportBackupToFile,
+  parseBackup,
+  readBackupFile,
+  restoreBackup,
+  summarizeBackup,
+  BackupError,
+  type BackupSummary,
+} from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
-import GoalsCard from "./GoalsCard";
 import "./Account.css";
 
 type ModalType =
@@ -29,12 +34,8 @@ type ModalType =
   | "request"
   | "terms"
   | "privacy"
-  | "deleteAccount"
+  | "restore"
   | null;
-
-/** Public account-deletion page. Google Play also requires this URL on the
- *  listing itself, where it must be reachable without installing the app. */
-const DELETE_ACCOUNT_URL = "https://rafeeqapp-deleteaccount.netlify.app/";
 
 const PRIVACY_SECTIONS = [
   {
@@ -50,57 +51,36 @@ const PRIVACY_SECTIONS = [
     body: "Recite Mode is the only feature that sends audio off your device, it is never on by default, and it runs only while you are actively using it.\nTo turn speech into text, the App streams your microphone audio in real time to Deepgram, a speech-recognition provider based in the United States. Audio is streamed for transcription only: the App does not record your voice to a file, does not keep the audio, and does not send it anywhere else. The transcribed text is used only to follow along with the verse on screen and is discarded when the session ends. Android asks for microphone permission the first time you use Recite Mode; if you decline, the rest of the App works normally.",
   },
   {
-    heading: "3. Signing in (optional)",
-    body: "You may sign in with a Quran Foundation account. Sign-in is optional and the App is fully usable without it. When you sign in, your basic profile, reading streaks and daily activity, memorisation goals, and notes sync to your Quran Foundation account, held by them under their own privacy policy. Sign-in tokens are stored on your device and erased when you sign out.",
+    heading: "3. No account required",
+    body: "The App has no sign-in and no user account. Everything it stores about you — bookmarks, notes, memorisation progress, and your Hifz and quiz streaks — stays on your device. Nothing is synced to a server and nothing is tied to your identity.",
   },
   {
     heading: "4. Services the App connects to",
-    body: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent unless you are signed in.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS).",
+    body: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS).",
   },
   {
     heading: "5. What the App does not do",
     body: "No advertising and no advertising identifiers. No analytics or behavioural tracking. No selling or sharing of personal data. No access to your location, contacts, photos, files, or call history.",
   },
   {
-    heading: "6. Deleting your data",
-    body: "On-device data: uninstall the App, or clear its storage from Android Settings → Apps → Rafeeq → Storage. Account data: see \"Delete Account & Data\" in this menu.",
+    heading: "6. Backing up your data",
+    body: "Because there is no account, Account → Backup → \"Export My Data\" writes your notes, bookmarks and streaks to a file you control. Restore it on another device to move your data across. The file stays wherever you save it — the App never uploads it anywhere.",
   },
   {
-    heading: "7. Children's Privacy",
+    heading: "7. Deleting your data",
+    body: "Uninstall the App, or clear its storage from Android Settings → Apps → Rafeeq → Storage. Because nothing leaves your device, that removes everything permanently — there is no server-side copy and no request to us is needed.",
+  },
+  {
+    heading: "8. Children's Privacy",
     body: "The App is suitable for all ages and does not knowingly collect personal information from children under 13. Recite Mode requires microphone permission, which on most devices must be granted by the device owner.",
   },
   {
-    heading: "8. Changes",
+    heading: "9. Changes",
     body: "If this policy changes materially — particularly regarding what data leaves your device — the date above will change and the change will be described in the store listing's release notes.",
   },
   {
     heading: "Contact",
     body: "If you have questions about this policy, please contact us at or.mokhtar@gmail.com.",
-  },
-];
-
-/** Shown by the "Delete Account & Data" row. Google Play requires an in-app
- *  deletion route for any app offering sign-in, plus the public URL above. */
-const DELETE_ACCOUNT_SECTIONS = [
-  {
-    heading: null,
-    body: "Rafeeq does not run its own account system. Signing in is optional and uses a Quran Foundation account, so account data is held by the Quran Foundation. The steps below cover both the data on your device and the data synced to that account.",
-  },
-  {
-    heading: "1. Delete data stored on your device",
-    body: "Bookmarks, notes, memorisation progress, streaks, preferences, and cached Quran text and audio live only on your device. Uninstall Rafeeq, or open Android Settings → Apps → Rafeeq → Storage and tap Clear storage. This is immediate and irreversible; no request to us is needed.",
-  },
-  {
-    heading: "2. Sign out",
-    body: "Choose Sign Out at the top of this screen to erase your sign-in tokens from this device. Signing out does not delete data already synced to your Quran Foundation account — use step 3 for that.",
-  },
-  {
-    heading: "3. Request deletion of synced account data",
-    body: "If you signed in, your basic profile, reading streaks and daily activity, memorisation goals, and notes may be stored against your Quran Foundation account. Contact the Quran Foundation directly at quran.foundation, or email or.mokhtar@gmail.com with the subject \"Rafeeq account deletion request\" and the email address you signed in with, and we will forward and follow up on your request. We aim to acknowledge within 7 days; deletion is completed by the Quran Foundation under their retention policy.",
-  },
-  {
-    heading: "Recite Mode audio",
-    body: "Nothing to delete — recitation audio is transcribed live and is never saved by the App.",
   },
 ];
 
@@ -115,7 +95,7 @@ const TERMS_SECTIONS = [
   },
   {
     heading: "2. Privacy & Data",
-    body: "The App stores your preferences, bookmarks, and recitation progress locally on your device. When you sign in with a Quran Foundation account, your activity may be synced to your account according to their privacy policy. No personal data is sold or shared with third parties.",
+    body: "The App stores your preferences, bookmarks, notes, streaks, and recitation progress locally on your device. There is no account and no server-side sync. No personal data is sold or shared with third parties.",
   },
   {
     heading: "3. Intellectual Property",
@@ -137,130 +117,150 @@ const TERMS_SECTIONS = [
 
 const Account: React.FC = () => {
   const history = useHistory();
-  const { lang, isRTL, t: strings } = useLang();
-  const { guard } = useOfflineGuard();
+  const { lang, isRTL } = useLang();
 
-  const [streaks, setStreaks] = useState<Streak[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Start as null — we resolve the real value async on mount (getStoredAccessTokenSync returns null on native)
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [streakOpen, setStreakOpen] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
   const [featureText, setFeatureText] = useState("");
   const [featureSent, setFeatureSent] = useState(false);
   const featureRef = useRef<HTMLTextAreaElement>(null);
 
+  // Both streaks are computed from local storage — no account, no network.
+  const [hifzStreak, setHifzStreak] = useState(0);
+  const [quizStreak, setQuizStreak] = useState(0);
+  const [longestQuizStreak, setLongestQuizStreak] = useState(0);
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
 
-  // Track whether initial load has been done so useIonViewWillEnter doesn't double-fire on first mount
-  const initialLoadDone = useRef(false);
+  // Backup & restore
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [pendingRestore, setPendingRestore] = useState<
+    { summary: BackupSummary; json: string } | null
+  >(null);
+  const [restoring, setRestoring] = useState(false);
 
-  const loadUserData = useCallback(async (isLoggedIn: boolean) => {
-    if (!isLoggedIn) return;
+  const loadLocalData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     setNotesError(null);
     try {
-      const [streaksData, profileData, notesData] = await Promise.all([
-        fetchStreaks(10),
-        fetchUserProfile().catch((err) => { if (err instanceof SessionExpiredError) throw err; console.warn("[Account] fetchUserProfile failed:", err); return null; }),
-        fetchAllNotes().catch((err) => { if (err instanceof SessionExpiredError) throw err; console.warn("[Account] fetchAllNotes failed:", err); return []; }),
-      ]);
-      setStreaks(streaksData);
-      setUserProfile(profileData);
-      setNotes(notesData as Note[]);
+      // The Hifz streak merges the persistent active-day store with the current
+      // plan's completed sessions, so the plan has to be loaded to compute it.
+      const plan = await loadPlanAsync();
+      const sessions: PlanSession[] = plan?.sessions ?? [];
+      setHifzStreak(computeStreakPersistent(sessions));
+      setQuizStreak(computeQuizStreak());
+      setLongestQuizStreak(computeLongestQuizStreak());
+      setNotes(await fetchAllNotes());
     } catch (err) {
-      console.error("[Account] loadUserData failed:", err);
-      if (err instanceof SessionExpiredError) {
-        setError(
-          lang === "ar"
-            ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً."
-            : "session_expired",
-        );
-      } else if (err instanceof NetworkError || err instanceof TypeError) {
-        setError(
-          lang === "ar"
-            ? "لا يوجد اتصال بالإنترنت. تحقق من الاتصال وحاول مجدداً."
-            : "No internet connection. Connect and try again.",
-        );
-      } else {
-        setError(
-          lang === "ar" ? "تعذر تحميل البيانات. حاول مجدداً." : "Could not load data. Try again.",
-        );
-      }
+      console.error("[Account] loadLocalData failed:", err);
+      setNotesError(
+        lang === "ar" ? "تعذر تحميل الملاحظات" : "Could not load notes",
+      );
     } finally {
       setLoading(false);
     }
   }, [lang]);
 
-  // Load data on first mount — resolves login state async so it works on native too
-  // Use refresh token as the source of truth for "logged in" — access token may be
-  // expired but still stored; refresh token absence means the session is gone.
   useEffect(() => {
-    getStoredRefreshToken().then((refreshToken) => {
-      const isLoggedIn = !!refreshToken;
-      setLoggedIn(isLoggedIn);
-      initialLoadDone.current = true;
-      loadUserData(isLoggedIn);
-    });
-  }, []);
+    loadLocalData();
+  }, [loadLocalData]);
 
-  // Refresh data when page becomes visible after navigating back, but skip the first mount
-  // (the useEffect above already handles that)
+  // Refresh when returning to the page — a quiz or Hifz session finished
+  // elsewhere will have moved the streaks.
   useIonViewWillEnter(() => {
-    if (!initialLoadDone.current) return;
-    getStoredRefreshToken().then((refreshToken) => {
-      const isLoggedIn = !!refreshToken;
-      setLoggedIn(isLoggedIn);
-      loadUserData(isLoggedIn);
-    });
+    loadLocalData();
   });
 
-  // Web: when the OAuth callback tab writes the token to localStorage, a storage
-  // event fires in this tab — use it to pick up the login without a page reload.
-  // Native: App.tsx dispatches "rafiq_auth_complete" after token exchange via deep link.
+  // A quiz completed while this page is mounted updates the streak immediately.
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "rafiq_oauth_token_v1" && e.newValue) {
-        setLoggedIn(true);
-        loadUserData(true);
+    const onQuizStreakChanged = () => {
+      setQuizStreak(computeQuizStreak());
+      setLongestQuizStreak(computeLongestQuizStreak());
+    };
+    window.addEventListener("quiz-streak-changed", onQuizStreakChanged);
+    return () =>
+      window.removeEventListener("quiz-streak-changed", onQuizStreakChanged);
+  }, []);
+
+  const handleExport = useCallback(async () => {
+    setBackupError(null);
+    setBackupMsg(null);
+    try {
+      const fileName = await exportBackupToFile();
+      setBackupMsg(
+        lang === "ar"
+          ? `تم حفظ النسخة الاحتياطية: ${fileName}`
+          : `Backup saved: ${fileName}`,
+      );
+    } catch (err) {
+      console.error("[Account] export failed:", err);
+      setBackupError(
+        lang === "ar" ? "تعذر إنشاء النسخة الاحتياطية" : "Could not create the backup",
+      );
+    }
+  }, [lang]);
+
+  // Reading the file only previews it — nothing is written until the user
+  // confirms in the restore dialog, since restoring replaces existing data.
+  const handleFilePicked = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      // Allow re-picking the same file later.
+      e.target.value = "";
+      if (!file) return;
+
+      setBackupError(null);
+      setBackupMsg(null);
+      try {
+        const json = await readBackupFile(file);
+        const backup = parseBackup(json);
+        setPendingRestore({ summary: summarizeBackup(backup), json });
+        setModal("restore");
+      } catch (err) {
+        const code = err instanceof BackupError ? err.message : "unknown";
+        setBackupError(
+          code === "version_too_new"
+            ? lang === "ar"
+              ? "هذه النسخة أُنشئت بإصدار أحدث من التطبيق"
+              : "This backup was made by a newer version of the app"
+            : lang === "ar"
+              ? "هذا الملف ليس نسخة احتياطية صالحة"
+              : "That file is not a valid Rafeeq backup",
+        );
       }
-    };
-    const onAuthComplete = () => {
-      setLoggedIn(true);
-      loadUserData(true);
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("rafiq_auth_complete", onAuthComplete);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("rafiq_auth_complete", onAuthComplete);
-    };
-  }, [loadUserData]);
-
-  // OAuth needs a live round-trip to the identity provider, so there is no
-  // offline path here — tell the user rather than opening a browser that fails.
-  const handleLogin = () => guard(strings.offline.account, () => signIn());
-  const handleLogout = async () => {
-    await signOut();
-    setLoggedIn(false);
-    setUserProfile(null);
-    setStreaks([]);
-    setNotes([]);
-    setError(null);
-    setStreakOpen(false);
-    setNotesOpen(false);
-  };
-
-  const activeStreak = streaks.find((s) => s.status === "ACTIVE");
-  const longestStreak = streaks.reduce(
-    (max, s) => (s.days > max ? s.days : max),
-    0,
+    },
+    [lang],
   );
+
+  const handleConfirmRestore = useCallback(async () => {
+    if (!pendingRestore) return;
+    setRestoring(true);
+    setBackupError(null);
+    try {
+      await restoreBackup(parseBackup(pendingRestore.json));
+      setModal(null);
+      setPendingRestore(null);
+      await loadLocalData();
+      // Nudge any other mounted view that reads these stores directly.
+      window.dispatchEvent(new CustomEvent("quiz-streak-changed"));
+      setBackupMsg(
+        lang === "ar" ? "تمت استعادة بياناتك" : "Your data has been restored",
+      );
+    } catch (err) {
+      console.error("[Account] restore failed:", err);
+      setBackupError(
+        lang === "ar" ? "تعذرت استعادة النسخة الاحتياطية" : "Could not restore the backup",
+      );
+      setModal(null);
+    } finally {
+      setRestoring(false);
+    }
+  }, [pendingRestore, lang, loadLocalData]);
 
   const formatDate = (iso: string) => {
     try {
@@ -273,30 +273,32 @@ const Account: React.FC = () => {
     }
   };
 
-  const displayName = userProfile
-    ? [userProfile.firstName, userProfile.lastName].filter(Boolean).join(" ") ||
-      userProfile.email ||
-      (lang === "ar" ? "مستخدم" : "User")
-    : null;
-
   const t = {
     title:          lang === "ar" ? "حسابي"                              : "My Account",
     subtitle:       lang === "ar" ? "الإحصاءات والإنجازات"               : "Stats & Achievements",
     back:           lang === "ar" ? "رجوع"                               : "Back",
-    signIn:         lang === "ar" ? "تسجيل الدخول"                       : "Sign In",
-    signOut:        lang === "ar" ? "تسجيل الخروج"                       : "Sign Out",
-    signedIn:       lang === "ar" ? "مسجّل الدخول"                       : "Signed In",
-    guest:          lang === "ar" ? "زائر"                               : "Guest",
-    signInHint:     lang === "ar" ? "سجّل الدخول عبر Quran.com لمزامنة تقدمك" : "Sign in via Quran.com to sync your progress",
-    streak:         lang === "ar" ? "سلسلة القراءة"                      : "Reading Streak",
+    streak:         lang === "ar" ? "السلاسل"                            : "Streaks",
+    hifzStreak:     lang === "ar" ? "سلسلة الحفظ"                        : "Hifz Streak",
+    quizStreak:     lang === "ar" ? "سلسلة الاختبارات"                   : "Quiz Streak",
     streakDays:     lang === "ar" ? "يوم متواصل"                         : "day streak",
-    active:         lang === "ar" ? "نشط"                                : "Active",
-    broken:         lang === "ar" ? "منقطع"                              : "Broken",
+    days:           lang === "ar" ? "يوم"                                : "days",
     longest:        lang === "ar" ? "أطول سلسلة"                         : "Longest",
     loading:        lang === "ar" ? "جاري التحميل…"                      : "Loading…",
-    noStreak:       lang === "ar" ? "لا توجد سلاسل قراءة بعد — ابدأ اليوم!" : "No reading streaks yet — start today!",
+    noStreak:       lang === "ar" ? "لا توجد سلاسل بعد — ابدأ اليوم!"    : "No streaks yet — start today!",
     aboutApp:       lang === "ar" ? "عن التطبيق"                         : "About Rafeeq",
-    deleteAccount:  lang === "ar" ? "حذف الحساب والبيانات"               : "Delete Account & Data",
+    backup:         lang === "ar" ? "النسخ الاحتياطي"                    : "Backup",
+    exportData:     lang === "ar" ? "تصدير بياناتي"                      : "Export My Data",
+    importData:     lang === "ar" ? "استعادة من ملف"                     : "Restore From File",
+    backupHint:     lang === "ar"
+      ? "احفظ ملاحظاتك وسلاسلك ومواضع القراءة في ملف، ثم استعدها على جهاز آخر."
+      : "Save your notes, streaks and bookmarks to a file, then restore them on another device.",
+    restoreTitle:   lang === "ar" ? "استعادة البيانات"                   : "Restore Data",
+    restoreWarn:    lang === "ar"
+      ? "سيحل محتوى هذا الملف محل البيانات الموجودة على هذا الجهاز. لا يمكن التراجع عن هذا الإجراء."
+      : "This will replace the data currently on this device. This cannot be undone.",
+    restoreConfirm: lang === "ar" ? "استعادة"                            : "Restore",
+    restoring:      lang === "ar" ? "جاري الاستعادة…"                    : "Restoring…",
+    cancel:         lang === "ar" ? "إلغاء"                              : "Cancel",
     requestFeature: lang === "ar" ? "اقتراح ميزة"                        : "Request a Feature",
     helpCenter:     lang === "ar" ? "مركز المساعدة"                      : "Help Center",
     shareApp:       lang === "ar" ? "مشاركة التطبيق"                     : "Share Application",
@@ -364,120 +366,65 @@ const Account: React.FC = () => {
 
           <div className="account-body">
 
-            {/* ── Profile card ── */}
-            <div className="ac-card ac-profile-card">
-              <div className="ac-profile-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-              <div className="ac-profile-info">
-                <p className="ac-profile-name">
-                  {loggedIn && displayName ? displayName : loggedIn ? t.signedIn : loggedIn === false ? t.guest : "…"}
-                </p>
-                {loggedIn && userProfile?.email && (
-                  <p className="ac-profile-email">{userProfile.email}</p>
-                )}
-                {loggedIn === false && <p className="ac-profile-hint">{t.signInHint}</p>}
-              </div>
-              {loggedIn === true ? (
-                <button className="ac-action-btn ac-signout-btn" onClick={handleLogout}>{t.signOut}</button>
-              ) : loggedIn === false ? (
-                <button className="ac-action-btn ac-signin-btn" onClick={handleLogin}>{t.signIn}</button>
-              ) : null}
-            </div>
-
-            {/* ── Streak card ── */}
-            {loggedIn && (
-              <div className="ac-card ac-streak-card">
-                <button
-                  className="ac-streak-header"
-                  onClick={() => setStreakOpen((o) => !o)}
-                  aria-expanded={streakOpen}
-                >
-                  <div className="ac-streak-header-left">
-                    <span className="ac-streak-flame">🍃</span>
-                    <div>
-                      <p className="ac-streak-title">{t.streak}</p>
-                      {!streakOpen && !loading && (
-                        <p className="ac-streak-summary">
-                          {activeStreak
-                            ? `${activeStreak.days} ${t.streakDays}`
-                            : lang === "ar" ? "لا توجد سلسلة نشطة" : "No active streak"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <svg className={`ac-chevron ${streakOpen ? "ac-chevron-up" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-
-                {streakOpen && (
-                  <div className="ac-streak-body">
-                    {loading ? (
-                      <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
-                    ) : error ? (
-                      <div className="ac-error-block">
-                        <p className="ac-error">
-                          {error === "session_expired"
-                            ? (lang === "ar" ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً." : "Your session has expired. Please sign in again.")
-                            : error}
-                        </p>
-                        {error === "session_expired" ? (
-                          <button className="ac-retry-btn" onClick={handleLogin}>{t.signIn}</button>
-                        ) : (
-                          <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <div className="ac-streak-stats">
-                          <div className="ac-streak-stat">
-                            <span className="ac-streak-stat-val">{activeStreak?.days ?? 0}</span>
-                            <span className="ac-streak-stat-lbl">{t.streakDays}</span>
-                          </div>
-                          <div className="ac-streak-stat-div" />
-                          <div className="ac-streak-stat">
-                            <span className="ac-streak-stat-val">{longestStreak}</span>
-                            <span className="ac-streak-stat-lbl">{t.longest}</span>
-                          </div>
-                        </div>
-
-                        {streaks.length > 0 ? (
-                          <ul className="ac-streak-list">
-                            {streaks.map((s) => (
-                              <li key={s.id} className="ac-streak-row">
-                                <span className="ac-streak-row-icon">{s.status === "ACTIVE" ? "🍃" : "🍂"}</span>
-                                <div className="ac-streak-row-info">
-                                  <span className="ac-streak-row-range">
-                                    {formatDate(s.startDate)}
-                                    {s.startDate !== s.endDate && ` — ${formatDate(s.endDate)}`}
-                                  </span>
-                                </div>
-                                <span className={`ac-badge ${s.status === "ACTIVE" ? "ac-badge-active" : "ac-badge-broken"}`}>
-                                  {s.status === "ACTIVE" ? t.active : t.broken}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="ac-streak-empty">{t.noStreak}</p>
-                        )}
-                      </>
+            {/* ── Streaks card — Hifz sessions and quizzes, both computed locally ── */}
+            <div className="ac-card ac-streak-card">
+              <button
+                className="ac-streak-header"
+                onClick={() => setStreakOpen((o) => !o)}
+                aria-expanded={streakOpen}
+              >
+                <div className="ac-streak-header-left">
+                  <span className="ac-streak-flame">🍃</span>
+                  <div>
+                    <p className="ac-streak-title">{t.streak}</p>
+                    {!streakOpen && !loading && (
+                      <p className="ac-streak-summary">
+                        {hifzStreak > 0 || quizStreak > 0
+                          ? `${t.hifzStreak}: ${hifzStreak} · ${t.quizStreak}: ${quizStreak}`
+                          : lang === "ar" ? "لا توجد سلسلة نشطة" : "No active streak"}
+                      </p>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+                <svg className={`ac-chevron ${streakOpen ? "ac-chevron-up" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
 
-            {/* ── Goals card ── */}
-            {loggedIn && <GoalsCard lang={lang} isRTL={isRTL} />}
+              {streakOpen && (
+                <div className="ac-streak-body">
+                  {loading ? (
+                    <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
+                  ) : (
+                    <>
+                      <div className="ac-streak-stats">
+                        <div className="ac-streak-stat">
+                          <span className="ac-streak-stat-val">{hifzStreak}</span>
+                          <span className="ac-streak-stat-lbl">{t.hifzStreak}</span>
+                        </div>
+                        <div className="ac-streak-stat-div" />
+                        <div className="ac-streak-stat">
+                          <span className="ac-streak-stat-val">{quizStreak}</span>
+                          <span className="ac-streak-stat-lbl">{t.quizStreak}</span>
+                        </div>
+                        <div className="ac-streak-stat-div" />
+                        <div className="ac-streak-stat">
+                          <span className="ac-streak-stat-val">{longestQuizStreak}</span>
+                          <span className="ac-streak-stat-lbl">{t.longest}</span>
+                        </div>
+                      </div>
+
+                      {hifzStreak === 0 && quizStreak === 0 && (
+                        <p className="ac-streak-empty">{t.noStreak}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* ── Notes card ── */}
-            {loggedIn && (
-              <div className="ac-card ac-notes-card">
+            <div className="ac-card ac-notes-card">
                 <button
                   className="ac-streak-header"
                   onClick={() => setNotesOpen((o) => !o)}
@@ -507,16 +454,8 @@ const Account: React.FC = () => {
                       <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
                     ) : notesError ? (
                       <div className="ac-error-block">
-                        <p className="ac-error">
-                          {notesError === "session_expired"
-                            ? (lang === "ar" ? "انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً." : "Your session has expired. Please sign in again.")
-                            : notesError}
-                        </p>
-                        {notesError === "session_expired" ? (
-                          <button className="ac-retry-btn" onClick={handleLogin}>{t.signIn}</button>
-                        ) : (
-                          <button className="ac-retry-btn" onClick={() => loadUserData(true)}>{t.retry}</button>
-                        )}
+                        <p className="ac-error">{notesError}</p>
+                        <button className="ac-retry-btn" onClick={() => loadLocalData()}>{t.retry}</button>
                       </div>
                     ) : notes.length === 0 ? (
                       <p className="ac-streak-empty">{t.noNotes}</p>
@@ -551,8 +490,7 @@ const Account: React.FC = () => {
                     )}
                   </div>
                 )}
-              </div>
-            )}
+            </div>
 
             {/* ── Info group ── */}
             <p className="ac-section-label">{lang === "ar" ? "معلومات" : "Info"}</p>
@@ -578,6 +516,38 @@ const Account: React.FC = () => {
                 </svg>
               </button>
             </div>
+
+            {/* ── Backup group — the cross-device path, since there is no account ── */}
+            <p className="ac-section-label">{t.backup}</p>
+            <p className="ac-group-hint">{t.backupHint}</p>
+            <div className="ac-group">
+              <button className="ac-row" onClick={handleExport}>
+                <span className="ac-row-label">{t.exportData}</span>
+                <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+              <div className="ac-row-divider" />
+              <button className="ac-row" onClick={() => fileInputRef.current?.click()}>
+                <span className="ac-row-label">{t.importData}</span>
+                <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </button>
+            </div>
+            {backupMsg && <p className="ac-backup-msg" role="status">{backupMsg}</p>}
+            {backupError && <p className="ac-backup-msg ac-backup-msg--error" role="alert">{backupError}</p>}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleFilePicked}
+              style={{ display: "none" }}
+            />
 
             {/* ── Share / Rate group — disabled until the app is published to the stores ── */}
             <p className="ac-section-label">{lang === "ar" ? "مشاركة" : "Share"}</p>
@@ -611,15 +581,6 @@ const Account: React.FC = () => {
               <div className="ac-row-divider" />
               <button className="ac-row" onClick={() => setModal("privacy")}>
                 <span className="ac-row-label">{t.privacy}</span>
-                <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  {isRTL ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 18l6-6-6-6" />}
-                </svg>
-              </button>
-              {/* Google Play requires an in-app route to account deletion for any app
-                  offering sign-in — a listing URL alone is not sufficient. */}
-              <div className="ac-row-divider" />
-              <button className="ac-row" onClick={() => setModal("deleteAccount")}>
-                <span className="ac-row-label">{t.deleteAccount}</span>
                 <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   {isRTL ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 18l6-6-6-6" />}
                 </svg>
@@ -686,28 +647,55 @@ const Account: React.FC = () => {
 
         {modal === "terms" && (
           <AccountModal title={t.terms} onClose={() => setModal(null)}>
-            <ProseContent sections={TERMS_SECTIONS} updated="8 August 2026" />
+            <ProseContent sections={TERMS_SECTIONS} updated="9 August 2026" />
           </AccountModal>
         )}
 
         {modal === "privacy" && (
           <AccountModal title={t.privacy} onClose={() => setModal(null)}>
-            <ProseContent sections={PRIVACY_SECTIONS} updated="8 August 2026" />
+            <ProseContent sections={PRIVACY_SECTIONS} updated="9 August 2026" />
           </AccountModal>
         )}
 
-        {modal === "deleteAccount" && (
-          <AccountModal title={t.deleteAccount} onClose={() => setModal(null)}>
-            <ProseContent
-              sections={DELETE_ACCOUNT_SECTIONS}
-              updated="8 August 2026"
-            />
-            <button
-              className="amod-request-submit"
-              onClick={() => window.open(DELETE_ACCOUNT_URL, "_blank")}
-            >
-              {lang === "ar" ? "فتح صفحة الحذف" : "Open deletion page"}
-            </button>
+        {modal === "restore" && pendingRestore && (
+          <AccountModal title={t.restoreTitle} onClose={() => { setModal(null); setPendingRestore(null); }}>
+            <div className="amod-request">
+              <p className="amod-request-label">{t.restoreWarn}</p>
+              <ul className="ac-restore-summary">
+                <li>
+                  <span>{t.notes}</span>
+                  <strong>{pendingRestore.summary.notes}</strong>
+                </li>
+                <li>
+                  <span>{lang === "ar" ? "المواضع المحفوظة" : "Bookmarks"}</span>
+                  <strong>{pendingRestore.summary.bookmarks}</strong>
+                </li>
+                <li>
+                  <span>{t.hifzStreak}</span>
+                  <strong>{pendingRestore.summary.hifzStreakDays} {t.days}</strong>
+                </li>
+                <li>
+                  <span>{t.quizStreak}</span>
+                  <strong>{pendingRestore.summary.quizStreakDays} {t.days}</strong>
+                </li>
+              </ul>
+              <div className="ac-restore-actions">
+                <button
+                  className="ac-restore-cancel"
+                  onClick={() => { setModal(null); setPendingRestore(null); }}
+                  disabled={restoring}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  className="amod-request-submit"
+                  onClick={handleConfirmRestore}
+                  disabled={restoring}
+                >
+                  {restoring ? t.restoring : t.restoreConfirm}
+                </button>
+              </div>
+            </div>
           </AccountModal>
         )}
 
