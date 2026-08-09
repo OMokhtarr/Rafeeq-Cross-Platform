@@ -72,7 +72,8 @@ Preferences).
 
 ### Security practices
 - Data encrypted in transit: **Yes** (all endpoints HTTPS/WSS)
-- Users can request data deletion: **Yes** — see section 4.
+- Users can request data deletion: **Yes** — uninstall or clear storage removes
+  everything; nothing is stored off-device. See section 4.
 
 ---
 
@@ -108,8 +109,9 @@ deletion path nor the public deletion URL applies. Google's definition:
 Apple's Guideline 5.1.1(v) uses the same trigger, so the iOS build is equally
 out of scope.
 
-The in-app "Delete Account & Data" row and its modal have been removed.
-`delete-account.html` is **kept in the repo, unhosted and unlinked** — see below.
+The in-app "Delete Account & Data" row and its modal have been removed, along
+with `delete-account.html` and the OAuth relay `index.html`. All of it is
+recoverable from git history — see below.
 
 > ⚠️ **This reverses the moment sign-in is added.** Sign in with Google or Apple
 > counts as account creation on both stores (Google names "SSO" in its list of
@@ -169,7 +171,8 @@ text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and the bracketed
 date/contact placeholders are fixed here and in `terms.html`.
 
 - [ ] **Host `privacy.html`** (GitHub Pages, Cloudflare Pages, or alongside the
-      token broker) and put the URL in the listing.
+      token broker) and put the URL in the listing. This is the only page that
+      must be hosted — the deletion page is no longer required (section 4).
 - [ ] Confirm the Deepgram privacy-policy link and the Quran Foundation
       privacy-policy link both resolve.
 
@@ -228,7 +231,7 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 1. Rotate both credentials, deploy the broker (section 7)
 2. Smoke-test recite mode against the deployed broker
 3. Android Auto regression pass in a real car
-4. Host the privacy policy + deletion page (sections 4–5)
+4. Host the privacy policy (section 5) — no deletion page needed
 5. Build the signed AAB (`gradlew bundleRelease`)
 6. Create the Play listing, complete Data safety + foreground service declarations
 7. Start the closed test — ~12 testers × 14 continuous days (personal accounts)
