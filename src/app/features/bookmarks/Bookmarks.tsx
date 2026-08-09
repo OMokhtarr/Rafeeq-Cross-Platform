@@ -7,7 +7,7 @@ import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   getLocalBookmarkedVerseKeys,
   removeLocalBookmark,
-} from "../../core/services/api/user-api.client";
+} from "../../core/services/storage/notes.service";
 import {
   getRecitationHistory,
   deleteRecitationSession,

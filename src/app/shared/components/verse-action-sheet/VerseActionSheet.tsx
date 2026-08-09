@@ -17,7 +17,7 @@ import { toHindiNumbers } from "../../../core/utils/arabic.util";
 import {
   isPageBookmarked,
   toggleBookmark,
-} from "../../../core/services/api/user-api.client";
+} from "../../../core/services/storage/notes.service";
 import { getPlayableUrl } from "../../../core/services/audio/audio-cache.service";
 import { useAudioPlayer } from "../../../core/hooks/useAudioPlayer";
 import NoteModal from "../note-modal/NoteModal";

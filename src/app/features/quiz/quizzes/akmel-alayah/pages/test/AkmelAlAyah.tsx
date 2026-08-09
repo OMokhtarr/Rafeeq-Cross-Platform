@@ -24,6 +24,7 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
+import { recordQuizCompletion } from "../../../../../../core/services/storage/quiz-streak.service";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import type {
   QuizConfig,
@@ -297,6 +298,7 @@ const AkmelAlAyah: React.FC = () => {
       setShowContext(false); // ← Already closing immersive mode
     } else {
       setQuizComplete(true);
+      recordQuizCompletion();
     }
   };
 

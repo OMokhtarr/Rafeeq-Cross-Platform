@@ -108,93 +108,6 @@ ion-content::part(scroll) {
 }
 
 /* ═══════════════════════════════════════════
-   PROFILE CARD
-   ═══════════════════════════════════════════ */
-
-.ac-profile-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-}
-
-.ac-profile-avatar {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  border-radius: 50%;
-  background: var(--color-gold-faint);
-  border: 1.5px solid var(--color-gold-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-gold);
-}
-.ac-profile-avatar svg { width: 22px; height: 22px; }
-
-.ac-profile-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ac-profile-name {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ac-profile-email {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ac-profile-hint {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  line-height: 1.45;
-}
-
-.ac-action-btn {
-  flex-shrink: 0;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 8px 14px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-  white-space: nowrap;
-  min-width: 80px;
-  text-align: center;
-}
-.ac-action-btn:hover { opacity: 0.8; }
-
-/* Sign in — gold button, dark text */
-.ac-signin-btn {
-  background: var(--color-gold);
-  color: #111;
-}
-
-/* Sign out — muted red */
-.ac-signout-btn {
-  background: color-mix(in srgb, #e07070 12%, transparent);
-  color: #e07070;
-  border: 1.5px solid color-mix(in srgb, #e07070 28%, transparent);
-}
-
-/* ═══════════════════════════════════════════
    STREAK / NOTES / GOALS COLLAPSIBLE CARDS
    ═══════════════════════════════════════════ */
 
@@ -300,71 +213,11 @@ ion-content::part(scroll) {
   padding: 0 4px;
 }
 
-/* Streak list */
-.ac-streak-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ac-streak-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--color-bg-content);
-  border: 1.5px solid var(--color-border-card);
-  border-radius: var(--radius-md);
-  padding: 9px 12px;
-}
-
-.ac-streak-row-icon { font-size: 1rem; flex-shrink: 0; }
-
-.ac-streak-row-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ac-streak-row-range {
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .ac-streak-empty {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   text-align: center;
   padding: 4px 0 2px;
-}
-
-/* ── Badges ── */
-.ac-badge {
-  display: inline-block;
-  font-size: var(--text-sm);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-.ac-badge-active {
-  background: color-mix(in srgb, var(--color-quran) 15%, transparent);
-  color: var(--color-quran);
-  border: 1px solid var(--color-quran);
-}
-.ac-badge-broken {
-  background: color-mix(in srgb, #e07070 12%, transparent);
-  color: #e07070;
-  border: 1px solid color-mix(in srgb, #e07070 35%, transparent);
 }
 
 /* ── Loading / error ── */
@@ -823,3 +676,73 @@ ion-content::part(scroll) {
   color: var(--color-quran);
   font-weight: 700;
 }
+
+/* ═══════════════════════════════════════════
+   BACKUP & RESTORE
+   ═══════════════════════════════════════════ */
+
+/* Sits between the section label and the group, explaining what the rows do. */
+.ac-group-hint {
+  margin: 0 4px 8px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.ac-backup-msg {
+  margin: 8px 4px 0;
+  font-size: var(--text-sm);
+  color: var(--color-quran);
+  line-height: 1.45;
+  word-break: break-word;
+}
+.ac-backup-msg--error { color: #e07070; }
+
+/* Restore confirmation: what the file holds, before it replaces anything. */
+.ac-restore-summary {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ac-restore-summary li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-bg-content);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.ac-restore-summary strong {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.ac-restore-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ac-restore-actions .amod-request-submit { flex: 1; margin: 0; }
+
+.ac-restore-cancel {
+  flex: 1;
+  background: var(--color-bg-content);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.ac-restore-cancel:active { opacity: 0.6; }
+.ac-restore-cancel:disabled { opacity: 0.5; cursor: default; }

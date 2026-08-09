@@ -10,7 +10,6 @@ import {
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { Capacitor } from "@capacitor/core";
-import { App as CapApp } from "@capacitor/app";
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
@@ -43,8 +42,6 @@ import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
-import AuthCallback from "./app/core/services/auth/AuthCallback";
-import { exchangeCodeForToken } from "./app/core/services/auth/oauth.service";
 
 setupIonicReact({ mode: "md" });
 
@@ -105,7 +102,6 @@ const MainRouterOutlet: React.FC = () => {
   return (
     <IonRouterOutlet id="main">
       <Route exact path="/" component={Home} />
-      <Route exact path="/auth/callback" component={AuthCallback} />
       <Route exact path="/viewer" component={PageViewer} />
       <Route exact path="/surah-juz" component={SurahJuzSelection} />
       <Route exact path="/search" component={Search} />
@@ -170,37 +166,6 @@ const App: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (Capacitor.getPlatform() === "web") return;
-
-    let cleanup: (() => void) | undefined;
-
-    CapApp.addListener("appUrlOpen", async (data) => {
-      console.log("[appUrlOpen] url:", data.url);
-      const raw = data.url;
-      const queryStart = raw.indexOf("?");
-      const code = queryStart !== -1
-        ? new URLSearchParams(raw.slice(queryStart)).get("code")
-        : null;
-      console.log("[appUrlOpen] code:", code);
-      if (code) {
-        try {
-          await exchangeCodeForToken(code);
-          console.log("[appUrlOpen] token exchange success");
-          window.location.hash = "/account";
-          // Notify Account page (already mounted on native) that tokens are ready
-          window.dispatchEvent(new CustomEvent("rafiq_auth_complete"));
-        } catch (e) {
-          console.error("[appUrlOpen] token exchange failed:", e);
-        }
-      }
-    }).then((handle) => {
-      cleanup = () => handle.remove();
-    });
-
-    return () => cleanup?.();
   }, []);
 
   return (
