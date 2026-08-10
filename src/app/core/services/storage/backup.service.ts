@@ -47,10 +47,13 @@ const BACKED_UP_KEYS = [
   "rafiq_hifz_reading_v1",
   "rafiq_hifz_streak_dates_v1",
   "rafiq_hifz_streak_freeze_v1",
+  "rafiq_hifz_session_counts_v1",
+  "rafiq_hifz_freeze_tokens_v1",
   // Quiz streak
   "rafiq_quiz_streak_dates_v1",
   "rafiq_quiz_streak_counts_v1",
   "rafiq_quiz_streak_freeze_v1",
+  "rafiq_quiz_freeze_tokens_v1",
   // Preferences — small, and a restored device should feel identical
   "rafiq_settings_v1",
   "rafiq_theme_v1",

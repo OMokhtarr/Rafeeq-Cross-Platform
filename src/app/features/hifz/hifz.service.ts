@@ -9,6 +9,11 @@ import {
 } from "../../core/services/data/metadata.service";
 // Streak dates are the user's local calendar day — see local-date.util.
 import { localDateStr, daysAgoStr } from "../../core/utils/local-date.util";
+import {
+  settleFreezes,
+  earnFreezes,
+  wasFrozen,
+} from "../../core/services/storage/streak-freeze.service";
 
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
@@ -797,6 +802,47 @@ export function recordStreakDay(date: string): void {
   }
 }
 
+// ─── Per-day session counts ───────────────────────────────────────────────────
+// Freezes are earned by doing more than one session in a day, so earning needs
+// a count that survives plan reset / new round / delete. countSessionsToday
+// reads the current plan and cannot serve: the plan is replaced over time.
+//
+// Stored as the set of session ids completed per day rather than a tally, so it
+// is idempotent under the two ways completion is recorded — seeding the store
+// from historical sessions on load, and toggling a session done/undone/done —
+// neither of which may mint extra freezes.
+
+const HIFZ_SESSION_COUNTS_KEY = "rafiq_hifz_session_counts_v1";
+
+function loadSessionIdsByDay(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(HIFZ_SESSION_COUNTS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Record that `sessionId` was completed on `date`. Idempotent per id, so
+ * re-marking or re-seeding the same session never inflates the count.
+ */
+export function recordSessionForDay(date: string, sessionId: string): void {
+  const byDay = loadSessionIdsByDay();
+  const ids = byDay[date] ?? [];
+  if (ids.includes(sessionId)) return;
+  ids.push(sessionId);
+  byDay[date] = ids;
+  try {
+    localStorage.setItem(HIFZ_SESSION_COUNTS_KEY, JSON.stringify(byDay));
+  } catch {}
+}
+
+/** Sessions recorded as completed on a date, across all plans. */
+export function countSessionsOnDate(date: string): number {
+  return (loadSessionIdsByDay()[date] ?? []).length;
+}
+
 /** Longest run of consecutive days ending today (or yesterday) from a date set. */
 function streakFromDateSet(doneDates: Set<string>): number {
   let streak = 0;
@@ -882,7 +928,13 @@ export function streakRecoveryInfo(sessions: PlanSession[]): StreakRecoveryInfo 
   const dates = allStreakDates(sessions);
   const yesterday = isoDaysAgo(1);
   const dayBefore = isoDaysAgo(2);
-  const sessionsToday = countSessionsToday(sessions);
+  // Prefer the persistent per-day store: the plan is replaced on reset / new
+  // round, which would drop today's count to 0 and make repair unreachable.
+  // Fall back to the plan for data recorded before that store existed.
+  const sessionsToday = Math.max(
+    countSessionsOnDate(todayStr()),
+    countSessionsToday(sessions),
+  );
   const none: StreakRecoveryInfo = {
     recoverable: false,
     restorableStreak: 0,
@@ -929,6 +981,59 @@ export function tryRecoverStreak(sessions: PlanSession[]): boolean {
     return true;
   }
   return false;
+}
+
+// ─── Freezes ──────────────────────────────────────────────────────────────────
+
+/**
+ * Spend freezes on any days missed since the last session. Safe to call on app
+ * open and after each completion. `asOf` is the day being settled up to,
+ * exclusive — pass the date being recorded when it is not today, or a freeze
+ * would be spent on the very day about to be marked active.
+ */
+export function settleHifzFreezes(
+  sessions: PlanSession[],
+  asOf: string = todayStr(),
+): string[] {
+  return settleFreezes("hifz", allStreakDates(sessions), asOf);
+}
+
+/**
+ * Record a completed session and update freezes: settle any missed days first,
+ * then mark the day active, attempt repair, and award freezes for extra
+ * sessions. Returns the days a freeze covered and the freezes earned, so the
+ * caller can surface both.
+ */
+export function recordHifzSession(
+  sessions: PlanSession[],
+  sessionId: string,
+  date: string = todayStr(),
+): { frozen: string[]; earned: number } {
+  // Settle before recording, while the store still shows the gap.
+  const frozen = settleHifzFreezes(sessions, date);
+
+  // Record before repairing: streakRecoveryInfo counts today's sessions from
+  // this store, so the session just completed has to be in it to count.
+  recordStreakDay(date);
+  recordSessionForDay(date, sessionId);
+
+  const repaired = tryRecoverStreak(sessions);
+  // A repair spends the day's extra session, so it cannot also earn a freeze.
+  // A day bridged by a *freeze* is not a repair, hence wasFrozen — both write
+  // the same bridged-days store.
+  const repairedToday =
+    repaired ||
+    (loadFreezeDates().includes(isoDaysAgo(1)) &&
+      !wasFrozen("hifz", isoDaysAgo(1)));
+
+  const earned = earnFreezes(
+    "hifz",
+    date,
+    countSessionsOnDate(date),
+    repairedToday,
+  );
+
+  return { frozen, earned };
 }
 
 export function computeStreak(sessions: PlanSession[]): number {
