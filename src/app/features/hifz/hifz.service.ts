@@ -7,6 +7,8 @@ import {
   getHizbStartPages,
   type UnitBoundary,
 } from "../../core/services/data/metadata.service";
+// Streak dates are the user's local calendar day — see local-date.util.
+import { localDateStr, daysAgoStr } from "../../core/utils/local-date.util";
 
 const STORAGE_KEY = "rafiq_hifz_v2";
 const BEST_PLAN_KEY = "rafiq_hifz_best_v1";
@@ -21,6 +23,12 @@ const HIFZ_STREAK_KEY = "rafiq_hifz_streak_dates_v1";
 // Missed days the user has "bought back" by completing extra sessions the next
 // day. Stored separately from real active-days so recovery is auditable and,
 // like the streak store, is never cleared by plan reset / new round / delete.
+//
+// NOTE: despite the key name this holds *repaired* days, not streak freezes.
+// Freezes are the separate consumable in streak-freeze.service.ts. The key is
+// kept as-is because renaming it would strand data on existing installs; a day
+// covered by a spent freeze is also written here so streak maths needs no
+// special case.
 const HIFZ_STREAK_FREEZE_KEY = "rafiq_hifz_streak_freeze_v1";
 // How many sessions must be completed on a recovery day to bridge one missed day.
 export const STREAK_RECOVERY_THRESHOLD = 2;
@@ -605,7 +613,7 @@ function flattenMemorized(
 
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr();
 }
 
 /** Page span covered by a single memorized unit. */
@@ -793,19 +801,13 @@ export function recordStreakDay(date: string): void {
 function streakFromDateSet(doneDates: Set<string>): number {
   let streak = 0;
   const d = new Date();
-  const todayIso = d.toISOString().slice(0, 10);
   // If nothing done today, start from yesterday so a past streak still shows.
-  if (!doneDates.has(todayIso)) {
+  if (!doneDates.has(localDateStr(d))) {
     d.setDate(d.getDate() - 1);
   }
-  while (true) {
-    const ds = d.toISOString().slice(0, 10);
-    if (doneDates.has(ds)) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else {
-      break;
-    }
+  while (doneDates.has(localDateStr(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
   return streak;
 }
@@ -839,11 +841,7 @@ function addFreezeDate(date: string): void {
   }
 }
 
-function isoDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-}
+const isoDaysAgo = daysAgoStr;
 
 /** All days that count toward the streak: real active days + frozen days. */
 function allStreakDates(sessions: PlanSession[]): Set<string> {
@@ -905,7 +903,7 @@ export function streakRecoveryInfo(sessions: PlanSession[]): StreakRecoveryInfo 
   let priorStreak = 0;
   const d = new Date();
   d.setDate(d.getDate() - 2);
-  while (dates.has(d.toISOString().slice(0, 10))) {
+  while (dates.has(localDateStr(d))) {
     priorStreak++;
     d.setDate(d.getDate() - 1);
   }
@@ -941,24 +939,18 @@ export function computeStreak(sessions: PlanSession[]): number {
   const d = new Date();
   // If nothing done today, start checking from yesterday so a past streak
   // doesn't show as 0 just because today hasn't been reviewed yet.
-  const todayIso = d.toISOString().slice(0, 10);
-  if (!doneDates.has(todayIso)) {
+  if (!doneDates.has(localDateStr(d))) {
     d.setDate(d.getDate() - 1);
   }
-  while (true) {
-    const ds = d.toISOString().slice(0, 10);
-    if (doneDates.has(ds)) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else {
-      break;
-    }
+  while (doneDates.has(localDateStr(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
   return streak;
 }
 
 export function countSessionsToday(sessions: PlanSession[]): number {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   return sessions.filter((s) => s.done && s.doneDate === today).length;
 }
 

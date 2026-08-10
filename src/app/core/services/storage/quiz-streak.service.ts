@@ -12,7 +12,16 @@
  * Kept separate from hifz.service.ts rather than sharing helpers: the Hifz
  * streak is coupled to plan sessions (it merges each session's doneDate),
  * whereas quizzes only have completion dates and a per-day count.
+ *
+ * Dates throughout are the user's local calendar day — see local-date.util.
  */
+
+import {
+  localDateStr,
+  todayStr,
+  daysAgoStr as isoDaysAgo,
+  daysBetween,
+} from "../../utils/local-date.util";
 
 /** Dates (YYYY-MM-DD) on which at least one quiz was completed. */
 const QUIZ_STREAK_KEY = "rafiq_quiz_streak_dates_v1";
@@ -24,17 +33,6 @@ const QUIZ_STREAK_FREEZE_KEY = "rafiq_quiz_streak_freeze_v1";
 /** Quizzes needed on a recovery day to bridge one missed day. Matches Hifz. */
 export const QUIZ_STREAK_RECOVERY_THRESHOLD = 2;
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isoDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-}
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
@@ -131,10 +129,10 @@ function streakFromDateSet(doneDates: Set<string>): number {
   let streak = 0;
   const d = new Date();
   // If nothing done today, start from yesterday so a live streak still shows.
-  if (!doneDates.has(d.toISOString().slice(0, 10))) {
+  if (!doneDates.has(localDateStr(d))) {
     d.setDate(d.getDate() - 1);
   }
-  while (doneDates.has(d.toISOString().slice(0, 10))) {
+  while (doneDates.has(localDateStr(d))) {
     streak++;
     d.setDate(d.getDate() - 1);
   }
@@ -151,20 +149,12 @@ export function computeLongestQuizStreak(): number {
   const dates = Array.from(allQuizStreakDates()).sort();
   let longest = 0;
   let run = 0;
-  let prev: Date | null = null;
+  let prev: string | null = null;
 
   for (const ds of dates) {
-    const current = new Date(ds);
-    if (prev) {
-      const gapDays = Math.round(
-        (current.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      run = gapDays === 1 ? run + 1 : 1;
-    } else {
-      run = 1;
-    }
+    run = prev && daysBetween(prev, ds) === 1 ? run + 1 : 1;
     if (run > longest) longest = run;
-    prev = current;
+    prev = ds;
   }
   return longest;
 }
@@ -211,7 +201,7 @@ export function quizStreakRecoveryInfo(): QuizStreakRecoveryInfo {
   let priorStreak = 0;
   const d = new Date();
   d.setDate(d.getDate() - 2);
-  while (dates.has(d.toISOString().slice(0, 10))) {
+  while (dates.has(localDateStr(d))) {
     priorStreak++;
     d.setDate(d.getDate() - 1);
   }

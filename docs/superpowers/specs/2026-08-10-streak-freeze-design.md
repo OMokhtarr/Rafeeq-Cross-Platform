@@ -126,9 +126,25 @@ day as repaired.
 
 ### Date convention
 
-All new code uses `new Date().toISOString().slice(0, 10)` (UTC), matching the
-existing services exactly. The UTC-vs-local distinction is a latent quirk in the
-current code; this design deliberately does not diverge from it.
+All dates are the user's **local** calendar day, via
+`src/app/core/utils/local-date.util.ts`.
+
+The original code used `new Date().toISOString().slice(0, 10)`, which rolls the
+day over at midnight UTC. For a user in UTC+3 that filed anything done between
+00:00 and 03:00 local under the previous day — a session finished at 1am looked
+like it belonged to yesterday, and a day genuinely completed could read as
+missed. Freezes would make this worse by silently spending a token on a day the
+user did not feel they missed.
+
+This was fixed ahead of the freeze work, as its own change, across
+`hifz.service.ts`, `quiz-streak.service.ts`, and `Hifz.tsx`. The one remaining
+`toISOString` call, the backup filename in `backup.service.ts`, is intentionally
+UTC.
+
+**One-time boundary shift:** dates already stored under the UTC convention are
+not migrated. A user east of UTC may see a single day at the transition that
+reads as a gap or a doubled day. This is a one-off affecting at most one day,
+and the freeze feature absorbs exactly this case, so no migration is built.
 
 ## Architecture
 
@@ -258,6 +274,10 @@ Without this, users lose their freezes when migrating devices. `restoreBackup`
 needs no other change — the keys are plain localStorage values.
 
 ## Testing
+
+Tests run on CRA's bundled Jest — `npx react-scripts test --watchAll=false`.
+No test dependency needs installing; plain `.test.ts` files under `src/` are
+picked up as-is.
 
 Pure-function tests over `streak-freeze.service.ts` with an injected "today":
 
