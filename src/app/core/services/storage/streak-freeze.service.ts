@@ -181,12 +181,16 @@ export function earnFreezes(
 /**
  * Cover missed days with available freezes.
  *
- * Scans from the last active day forward to yesterday, spending one freeze per
- * uncovered day, oldest first, and stops at the first day it cannot cover — a
- * gap wider than the pool breaks the streak, and covering later days after an
- * uncoverable one would strand an unreachable run.
+ * All or nothing: freezes are spent only when they can bridge the whole gap.
+ * A partial spend would leave the newest miss uncovered but make the day before
+ * it active, which is exactly the state repair looks for — so a user could
+ * freeze two days, repair the third, and carry a 3-day gap. Freezes and repair
+ * must never stack within one gap. Declining also means a user returning after
+ * a month keeps their freezes for the new streak instead of burning them on
+ * days long past.
  *
  * Today is never covered: the day is not over, and the user may yet act.
+ * Neither is yesterday alone — the streak is still alive until today ends.
  *
  * Idempotent — days already bridged are skipped, so calling on every app open
  * and after every activity is safe.
@@ -213,20 +217,22 @@ export function settleFreezes(pool: PoolId, activeDates: Set<string>): string[] 
   const state = loadFreezePool(pool);
   if (state.count === 0) return [];
 
-  const newlyCovered: string[] = [];
-  // Days strictly between lastActive and today, oldest first.
+  // Days strictly between lastActive and today that still need covering.
+  const missed: string[] = [];
   for (let offset = 1; offset < gapDays; offset++) {
     const day = addDays(lastActive, offset);
-    if (covered.has(day)) continue;
-    if (state.count === 0) break; // out of freezes — the streak breaks here
+    if (!covered.has(day)) missed.push(day);
+  }
+  // All or nothing — see the doc comment.
+  if (missed.length === 0 || missed.length > state.count) return [];
+
+  for (const day of missed) {
     state.count--;
     state.spentOn.push(day);
     addBridgedDate(pool, day);
-    newlyCovered.push(day);
   }
-
-  if (newlyCovered.length > 0) saveFreezePool(pool, state);
-  return newlyCovered;
+  saveFreezePool(pool, state);
+  return missed;
 }
 
 function addDays(date: string, n: number): string {

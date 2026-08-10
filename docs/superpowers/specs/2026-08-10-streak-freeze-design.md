@@ -65,9 +65,22 @@ value is recomputable and the operation is idempotent under repeated calls.
 
 ### Spending
 
-One freeze per missed day, oldest first, up to the 2 in the pool. Two
-consecutive missed days consume both freezes and the streak survives. A third
-consecutive missed day breaks the streak permanently.
+One freeze per missed day, up to the 2 in the pool. Two consecutive missed days
+consume both freezes and the streak survives. A third consecutive missed day
+breaks the streak permanently.
+
+**All or nothing.** Freezes are spent only when they can bridge the entire gap.
+A partial spend would leave the newest missed day uncovered while making the day
+before it active — which is exactly the state repair looks for. A user could
+then freeze two days, repair the third, and carry a 3-day gap, contradicting the
+rule above. **Freezes and repair never stack within one gap.**
+
+Declining also means a user returning after a long lapse keeps their freezes for
+the new streak rather than burning them on days long past, and never sees a
+"a freeze covered <date>" notice for a date months ago.
+
+Today is never covered — the day is not over. Nor is yesterday alone, for the
+same reason: the streak is still alive until today ends.
 
 ### Freeze before repair
 

@@ -8,6 +8,11 @@ import {
   lastFrozenDate,
   resetFreezePool,
 } from "./streak-freeze.service";
+import {
+  recordQuizCompletion,
+  computeQuizStreak,
+  quizStreakRecoveryInfo,
+} from "./quiz-streak.service";
 import { todayStr, daysAgoStr } from "../../utils/local-date.util";
 
 beforeEach(() => {
@@ -129,13 +134,29 @@ describe("spending", () => {
     expect(freezeCount("hifz")).toBe(0);
   });
 
-  it("cannot bridge three consecutive missed days", () => {
+  it("declines a three-day gap rather than partially bridging it", () => {
     const active = new Set([daysAgoStr(4)]);
     const covered = settleFreezes("hifz", active);
-    // Only the two oldest are covered; the run is broken regardless.
-    expect(covered).toHaveLength(2);
-    expect(freezeCount("hifz")).toBe(0);
-    expect(wasFrozen("hifz", daysAgoStr(1))).toBe(false);
+    // A partial spend would leave yesterday uncovered but make the day before
+    // active — the exact state repair looks for — letting a 3-day gap survive.
+    expect(covered).toEqual([]);
+    expect(freezeCount("hifz")).toBe(MAX_FREEZES);
+  });
+
+  it("keeps freezes for the new streak when the user returns after a long lapse", () => {
+    const covered = settleFreezes("hifz", new Set([daysAgoStr(30)]));
+    expect(covered).toEqual([]);
+    expect(freezeCount("hifz")).toBe(MAX_FREEZES);
+    expect(lastFrozenDate("hifz")).toBeNull();
+  });
+
+  it("declines a two-day gap when only one freeze is left", () => {
+    localStorage.setItem(
+      "rafiq_hifz_freeze_tokens_v1",
+      JSON.stringify({ count: 1, earnedOn: {}, spentOn: [] }),
+    );
+    expect(settleFreezes("hifz", new Set([daysAgoStr(3)]))).toEqual([]);
+    expect(freezeCount("hifz")).toBe(1);
   });
 
   it("spends nothing when the pool is empty", () => {
@@ -198,6 +219,39 @@ describe("frozen vs repaired", () => {
     expect(lastFrozenDate("hifz")).toBeNull();
     settleFreezes("hifz", new Set([daysAgoStr(3)]));
     expect(lastFrozenDate("hifz")).toBe(daysAgoStr(1));
+  });
+});
+
+describe("no stacking with repair", () => {
+  it("leaves a three-day gap unrecoverable by repair", () => {
+    // The bug a partial spend would create: freezes bridge the two oldest
+    // missed days, which makes the day before yesterday active, which is
+    // precisely what repair requires — so two extra quizzes today would
+    // resurrect a streak that should have died.
+    recordQuizCompletion(daysAgoStr(4));
+    settleFreezes("quiz", new Set([daysAgoStr(4)]));
+
+    expect(quizStreakRecoveryInfo().recoverable).toBe(false);
+
+    recordQuizCompletion(todayStr());
+    recordQuizCompletion(todayStr());
+    expect(computeQuizStreak()).toBe(1); // today only — the old run is gone
+  });
+
+  it("still lets repair work on a one-day gap when freezes are exhausted", () => {
+    localStorage.setItem(
+      "rafiq_quiz_freeze_tokens_v1",
+      JSON.stringify({ count: 0, earnedOn: {}, spentOn: [] }),
+    );
+    recordQuizCompletion(daysAgoStr(3));
+    recordQuizCompletion(daysAgoStr(2));
+    settleFreezes("quiz", new Set([daysAgoStr(3), daysAgoStr(2)]));
+
+    expect(quizStreakRecoveryInfo().recoverable).toBe(true);
+    recordQuizCompletion(todayStr());
+    recordQuizCompletion(todayStr());
+    expect(quizStreakRecoveryInfo().recovered).toBe(true);
+    expect(computeQuizStreak()).toBe(4);
   });
 });
 
