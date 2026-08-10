@@ -22,6 +22,11 @@ import {
   daysAgoStr as isoDaysAgo,
   daysBetween,
 } from "../../utils/local-date.util";
+import {
+  settleFreezes,
+  earnFreezes,
+  wasFrozen,
+} from "./streak-freeze.service";
 
 /** Dates (YYYY-MM-DD) on which at least one quiz was completed. */
 const QUIZ_STREAK_KEY = "rafiq_quiz_streak_dates_v1";
@@ -90,11 +95,19 @@ export function countQuizzesOnDate(date: string = todayStr()): number {
 }
 
 /**
- * Record a completed quiz. Marks the day active (idempotent) and increments
- * that day's quiz count, then attempts streak recovery. Call once per finished
- * quiz. Returns the streak after recording.
+ * Record a completed quiz. Marks the day active (idempotent), increments that
+ * day's quiz count, then settles freezes, attempts repair, and awards any
+ * freezes earned. Call once per finished quiz. Returns the streak after
+ * recording.
  */
 export function recordQuizCompletion(date: string = todayStr()): number {
+  // Settle first, while the store still shows the gap: recording would make
+  // this date the last active day, hiding a missed yesterday from
+  // settleFreezes and letting it fall through to repair instead. Settle only
+  // up to the date being recorded, so a backdated call cannot spend a freeze
+  // on the very day it is about to mark active.
+  settleQuizFreezes(date);
+
   const dates = loadQuizStreakDates();
   if (!dates.includes(date)) {
     dates.push(date);
@@ -105,7 +118,17 @@ export function recordQuizCompletion(date: string = todayStr()): number {
   counts[date] = (counts[date] ?? 0) + 1;
   saveCounts(counts);
 
-  tryRecoverQuizStreak();
+  const repaired = tryRecoverQuizStreak();
+
+  // A repair spends the day's extra quiz, so it cannot also earn a freeze.
+  // A day bridged by a *freeze* is not a repair, hence the wasFrozen check —
+  // both mechanisms write the same bridged-days store.
+  const repairedToday =
+    repaired ||
+    (loadFreezeDates().includes(isoDaysAgo(1)) &&
+      !wasFrozen("quiz", isoDaysAgo(1)));
+
+  earnFreezes("quiz", date, counts[date], repairedToday);
 
   // Let a mounted Account view refresh without waiting on view lifecycle.
   if (typeof window !== "undefined") {
@@ -113,6 +136,14 @@ export function recordQuizCompletion(date: string = todayStr()): number {
   }
 
   return computeQuizStreak();
+}
+
+/**
+ * Spend freezes on any days missed since the last quiz. Safe to call on app
+ * open and after each completion. Returns the dates newly covered.
+ */
+export function settleQuizFreezes(asOf: string = todayStr()): string[] {
+  return settleFreezes("quiz", new Set(loadQuizStreakDates()), asOf);
 }
 
 // ─── Computation ──────────────────────────────────────────────────────────────

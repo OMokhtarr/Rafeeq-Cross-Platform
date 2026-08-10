@@ -5,6 +5,11 @@ import {
   countQuizzesOnDate,
   quizStreakRecoveryInfo,
 } from "./quiz-streak.service";
+import {
+  MAX_FREEZES,
+  freezeCount,
+  wasFrozen,
+} from "./streak-freeze.service";
 import { todayStr, daysAgoStr } from "../../utils/local-date.util";
 
 beforeEach(() => {
@@ -52,9 +57,18 @@ describe("quiz streak", () => {
 });
 
 describe("quiz streak repair", () => {
-  it("is recoverable after exactly one missed day", () => {
+  /** Empty the freeze pool so the repair path is reachable. */
+  function drainFreezes(): void {
+    localStorage.setItem(
+      "rafiq_quiz_freeze_tokens_v1",
+      JSON.stringify({ count: 0, earnedOn: {}, spentOn: [] }),
+    );
+  }
+
+  it("is recoverable after one missed day once freezes are exhausted", () => {
     recordQuizCompletion(daysAgoStr(3));
     recordQuizCompletion(daysAgoStr(2));
+    drainFreezes();
     // yesterday missed
     const info = quizStreakRecoveryInfo();
     expect(info.recoverable).toBe(true);
@@ -64,6 +78,7 @@ describe("quiz streak repair", () => {
   it("bridges the missed day once the threshold is met", () => {
     recordQuizCompletion(daysAgoStr(3));
     recordQuizCompletion(daysAgoStr(2));
+    drainFreezes();
     recordQuizCompletion(todayStr());
     recordQuizCompletion(todayStr()); // 2nd today triggers repair
     expect(quizStreakRecoveryInfo().recovered).toBe(true);
@@ -71,10 +86,58 @@ describe("quiz streak repair", () => {
     expect(computeQuizStreak()).toBe(4);
   });
 
-  it("is not recoverable after a two-day gap", () => {
+  it("is not recoverable after a two-day gap with no freezes", () => {
     recordQuizCompletion(daysAgoStr(4));
     recordQuizCompletion(daysAgoStr(3));
+    drainFreezes();
     expect(quizStreakRecoveryInfo().recoverable).toBe(false);
+  });
+});
+
+describe("freeze takes precedence over repair", () => {
+  it("covers a missed day silently, so repair is never needed", () => {
+    recordQuizCompletion(daysAgoStr(3));
+    recordQuizCompletion(daysAgoStr(2));
+    // yesterday missed, but a freeze is available
+    recordQuizCompletion(todayStr());
+
+    expect(quizStreakRecoveryInfo().recoverable).toBe(false);
+    expect(wasFrozen("quiz", daysAgoStr(1))).toBe(true);
+    expect(freezeCount("quiz")).toBe(MAX_FREEZES - 1);
+    // The run never broke: 3-ago, 2-ago, frozen yesterday, today.
+    expect(computeQuizStreak()).toBe(4);
+  });
+
+  it("does not raise the earning threshold on a frozen day", () => {
+    // A frozen day is not a repair, so the 2nd quiz today still earns.
+    recordQuizCompletion(daysAgoStr(2));
+    localStorage.setItem(
+      "rafiq_quiz_freeze_tokens_v1",
+      JSON.stringify({ count: 1, earnedOn: {}, spentOn: [] }),
+    );
+    recordQuizCompletion(todayStr()); // settles: freeze covers yesterday
+    expect(wasFrozen("quiz", daysAgoStr(1))).toBe(true);
+    expect(freezeCount("quiz")).toBe(0);
+
+    recordQuizCompletion(todayStr()); // 2nd today → earns one back
+    expect(freezeCount("quiz")).toBe(1);
+  });
+});
+
+describe("earning through the quiz flow", () => {
+  it("earns a freeze for an extra quiz on the same day", () => {
+    localStorage.setItem(
+      "rafiq_quiz_freeze_tokens_v1",
+      JSON.stringify({ count: 0, earnedOn: {}, spentOn: [] }),
+    );
+    recordQuizCompletion(todayStr());
+    expect(freezeCount("quiz")).toBe(0);
+    recordQuizCompletion(todayStr());
+    expect(freezeCount("quiz")).toBe(1);
+    recordQuizCompletion(todayStr());
+    expect(freezeCount("quiz")).toBe(2);
+    recordQuizCompletion(todayStr()); // capped
+    expect(freezeCount("quiz")).toBe(2);
   });
 });
 

@@ -191,6 +191,29 @@ describe("spending", () => {
     expect(freezeCount("hifz")).toBe(MAX_FREEZES);
   });
 
+  it("never spends a freeze on or after the day being settled up to", () => {
+    // Regression: settling before recording a backdated activity used to treat
+    // the day about to be recorded as missed and burn a freeze on it.
+    const covered = settleFreezes(
+      "hifz",
+      new Set([daysAgoStr(3)]),
+      daysAgoStr(2),
+    );
+    expect(covered).toEqual([]);
+    expect(freezeCount("hifz")).toBe(MAX_FREEZES);
+  });
+
+  it("settles only up to an explicit asOf date", () => {
+    // 5-ago active, settling up to 3-ago → only 4-ago is missed.
+    const covered = settleFreezes(
+      "hifz",
+      new Set([daysAgoStr(5)]),
+      daysAgoStr(3),
+    );
+    expect(covered).toEqual([daysAgoStr(4)]);
+    expect(freezeCount("hifz")).toBe(MAX_FREEZES - 1);
+  });
+
   it("skips a day already bridged by a repair", () => {
     localStorage.setItem(
       "rafiq_hifz_streak_freeze_v1",

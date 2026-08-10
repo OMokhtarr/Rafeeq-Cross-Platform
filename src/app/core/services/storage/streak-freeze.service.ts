@@ -192,26 +192,33 @@ export function earnFreezes(
  * Today is never covered: the day is not over, and the user may yet act.
  * Neither is yesterday alone — the streak is still alive until today ends.
  *
+ * `asOf` is the day being settled up to, exclusive, and defaults to today. A
+ * caller recording a backdated activity must pass that date, or settle would
+ * treat the day about to be recorded as missed and spend a freeze on it.
+ *
  * Idempotent — days already bridged are skipped, so calling on every app open
  * and after every activity is safe.
  *
  * Returns the dates newly covered, for the caller to surface.
  */
-export function settleFreezes(pool: PoolId, activeDates: Set<string>): string[] {
+export function settleFreezes(
+  pool: PoolId,
+  activeDates: Set<string>,
+  asOf: string = todayStr(),
+): string[] {
   if (activeDates.size === 0) return [];
 
-  const today = todayStr();
   const bridged = new Set(loadBridgedDates(pool));
   const covered = new Set([...activeDates, ...bridged]);
 
   // Newest day the streak is currently alive on. Anything after it is a gap.
   const lastActive = Array.from(covered)
-    .filter((d) => daysBetween(d, today) >= 0)
+    .filter((d) => daysBetween(d, asOf) > 0)
     .sort()
     .pop();
   if (!lastActive) return [];
 
-  const gapDays = daysBetween(lastActive, today);
+  const gapDays = daysBetween(lastActive, asOf);
   if (gapDays <= 1) return []; // active today or yesterday — nothing missed yet
 
   const state = loadFreezePool(pool);
