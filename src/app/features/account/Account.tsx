@@ -11,10 +11,12 @@ import {
 import {
   computeQuizStreak,
   computeLongestQuizStreak,
+  settleQuizFreezes,
 } from "../../core/services/storage/quiz-streak.service";
 import {
   loadPlanAsync,
   computeStreakPersistent,
+  settleHifzFreezes,
   type PlanSession,
 } from "../hifz/hifz.service";
 import {
@@ -152,6 +154,15 @@ const Account: React.FC = () => {
       // plan's completed sessions, so the plan has to be loaded to compute it.
       const plan = await loadPlanAsync();
       const sessions: PlanSession[] = plan?.sessions ?? [];
+
+      // Cover any missed days with a freeze before computing, so simply
+      // opening this page after a lapse shows the streak intact rather than
+      // broken. Both are idempotent and no-op when nothing was missed. Hifz is
+      // settled only once the plan has loaded, or an empty session list would
+      // make the last active day look older than it is.
+      settleQuizFreezes();
+      settleHifzFreezes(sessions);
+
       setHifzStreak(computeStreakPersistent(sessions));
       setQuizStreak(computeQuizStreak());
       setLongestQuizStreak(computeLongestQuizStreak());
@@ -355,14 +366,6 @@ const Account: React.FC = () => {
     <IonPage>
       <IonContent fullscreen>
         <div className="account-page" dir={isRTL ? "rtl" : "ltr"}>
-
-          {/* ── Header ── */}
-          <header className="account-header">
-            <div className="account-header-titles">
-              <h1 className="account-title">{t.title}</h1>
-              <p className="account-subtitle">{t.subtitle}</p>
-            </div>
-          </header>
 
           <div className="account-body">
 

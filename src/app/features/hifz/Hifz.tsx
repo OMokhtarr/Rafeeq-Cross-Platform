@@ -17,9 +17,10 @@ import {
   countMemorizedPages,
   computeStreakPersistent,
   streakRecoveryInfo,
-  tryRecoverStreak,
   STREAK_RECOVERY_THRESHOLD,
   recordStreakDay,
+  recordHifzSession,
+  settleHifzFreezes,
   countSessionsToday,
   countActiveDays,
   computeMaxSessionsPerDay,
@@ -57,13 +58,10 @@ import {
   getPageStart,
   initMetadata,
 } from "../../core/services/data/metadata.service";
+import { todayStr } from "../../core/utils/local-date.util";
 import "./Hifz.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Persist to both localStorage (immediate UI update) and native storage (background)
 function persistPlan(plan: HifzPlan): void {
@@ -602,7 +600,10 @@ const SetupView: React.FC<SetupViewProps> = ({
   const canGenerate = memorized.length > 0 && quantityValid;
 
   return (
-    <div className="hifz-setup" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div
+      className={"hifz-setup" + (isEditing ? "" : " hifz-setup--headerless")}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
 
 
       {/* Memorized content */}
@@ -1586,26 +1587,29 @@ const Hifz: React.FC = () => {
   // Auto-complete: when every page of a session has been read, mark it done.
   useEffect(() => {
     if (!plan) return;
-    let changed = false;
+    const completedIds: string[] = [];
     const today = todayStr();
     const sessions = plan.sessions.map((s) => {
       if (!s.done && isSessionFullyRead(s, readPages)) {
-        changed = true;
+        completedIds.push(s.id);
         return { ...s, done: true, doneDate: today };
       }
       return s;
     });
-    if (!changed) return;
+    if (completedIds.length === 0) return;
 
     const updated = { ...plan, sessions };
     savePlan(updated);
     savePlanAsync(updated).catch(() => {});
     setPlan(updated);
 
-    // A session auto-completed today → keep the persistent streak in step, and
-    // attempt to recover a missed day if enough sessions were finished today.
-    recordStreakDay(today);
-    tryRecoverStreak(sessions);
+    // Sessions auto-completed today → keep the persistent streak in step,
+    // settle any missed days against a freeze, attempt repair, and award any
+    // freezes the extra sessions earned. Each id is recorded separately so a
+    // batch of sessions counts as the several sessions it is.
+    for (const id of completedIds) {
+      recordHifzSession(sessions, id, today);
+    }
 
     // If this completed the whole plan, record a best run.
     if (sessions.every((s) => s.done)) {
@@ -1639,9 +1643,16 @@ const Hifz: React.FC = () => {
         setView("plan");
         // Seed the persistent streak store from any already-completed sessions,
         // so existing users' streaks aren't lost the first time they reset.
+        // Deliberately only recordStreakDay: routing historical sessions
+        // through recordHifzSession would settle and earn against past dates,
+        // minting freezes retroactively for work already done.
         for (const s of saved.sessions) {
           if (s.done && s.doneDate) recordStreakDay(s.doneDate);
         }
+        // Now that the store reflects reality, cover any missed days with a
+        // freeze — otherwise a user who simply opens the app after a lapse
+        // sees a broken streak until they next complete a session.
+        settleHifzFreezes(saved.sessions);
       }
       const best = await loadBestPlanAsync();
       setBestPlan(best);
@@ -1707,12 +1718,13 @@ const Hifz: React.FC = () => {
       setPlan(updated);
 
       // Record today in the persistent streak store when completing a session,
-      // so the streak survives later plan resets / new rounds / deletes.
+      // so the streak survives later plan resets / new rounds / deletes. This
+      // also settles freezes against any missed day, attempts repair, and
+      // awards freezes for extra sessions. Un-marking records nothing: the
+      // per-day store is keyed by session id, so re-marking cannot mint a
+      // second freeze for the same session.
       if (nowDone) {
-        recordStreakDay(today);
-        // If yesterday was missed but recoverable, completing enough sessions
-        // today bridges the gap and reconnects the streak.
-        tryRecoverStreak(sessions);
+        recordHifzSession(sessions, id, today);
       }
 
       // Keep the read-pages cache in sync with the manual checkmark: marking a
@@ -1779,6 +1791,9 @@ const Hifz: React.FC = () => {
         });
         return next;
       });
+      // Keeps the streak alive but deliberately does not earn a freeze:
+      // marking pages read is not a session, has no session id to count, and
+      // shouldn't mint freezes for work the plan doesn't track.
       if (read) recordStreakDay(todayStr());
     },
     [],
@@ -1905,24 +1920,6 @@ const Hifz: React.FC = () => {
   const h = t.hifz;
   const isRTL = lang === "ar";
 
-  // Compute plan stats for header subtitle
-  const planDone = plan?.sessions.filter((s) => s.done).length ?? 0;
-  const planTotal = plan?.sessions.length ?? 0;
-  const sessionsDone = plan?.sessions.filter((s) => s.done).length ?? 0;
-  const sessionsTotal = plan?.sessions.length ?? 0;
-
-  const headerTitle =
-    view === "sessions" ? h.sessionsAll :
-    view === "plan"     ? h.planTitle :
-                          h.setupTitle;
-
-  const headerSubtitle =
-    view === "sessions"
-      ? (lang === "ar" ? `${sessionsDone} / ${sessionsTotal} مكتملة` : `${sessionsDone} / ${sessionsTotal} done`)
-      : view === "plan" && plan
-      ? (lang === "ar" ? `${planDone} / ${planTotal} مكتملة` : `${planDone} / ${planTotal} done`)
-      : h.setupSubtitle;
-
   // Back: sessions → plan, setup-editing → plan, otherwise → app back
   const handleHeaderBack = () => {
     if (view === "sessions") { setView("plan"); return; }
@@ -1969,45 +1966,51 @@ const Hifz: React.FC = () => {
     </div>
   ) : <div className="hifz-header-right" />;
 
+  // Left slot: back on sessions/editing, all-sessions on plan, spacer otherwise
+  const headerLeft =
+    view === "sessions" || (view === "setup" && plan !== null) ? (
+      <button
+        className="hifz-back-btn"
+        onClick={handleHeaderBack}
+        aria-label={isRTL ? "رجوع" : "Back"}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
+        </svg>
+      </button>
+    ) : view === "plan" && plan ? (
+      <button
+        className="hifz-header-action-btn hifz-header-action-btn--all"
+        onClick={() => setView("sessions")}
+        aria-label={h.viewAllSessions}
+        title={h.viewAllSessions}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
+          <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
+          <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
+        </svg>
+      </button>
+    ) : <div style={{ width: 44 }} />;
+
+  // First-run setup has neither a back button nor actions — with the title text
+  // gone the header would be an empty bordered strip, so drop it entirely there.
+  const showHeader = !(view === "setup" && plan === null);
+
   return (
     <IonPage>
       <IonContent fullscreen scrollY={false}>
         <div className="hifz-page">
-          {/* ── Shared page header ── */}
-          <div className="hifz-page-header">
-            {(view === "sessions" || (view === "setup" && plan !== null)) ? (
-              <button
-                className="hifz-back-btn"
-                onClick={handleHeaderBack}
-                aria-label={isRTL ? "رجوع" : "Back"}
-              >
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
-                </svg>
-              </button>
-            ) : view === "plan" && plan ? (
-              <button
-                className="hifz-header-action-btn hifz-header-action-btn--all"
-                onClick={() => setView("sessions")}
-                aria-label={h.viewAllSessions}
-                title={h.viewAllSessions}
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
-                </svg>
-              </button>
-            ) : <div style={{ width: 44 }} />}
-            <div className="hifz-page-header-text">
-              <h1>{headerTitle}</h1>
-              <p>{headerSubtitle}</p>
+          {/* ── Shared page header — buttons only ── */}
+          {showHeader && (
+            <div className="hifz-page-header">
+              {headerLeft}
+              {headerRight}
             </div>
-            {headerRight}
-          </div>
+          )}
 
           {view === "setup" && (
             <SetupView

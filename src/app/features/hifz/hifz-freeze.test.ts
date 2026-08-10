@@ -155,6 +155,30 @@ describe("repair does not double-dip", () => {
   });
 });
 
+describe("settle on open", () => {
+  it("shows an intact streak after a lapse without any new activity", () => {
+    // The promise: opening the app after missing a day covers it with a
+    // freeze, rather than showing a broken streak until the next session.
+    recordHifzSession(noSessions, "s1", daysAgoStr(3));
+    recordHifzSession(noSessions, "s2", daysAgoStr(2));
+
+    // Before settling, the run stops at the missed day.
+    expect(computeStreakPersistent(noSessions)).toBe(0);
+
+    settleHifzFreezes(noSessions);
+    expect(computeStreakPersistent(noSessions)).toBe(3);
+    expect(wasFrozen("hifz", daysAgoStr(1))).toBe(true);
+  });
+
+  it("is safe to call repeatedly across opens", () => {
+    recordHifzSession(noSessions, "s1", daysAgoStr(2));
+    settleHifzFreezes(noSessions);
+    settleHifzFreezes(noSessions);
+    settleHifzFreezes(noSessions);
+    expect(freezeCount("hifz")).toBe(MAX_FREEZES - 1);
+  });
+});
+
 describe("pool independence", () => {
   it("does not touch the quiz pool", () => {
     recordHifzSession(noSessions, "s1", daysAgoStr(3));
