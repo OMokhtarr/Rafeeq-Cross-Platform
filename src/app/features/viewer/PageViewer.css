@@ -1838,6 +1838,13 @@
 }
 
 /* ── Playback sheet drag handle ───────────────────────────────────────────── */
+/* The sheet's entry animation. Referenced by the inline `animation` style on
+   the playback sheet, which previously named a keyframe that did not exist. */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
 .playback-sheet-drag-handle {
   width: 36px;
   height: 4px;
@@ -1846,6 +1853,18 @@
   margin: 10px auto 0;
   flex-shrink: 0;
   pointer-events: none;
+}
+
+/* Grab zone for drag-to-dismiss. Without touch-action: none Android hands the
+   vertical gesture to the scroller and cancels the pointer mid-drag — the bug
+   that made this sheet stick or snap back at random. Scoped to the top strip
+   so the settings list underneath still scrolls. */
+.playback-sheet-grab {
+  touch-action: none;
+  flex-shrink: 0;
+  /* Matches the hook's 48px handle zone so the whole grabbable strip is also
+     the strip that suppresses native scrolling. */
+  height: 48px;
 }
 
 [data-theme="night"] .playback-sheet-drag-handle {

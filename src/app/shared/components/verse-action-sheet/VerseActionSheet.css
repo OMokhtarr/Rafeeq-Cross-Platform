@@ -59,6 +59,15 @@
   flex-shrink: 0;
 }
 
+/* Drag-to-dismiss grab zone: the handle plus the header strip beneath it.
+   touch-action must be none here or Android claims the vertical gesture for
+   scrolling and cancels the pointer mid-drag. It is deliberately NOT on
+   .vas-sheet — that would stop the tafsir body from scrolling. */
+.vas-handle,
+.vas-header {
+  touch-action: none;
+}
+
 /* ── Header ───────────────────────────────────────────────────────────────── */
 
 .vas-header {

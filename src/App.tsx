@@ -10,6 +10,8 @@ import {
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { useQuizFreezeToasts } from "./app/core/hooks/useFreezeToast";
+import { useDoubleSwipeExit } from "./app/core/hooks/useDoubleSwipeExit";
+import { closeTopOverlay } from "./app/core/utils/overlay-registry";
 import { Capacitor } from "@capacitor/core";
 
 import "@ionic/react/css/core.css";
@@ -65,11 +67,23 @@ const MainRouterOutlet: React.FC = () => {
   // keeps visited pages mounted, so a per-page listener would fire once per page
   // the user had already been to.
   useQuizFreezeToasts();
+  const exit = useDoubleSwipeExit();
   // Keep a live ref to whether the *current* route is a root tab. The outlet's
   // swipe handler is created once, so we gate it through this ref rather than
   // re-binding the handler on every navigation.
   const isRootTabRef = useRef(false);
   isRootTabRef.current = ROOT_TAB_PATHS.has(location.pathname);
+
+  // Keep the exit helpers in a ref for the same reason: the patched canStart is
+  // installed once, so it must not close over this render's callbacks.
+  const exitRef = useRef(exit);
+  exitRef.current = exit;
+
+  // A swipe that lands on a different route means the user went somewhere
+  // rather than exiting, so the armed first swipe should not carry over.
+  useEffect(() => {
+    exit.reset();
+  }, [location.pathname, exit]);
 
   useEffect(() => {
     let patched: { canStart: (...a: unknown[]) => boolean } | null = null;
@@ -88,8 +102,18 @@ const MainRouterOutlet: React.FC = () => {
       if (!handler || patched) return;
       patched = handler;
       original = handler.canStart.bind(handler);
-      handler.canStart = (...args: unknown[]) =>
-        isRootTabRef.current ? false : original!(...args);
+      // Priority: an open sheet swallows the swipe, then root tabs count it
+      // toward exiting, and only otherwise does it fall through to Ionic's
+      // real back navigation. Returning false in the first two cases stops
+      // Ionic animating a page transition that must not happen.
+      handler.canStart = (...args: unknown[]) => {
+        if (closeTopOverlay()) return false;
+        if (isRootTabRef.current) {
+          exitRef.current.attempt();
+          return false;
+        }
+        return original!(...args);
+      };
     };
 
     tryPatch();

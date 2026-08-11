@@ -1031,13 +1031,12 @@ interface DashboardViewProps {
   onQuiz: (session: PlanSession) => void;
   onToggleSurah: (pages: number[], read: boolean) => void;
   onStartNewRound: () => void;
+  onViewAllSessions: () => void;
   bestPlan: BestPlanRecord | null;
   latestPlan: BestPlanRecord | null;
   lang: "ar" | "en";
   t: any;
   readPages: number[];
-  showResetConfirm: boolean;
-  setShowResetConfirm: (v: boolean) => void;
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -1050,13 +1049,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onQuiz,
   onToggleSurah,
   onStartNewRound,
+  onViewAllSessions,
   bestPlan,
   latestPlan,
   lang,
   t,
   readPages,
-  showResetConfirm,
-  setShowResetConfirm,
 }) => {
   const h = t.hifz;
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
@@ -1096,24 +1094,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>
-      {/* ── Reset confirmation dialog ── */}
-      {showResetConfirm && (
-        <div className="hifz-confirm-backdrop" onClick={() => setShowResetConfirm(false)}>
-          <div className="hifz-confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <p className="hifz-confirm-title">{h.resetConfirmTitle}</p>
-            <p className="hifz-confirm-body">{h.resetConfirmBody}</p>
-            <div className="hifz-confirm-actions">
-              <button className="hifz-confirm-cancel" onClick={() => setShowResetConfirm(false)}>
-                {h.resetConfirmNo}
-              </button>
-              <button className="hifz-confirm-yes" onClick={() => { setShowResetConfirm(false); onReset(); }}>
-                {h.resetConfirmYes}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Hero card: horizontally scrollable pages of charts ── */}
       <div
         className="hifz-hero-scroll"
@@ -1269,6 +1249,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ── All-sessions entry — replaces the removed header button ── */}
+      <button
+        type="button"
+        className="hifz-all-sessions-row"
+        onClick={onViewAllSessions}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
+          <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
+          <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
+        </svg>
+        <span className="hifz-all-sessions-label">{h.viewAllSessions}</span>
+        <svg className="hifz-all-sessions-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {lang === "ar" ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 18l6-6-6-6" />}
+        </svg>
+      </button>
 
       {/* ── Streak recovery info dialog ── */}
       {showStreakInfo && (
@@ -1429,6 +1429,9 @@ interface HifzSessionsViewProps {
   onOpenPage: (page: number, session?: PlanSession) => void;
   onQuiz: (session: PlanSession) => void;
   onToggleSurah: (pages: number[], read: boolean) => void;
+  onEdit: () => void;
+  onRequestReset: () => void;
+  onRequestDelete: () => void;
   lang: "ar" | "en";
   t: any;
   readPages: number[];
@@ -1442,6 +1445,9 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
   onOpenPage,
   onQuiz,
   onToggleSurah,
+  onEdit,
+  onRequestReset,
+  onRequestDelete,
   lang,
   t,
   readPages,
@@ -1534,6 +1540,33 @@ const HifzSessionsView: React.FC<HifzSessionsViewProps> = ({
           )}
         </div>
       )}
+
+      {/* ── Plan actions — moved off the dashboard, which is now read-only.
+             Labelled rather than icon-only so the destructive ones read
+             clearly, and placed last so they are out of the way. ── */}
+      <div className="hifz-plan-actions">
+        <button
+          type="button"
+          className="hifz-plan-action hifz-plan-action--edit"
+          onClick={onEdit}
+        >
+          {h.planEdit}
+        </button>
+        <button
+          type="button"
+          className="hifz-plan-action hifz-plan-action--reset"
+          onClick={onRequestReset}
+        >
+          {h.planReset}
+        </button>
+        <button
+          type="button"
+          className="hifz-plan-action hifz-plan-action--delete"
+          onClick={onRequestDelete}
+        >
+          {h.planDelete}
+        </button>
+      </div>
     </div>
   );
 };
@@ -1937,78 +1970,25 @@ const Hifz: React.FC = () => {
     history.replace("/");
   };
 
-  // Right slot: edit + reset on plan view, spacer elsewhere
-  const headerRight = view === "plan" ? (
-    <div className="hifz-header-right">
-      <button
-        className="hifz-header-action-btn hifz-header-action-btn--edit"
-        onClick={() => setView("setup")}
-        aria-label={h.planEdit}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-        </svg>
-      </button>
-      <button
-        className="hifz-header-action-btn hifz-header-action-btn--reset"
-        onClick={() => setShowResetConfirm(true)}
-        aria-label={h.planReset}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="23 4 23 10 17 10" />
-          <polyline points="1 20 1 14 7 14" />
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-        </svg>
-      </button>
-      <button
-        className="hifz-header-action-btn hifz-header-action-btn--delete"
-        onClick={() => setShowDeleteConfirm(true)}
-        aria-label={h.planDelete}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          <path d="M10 11v6M14 11v6" />
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-        </svg>
-      </button>
-    </div>
-  ) : <div className="hifz-header-right" />;
+  // The header is now a back-only strip on sub-views; the plan dashboard
+  // renders without it, so there is no right slot to fill.
+  const headerLeft = (
+    <button
+      className="hifz-back-btn"
+      onClick={handleHeaderBack}
+      aria-label={isRTL ? "رجوع" : "Back"}
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
+      </svg>
+    </button>
+  );
 
-  // Left slot: back on sessions/editing, all-sessions on plan, spacer otherwise
-  const headerLeft =
-    view === "sessions" || (view === "setup" && plan !== null) ? (
-      <button
-        className="hifz-back-btn"
-        onClick={handleHeaderBack}
-        aria-label={isRTL ? "رجوع" : "Back"}
-      >
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {isRTL ? <path d="M5 12h14M13 5l7 7-7 7" /> : <path d="M19 12H5M12 5l-7 7 7 7" />}
-        </svg>
-      </button>
-    ) : view === "plan" && plan ? (
-      <button
-        className="hifz-header-action-btn hifz-header-action-btn--all"
-        onClick={() => setView("sessions")}
-        aria-label={h.viewAllSessions}
-        title={h.viewAllSessions}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="8" y1="6" x2="21" y2="6" />
-          <line x1="8" y1="12" x2="21" y2="12" />
-          <line x1="8" y1="18" x2="21" y2="18" />
-          <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3" />
-          <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3" />
-          <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3" />
-        </svg>
-      </button>
-    ) : <div style={{ width: 44 }} />;
-
-  // First-run setup has neither a back button nor actions — with the title text
-  // gone the header would be an empty bordered strip, so drop it entirely there.
-  const showHeader = !(view === "setup" && plan === null);
+  // The header only exists to get back out of a sub-view. The plan dashboard is
+  // the page's root — it has nowhere to go back to and its actions now live in
+  // the sessions view, so it renders with no top bar and reclaims the height.
+  // First-run setup likewise has no back target.
+  const showHeader = view !== "plan" && !(view === "setup" && plan === null);
 
   return (
     <IonPage>
@@ -2016,10 +1996,7 @@ const Hifz: React.FC = () => {
         <div className="hifz-page">
           {/* ── Shared page header — buttons only ── */}
           {showHeader && (
-            <div className="hifz-page-header">
-              {headerLeft}
-              {headerRight}
-            </div>
+            <div className="hifz-page-header">{headerLeft}</div>
           )}
 
           {view === "setup" && (
@@ -2047,13 +2024,12 @@ const Hifz: React.FC = () => {
               onQuiz={handleQuizFromSession}
               onToggleSurah={handleToggleSurah}
               onStartNewRound={handleStartNewRound}
+              onViewAllSessions={() => setView("sessions")}
               bestPlan={bestPlan}
               latestPlan={latestPlan}
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}
-              showResetConfirm={showResetConfirm}
-              setShowResetConfirm={setShowResetConfirm}
             />
           )}
           {view === "sessions" && plan && (
@@ -2065,10 +2041,35 @@ const Hifz: React.FC = () => {
               onOpenPage={handleOpenPage}
               onQuiz={handleQuizFromSession}
               onToggleSurah={handleToggleSurah}
+              onEdit={handleEdit}
+              onRequestReset={() => setShowResetConfirm(true)}
+              onRequestDelete={() => setShowDeleteConfirm(true)}
               lang={lang as "ar" | "en"}
               t={t}
               readPages={readPages}
             />
+          )}
+
+          {/* ── Reset-plan confirmation dialog — page level so it works from
+                 the sessions view, which is where the action now lives ── */}
+          {showResetConfirm && (
+            <div className="hifz-confirm-backdrop" onClick={() => setShowResetConfirm(false)}>
+              <div className="hifz-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+                <p className="hifz-confirm-title">{t.hifz.resetConfirmTitle}</p>
+                <p className="hifz-confirm-body">{t.hifz.resetConfirmBody}</p>
+                <div className="hifz-confirm-actions">
+                  <button className="hifz-confirm-cancel" onClick={() => setShowResetConfirm(false)}>
+                    {t.hifz.resetConfirmNo}
+                  </button>
+                  <button
+                    className="hifz-confirm-yes"
+                    onClick={() => { setShowResetConfirm(false); handleReset(); }}
+                  >
+                    {t.hifz.resetConfirmYes}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ── Delete-plan confirmation dialog ── */}

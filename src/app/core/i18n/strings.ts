@@ -26,6 +26,9 @@ export interface AppStrings {
     bismillah: string;
   };
 
+  /** Confirmation shown on the first of the two back swipes that exit the app. */
+  exitConfirm: string;
+
   /** Shown when a feature that needs the network is used while offline. */
   offline: {
     /** Generic message for any online-only action. */
@@ -431,6 +434,7 @@ const ar: AppStrings = {
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
   },
+  exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
     message: "هذه الميزة تتطلب الاتصال بالإنترنت",
     download: "تحميل التلاوات يتطلب الاتصال بالإنترنت",
@@ -852,6 +856,7 @@ const en: AppStrings = {
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
   },
+  exitConfirm: "Swipe again to exit",
   offline: {
     message: "This feature is only available when connected to the Internet",
     download: "Downloading recitations requires an Internet connection",

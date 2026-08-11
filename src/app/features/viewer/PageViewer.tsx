@@ -34,6 +34,8 @@ import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import { useWakeLock } from "../../core/hooks/useWakeLock";
 import { useReciteMode } from "../../core/hooks/useReciteMode";
 import { useFeedbackBeep } from "../../core/hooks/useFeedbackBeep";
+import { useSheetDrag } from "../../core/hooks/useSheetDrag";
+import { registerOverlay } from "../../core/utils/overlay-registry";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import { isPageBookmarked } from "../../core/services/storage/notes.service";
 import { markPageRead, isPageMarkedRead } from "../hifz/hifz.service";
@@ -150,9 +152,14 @@ const PageViewer: React.FC = () => {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
   const sheetOpenTimeRef = useRef<number>(0);
-  const sheetDragStartY = useRef<number | null>(null);
-  const sheetDragCurrentY = useRef<number>(0);
-  const sheetElRef = useRef<HTMLDivElement>(null);
+  const closePlaybackSheet = useCallback(() => setPlaybackSheetOpen(false), []);
+  const playbackDrag = useSheetDrag({ onDismiss: closePlaybackSheet });
+
+  // An edge swipe should close the sheet rather than count toward exiting.
+  useEffect(() => {
+    if (!playbackSheetOpen) return;
+    return registerOverlay(closePlaybackSheet);
+  }, [playbackSheetOpen, closePlaybackSheet]);
 
   // Recite mode: STT + fuzzy verse matching, driven by long-pressing the play button.
   const recite = useReciteMode(
@@ -1481,7 +1488,7 @@ const PageViewer: React.FC = () => {
               />
               {/* Sheet content – starts below the toolbar */}
               <div
-                ref={sheetElRef}
+                ref={playbackDrag.ref}
                 style={{
                   position: "absolute",
                   top: "56px", // height of .top-toolbar
@@ -1494,42 +1501,12 @@ const PageViewer: React.FC = () => {
                   animation: "slideUp 0.25s ease-out",
                   willChange: "transform",
                 }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  // Only start drag when touching within the top 48px (handle zone)
-                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                  if (e.clientY - rect.top > 48) return;
-                  sheetDragStartY.current = e.clientY;
-                  sheetDragCurrentY.current = 0;
-                  (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-                }}
-                onPointerMove={(e) => {
-                  if (sheetDragStartY.current === null) return;
-                  const dy = Math.max(0, e.clientY - sheetDragStartY.current);
-                  sheetDragCurrentY.current = dy;
-                  if (sheetElRef.current) {
-                    sheetElRef.current.style.transform = `translateY(${dy}px)`;
-                    sheetElRef.current.style.transition = "none";
-                  }
-                }}
-                onPointerUp={(e) => {
-                  if (sheetDragStartY.current === null) return;
-                  sheetDragStartY.current = null;
-                  const el = sheetElRef.current;
-                  if (!el) return;
-                  if (sheetDragCurrentY.current > 120) {
-                    el.style.transition = "transform 0.25s ease";
-                    el.style.transform = `translateY(100%)`;
-                    setTimeout(() => setPlaybackSheetOpen(false), 240);
-                  } else {
-                    el.style.transition = "transform 0.2s ease";
-                    el.style.transform = "translateY(0)";
-                  }
-                  sheetDragCurrentY.current = 0;
-                }}
+                {...playbackDrag.dragHandlers}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="playback-sheet-drag-handle" aria-hidden="true" />
+                <div className="playback-sheet-grab" aria-hidden="true">
+                  <div className="playback-sheet-drag-handle" />
+                </div>
                 <PlaybackSettings
                   onClose={() => setPlaybackSheetOpen(false)}
                   currentPage={currentPage}

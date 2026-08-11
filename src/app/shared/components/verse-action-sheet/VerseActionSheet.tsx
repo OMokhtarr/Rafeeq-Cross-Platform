@@ -20,6 +20,8 @@ import {
 } from "../../../core/services/storage/notes.service";
 import { getPlayableUrl } from "../../../core/services/audio/audio-cache.service";
 import { useAudioPlayer } from "../../../core/hooks/useAudioPlayer";
+import { useSheetDrag } from "../../../core/hooks/useSheetDrag";
+import { registerOverlay } from "../../../core/utils/overlay-registry";
 import NoteModal from "../note-modal/NoteModal";
 import "./VerseActionSheet.css";
 
@@ -58,6 +60,18 @@ const VerseActionSheet: React.FC<Props> = ({
   const history = useHistory();
 
   const nightClass = isNight ? " vas-sheet--night" : "";
+
+  // ── Drag to dismiss ────────────────────────────────────────────────────────
+  const { ref: sheetRef, dragHandlers } = useSheetDrag<HTMLElement>({
+    onDismiss: onClose,
+  });
+
+  // Let the app-level edge-swipe gate close this sheet instead of treating the
+  // swipe as a back/exit. Only while actually open.
+  useEffect(() => {
+    if (!open) return;
+    return registerOverlay(onClose);
+  }, [open, onClose]);
 
   // ── Bookmark ───────────────────────────────────────────────────────────────
   const [bookmarked, setBookmarked] = useState(false);
@@ -311,10 +325,12 @@ const VerseActionSheet: React.FC<Props> = ({
     <>
       <div className="vas-backdrop" onClick={onClose} aria-hidden="true" />
       <aside
+        ref={sheetRef}
         className={`vas-sheet${nightClass}`}
         role="dialog"
         aria-label={t.mushaf.actionSheetTitle(displayKey)}
         dir={isRTL ? "rtl" : "ltr"}
+        {...dragHandlers}
       >
         <div className="vas-handle" aria-hidden="true" />
 

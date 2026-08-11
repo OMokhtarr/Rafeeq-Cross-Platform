@@ -23,13 +23,14 @@ ion-content::part(scroll) {
 }
 
 /* ── Shared page header — buttons only, no title text ───── */
+/* Back-only strip on the sub-views. The plan dashboard renders without it. */
 .hifz-page-header {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
+  padding: max(12px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    16px 12px;
   background: var(--color-bg-content);
   border-bottom: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
@@ -57,65 +58,6 @@ ion-content::part(scroll) {
   border-color: var(--color-gold);
 }
 
-/* Right slot in plan header — matches left 44px spacer width so title stays centered */
-.hifz-header-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-  min-width: 44px;
-}
-
-/* Edit/reset action buttons in plan header */
-.hifz-header-action-btn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.hifz-header-action-btn--edit {
-  background: transparent;
-  border: 1.5px solid var(--color-border-card);
-  color: var(--color-text-secondary);
-}
-.hifz-header-action-btn--edit:hover {
-  background: var(--color-bg-card);
-}
-
-.hifz-header-action-btn--all {
-  background: transparent;
-  border: 1.5px solid var(--color-border-card);
-  color: var(--color-gold);
-}
-.hifz-header-action-btn--all:hover {
-  background: color-mix(in srgb, var(--color-gold) 10%, transparent);
-}
-
-.hifz-header-action-btn--reset {
-  background: transparent;
-  border: 1.5px solid color-mix(in srgb, #e05a5a 40%, transparent);
-  color: #e05a5a;
-}
-.hifz-header-action-btn--reset:hover {
-  background: color-mix(in srgb, #e05a5a 8%, transparent);
-}
-
-.hifz-header-action-btn--delete {
-  background: color-mix(in srgb, #e05a5a 14%, transparent);
-  border: 1.5px solid color-mix(in srgb, #e05a5a 55%, transparent);
-  color: #e05a5a;
-}
-.hifz-header-action-btn--delete:hover {
-  background: color-mix(in srgb, #e05a5a 22%, transparent);
-}
 
 /* ── Setup view ───────────────────────────────────────────── */
 .hifz-setup {
@@ -142,7 +84,10 @@ ion-content::part(scroll) {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
+  /* Topmost element on this view — the page header was removed, so the plan
+     clears the status bar itself. */
+  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
@@ -156,20 +101,82 @@ ion-content::part(scroll) {
   margin-bottom: var(--space-4);
 }
 
-.hifz-plan-header {
-  padding: var(--space-3) 0 var(--space-3);
-  margin-bottom: var(--space-3);
-  flex-shrink: 0;
+/* ── All-sessions entry row — replaces the removed header button ───────────── */
+.hifz-all-sessions-row {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-lg, 12px);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base);
+}
+.hifz-all-sessions-row:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+.hifz-all-sessions-row svg {
+  color: var(--color-gold);
+  flex-shrink: 0;
 }
 
-.hifz-plan-header-actions {
+.hifz-all-sessions-label {
+  flex: 1;
+  text-align: start;
+}
+
+/* Chevron sits at the trailing edge and points the way the language reads. */
+.hifz-all-sessions-chevron {
+  opacity: 0.5;
+}
+
+/* ── Plan actions — bottom of the sessions view ────────────────────────────── */
+.hifz-plan-actions {
   display: flex;
+  flex-direction: column;
   gap: var(--space-2);
-  flex-shrink: 0;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1.5px solid var(--color-border-card);
+}
+
+.hifz-plan-action {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg, 12px);
+  border: 1.5px solid var(--color-border-card);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base);
+}
+
+.hifz-plan-action--edit:hover {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+
+.hifz-plan-action--reset:hover {
+  border-color: var(--color-gold);
+}
+
+/* Delete reads as destructive without shouting — it only fills in on intent.
+   #e05a5a is the danger colour already used by the confirm dialogs. */
+.hifz-plan-action--delete {
+  color: #e05a5a;
+  border-color: color-mix(in srgb, #e05a5a 55%, transparent);
+}
+.hifz-plan-action--delete:hover {
+  background: color-mix(in srgb, #e05a5a 14%, transparent);
 }
 
 .hifz-title {
@@ -764,8 +771,6 @@ ion-content::part(scroll) {
 .hifz-session-bar-slice.filled {
   background: var(--color-quran);
 }
-
-/* ── Plan action buttons — now .hifz-header-action-btn ───── */
 
 /* ── Add sheet (bottom drawer) ────────────────────────────── */
 .hifz-sheet-backdrop {
