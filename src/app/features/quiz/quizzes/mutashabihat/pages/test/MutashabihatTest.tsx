@@ -32,7 +32,6 @@ import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
 import { recordQuizCompletion } from "../../../../../../core/services/storage/quiz-streak.service";
-import { useQuizFreezeToasts } from "../../../../../../core/hooks/useFreezeToast";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
@@ -70,8 +69,6 @@ const MutashabihatTest: React.FC = () => {
   const { t, isRTL } = useLang();
   const tt = t.quizTest;
   const [presentToast] = useIonToast();
-  // Surface a freeze earned or spent by finishing this quiz.
-  useQuizFreezeToasts();
 
   const [questions, setQuestions] = useState<
     ReturnType<typeof buildMutashabihatQuestion>[]

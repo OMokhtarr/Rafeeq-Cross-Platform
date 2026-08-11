@@ -345,6 +345,17 @@ Two things the design did not anticipate:
   done/undone/done toggle. A counter would have inflated under both and minted
   free freezes.
 
+### Toasts as built
+
+The toast listener is mounted once at the router outlet, not on the pages that
+trigger it: `IonRouterOutlet` keeps visited pages mounted, so a per-page
+listener fired once per page the user had already visited.
+
+A freeze spent by settle-on-open produces **no toast** — both open-path callers
+drop the return value. The card's spend notice reports it instead, which
+persists where a toast at launch would likely be missed. Earning and
+spending during an activity both toast as described above.
+
 ### Testing as built
 
 80 tests across six files, run with CRA's bundled Jest

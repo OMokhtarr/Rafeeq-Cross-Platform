@@ -22,7 +22,6 @@ import {
   type PlanSession,
 } from "../hifz/hifz.service";
 import StreakFreezeMeter from "./StreakFreezeMeter";
-import { useQuizFreezeToasts } from "../../core/hooks/useFreezeToast";
 import {
   exportBackupToFile,
   parseBackup,
@@ -213,9 +212,6 @@ const Account: React.FC = () => {
     return () =>
       window.removeEventListener("quiz-streak-changed", onQuizStreakChanged);
   }, []);
-
-  // Toasts for the same event, shared with the quiz pages.
-  useQuizFreezeToasts();
 
   const handleExport = useCallback(async () => {
     setBackupError(null);
