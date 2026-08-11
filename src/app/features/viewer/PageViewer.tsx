@@ -766,7 +766,7 @@ const PageViewer: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollY={false}>
+      <IonContent className="mushaf-ion-content" fullscreen scrollY={false}>
         <div
           className={`mushaf-container ${
             immersive.chromeVisible ? "" : "immersive"

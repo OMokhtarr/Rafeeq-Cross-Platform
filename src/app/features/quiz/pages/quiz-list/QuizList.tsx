@@ -37,13 +37,6 @@ const QuizList: React.FC = () => {
     <IonPage>
       <IonContent fullscreen>
         <div className="ql-page-wrapper">
-          {/* ── Header ── */}
-          <div className="ql-header">
-            <div className="ql-header-text" dir={isRTL ? "rtl" : "ltr"}>
-              <h1 className="ql-title">{tql.titleHeader}</h1>
-            </div>
-          </div>
-
           {/* ── Quiz cards ── */}
           <div className="ql-container" dir={isRTL ? "rtl" : "ltr"}>
             {QUIZZES.map((quiz) => {

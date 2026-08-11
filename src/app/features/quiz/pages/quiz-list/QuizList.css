@@ -21,47 +21,15 @@ ion-content::part(scroll) {
     color var(--transition-theme);
 }
 
-/* ── Header — matches Settings/Account/Hifz standard ── */
-.ql-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 16px;
-  background: var(--color-bg-content);
-  border-bottom: 1.5px solid var(--color-border-card);
-  flex-shrink: 0;
-  transition: background var(--transition-theme), border-color var(--transition-theme);
-}
-
-.ql-header-text {
-  text-align: center;
-}
-
-.ql-title {
-  font-family: var(--font-arabic-display);
-  font-size: var(--text-xl);
-  color: var(--color-gold);
-  margin: 0 0 2px;
-}
-
-[dir="ltr"] .ql-title {
-  font-family: var(--font-latin);
-  font-size: var(--text-lg);
-}
-
-.ql-subtitle {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
 /* ── Content container ── */
+/* No page header here, so the cards clear the status bar themselves. */
 .ql-container {
   display: flex;
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  padding: var(--space-4) 16px 0;
+  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    16px 0;
   box-sizing: border-box;
 }
 

@@ -113,8 +113,17 @@ android {
             )
             tasks.named("bundle${variant.name.capitalize()}").configure {
                 doLast {
+                    // Copy, don't rename: produceReleaseBundleIdeListingFile declares
+                    // app-<buildType>.aab as a required input, so moving it away makes
+                    // every bundle build fail with "input file ... doesn't exist".
                     def renamed = new File(aabFile.parent, "Rafeeq-${variant.versionName}-${variant.buildType.name}.aab")
-                    if (aabFile.exists()) aabFile.renameTo(renamed)
+                    if (aabFile.exists()) {
+                        java.nio.file.Files.copy(
+                            aabFile.toPath(),
+                            renamed.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                        )
+                    }
                 }
             }
         }

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 
+import { useSystemBarsTheme } from "../hooks/useSystemBarsTheme";
+
 export type Theme = "day" | "night";
 
 interface ThemeCtx {
@@ -36,6 +38,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(STORAGE_KEY, theme);
     } catch (_) {}
   }, [theme]);
+
+  // Match the OS status bar and navigation/gesture bar to the active theme.
+  useSystemBarsTheme(theme);
 
   const setTheme = useCallback((t: Theme) => setThemeState(t), []);
   const toggle = useCallback(() => setThemeState(t => (t === "day" ? "night" : "day")), []);

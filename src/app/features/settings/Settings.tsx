@@ -646,14 +646,6 @@ const Settings: React.FC = () => {
       <IonContent fullscreen>
         <div className="settings-page-wrapper">
           <div className="settings-container">
-            {/* ── Header ── */}
-            <div className="settings-header">
-              <div className="settings-header-text">
-                <h1>{lang === "ar" ? "الإعدادات" : "Settings"}</h1>
-                <p>{lang === "ar" ? "تخصيص التطبيق" : "Customize your experience"}</p>
-              </div>
-            </div>
-
             {/* ── Language — two-button row per design index.html ── */}
             <div className="settings-section">
               <p className="settings-section-title">{ts.sectionLanguage}</p>
@@ -829,9 +821,9 @@ const Settings: React.FC = () => {
               <p>{ts.version}</p>
             </div>
           </div>
-          <BottomNavBar active="settings" />
         </div>
       </IonContent>
+      <BottomNavBar active="settings" fixed />
       <TajweedInfoModal
         open={tajweedInfoOpen}
         onClose={() => setTajweedInfoOpen(false)}

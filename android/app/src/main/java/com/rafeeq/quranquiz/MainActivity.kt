@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.Bundle
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.getcapacitor.BridgeActivity
 import com.rafeeq.quranquiz.auto.RafeeqAutoPlugin
 
@@ -92,12 +91,32 @@ class MainActivity : BridgeActivity() {
         super.onPause()
     }
 
+    /**
+     * Both system bars are transparent, so their apparent colour is whatever
+     * the app paints behind them (themed `--color-bg-app` on <body>).
+     *
+     * Icon/pill tint is NOT set here. The bars must follow the in-app day/night
+     * toggle, which only the WebView knows about, so the JS side owns it via
+     * Capacitor's SystemBars API (see useSystemBarsTheme.ts). Hardcoding the
+     * light-icon appearance here would fight that hook and leave day mode with
+     * white icons on a white background.
+     *
+     * The pre-WebView tint is handled by the SystemBars `style: "DARK"` entry
+     * in capacitor.config.ts, which matches the night default; the hook then
+     * corrects it if the user's stored theme is day.
+     */
     private fun enableEdgeToEdge() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.isAppearanceLightStatusBars = false
-        controller.isAppearanceLightNavigationBars = false
+
+        // Android draws a translucent scrim behind a transparent navigation bar
+        // to guarantee contrast against arbitrary content. Rafeeq controls the
+        // colour underneath (solid black or solid white) and already guarantees
+        // it, so the scrim only shows up as a mismatched grey band above the
+        // gesture pill. Opt out so the bar truly matches the app background.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
     }
 }

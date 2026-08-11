@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!--
+      Cold-start window background.
+
+      Shown for the moment between process start and the WebView painting the
+      themed UI. The app's theme defaults to night (#000000, see ThemeContext
+      DEFAULT_THEME), so night is what this must match — otherwise every launch
+      flashes Capacitor's default white window first.
+
+      Black regardless of the device's own light/dark setting, because Rafeeq's
+      theme is its own stored preference and is not derived from the device.
+      values-night/ (used when the DEVICE is in dark mode) repeats the same
+      value for that reason. Once the WebView boots, useSystemBarsTheme applies
+      the user's actual stored theme.
+    -->
+    <color name="windowBackground">#000000</color>
+
+    <!-- Brand colours, replacing Capacitor's default indigo placeholders. -->
+    <color name="colorPrimary">#0F7A5A</color>
+    <color name="colorPrimaryDark">#000000</color>
+    <color name="colorAccent">#D4B48C</color>
+</resources>

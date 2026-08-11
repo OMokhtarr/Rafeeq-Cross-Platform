@@ -319,14 +319,6 @@ const Azkar: React.FC = () => {
     <IonPage>
       <IonContent>
         <div className="azkar-page-wrapper">
-          {/* Standard page header */}
-          <div className="azkar-page-header">
-            <div className="azkar-page-header-text">
-              <h1 className="azkar-page-title" lang={isRTL ? "ar" : "en"} dir={isRTL ? "rtl" : "ltr"}>{ta.title}</h1>
-              <p className="azkar-page-subtitle">{ta.subtitle}</p>
-            </div>
-          </div>
-
           <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
             <div className="azkar-categories">
               {azkarData.map((cat: any) => {

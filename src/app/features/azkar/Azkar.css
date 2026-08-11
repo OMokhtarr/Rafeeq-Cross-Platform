@@ -34,77 +34,10 @@ ion-content::part(scroll) {
   scrollbar-width: none;
 }
 
-/* ── Category list page header — matches Settings/Account/Hifz standard ── */
-.azkar-page-header {
-  width: 100%;
-  max-width: var(--max-width-mobile, 600px);
-  box-sizing: border-box;
-  /* Capped so enlarged OS text can't let the header eat the scroll region
-     below it. It stays fixed at normal sizes and only gives way when the
-     text would otherwise squeeze the content out of reach. */
-  flex-shrink: 0;
-  max-height: 22vh;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--color-bg-content);
-  border-bottom: 1.5px solid var(--color-border-card);
-  transition: background var(--transition-theme), border-color var(--transition-theme);
-}
-
-.azkar-page-header-text {
-  flex: 1;
-  text-align: center;
-}
-
-.azkar-page-title {
-  font-family: var(--font-arabic-display);
-  font-size: var(--text-xl);
-  color: var(--color-gold);
-  margin: 0 0 2px;
-}
-
-[dir="ltr"] .azkar-page-title {
-  font-family: var(--font-latin);
-  font-size: var(--text-lg);
-}
-
-.azkar-page-subtitle {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.azkar-page-back-btn {
-  background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background var(--transition-base), border-color var(--transition-base);
-}
-
-.azkar-page-back-btn:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
-}
-
 /* ── Category list ────────────────────────────────── */
+/* No page header here, so the list clears the status bar itself. */
 .azkar-categories {
-  padding: var(--space-4) 16px 0;
+  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;

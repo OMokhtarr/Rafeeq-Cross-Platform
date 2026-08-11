@@ -151,7 +151,10 @@
   font-family: var(--font-arabic, "Scheherazade New", "Amiri", serif);
   font-size: 0.7rem;
   color: inherit;
-  line-height: 1;
+  /* Arabic descenders (the ي in حسابي) drop well below the baseline, and the
+     ellipsis clip is an overflow:hidden box — at line-height:1 the line box
+     ends at the baseline and shears them off. Give the box room to hold them. */
+  line-height: 1.45;
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
@@ -163,6 +166,8 @@
   font-family: var(--font-latin, Georgia, serif);
   font-size: 0.62rem;
   letter-spacing: 0.3px;
+  /* Latin descenders are shallow, so this stays tighter than the Arabic box. */
+  line-height: 1.25;
 }
 
 /* Active label gets a subtle weight bump */

@@ -17,6 +17,16 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+
+        <!-- Paint the launch window in the app's own background instead of
+             AppCompat's default white, so cold start doesn't flash white
+             before the WebView renders the themed UI. -->
+        <item name="android:windowBackground">@color/windowBackground</item>
+
+        <!-- Bar icon tint is left at the platform default (light icons), which
+             already matches the default night theme, so nothing is set here.
+             useSystemBarsTheme flips both bars once the WebView reports the
+             user's actual stored theme. -->
     </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar" />

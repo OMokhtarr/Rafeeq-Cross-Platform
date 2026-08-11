@@ -25,6 +25,16 @@ const config: CapacitorConfig = {
       launchAutoHide: true,
       showSpinner: false,
     },
+
+    // System bar icon/pill tint at load, before the WebView can report the
+    // user's stored theme. Left at the "DEFAULT" default this would follow the
+    // DEVICE theme, so a light-mode phone would draw dark icons over Rafeeq's
+    // black night background and they'd vanish. The app's own theme defaults
+    // to night, so pin DARK (= light icons) to match; useSystemBarsTheme then
+    // corrects to LIGHT for users whose stored theme is day.
+    SystemBars: {
+      style: "DARK",
+    },
   },
 };
 

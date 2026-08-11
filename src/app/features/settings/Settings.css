@@ -28,75 +28,28 @@ ion-content::part(scroll) {
 
 .settings-container {
   width: 100%;
-  max-width: 600px;
+  max-width: var(--max-width-mobile, 600px);
   min-width: var(--min-width-mobile, 320px);
   flex: 1;
   overflow-y: auto;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  /* The fixed nav bar overlays the bottom of IonContent, so the scroll
+     region must reserve its height or the last rows sit underneath it. */
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* ── Header — matches Account page header ─────── */
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--color-bg-content);
-  border-bottom: 1.5px solid var(--color-border-card);
-  flex-shrink: 0;
-  transition: background var(--transition-theme), border-color var(--transition-theme);
-}
-
-.settings-back-btn {
-  background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background var(--transition-base), border-color var(--transition-base);
-}
-
-.settings-back-btn:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
-}
-
-.settings-header-text {
-  flex: 1;
-  text-align: center;
-}
-
-.settings-header-text h1 {
-  font-family: var(--font-arabic-display);
-  font-size: var(--text-xl);
-  color: var(--color-gold);
-  margin: 0 0 2px;
-}
-
-[dir="ltr"] .settings-header-text h1 {
-  font-family: var(--font-latin);
-  font-size: var(--text-lg);
-}
-
-.settings-header-text p {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin: 0;
 }
 
 /* ── Section ─────────────────────────────────── */
 .settings-section {
   margin: 18px 16px 0;
+}
+
+/* No page header here, so the first section clears the status bar itself. */
+.settings-section:first-child {
+  margin-top: max(18px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
 }
 
 .settings-section-title {

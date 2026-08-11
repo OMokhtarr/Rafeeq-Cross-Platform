@@ -48,6 +48,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         const val RECITERS_LIST_ID = "__reciters__"
         const val RECITER_PREFIX = "reciter:"
         const val SURAH_PREFIX = "surah:"
+        // Android Auto's browser client. Only this client gets an eager foreground promote on
+        // connect (see onGetRoot) — every other media browser (Bluetooth AVRCP, Assistant,
+        // System UI) browses without causing a notification card to appear.
+        const val ANDROID_AUTO_PKG = "com.google.android.projection.gearhead"
         const val ACTION_JUMP_TO_PAGE = "com.rafeeq.quranquiz.JUMP_TO_PAGE"
         const val EXTRA_AYA = "aya"
         const val EXTRA_PAGE = "page"
@@ -1102,22 +1106,42 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // if we return a root, it then auto-plays the last media. Returning null for that
         // probe tells the system we have nothing to resume, so connecting to the car never
         // auto-starts the last surah — playback only begins on an explicit user action.
+        // Logged so that if the media card ever appears (or Auto's play button stops routing),
+        // one logcat glance shows WHICH client connected — that's what the promote gate below
+        // keys on.
+        Log.d(
+            "RafeeqMedia",
+            "onGetRoot: client=$clientPackageName recent=${rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true}",
+        )
         if (rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true) {
             return null
         }
         // Mark the start of a fresh browser connection. An onPlay() with no user interaction
         // since this point is an auto-resume → suppressed (see SessionCallback.onPlay).
         userInteracted = false
-        // A media client (Android Auto, the car, or the system media controls) is
-        // connecting. Promote to a foreground media service NOW so the MediaSession's
-        // transport controls (the car's play button → onPlay()) are reliably routed.
-        // This does NOT fire on a plain phone-app open (no media browser connects), so
-        // the notification card still won't appear just from opening the app.
-        promoteToForeground(
-            session.controller.metadata
-                ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق",
-            false,
-        )
+        // Promote to a foreground media service NOW — but ONLY for Android Auto. Doing this
+        // for every browser client is what made the media card appear on a plain phone-app
+        // open: opening the app pushes the content tree / playback state, which starts the
+        // service and leaves an ACTIVE session advertising play actions. System media clients
+        // (Bluetooth AVRCP whenever earbuds/car BT are attached, Assistant, some OEM System UI
+        // media surfaces) then connect and call onGetRoot on their own, with no EXTRA_RECENT —
+        // so the old unconditional promote posted a card with nothing playing. Worse,
+        // `isForeground` is a one-way latch, so that one spurious promote also flipped the
+        // `isPlaying || isForeground` guard in updateState() on permanently, keeping the card
+        // alive for the rest of the process.
+        //
+        // Auto still needs the eager promote so the car's play button (→ onPlay()) is reliably
+        // routed on connect, so we keep it for gearhead only. Every other client still gets a
+        // real BrowserRoot — browsing works untouched; it just doesn't post a notification.
+        // Non-Auto playback is unaffected: the card appears the moment audio actually starts,
+        // via promoteToForeground() from onPlayingChanged / updateState.
+        if (clientPackageName == ANDROID_AUTO_PKG) {
+            promoteToForeground(
+                session.controller.metadata
+                    ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق",
+                false,
+            )
+        }
         return BrowserRoot(ROOT_ID, null)
     }
 

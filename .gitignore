@@ -45,3 +45,6 @@ coverage/
 *.tmp
 *.temp
 .env.production
+
+# Local npm config (machine-specific script-shell path)
+.npmrc

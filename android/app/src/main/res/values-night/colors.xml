@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!--
+      Device in dark mode — same values as the default set, which is already
+      night. Declared explicitly so the pairing with values/colors.xml stays
+      obvious and a future edit to one doesn't silently desync the other.
+    -->
+    <color name="windowBackground">#000000</color>
+</resources>

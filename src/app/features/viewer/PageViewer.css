@@ -28,7 +28,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  /* The viewer's ion-content no longer supplies the safe-area inset (see
+     .mushaf-ion-content), so the toolbar carries it: the background extends
+     under the status bar while the controls stay below it. */
+  padding: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    16px 10px;
   background: var(--color-bg-toolbar);
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-gold);
@@ -757,6 +761,20 @@
    Immersive state: same overlays slide off-screen, opacity → 0,
    pointer-events disabled. The mushaf surface itself never moves.
    ───────────────────────────────────────────────────────────────────── */
+/* The chrome is positioned against .mushaf-container, not IonPage, so the
+   container has to reach the true screen edges. App.css insets every
+   ion-content by the safe-area, which would stop it short of the bottom and
+   leave the app background showing as a band behind the gesture pill —
+   visibly lighter than the nav's own black. The toolbar and nav bar each pad
+   themselves by the corresponding inset, so they still clear the system bars.
+   Scoped by class: a bare ion-content rule here would leak to every page. */
+.mushaf-ion-content {
+  --padding-top: 0px;
+  --padding-bottom: 0px;
+  --padding-start: 0px;
+  --padding-end: 0px;
+}
+
 .mushaf-container {
   position: relative;
 }

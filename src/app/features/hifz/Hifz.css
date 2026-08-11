@@ -22,7 +22,7 @@ ion-content::part(scroll) {
   transition: background var(--transition-theme), color var(--transition-theme);
 }
 
-/* ── Shared page header — matches Account/Settings ──────── */
+/* ── Shared page header — buttons only, no title text ───── */
 .hifz-page-header {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
@@ -32,33 +32,9 @@ ion-content::part(scroll) {
   padding: 12px 16px;
   background: var(--color-bg-content);
   border-bottom: 1.5px solid var(--color-border-card);
-  /* Capped so enlarged OS text can't let the header eat the scroll region
-     below it. It stays fixed at normal sizes and only gives way when the
-     text would otherwise squeeze the content out of reach. */
   flex-shrink: 0;
-  max-height: 22vh;
-  overflow-y: auto;
   box-sizing: border-box;
   transition: background var(--transition-theme), border-color var(--transition-theme);
-}
-
-.hifz-page-header-text {
-  flex: 1;
-  text-align: center;
-}
-
-.hifz-page-header-text h1 {
-  font-family: var(--font-arabic-display);
-  font-size: var(--text-xl);
-  color: var(--color-gold);
-  margin: 0 0 2px;
-  line-height: var(--leading-tight);
-}
-
-.hifz-page-header-text p {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: 0;
 }
 
 /* Circular gold back button — matches Account/Settings */
@@ -152,6 +128,12 @@ ion-content::part(scroll) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* First-run setup renders with no header above it, so it clears the status bar
+   itself. Editing a plan keeps the header, which already provides that gap. */
+.hifz-setup--headerless {
+  padding-top: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
 }
 
 /* Plan/dashboard: the scroll region below the fixed header. Scrolls only when
