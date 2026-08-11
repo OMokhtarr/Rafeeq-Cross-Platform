@@ -18,6 +18,7 @@ import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
 import { recordQuizCompletion } from "../../../../../../core/services/storage/quiz-streak.service";
+import { useQuizFreezeToasts } from "../../../../../../core/hooks/useFreezeToast";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -204,6 +205,8 @@ const AkmelAlNehayat: React.FC = () => {
   const history = useHistory();
   const { t, isRTL } = useLang();
   const tt = t.quizTest;
+  // Surface a freeze earned or spent by finishing this quiz.
+  useQuizFreezeToasts();
 
   const [questions, setQuestions] = useState<NehayatQuestion[]>([]);
   const [idx, setIdx] = useState(0);

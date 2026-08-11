@@ -59,6 +59,7 @@ import {
   initMetadata,
 } from "../../core/services/data/metadata.service";
 import { todayStr } from "../../core/utils/local-date.util";
+import { useFreezeToast } from "../../core/hooks/useFreezeToast";
 import "./Hifz.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -1543,6 +1544,7 @@ const Hifz: React.FC = () => {
   const { t, lang } = useLang();
   const { isNight } = useTheme();
   const history = useHistory();
+  const { toastFrozen, toastEarned } = useFreezeToast();
 
   const [plan, setPlan] = useState<HifzPlan | null>(null);
   const [view, setView] = useState<"setup" | "plan" | "sessions">("setup");
@@ -1607,9 +1609,15 @@ const Hifz: React.FC = () => {
     // settle any missed days against a freeze, attempt repair, and award any
     // freezes the extra sessions earned. Each id is recorded separately so a
     // batch of sessions counts as the several sessions it is.
+    let frozenDays = 0;
+    let earnedFreezes = 0;
     for (const id of completedIds) {
-      recordHifzSession(sessions, id, today);
+      const r = recordHifzSession(sessions, id, today);
+      frozenDays += r.frozen.length;
+      earnedFreezes += r.earned;
     }
+    toastFrozen(frozenDays);
+    toastEarned(earnedFreezes);
 
     // If this completed the whole plan, record a best run.
     if (sessions.every((s) => s.done)) {
@@ -1630,7 +1638,7 @@ const Hifz: React.FC = () => {
       persistLatestPlan(record);
       setLatestPlan(record);
     }
-  }, [readPages, plan, chapters]);
+  }, [readPages, plan, chapters, toastFrozen, toastEarned]);
 
   useEffect(() => {
     // Load saved plan from storage (web localStorage or native Capacitor Preferences)
@@ -1724,7 +1732,9 @@ const Hifz: React.FC = () => {
       // per-day store is keyed by session id, so re-marking cannot mint a
       // second freeze for the same session.
       if (nowDone) {
-        recordHifzSession(sessions, id, today);
+        const r = recordHifzSession(sessions, id, today);
+        toastFrozen(r.frozen.length);
+        toastEarned(r.earned);
       }
 
       // Keep the read-pages cache in sync with the manual checkmark: marking a
@@ -1771,7 +1781,7 @@ const Hifz: React.FC = () => {
         setLatestPlan(record);
       }
     },
-    [plan, chapters],
+    [plan, chapters, toastFrozen, toastEarned],
   );
 
   // Mark/unmark a single surah's pages as read (per-surah tick in a multi-surah

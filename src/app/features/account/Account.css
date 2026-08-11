@@ -20,63 +20,10 @@ ion-content::part(scroll) {
   width: 100%;
 }
 
-/* ── Header — matches Settings header ── */
-.account-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--color-bg-content);
-  border-bottom: 1.5px solid var(--color-border-card);
-  flex-shrink: 0;
-  transition: background var(--transition-theme), border-color var(--transition-theme);
-}
-
-/* Circular gold back button — matches settings-back-btn */
-.account-back {
-  background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background var(--transition-base), border-color var(--transition-base);
-}
-.account-back:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
-}
-.account-back svg { width: 20px; height: 20px; }
-
-.account-header-titles { text-align: center; flex: 1; }
-
-.account-title {
-  font-family: var(--font-arabic-display);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  margin: 0;
-  color: var(--color-gold);
-}
-[dir="ltr"] .account-title {
-  font-family: var(--font-latin);
-  font-size: var(--text-lg);
-}
-
-.account-subtitle {
-  font-family: var(--font-latin);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: 2px 0 0;
-}
-
 /* ── Body — IonContent handles the scroll, so this just stacks cards ── */
+/* No page header here, so the body clears the status bar itself. */
 .account-body {
-  padding: 16px 16px 0;
+  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -218,6 +165,105 @@ ion-content::part(scroll) {
   color: var(--color-text-muted);
   text-align: center;
   padding: 4px 0 2px;
+}
+
+/* ── Freeze meter ─────────────────────────────────────────────────────────
+   A pip is a crescent rather than a dot: the card's whole language is gold
+   mushaf furniture, and a crescent held in reserve reads as "in hand"
+   without needing a legend. Held pips are solid gold; spent ones keep the
+   same silhouette at --color-gold-subtle, so the meter's shape stays
+   readable at a glance and no new colour enters the palette. */
+
+/* One row per streak, separated from the stats and from each other by the
+   same hairline the card already uses between sections. */
+.ac-freeze-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-card);
+}
+
+.ac-freeze-row-lbl {
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* Arabic has no case and letter-spacing breaks its joins, so the label drops
+   both and keeps the inherited Arabic face. */
+[dir="rtl"] .ac-freeze-row-lbl {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ac-freeze {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.ac-freeze-meter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The crescent: a disc with a second disc punched out by an offset shadow. */
+.ac-freeze-pip {
+  width: 11px;
+  height: 11px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  box-shadow: inset -3px 0 0 0 var(--color-gold-subtle);
+  transform: rotate(-20deg);
+  flex-shrink: 0;
+}
+
+.ac-freeze-pip--held {
+  box-shadow: inset -3px 0 0 0 var(--color-gold);
+}
+
+/* Mirror the crescent's opening with the reading direction. */
+[dir="rtl"] .ac-freeze-pip {
+  box-shadow: inset 3px 0 0 0 var(--color-gold-subtle);
+  transform: rotate(20deg);
+}
+
+[dir="rtl"] .ac-freeze-pip--held {
+  box-shadow: inset 3px 0 0 0 var(--color-gold);
+}
+
+.ac-freeze-count {
+  font-family: var(--font-latin);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-gold);
+  margin-inline-start: 2px;
+  line-height: 1;
+}
+
+.ac-freeze-state {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 0 var(--space-2);
+}
+
+/* The spend notice earns a touch more weight than the state line: it reports
+   something that already happened to the user's streak. */
+.ac-freeze-notice {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-gold-deep);
+  text-align: center;
 }
 
 /* ── Loading / error ── */

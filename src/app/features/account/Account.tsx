@@ -12,13 +12,17 @@ import {
   computeQuizStreak,
   computeLongestQuizStreak,
   settleQuizFreezes,
+  loadQuizStreakDates,
 } from "../../core/services/storage/quiz-streak.service";
 import {
   loadPlanAsync,
   computeStreakPersistent,
   settleHifzFreezes,
+  loadStreakDates,
   type PlanSession,
 } from "../hifz/hifz.service";
+import StreakFreezeMeter from "./StreakFreezeMeter";
+import { useQuizFreezeToasts } from "../../core/hooks/useFreezeToast";
 import {
   exportBackupToFile,
   parseBackup,
@@ -117,6 +121,11 @@ const TERMS_SECTIONS = [
   },
 ];
 
+/** Newest date in a streak store, or null when the streak was never started. */
+function latestDate(dates: string[]): string | null {
+  return dates.length ? dates.slice().sort().pop() ?? null : null;
+}
+
 const Account: React.FC = () => {
   const history = useHistory();
   const { lang, isRTL } = useLang();
@@ -132,6 +141,10 @@ const Account: React.FC = () => {
   const [hifzStreak, setHifzStreak] = useState(0);
   const [quizStreak, setQuizStreak] = useState(0);
   const [longestQuizStreak, setLongestQuizStreak] = useState(0);
+  // Latest real activity per streak. Null means the streak was never started,
+  // which hides that freeze meter entirely.
+  const [hifzLastActive, setHifzLastActive] = useState<string | null>(null);
+  const [quizLastActive, setQuizLastActive] = useState<string | null>(null);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesError, setNotesError] = useState<string | null>(null);
@@ -166,6 +179,8 @@ const Account: React.FC = () => {
       setHifzStreak(computeStreakPersistent(sessions));
       setQuizStreak(computeQuizStreak());
       setLongestQuizStreak(computeLongestQuizStreak());
+      setHifzLastActive(latestDate(loadStreakDates()));
+      setQuizLastActive(latestDate(loadQuizStreakDates()));
       setNotes(await fetchAllNotes());
     } catch (err) {
       console.error("[Account] loadLocalData failed:", err);
@@ -192,11 +207,15 @@ const Account: React.FC = () => {
     const onQuizStreakChanged = () => {
       setQuizStreak(computeQuizStreak());
       setLongestQuizStreak(computeLongestQuizStreak());
+      setQuizLastActive(latestDate(loadQuizStreakDates()));
     };
     window.addEventListener("quiz-streak-changed", onQuizStreakChanged);
     return () =>
       window.removeEventListener("quiz-streak-changed", onQuizStreakChanged);
   }, []);
+
+  // Toasts for the same event, shared with the quiz pages.
+  useQuizFreezeToasts();
 
   const handleExport = useCallback(async () => {
     setBackupError(null);
@@ -416,6 +435,30 @@ const Account: React.FC = () => {
                           <span className="ac-streak-stat-lbl">{t.longest}</span>
                         </div>
                       </div>
+
+                      {/* Freeze meters — one per streak, and only for a streak
+                          the user has actually started. Showing an empty meter
+                          for a feature they never use is a standing nag. */}
+                      {hifzLastActive && (
+                        <div className="ac-freeze-row">
+                          <span className="ac-freeze-row-lbl">{t.hifzStreak}</span>
+                          <StreakFreezeMeter
+                            pool="hifz"
+                            lang={lang}
+                            lastActiveDate={hifzLastActive}
+                          />
+                        </div>
+                      )}
+                      {quizLastActive && (
+                        <div className="ac-freeze-row">
+                          <span className="ac-freeze-row-lbl">{t.quizStreak}</span>
+                          <StreakFreezeMeter
+                            pool="quiz"
+                            lang={lang}
+                            lastActiveDate={quizLastActive}
+                          />
+                        </div>
+                      )}
 
                       {hifzStreak === 0 && quizStreak === 0 && (
                         <p className="ac-streak-empty">{t.noStreak}</p>

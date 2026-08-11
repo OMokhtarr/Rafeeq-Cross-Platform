@@ -106,7 +106,7 @@ export function recordQuizCompletion(date: string = todayStr()): number {
   // settleFreezes and letting it fall through to repair instead. Settle only
   // up to the date being recorded, so a backdated call cannot spend a freeze
   // on the very day it is about to mark active.
-  settleQuizFreezes(date);
+  const frozen = settleQuizFreezes(date);
 
   const dates = loadQuizStreakDates();
   if (!dates.includes(date)) {
@@ -128,14 +128,27 @@ export function recordQuizCompletion(date: string = todayStr()): number {
     (loadFreezeDates().includes(isoDaysAgo(1)) &&
       !wasFrozen("quiz", isoDaysAgo(1)));
 
-  earnFreezes("quiz", date, counts[date], repairedToday);
+  const earned = earnFreezes("quiz", date, counts[date], repairedToday);
 
-  // Let a mounted Account view refresh without waiting on view lifecycle.
+  // Let a mounted Account view refresh without waiting on view lifecycle, and
+  // carry the freeze changes so a listening view can toast them.
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("quiz-streak-changed"));
+    window.dispatchEvent(
+      new CustomEvent("quiz-streak-changed", {
+        detail: { frozen, earned } satisfies QuizFreezeChange,
+      }),
+    );
   }
 
   return computeQuizStreak();
+}
+
+/** Freeze changes carried by the `quiz-streak-changed` event. */
+export interface QuizFreezeChange {
+  /** Days newly covered by a freeze. */
+  frozen: string[];
+  /** Freezes newly earned. */
+  earned: number;
 }
 
 /**
