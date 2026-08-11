@@ -23,7 +23,7 @@ ion-content::part(scroll) {
 /* ── Body — IonContent handles the scroll, so this just stacks cards ── */
 /* No page header here, so the body clears the status bar itself. */
 .account-body {
-  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px 0;
+  padding: max(16px, var(--safe-inset-top)) 16px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;

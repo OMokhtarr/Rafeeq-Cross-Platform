@@ -10,6 +10,33 @@
 @import url("https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Scheherazade+New:wght@400;500;600;700&display=swap");
 
 :root {
+  /* ── SAFE AREA INSETS — resolved ──────────────────
+     Use --safe-inset-* everywhere. Never read --safe-area-inset-*,
+     env(safe-area-inset-*), or --rfq-safe-area-inset-* directly: each is
+     correct only on some devices, and the whole point of these tokens is
+     that one name resolves to the right one everywhere.
+
+     Three sources, largest wins:
+     - --safe-area-inset-*      Capacitor's bundled SystemBars plugin
+                                (com.getcapacitor.plugin.SystemBars). Real
+                                values on Android 15+; injects 0px on ≤14.
+     - env(safe-area-inset-*)   iOS and web. On Android WebView this only
+                                reflects a cutout, and only on builds new
+                                enough for the plugin's passthrough branch.
+     - --rfq-safe-area-inset-*  Ours, set by MainActivity on Android ≤14 only
+                                (injectSafeAreaInsetsBelowApi35). It must not
+                                reuse the plugin's names: insets dispatch
+                                parent → child, so our listener runs first and
+                                the plugin's zeros would overwrite ours.
+
+     max() rather than var(x, env(y)) fallbacks throughout: the plugin always
+     *defines* its variables, so a defined-but-zero value never triggers a
+     var() fallback and the other sources must be consulted independently. */
+  --safe-inset-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px), var(--rfq-safe-area-inset-top, 0px));
+  --safe-inset-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px), var(--rfq-safe-area-inset-right, 0px));
+  --safe-inset-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), var(--rfq-safe-area-inset-bottom, 0px));
+  --safe-inset-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px), var(--rfq-safe-area-inset-left, 0px));
+
   /* ── BRAND PALETTE (theme-invariant) ─────────────── */
 
   --color-forest-deep: #0d1f14;
@@ -104,12 +131,12 @@
      region above it. Text growth is bounded by the textZoom cap instead
      (MainActivity.applyCappedTextZoom / -webkit-text-size-adjust), which
      keeps the nav's own content inside this height. */
-  --bottom-nav-height: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  --bottom-nav-height: calc(64px + var(--safe-inset-bottom));
 }
 
 @media (min-width: 480px) {
   :root {
-    --bottom-nav-height: calc(70px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+    --bottom-nav-height: calc(70px + var(--safe-inset-bottom));
   }
 }
 

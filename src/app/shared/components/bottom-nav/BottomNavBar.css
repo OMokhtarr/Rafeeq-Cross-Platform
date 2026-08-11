@@ -8,9 +8,9 @@
   width: 100%;
   background: #0a0a0a;
   border-top: 1px solid var(--color-gold);
-  padding: 2px var(--safe-area-inset-right, env(safe-area-inset-right, 0px))
-    max(2px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
-    var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  padding: 2px var(--safe-inset-right)
+    max(2px, var(--safe-inset-bottom))
+    var(--safe-inset-left);
   flex-shrink: 0;
   box-sizing: border-box;
   transition:

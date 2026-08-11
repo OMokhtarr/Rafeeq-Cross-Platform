@@ -41,13 +41,14 @@ ion-content::part(scroll) {
   margin-inline: auto;
 }
 
-/* Safe area insets: --safe-area-inset-* come from Capacitor's System Bars
-   plugin (see the note in index.css). Never redeclare them here. */
+/* Safe area insets: always use the --safe-inset-* tokens (defined in
+   tokens.css). Never read Capacitor's --safe-area-inset-* directly — it is
+   0px on Android 14 and below. */
 ion-content {
-  --padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  --padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
-  --padding-start: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
-  --padding-end: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --padding-top: var(--safe-inset-top);
+  --padding-bottom: var(--safe-inset-bottom);
+  --padding-start: var(--safe-inset-left);
+  --padding-end: var(--safe-inset-right);
 }
 
 ion-page {
@@ -55,18 +56,18 @@ ion-page {
 }
 
 ion-header {
-  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  padding-top: var(--safe-inset-top);
 }
 
 ion-footer {
-  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--safe-inset-bottom);
 }
 
 .safe-area-padding {
-  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
-  padding-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
-  padding-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  padding-top: var(--safe-inset-top);
+  padding-bottom: var(--safe-inset-bottom);
+  padding-left: var(--safe-inset-left);
+  padding-right: var(--safe-inset-right);
 }
 
 /* Preload progress bar */
@@ -83,4 +84,38 @@ ion-footer {
   height: 100%;
   background: var(--color-gold);
   transition: width 0.3s ease;
+}
+
+/* ── Exit-confirmation toast ───────────────────────────────────────────────
+   A compact centred pill rather than Ionic's full-width bar. ion-toast keeps
+   its content in shadow DOM, so the shape comes from its custom properties
+   and the sizing from ::part(container) — a plain descendant selector cannot
+   reach inside. Scoped to .rfq-exit-toast so other toasts keep the default. */
+ion-toast.rfq-exit-toast {
+  --background: rgba(28, 28, 28, 0.94);
+  --color: #fff;
+  --border-radius: 9999px;
+  --box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  --min-width: 0;
+  --width: auto;
+  --max-width: calc(100vw - 64px);
+  /* Sit above the bottom nav rather than behind it. */
+  --start: 0;
+  --end: 0;
+  margin-inline: auto;
+  padding-bottom: calc(var(--bottom-nav-height, 64px) + 8px);
+  text-align: center;
+  font-family: var(--font-arabic);
+}
+
+ion-toast.rfq-exit-toast::part(container) {
+  width: -moz-fit-content;
+  width: fit-content;
+  margin-inline: auto;
+  border-radius: 9999px;
+}
+
+ion-toast.rfq-exit-toast::part(message) {
+  padding: 2px 4px;
+  text-align: center;
 }

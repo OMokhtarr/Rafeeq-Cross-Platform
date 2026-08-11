@@ -3,7 +3,9 @@ package com.rafeeq.quranquiz
 import android.os.Build
 import android.os.Bundle
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.getcapacitor.BridgeActivity
 import com.rafeeq.quranquiz.auto.RafeeqAutoPlugin
 
@@ -82,6 +84,10 @@ class MainActivity : BridgeActivity() {
         // to background (Android Auto pushes MainActivity behind its UI).
         bridge.webView.resumeTimers()
         bridge.webView.onResume()
+        // Re-assert the safe-area variables: a reload replaces the document and
+        // wipes the inline properties set on documentElement. No-op on 15+,
+        // where the listener is never registered.
+        ViewCompat.requestApplyInsets(window.decorView)
     }
 
     override fun onPause() {
@@ -109,6 +115,7 @@ class MainActivity : BridgeActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        injectSafeAreaInsetsBelowApi35()
 
         // Android draws a translucent scrim behind a transparent navigation bar
         // to guarantee contrast against arbitrary content. Rafeeq controls the
@@ -117,6 +124,67 @@ class MainActivity : BridgeActivity() {
         // gesture pill. Opt out so the bar truly matches the app background.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
+        }
+    }
+
+    /**
+     * Supply `--rfq-safe-area-inset-*` on Android 14 and below.
+     *
+     * Capacitor's SystemBars plugin (bundled in @capacitor/android core, see
+     * `com.getcapacitor.plugin.SystemBars`) owns `--safe-area-inset-*`, but only
+     * reads real insets on Android 15+. Below VANILLA_ICE_CREAM its listener
+     * takes the non-passthrough branch, which explicitly rebuilds the insets as
+     * `Insets.of(0, 0, 0, 0)` and then calls `injectSafeAreaCSS` with those
+     * zeros. `env(safe-area-inset-top)` does not cover the gap either: on
+     * Android WebView that reflects the display cutout only, and only on WebView
+     * builds new enough for the passthrough branch. So on ≤14 both halves of the
+     * CSS `max(var(...), env(...))` resolve to 0.
+     *
+     * Most pages absorb that because ion-content still applies its own padding,
+     * but the mushaf viewer zeroes it (`.mushaf-ion-content`) and relies on the
+     * toolbar padding itself by the inset — so the toolbar rendered underneath
+     * the status bar.
+     *
+     * A SEPARATE VARIABLE NAME IS LOAD-BEARING. Insets dispatch parent → child,
+     * so this decor-view listener runs BEFORE Capacitor's (registered on the
+     * WebView's parent) and both queue their JS on the main looper in that same
+     * order — Capacitor's zeros would land last and overwrite ours on every
+     * insets pass. Writing to our own namespace sidesteps the ordering entirely.
+     * CSS consumers never read these names directly: `tokens.css` folds all
+     * three sources into `--safe-inset-*` with a max(), so on 15+ ours is
+     * undefined → 0 and the plugin wins, and on ≤14 the plugin's is 0 and ours
+     * wins. Renaming these variables means updating that token block too.
+     */
+    private fun injectSafeAreaInsetsBelowApi35() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            // CSS pixels are density-independent; textZoom does not affect this.
+            val density = resources.displayMetrics.density
+            val top = (bars.top / density).toInt()
+            val right = (bars.right / density).toInt()
+            val bottom = (bars.bottom / density).toInt()
+            val left = (bars.left / density).toInt()
+
+            val script =
+                """
+                (function () {
+                  var s = document.documentElement.style;
+                  s.setProperty('--rfq-safe-area-inset-top', '${top}px');
+                  s.setProperty('--rfq-safe-area-inset-right', '${right}px');
+                  s.setProperty('--rfq-safe-area-inset-bottom', '${bottom}px');
+                  s.setProperty('--rfq-safe-area-inset-left', '${left}px');
+                })();
+                """.trimIndent()
+
+            bridge?.webView?.let { wv -> wv.post { wv.evaluateJavascript(script, null) } }
+
+            // Pass through untouched: consuming here would stop Capacitor and
+            // any other listener from ever seeing the insets.
+            insets
         }
     }
 }

@@ -5,6 +5,7 @@ import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import { registerOverlay } from "../../core/utils/overlay-registry";
 import {
   loadPlan,
   loadPlanAsync,
@@ -107,6 +108,10 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
   const [mode, setMode] = useState<"juz" | "surah" | "pages">("juz");
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+
+  // An edge swipe / system Back should close this sheet rather than navigate
+  // away. Mounted only while open, so registering on mount is enough.
+  useEffect(() => registerOverlay(onClose), [onClose]);
 
   // multi-select sets for juz and surah
   const [selectedJuzs, setSelectedJuzs] = useState<Set<number>>(new Set());
@@ -1060,6 +1065,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [showStreakInfo, setShowStreakInfo] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
+
+  // Put these dialogs on the back ladder so an edge swipe dismisses the dialog
+  // instead of counting toward leaving the page.
+  useEffect(() => {
+    if (!showNewRoundConfirm) return;
+    return registerOverlay(() => setShowNewRoundConfirm(false));
+  }, [showNewRoundConfirm]);
+
+  useEffect(() => {
+    if (!showStreakInfo) return;
+    return registerOverlay(() => setShowStreakInfo(false));
+  }, [showStreakInfo]);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
   const doneSessions = sessions.filter((s) => s.done).length;
@@ -1589,6 +1606,18 @@ const Hifz: React.FC = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Same back-ladder treatment as the dashboard dialogs above: an open confirm
+  // swallows the swipe rather than letting it fall through to the sub-view.
+  useEffect(() => {
+    if (!showResetConfirm) return;
+    return registerOverlay(() => setShowResetConfirm(false));
+  }, [showResetConfirm]);
+
+  useEffect(() => {
+    if (!showDeleteConfirm) return;
+    return registerOverlay(() => setShowDeleteConfirm(false));
+  }, [showDeleteConfirm]);
+
   const [memorized, setMemorized] = useState<MemorizedUnit[]>([]);
   const [goal, setGoal] = useState<HifzGoal>({
     quantity: 5,
@@ -1966,9 +1995,20 @@ const Hifz: React.FC = () => {
   // Back: sessions → plan, setup-editing → plan, otherwise → app back
   const handleHeaderBack = () => {
     if (view === "sessions") { setView("plan"); return; }
-    if (view === "setup" && plan !== null) { setView("plan"); return; }
+    // Editing is reached from the sessions view, so back returns there.
+    if (view === "setup" && plan !== null) { setView("sessions"); return; }
     history.replace("/");
   };
+
+  // The sub-views are local state, not routes, so the system Back button can't
+  // reach them via history. Registering them as overlays puts them on the same
+  // back ladder: setup → sessions → plan. First-run setup has no back target.
+  useEffect(() => {
+    if (view === "sessions") return registerOverlay(() => setView("plan"));
+    if (view === "setup" && plan !== null) {
+      return registerOverlay(() => setView("sessions"));
+    }
+  }, [view, plan]);
 
   // The header is now a back-only strip on sub-views; the plan dashboard
   // renders without it, so there is no right slot to fill.
@@ -1996,7 +2036,14 @@ const Hifz: React.FC = () => {
         <div className="hifz-page">
           {/* ── Shared page header — buttons only ── */}
           {showHeader && (
-            <div className="hifz-page-header">{headerLeft}</div>
+            <div className="hifz-page-header">
+              {headerLeft}
+              <h1 className="hifz-page-header-title">
+                {view === "sessions" ? h.viewAllSessions : h.setupTitle}
+              </h1>
+              {/* Balances the back button so the title stays centred. */}
+              <div className="hifz-page-header-spacer" aria-hidden="true" />
+            </div>
           )}
 
           {view === "setup" && (

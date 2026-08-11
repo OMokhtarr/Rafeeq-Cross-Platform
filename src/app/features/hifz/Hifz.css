@@ -23,14 +23,17 @@ ion-content::part(scroll) {
 }
 
 /* ── Shared page header — buttons only, no title text ───── */
-/* Back-only strip on the sub-views. The plan dashboard renders without it. */
+/* Back + title strip on the sub-views. The plan dashboard renders without it. */
 .hifz-page-header {
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   display: flex;
   align-items: center;
-  padding: max(12px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
-    16px 12px;
+  gap: var(--space-2);
+  /* Height comes from the 36px back button plus this padding — keep both tight
+     so the strip stays out of the way of the content it sits above. */
+  padding: max(8px, var(--safe-inset-top))
+    16px 8px;
   background: var(--color-bg-content);
   border-bottom: 1.5px solid var(--color-border-card);
   flex-shrink: 0;
@@ -38,10 +41,40 @@ ion-content::part(scroll) {
   transition: background var(--transition-theme), border-color var(--transition-theme);
 }
 
-/* Circular gold back button — matches Account/Settings */
+.hifz-page-header-title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-gold);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Unlike .sjs-title, this one clips (overflow:hidden, for the ellipsis), so
+     Amiri's ascenders and diacritics get cut instead of harmlessly spilling.
+     An explicit line box plus a little vertical room keeps them inside it. */
+  line-height: 1.6;
+  padding-block: 2px;
+}
+
+[dir="ltr"] .hifz-page-header-title {
+  font-family: var(--font-latin);
+  font-size: var(--text-lg);
+}
+
+/* Same width as .hifz-back-btn so the title centres against the real page. */
+.hifz-page-header-spacer {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+/* Circular gold back button — 36px to match Search's compact header. */
 .hifz-back-btn {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   background: none;
   border: 1.5px solid var(--color-gold-subtle);
   color: var(--color-gold);
@@ -75,7 +108,7 @@ ion-content::part(scroll) {
 /* First-run setup renders with no header above it, so it clears the status bar
    itself. Editing a plan keeps the header, which already provides that gap. */
 .hifz-setup--headerless {
-  padding-top: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding-top: max(var(--space-4), var(--safe-inset-top));
 }
 
 /* Plan/dashboard: the scroll region below the fixed header. Scrolls only when
@@ -86,7 +119,7 @@ ion-content::part(scroll) {
   margin: 0 auto;
   /* Topmost element on this view — the page header was removed, so the plan
      clears the status bar itself. */
-  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+  padding: max(var(--space-4), var(--safe-inset-top))
     var(--space-4) calc(var(--bottom-nav-height) + var(--space-6));
   box-sizing: border-box;
   flex: 1;
@@ -789,7 +822,7 @@ ion-content::part(scroll) {
   max-height: 88vh;
   background: var(--color-bg-content);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-inset-bottom));
   box-sizing: border-box;
   animation: hifz-sheet-up 0.25s ease;
   display: flex;

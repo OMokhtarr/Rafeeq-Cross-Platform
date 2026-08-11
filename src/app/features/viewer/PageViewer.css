@@ -30,8 +30,14 @@
   align-items: center;
   /* The viewer's ion-content no longer supplies the safe-area inset (see
      .mushaf-ion-content), so the toolbar carries it: the background extends
-     under the status bar while the controls stay below it. */
-  padding: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+     under the status bar while the controls stay below it.
+
+     --safe-inset-top resolves the inset across platforms (see tokens.css).
+     This is the page that exposed why that token has to exist:
+     .mushaf-ion-content zeroes ion-content's padding, so on Android ≤14 —
+     where Capacitor's plugin injects 0px and env() is also 0 — nothing else
+     was left to clear the status bar and the toolbar rendered underneath it. */
+  padding: calc(10px + var(--safe-inset-top))
     16px 10px;
   background: var(--color-bg-toolbar);
   color: var(--color-text-primary);
@@ -727,7 +733,7 @@
   bottom: 0;
   /* Default centered; .align-start / .align-end override per page parity. */
   text-align: center;
-  padding: 6px 20px max(12px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  padding: 6px 20px max(12px, var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), var(--rfq-safe-area-inset-bottom, 0px));
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-muted, #8a8170);
@@ -1479,7 +1485,7 @@
 .selection-bar {
   position: absolute;
   inset-inline: 12px;
-  bottom: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  bottom: calc(64px + var(--safe-inset-bottom));
   background: var(--color-bg-toolbar, #fdfaf3);
   border: 1.5px solid var(--color-gold, #d4b48c);
   border-radius: 14px;
@@ -1862,9 +1868,15 @@
 .playback-sheet-grab {
   touch-action: none;
   flex-shrink: 0;
-  /* Matches the hook's 48px handle zone so the whole grabbable strip is also
-     the strip that suppresses native scrolling. */
-  height: 48px;
+  /* Just the handle plus its breathing room — PlaybackSettings renders its own
+     .pb-header directly below, so anything taller reads as a double header. */
+  padding-bottom: 6px;
+}
+
+/* The sheet's own header is part of the grab area: dragging from the title bar
+   is the natural gesture, and it keeps the handle strip short. */
+.playback-sheet .pb-header {
+  touch-action: none;
 }
 
 [data-theme="night"] .playback-sheet-drag-handle {

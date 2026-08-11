@@ -153,7 +153,12 @@ const PageViewer: React.FC = () => {
   const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
   const sheetOpenTimeRef = useRef<number>(0);
   const closePlaybackSheet = useCallback(() => setPlaybackSheetOpen(false), []);
-  const playbackDrag = useSheetDrag({ onDismiss: closePlaybackSheet });
+  // 96px covers the handle strip plus PlaybackSettings' own .pb-header, so the
+  // whole title bar is draggable.
+  const playbackDrag = useSheetDrag({
+    onDismiss: closePlaybackSheet,
+    handleZone: 96,
+  });
 
   // An edge swipe should close the sheet rather than count toward exiting.
   useEffect(() => {
@@ -1491,7 +1496,10 @@ const PageViewer: React.FC = () => {
                 ref={playbackDrag.ref}
                 style={{
                   position: "absolute",
-                  top: "56px", // height of .top-toolbar
+                  // Height of .top-toolbar, which pads itself by the status-bar
+                  // inset — a bare 56px would tuck the sheet under the toolbar.
+                  // Must stay in sync with .top-toolbar's padding (PageViewer.css).
+                  top: "calc(56px + var(--safe-inset-top))",
                   bottom: 0,
                   width: "100%",
                   background: "var(--color-bg-content, #f7f7f8)",

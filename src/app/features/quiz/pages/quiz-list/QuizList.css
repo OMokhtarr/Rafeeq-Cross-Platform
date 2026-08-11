@@ -28,7 +28,7 @@ ion-content::part(scroll) {
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+  padding: max(var(--space-4), var(--safe-inset-top))
     16px 0;
   box-sizing: border-box;
 }

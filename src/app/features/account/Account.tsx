@@ -42,83 +42,135 @@ type ModalType =
   | "restore"
   | null;
 
-const PRIVACY_SECTIONS = [
+/**
+ * Legal prose. Each section carries both languages side by side (same shape as
+ * TAJWEED_RULES in Settings) so the Arabic and English can never drift apart
+ * section-by-section the way two parallel arrays would.
+ */
+interface ProseSection {
+  headingAr: string | null;
+  headingEn: string | null;
+  bodyAr: string;
+  bodyEn: string;
+}
+
+const PRIVACY_SECTIONS: ProseSection[] = [
   {
-    heading: null,
-    body: "Rafeeq (\"the App\") is committed to protecting your privacy. This policy explains how we handle your data.",
+    headingAr: null,
+    headingEn: null,
+    bodyAr: "يلتزم تطبيق رفيق (\"التطبيق\") بحماية خصوصيتك. توضح هذه السياسة كيفية تعاملنا مع بياناتك.",
+    bodyEn: "Rafeeq (\"the App\") is committed to protecting your privacy. This policy explains how we handle your data.",
   },
   {
-    heading: "1. Data stored on your device",
-    body: "Your preferences, bookmarks, notes, reading position, memorisation progress and streaks, plus cached Quran text, translations, fonts and downloaded audio are stored only on your device. Uninstalling the App, or clearing its storage in Android settings, removes all of it permanently.",
+    headingAr: "١. البيانات المحفوظة على جهازك",
+    headingEn: "1. Data stored on your device",
+    bodyAr: "تُحفظ تفضيلاتك ومواضعك المحفوظة وملاحظاتك وموضع القراءة وتقدّم الحفظ وسلاسل المواظبة، إضافة إلى النص القرآني والترجمات والخطوط والمقاطع الصوتية المُنزَّلة، على جهازك فقط. وإلغاء تثبيت التطبيق، أو مسح مساحة تخزينه من إعدادات أندرويد، يحذفها جميعًا نهائيًا.",
+    bodyEn: "Your preferences, bookmarks, notes, reading position, memorisation progress and streaks, plus cached Quran text, translations, fonts and downloaded audio are stored only on your device. Uninstalling the App, or clearing its storage in Android settings, removes all of it permanently.",
   },
   {
-    heading: "2. Recite Mode and your microphone",
-    body: "Recite Mode is the only feature that sends audio off your device, it is never on by default, and it runs only while you are actively using it.\nTo turn speech into text, the App streams your microphone audio in real time to Deepgram, a speech-recognition provider based in the United States. Audio is streamed for transcription only: the App does not record your voice to a file, does not keep the audio, and does not send it anywhere else. The transcribed text is used only to follow along with the verse on screen and is discarded when the session ends. Android asks for microphone permission the first time you use Recite Mode; if you decline, the rest of the App works normally.",
+    headingAr: "٢. وضع التلاوة والميكروفون",
+    headingEn: "2. Recite Mode and your microphone",
+    bodyAr: "وضع التلاوة هو الميزة الوحيدة التي تُرسل صوتًا خارج جهازك، وهو غير مُفعَّل افتراضيًا أبدًا، ولا يعمل إلا أثناء استخدامك له فعليًا.\nلتحويل الكلام إلى نص، يبثّ التطبيق صوت الميكروفون في الوقت الفعلي إلى Deepgram، وهي شركة للتعرّف على الكلام مقرّها الولايات المتحدة. ويُبثّ الصوت لغرض النسخ النصي فقط: فالتطبيق لا يسجّل صوتك في ملف، ولا يحتفظ بالصوت، ولا يرسله إلى أي جهة أخرى. ويُستخدم النص الناتج فقط لمتابعة الآية المعروضة على الشاشة، ويُتلَف بانتهاء الجلسة. ويطلب أندرويد إذن الميكروفون عند أول استخدام لوضع التلاوة؛ وإذا رفضت، يعمل باقي التطبيق بصورة طبيعية.",
+    bodyEn: "Recite Mode is the only feature that sends audio off your device, it is never on by default, and it runs only while you are actively using it.\nTo turn speech into text, the App streams your microphone audio in real time to Deepgram, a speech-recognition provider based in the United States. Audio is streamed for transcription only: the App does not record your voice to a file, does not keep the audio, and does not send it anywhere else. The transcribed text is used only to follow along with the verse on screen and is discarded when the session ends. Android asks for microphone permission the first time you use Recite Mode; if you decline, the rest of the App works normally.",
   },
   {
-    heading: "3. No account required",
-    body: "The App has no sign-in and no user account. Everything it stores about you — bookmarks, notes, memorisation progress, and your Hifz and quiz streaks — stays on your device. Nothing is synced to a server and nothing is tied to your identity.",
+    headingAr: "٣. لا حاجة إلى حساب",
+    headingEn: "3. No account required",
+    bodyAr: "لا يتضمن التطبيق تسجيل دخول ولا حساب مستخدم. وكل ما يحفظه عنك — المواضع المحفوظة والملاحظات وتقدّم الحفظ وسلاسل الحفظ والاختبارات — يبقى على جهازك. ولا تتم مزامنة أي شيء مع خادم، ولا يُربط أي شيء بهويتك.",
+    bodyEn: "The App has no sign-in and no user account. Everything it stores about you — bookmarks, notes, memorisation progress, and your Hifz and quiz streaks — stays on your device. Nothing is synced to a server and nothing is tied to your identity.",
   },
   {
-    heading: "4. Services the App connects to",
-    body: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS).",
+    headingAr: "٤. الخدمات التي يتصل بها التطبيق",
+    headingEn: "4. Services the App connects to",
+    bodyAr: "Quran Foundation — النص القرآني والترجمات والتفسير والتلاوات الصوتية؛ ولا يُرسَل أي شيء يدل على هويتك.\nDeepgram — التعرّف على الكلام في وضع التلاوة؛ ويستقبل صوت الميكروفون المباشر أثناء تشغيل وضع التلاوة فقط.\njsDelivr — خطوط المصحف.\nوجميع الاتصالات تجري عبر نقل مُشفَّر (HTTPS/WSS).",
+    bodyEn: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS).",
   },
   {
-    heading: "5. What the App does not do",
-    body: "No advertising and no advertising identifiers. No analytics or behavioural tracking. No selling or sharing of personal data. No access to your location, contacts, photos, files, or call history.",
+    headingAr: "٥. ما لا يفعله التطبيق",
+    headingEn: "5. What the App does not do",
+    bodyAr: "لا إعلانات ولا معرّفات إعلانية. لا تحليلات ولا تتبّع سلوكي. لا بيع أو مشاركة للبيانات الشخصية. لا وصول إلى موقعك أو جهات اتصالك أو صورك أو ملفاتك أو سجل مكالماتك.",
+    bodyEn: "No advertising and no advertising identifiers. No analytics or behavioural tracking. No selling or sharing of personal data. No access to your location, contacts, photos, files, or call history.",
   },
   {
-    heading: "6. Backing up your data",
-    body: "Because there is no account, Account → Backup → \"Export My Data\" writes your notes, bookmarks and streaks to a file you control. Restore it on another device to move your data across. The file stays wherever you save it — the App never uploads it anywhere.",
+    headingAr: "٦. النسخ الاحتياطي لبياناتك",
+    headingEn: "6. Backing up your data",
+    bodyAr: "لعدم وجود حساب، فإن الحساب ← النسخ الاحتياطي ← \"تصدير بياناتي\" يكتب ملاحظاتك ومواضعك المحفوظة وسلاسل مواظبتك في ملف تتحكم أنت به. ويمكنك استعادته على جهاز آخر لنقل بياناتك. ويبقى الملف حيث حفظته — فالتطبيق لا يرفعه إلى أي مكان.",
+    bodyEn: "Because there is no account, Account → Backup → \"Export My Data\" writes your notes, bookmarks and streaks to a file you control. Restore it on another device to move your data across. The file stays wherever you save it — the App never uploads it anywhere.",
   },
   {
-    heading: "7. Deleting your data",
-    body: "Uninstall the App, or clear its storage from Android Settings → Apps → Rafeeq → Storage. Because nothing leaves your device, that removes everything permanently — there is no server-side copy and no request to us is needed.",
+    headingAr: "٧. حذف بياناتك",
+    headingEn: "7. Deleting your data",
+    bodyAr: "ألغِ تثبيت التطبيق، أو امسح مساحة تخزينه من الإعدادات ← التطبيقات ← رفيق ← التخزين في أندرويد. ولأن لا شيء يغادر جهازك، فإن ذلك يحذف كل شيء نهائيًا — إذ لا توجد نسخة على الخادم ولا حاجة إلى طلب يُرسل إلينا.",
+    bodyEn: "Uninstall the App, or clear its storage from Android Settings → Apps → Rafeeq → Storage. Because nothing leaves your device, that removes everything permanently — there is no server-side copy and no request to us is needed.",
   },
   {
-    heading: "8. Children's Privacy",
-    body: "The App is suitable for all ages and does not knowingly collect personal information from children under 13. Recite Mode requires microphone permission, which on most devices must be granted by the device owner.",
+    headingAr: "٨. خصوصية الأطفال",
+    headingEn: "8. Children's Privacy",
+    bodyAr: "التطبيق مناسب لجميع الأعمار، ولا يجمع عن علم أي معلومات شخصية من الأطفال دون سن الثالثة عشرة. ويتطلب وضع التلاوة إذن الميكروفون، وهو إذن يمنحه مالك الجهاز في معظم الأجهزة.",
+    bodyEn: "The App is suitable for all ages and does not knowingly collect personal information from children under 13. Recite Mode requires microphone permission, which on most devices must be granted by the device owner.",
   },
   {
-    heading: "9. Changes",
-    body: "If this policy changes materially — particularly regarding what data leaves your device — the date above will change and the change will be described in the store listing's release notes.",
+    headingAr: "٩. التغييرات",
+    headingEn: "9. Changes",
+    bodyAr: "إذا طرأ تغيير جوهري على هذه السياسة — ولا سيما فيما يخص البيانات التي تغادر جهازك — فسيتغير التاريخ أعلاه، وسيُوضَّح التغيير في ملاحظات الإصدار على صفحة المتجر.",
+    bodyEn: "If this policy changes materially — particularly regarding what data leaves your device — the date above will change and the change will be described in the store listing's release notes.",
   },
   {
-    heading: "Contact",
-    body: "If you have questions about this policy, please contact us at or.mokhtar@gmail.com.",
+    headingAr: "التواصل",
+    headingEn: "Contact",
+    bodyAr: "إن كانت لديك أي أسئلة حول هذه السياسة، يرجى التواصل معنا على or.mokhtar@gmail.com.",
+    bodyEn: "If you have questions about this policy, please contact us at or.mokhtar@gmail.com.",
   },
 ];
 
-const TERMS_SECTIONS = [
+const TERMS_SECTIONS: ProseSection[] = [
   {
-    heading: null,
-    body: "Welcome to Rafeeq (\"the App\"). By using the App, you agree to these terms.",
+    headingAr: null,
+    headingEn: null,
+    bodyAr: "مرحبًا بك في تطبيق رفيق (\"التطبيق\"). باستخدامك التطبيق فإنك توافق على هذه الشروط.",
+    bodyEn: "Welcome to Rafeeq (\"the App\"). By using the App, you agree to these terms.",
   },
   {
-    heading: "1. Usage",
-    body: "Rafeeq is a Quran companion designed for reading, recitation, and learning. You may use the App for personal, non‑commercial purposes only.",
+    headingAr: "١. الاستخدام",
+    headingEn: "1. Usage",
+    bodyAr: "رفيق تطبيق مرافق للقرآن الكريم، مُصمَّم للقراءة والتلاوة والتعلّم. ويجوز لك استخدامه للأغراض الشخصية غير التجارية فقط.",
+    bodyEn: "Rafeeq is a Quran companion designed for reading, recitation, and learning. You may use the App for personal, non‑commercial purposes only.",
   },
   {
-    heading: "2. Privacy & Data",
-    body: "The App stores your preferences, bookmarks, notes, streaks, and recitation progress locally on your device. There is no account and no server-side sync. No personal data is sold or shared with third parties.",
+    headingAr: "٢. الخصوصية والبيانات",
+    headingEn: "2. Privacy & Data",
+    bodyAr: "يحفظ التطبيق تفضيلاتك ومواضعك المحفوظة وملاحظاتك وسلاسل مواظبتك وتقدّم تلاوتك محليًا على جهازك. ولا يوجد حساب ولا مزامنة مع خادم. ولا تُباع أي بيانات شخصية ولا تُشارك مع أطراف أخرى.",
+    bodyEn: "The App stores your preferences, bookmarks, notes, streaks, and recitation progress locally on your device. There is no account and no server-side sync. No personal data is sold or shared with third parties.",
   },
   {
-    heading: "3. Intellectual Property",
-    body: "Quranic text, fonts, and audio are provided by the Quran Foundation under their respective licenses. The App itself and its original code are owned by the developer.",
+    headingAr: "٣. الملكية الفكرية",
+    headingEn: "3. Intellectual Property",
+    bodyAr: "النص القرآني والخطوط والتلاوات الصوتية مُقدَّمة من Quran Foundation بموجب التراخيص الخاصة بها. أما التطبيق نفسه وشيفرته الأصلية فهي ملك للمطوِّر.",
+    bodyEn: "Quranic text, fonts, and audio are provided by the Quran Foundation under their respective licenses. The App itself and its original code are owned by the developer.",
   },
   {
-    heading: "4. Disclaimer",
-    body: "The App is provided \"as is\" without warranties. The developer is not responsible for any errors in content or functionality.",
+    headingAr: "٤. إخلاء المسؤولية",
+    headingEn: "4. Disclaimer",
+    bodyAr: "يُقدَّم التطبيق \"كما هو\" دون أي ضمانات. والمطوِّر غير مسؤول عن أي أخطاء في المحتوى أو في أداء التطبيق.",
+    bodyEn: "The App is provided \"as is\" without warranties. The developer is not responsible for any errors in content or functionality.",
   },
   {
-    heading: "5. Changes",
-    body: "We may update these terms. Continued use after changes means you accept the new terms.",
+    headingAr: "٥. التغييرات",
+    headingEn: "5. Changes",
+    bodyAr: "قد نُحدِّث هذه الشروط. واستمرارك في الاستخدام بعد التغيير يعني قبولك الشروط الجديدة.",
+    bodyEn: "We may update these terms. Continued use after changes means you accept the new terms.",
   },
   {
-    heading: "Contact",
-    body: "or.mokhtar@gmail.com",
+    headingAr: "التواصل",
+    headingEn: "Contact",
+    bodyAr: "or.mokhtar@gmail.com",
+    bodyEn: "or.mokhtar@gmail.com",
   },
 ];
+
+/** "Last updated" date, per language — same day, localised month name. */
+const LEGAL_UPDATED_AR = "٩ أغسطس ٢٠٢٦";
+const LEGAL_UPDATED_EN = "9 August 2026";
 
 /** Newest date in a streak store, or null when the streak was never started. */
 function latestDate(dates: string[]): string | null {
@@ -365,17 +417,28 @@ const Account: React.FC = () => {
     setTimeout(() => { setFeatureSent(false); setModal(null); }, 1800);
   };
 
-  const ProseContent: React.FC<{ sections: typeof PRIVACY_SECTIONS; updated: string }> = ({ sections, updated }) => (
-    <div className="amod-prose">
-      <p className="amod-updated">Last updated: {updated}</p>
-      {sections.map((s, i) => (
-        <React.Fragment key={i}>
-          {s.heading && <h2>{s.heading}</h2>}
-          {s.body.split("\n").map((line, j) => <p key={j}>{line}</p>)}
-        </React.Fragment>
-      ))}
-    </div>
-  );
+  const ProseContent: React.FC<{ sections: ProseSection[] }> = ({ sections }) => {
+    const isAr = lang === "ar";
+    return (
+      <div className="amod-prose">
+        <p className="amod-updated">
+          {isAr
+            ? `آخر تحديث: ${LEGAL_UPDATED_AR}`
+            : `Last updated: ${LEGAL_UPDATED_EN}`}
+        </p>
+        {sections.map((s, i) => {
+          const heading = isAr ? s.headingAr : s.headingEn;
+          const body = isAr ? s.bodyAr : s.bodyEn;
+          return (
+            <React.Fragment key={i}>
+              {heading && <h2>{heading}</h2>}
+              {body.split("\n").map((line, j) => <p key={j}>{line}</p>)}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <IonPage>
@@ -689,13 +752,13 @@ const Account: React.FC = () => {
 
         {modal === "terms" && (
           <AccountModal title={t.terms} onClose={() => setModal(null)}>
-            <ProseContent sections={TERMS_SECTIONS} updated="9 August 2026" />
+            <ProseContent sections={TERMS_SECTIONS} />
           </AccountModal>
         )}
 
         {modal === "privacy" && (
           <AccountModal title={t.privacy} onClose={() => setModal(null)}>
-            <ProseContent sections={PRIVACY_SECTIONS} updated="9 August 2026" />
+            <ProseContent sections={PRIVACY_SECTIONS} />
           </AccountModal>
         )}
 

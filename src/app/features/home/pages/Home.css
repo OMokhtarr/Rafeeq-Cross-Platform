@@ -58,7 +58,7 @@ ion-content::part(scroll) {
 /* ── Top wordmark — small, faint, anchored to top of stage ── */
 .home-wordmark {
   position: absolute;
-  top: max(2rem, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  top: max(2rem, var(--safe-inset-top));
   left: 0;
   right: 0;
   display: flex;

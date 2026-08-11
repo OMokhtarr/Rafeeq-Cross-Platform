@@ -37,7 +37,7 @@ ion-content::part(scroll) {
 /* ── Category list ────────────────────────────────── */
 /* No page header here, so the list clears the status bar itself. */
 .azkar-categories {
-  padding: max(var(--space-4), var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px 0;
+  padding: max(var(--space-4), var(--safe-inset-top)) 16px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;

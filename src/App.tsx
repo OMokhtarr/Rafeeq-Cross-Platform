@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { Route, Redirect, useLocation } from "react-router-dom";
+import { Route, Redirect, useLocation, useHistory } from "react-router-dom";
+import { App as CapApp } from "@capacitor/app";
 import { initMetadata } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
@@ -79,11 +80,40 @@ const MainRouterOutlet: React.FC = () => {
   const exitRef = useRef(exit);
   exitRef.current = exit;
 
+  const history = useHistory();
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
   // A swipe that lands on a different route means the user went somewhere
   // rather than exiting, so the armed first swipe should not carry over.
+  // Keyed on the path alone and dispatched through the ref: depending on `exit`
+  // here would re-run this on every render — including the one the toast itself
+  // causes — and disarm the swipe that was just armed.
   useEffect(() => {
-    exit.reset();
-  }, [location.pathname, exit]);
+    exitRef.current.reset();
+  }, [location.pathname]);
+
+  // Android's edge-swipe back and its 3-button Back both arrive here as one
+  // event — Ionic's own swipe-back never fires, because swipeBackEnabled
+  // defaults to `mode === "ios"` and this app runs in "md". Registering a
+  // listener also replaces Capacitor's default (WebView goBack), so this
+  // ladder owns the whole back behaviour.
+  useEffect(() => {
+    const handle = CapApp.addListener("backButton", ({ canGoBack }) => {
+      // 1. An open sheet/dialog swallows it.
+      if (closeTopOverlay()) return;
+      // 2. A main tab has nowhere to go: two in a row exit.
+      if (isRootTabRef.current) {
+        exitRef.current.attempt();
+        return;
+      }
+      // 3. Anywhere else, go back.
+      if (canGoBack) historyRef.current.goBack();
+    });
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
 
   useEffect(() => {
     let patched: { canStart: (...a: unknown[]) => boolean } | null = null;
