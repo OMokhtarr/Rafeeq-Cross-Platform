@@ -1,7 +1,8 @@
 # Streak Freeze — Design
 
 Date: 2026-08-10
-Status: Approved, ready for implementation planning
+Status: Implemented (2026-08-11). See "As built" at the end for the two rules
+that changed during implementation.
 
 ## Problem
 
@@ -312,3 +313,46 @@ export/restore.
 - Purchasing or gifting freezes.
 - Any first-run explanation of the mechanic beyond the state line.
 - Renaming the legacy `*_streak_freeze_v1` keys.
+
+## As built
+
+Two rules changed during implementation, both after a bug the original design
+would have shipped.
+
+**Freezes spend all or nothing** (see the Spending section, already updated). The
+first implementation spent them oldest-first and stopped when it ran out. That
+left the newest missed day uncovered while making the day before it active,
+which is exactly what repair looks for — so a user could freeze two days, repair
+the third, and carry a 3-day gap that the design says must break the streak. The
+test that was supposed to catch this only asserted `settleFreezes`' own return
+value, so it passed while the system contradicted the spec. It is now tested end
+to end through the quiz streak service.
+
+**`settleFreezes` takes an `asOf` date.** Settling runs before recording, so the
+day being recorded is not yet in the store. With a backdated completion, settle
+treated that day as missed and spent a freeze on it. `asOf` bounds the scan to
+the day being recorded.
+
+Two things the design did not anticipate:
+
+- **Repair was already broken after a plan reset.** `streakRecoveryInfo` counted
+  today's sessions from the current plan, which is replaced on reset, so the
+  count read 0 and repair was unreachable. It now prefers the new per-day store
+  and falls back to the plan. This was a pre-existing bug, surfaced by the
+  freeze work rather than caused by it.
+- **The Hifz per-day store holds session ids, not a tally.** Completion is
+  recorded both by seeding from historical sessions on load and by a
+  done/undone/done toggle. A counter would have inflated under both and minted
+  free freezes.
+
+### Testing as built
+
+80 tests across six files, run with CRA's bundled Jest
+(`npx react-scripts test --watchAll=false`). `@testing-library/react` is not a
+dependency, so the meter's copy and notice rules are tested as extracted pure
+functions rather than by rendering.
+
+### Not done
+
+The app has not been built or run on a device — only tests and `tsc` were used
+to verify. The meter's appearance on a real screen is unverified.
