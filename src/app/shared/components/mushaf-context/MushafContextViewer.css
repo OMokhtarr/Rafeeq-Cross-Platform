@@ -6,7 +6,7 @@
   background: var(--color-mushaf-bg, #faf7f0);
   color: var(--color-mushaf-text, #2c1810);
   overflow: hidden;
-  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  font-family: var(--font-arabic-display);
   box-sizing: border-box;
   transition: background-color var(--transition-theme, 0.2s),
     color var(--transition-theme, 0.2s);
@@ -66,7 +66,7 @@
   padding: 1px 6px;
   white-space: nowrap;
   flex-shrink: 0;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
 }
 
 [data-theme="day"] .mcv-hizb-badge {
@@ -121,7 +121,7 @@
   min-width: 22px;
   text-align: center;
   white-space: nowrap;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   border-right: 1px solid rgba(212, 180, 140, 0.25);
   border-left: 1px solid rgba(212, 180, 140, 0.25);
   line-height: 26px;
@@ -150,7 +150,7 @@
   color: var(--color-gold, #d4b48c);
   border-radius: 20px;
   cursor: pointer;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   font-size: 0.74rem;
   white-space: nowrap;
   transition: all 0.15s;

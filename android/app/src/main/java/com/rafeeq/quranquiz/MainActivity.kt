@@ -6,7 +6,10 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import com.getcapacitor.BridgeActivity
+import com.getcapacitor.WebViewListener
 import com.rafeeq.quranquiz.auto.RafeeqAutoPlugin
 
 class MainActivity : BridgeActivity() {
@@ -33,6 +36,63 @@ class MainActivity : BridgeActivity() {
         bridge.webView.settings.mediaPlaybackRequiresUserGesture = false
         applyCappedTextZoom()
         enableEdgeToEdge()
+        keepSafeAreaInsetsAcrossDocuments()
+    }
+
+    /**
+     * Keep the safe-area variables alive across document swaps.
+     *
+     * The variables live as inline styles on `documentElement`, so they die with
+     * the document they were set on. Insets only dispatch when they actually
+     * change — never merely because a page loaded — so the first document (the
+     * app itself) can come up with the variables missing and nothing to restore
+     * them. That is the state where the mushaf toolbar renders under the status
+     * bar even though the native side measured the inset correctly.
+     *
+     * Two parts:
+     * - `addDocumentStartJavaScript` seeds the properties at 0px before any page
+     *   script runs, so they always exist. Requires DOCUMENT_START_SCRIPT
+     *   (Android WebView 83+); the feature check makes it a no-op elsewhere.
+     *   Strictly an invariant — CSS reads `var(--rfq-…, 0px)` and so already
+     *   tolerates the properties being absent.
+     * - `onPageLoaded` pushes the REAL measured values in after each document is
+     *   up. This is the part that actually fixes the bug.
+     */
+    private fun keepSafeAreaInsetsAcrossDocuments() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            // Seed the variables at 0px before any page CSS is evaluated, so the
+            // custom properties always exist; the real values follow immediately.
+            WebViewCompat.addDocumentStartJavaScript(
+                bridge.webView,
+                """
+                (function () {
+                  var s = document.documentElement.style;
+                  if (!s.getPropertyValue('--rfq-safe-area-inset-top')) {
+                    s.setProperty('--rfq-safe-area-inset-top', '0px');
+                    s.setProperty('--rfq-safe-area-inset-right', '0px');
+                    s.setProperty('--rfq-safe-area-inset-bottom', '0px');
+                    s.setProperty('--rfq-safe-area-inset-left', '0px');
+                  }
+                })();
+                """.trimIndent(),
+                setOf("*")
+            )
+        }
+
+        // The real values still have to be re-pushed after each document swap:
+        // the seed above only guarantees the properties exist. Capacitor owns
+        // the WebViewClient, so hook its own listener API rather than replacing
+        // the client — onPageLoaded fires on first load and every navigation
+        // that replaces the document.
+        bridge.addWebViewListener(
+            object : WebViewListener() {
+                override fun onPageLoaded(webView: android.webkit.WebView) {
+                    reapplySafeAreaInsets()
+                }
+            }
+        )
     }
 
     /**
@@ -66,6 +126,9 @@ class MainActivity : BridgeActivity() {
 
         /** Ceiling for text growth — beyond this, dense layouts break. */
         private const val MAX_FONT_SCALE = 1.3f
+
+        /** `adb logcat -s RafeeqInsets` to trace safe-area injection on device. */
+        private const val INSETS_LOG_TAG = "RafeeqInsets"
     }
 
     // API 36 tightened this signature: the Intent parameter is no longer nullable.
@@ -87,7 +150,7 @@ class MainActivity : BridgeActivity() {
         // Re-assert the safe-area variables: a reload replaces the document and
         // wipes the inline properties set on documentElement. No-op on 15+,
         // where the listener is never registered.
-        ViewCompat.requestApplyInsets(window.decorView)
+        reapplySafeAreaInsets()
     }
 
     override fun onPause() {
@@ -159,32 +222,93 @@ class MainActivity : BridgeActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) return
 
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
-            // CSS pixels are density-independent; textZoom does not affect this.
-            val density = resources.displayMetrics.density
-            val top = (bars.top / density).toInt()
-            val right = (bars.right / density).toInt()
-            val bottom = (bars.bottom / density).toInt()
-            val left = (bars.left / density).toInt()
-
-            val script =
-                """
-                (function () {
-                  var s = document.documentElement.style;
-                  s.setProperty('--rfq-safe-area-inset-top', '${top}px');
-                  s.setProperty('--rfq-safe-area-inset-right', '${right}px');
-                  s.setProperty('--rfq-safe-area-inset-bottom', '${bottom}px');
-                  s.setProperty('--rfq-safe-area-inset-left', '${left}px');
-                })();
-                """.trimIndent()
-
-            bridge?.webView?.let { wv -> wv.post { wv.evaluateJavascript(script, null) } }
+            applySafeAreaInsets(insets)
 
             // Pass through untouched: consuming here would stop Capacitor and
             // any other listener from ever seeing the insets.
             insets
         }
+    }
+
+    /**
+     * Push the current insets into the WebView as `--rfq-safe-area-inset-*`.
+     *
+     * Split out of the listener so it can also be called directly: the listener
+     * alone is not enough to guarantee the variables are ever set.
+     *
+     * - The decor view may have already dispatched its insets before this
+     *   activity registered a listener, and a dispatch only repeats when
+     *   something invalidates it. `lastInsets` + the explicit re-apply in
+     *   `reapplySafeAreaInsets` cover that.
+     * - Values are written as inline styles on `documentElement`, which a
+     *   document replacement (initial load, reload, in-app navigation that
+     *   swaps the document) wipes. Nothing re-dispatches insets afterwards, so
+     *   the variables would stay missing until an unrelated inset change.
+     *
+     * Cached rather than re-read because `getRootWindowInsets` can return null
+     * before the view is attached.
+     */
+    private var lastInsets: WindowInsetsCompat? = null
+
+    private fun applySafeAreaInsets(insets: WindowInsetsCompat) {
+        lastInsets = insets
+
+        val bars = insets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        // CSS pixels are density-independent; textZoom does not affect this.
+        val density = resources.displayMetrics.density
+        val top = (bars.top / density).toInt()
+        val right = (bars.right / density).toInt()
+        val bottom = (bars.bottom / density).toInt()
+        val left = (bars.left / density).toInt()
+
+        val script =
+            """
+            (function () {
+              var s = document.documentElement.style;
+              s.setProperty('--rfq-safe-area-inset-top', '${top}px');
+              s.setProperty('--rfq-safe-area-inset-right', '${right}px');
+              s.setProperty('--rfq-safe-area-inset-bottom', '${bottom}px');
+              s.setProperty('--rfq-safe-area-inset-left', '${left}px');
+            })();
+            """.trimIndent()
+
+        // Diagnostic: `adb logcat -s RafeeqInsets` while launching shows whether
+        // this build contains the injection and what it measured. Silence means
+        // the installed APK predates this code — check that the NATIVE build was
+        // rebuilt, not just the web assets.
+        android.util.Log.d(
+            INSETS_LOG_TAG,
+            "inject top=$top right=$right bottom=$bottom left=$left density=$density sdk=${Build.VERSION.SDK_INT}"
+        )
+
+        bridge?.webView?.let { wv -> wv.post { wv.evaluateJavascript(script, null) } }
+    }
+
+    /**
+     * Re-assert the variables from the cached insets, or read them fresh if no
+     * dispatch has happened yet. Safe to call at any point after the WebView
+     * exists; a no-op on Android 15+, where Capacitor owns the variables.
+     */
+    private fun reapplySafeAreaInsets() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+
+        val cached = lastInsets
+        if (cached != null) {
+            applySafeAreaInsets(cached)
+            return
+        }
+
+        // No dispatch has reached the listener yet. Reading the root insets
+        // directly is what makes this robust: if the decor-view listener never
+        // fires at all, this path still supplies real values.
+        val fresh = ViewCompat.getRootWindowInsets(window.decorView)
+        if (fresh == null) {
+            android.util.Log.d(INSETS_LOG_TAG, "reapply: no cached insets and getRootWindowInsets() == null")
+            return
+        }
+        android.util.Log.d(INSETS_LOG_TAG, "reapply: using getRootWindowInsets() fallback (listener had not fired)")
+        applySafeAreaInsets(fresh)
     }
 }

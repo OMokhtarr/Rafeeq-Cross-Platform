@@ -57,9 +57,11 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "_browserslist_note": "Floor is chrome 79, not a market-share query. `>0.2%` resolved `and_chr` to the single LATEST Android Chrome, giving zero coverage of stale WebViews on old devices — WebView updates via Play independently of the OS, so the OS version says nothing about the engine. 79 = the `max()` floor used by the --safe-inset-* tokens; below it safe-area layout breaks structurally. Capacitor 8 itself blocks below WebView 60 (android.minWebViewVersion), so 79 is the binding constraint. This governs JS SYNTAX transpilation only — newer CSS (color-mix, font-palette) is handled by per-declaration fallbacks and degrades gracefully, so do NOT raise this floor to match a CSS feature. See docs/webview-compat-audit.md.",
   "browserslist": {
     "production": [
-      ">0.2%",
+      "chrome >= 79",
+      "ios_saf >= 15.6",
       "not dead",
       "not op_mini all"
     ],

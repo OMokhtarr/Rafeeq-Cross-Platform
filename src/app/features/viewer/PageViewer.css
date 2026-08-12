@@ -28,17 +28,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* The viewer's ion-content no longer supplies the safe-area inset (see
-     .mushaf-ion-content), so the toolbar carries it: the background extends
-     under the status bar while the controls stay below it.
+  /* No safe-area inset here — .mushaf-ion-content keeps IonContent's
+     --padding-top, which already pushes this whole container below the status
+     bar. Adding the inset again would double-count it.
 
-     --safe-inset-top resolves the inset across platforms (see tokens.css).
-     This is the page that exposed why that token has to exist:
-     .mushaf-ion-content zeroes ion-content's padding, so on Android ≤14 —
-     where Capacitor's plugin injects 0px and env() is also 0 — nothing else
-     was left to clear the status bar and the toolbar rendered underneath it. */
-  padding: calc(10px + var(--safe-inset-top))
-    16px 10px;
+     This is deliberately the pre-11-Aug arrangement: the inset belongs on
+     IonContent (one place, shared with every other page) rather than on the
+     toolbar, which cannot be trusted to clear the status bar on Android builds
+     where the injected inset variables resolve to 0. */
+  padding: 10px 16px;
   background: var(--color-bg-toolbar);
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-gold);
@@ -771,11 +769,25 @@
    container has to reach the true screen edges. App.css insets every
    ion-content by the safe-area, which would stop it short of the bottom and
    leave the app background showing as a band behind the gesture pill —
-   visibly lighter than the nav's own black. The toolbar and nav bar each pad
-   themselves by the corresponding inset, so they still clear the system bars.
-   Scoped by class: a bare ion-content rule here would leak to every page. */
+   visibly lighter than the nav's own black. The bottom nav pads itself by the
+   bottom inset, so it still clears the gesture bar.
+   Scoped by class: a bare ion-content rule here would leak to every page.
+
+   Only the BOTTOM (and the sides) may be zeroed. --padding-top deliberately
+   keeps App.css's safe-area value: IonContent is `fullscreen` and both it and
+   IonPage are position:absolute/inset:0, so they anchor to the viewport rather
+   than to <body>'s padded box — this padding is the only thing that pushes the
+   page below the status bar. Zeroing it here is what put the toolbar under the
+   status bar, because the toolbar is absolutely positioned at top:0 of this
+   container and the inset it fell back to reports 0 on some Android builds. */
 .mushaf-ion-content {
-  --padding-top: 0px;
+  /* Floored, unlike the global ion-content rule: every other page draws its own
+     header INSIDE this padding and floors it there (max(16px, inset) and
+     friends), so a page still looks right if the inset reports 0. This page
+     does not — the toolbar is absolutely positioned at top:0 and has no padding
+     of its own, so a 0 inset puts it under the status bar. The real inset wins
+     whenever it is larger, so this only ever acts as a safety net. */
+  --padding-top: max(var(--safe-inset-top), var(--status-bar-fallback));
   --padding-bottom: 0px;
   --padding-start: 0px;
   --padding-end: 0px;
@@ -910,7 +922,7 @@
   color: #8b4513;
   font-weight: bold;
   z-index: 2;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
   white-space: nowrap;
 }
 
@@ -1048,7 +1060,7 @@
   padding: 12px 20px;
   background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
   color: white;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
   font-size: 1.1rem;
 }
 
@@ -1087,7 +1099,7 @@
   font-size: 1.2rem;
   font-weight: bold;
   color: #2c1810;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
 }
 
 .result-verse {
@@ -1096,7 +1108,7 @@
   background-color: rgba(139, 69, 19, 0.1);
   padding: 3px 12px;
   border-radius: 20px;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
 }
 
 .result-meta {
@@ -1108,7 +1120,7 @@
 
 .result-page {
   color: #1c1c1c;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
 }
 
 .result-preview {
@@ -1118,7 +1130,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
 }
 
 .no-results {
@@ -1126,7 +1138,7 @@
   padding: 40px;
   color: #666;
   font-size: 1.2rem;
-  font-family: "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
 }
 
 .no-results p {
@@ -1249,7 +1261,7 @@
   display: flex;
   flex-direction: column;
   animation: drawer-slide-in 0.22s ease-out;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   direction: rtl;
 }
 
@@ -1283,7 +1295,7 @@
   flex: 1;
   font-size: 1.05rem;
   font-weight: 700;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   margin: 0;
 }
 
@@ -1342,7 +1354,7 @@
   border: 1px solid transparent;
   border-radius: 10px;
   color: inherit;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   font-size: 1rem;
   text-align: start;
   cursor: pointer;
@@ -1497,7 +1509,7 @@
   gap: 10px;
   z-index: 200;
   direction: rtl;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   animation: selbar-pop 0.18s ease-out;
 }
 
@@ -1536,7 +1548,7 @@
   padding: 8px 14px;
   border-radius: 999px;
   cursor: pointer;
-  font-family: "Traditional Arabic", "Amiri", serif;
+  font-family: var(--font-arabic-display);
   font-size: 0.95rem;
   transition: background 0.15s, transform 0.1s;
 }
@@ -1623,7 +1635,7 @@
   border-color: #d4a13a;
 }
 .verse-audio-label {
-  font-family: "Amiri", "Traditional Arabic", serif;
+  font-family: var(--font-arabic-display);
   font-size: 13px;
 }
 .verse-audio-spinner {

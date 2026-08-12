@@ -37,6 +37,17 @@
   --safe-inset-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), var(--rfq-safe-area-inset-bottom, 0px));
   --safe-inset-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px), var(--rfq-safe-area-inset-left, 0px));
 
+  /* Last-resort status-bar height for elements that would otherwise be drawn
+     UNDER the status bar when every inset source reports 0 — which happens on
+     Android builds where the native inset never reaches the WebView.
+
+     Only for elements with no other protection (see .top-toolbar). Most of the
+     app already floors its own padding with max(<design value>, inset), so it
+     degrades to a slightly tight layout rather than an unreadable one and does
+     not need this. 24dp is the standard Android status-bar height; devices with
+     a taller cutout report a larger real inset, which wins via max(). */
+  --status-bar-fallback: 24px;
+
   /* ── BRAND PALETTE (theme-invariant) ─────────────── */
 
   --color-forest-deep: #0d1f14;

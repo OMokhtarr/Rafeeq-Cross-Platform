@@ -1496,10 +1496,11 @@ const PageViewer: React.FC = () => {
                 ref={playbackDrag.ref}
                 style={{
                   position: "absolute",
-                  // Height of .top-toolbar, which pads itself by the status-bar
-                  // inset — a bare 56px would tuck the sheet under the toolbar.
-                  // Must stay in sync with .top-toolbar's padding (PageViewer.css).
-                  top: "calc(56px + var(--safe-inset-top))",
+                  // Height of .top-toolbar. No safe-area inset: this sheet is
+                  // positioned inside .mushaf-container, which IonContent's
+                  // --padding-top has already pushed below the status bar.
+                  // Keep in sync with .top-toolbar's padding (PageViewer.css).
+                  top: "56px",
                   bottom: 0,
                   width: "100%",
                   background: "var(--color-bg-content, #f7f7f8)",

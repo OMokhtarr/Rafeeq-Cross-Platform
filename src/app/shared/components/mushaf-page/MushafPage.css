@@ -289,7 +289,7 @@
   height: calc(100% - 8px);
   clip-path: var(--lobe);
   background: var(--sh-bg);
-  font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+  font-family: var(--font-arabic-display);
   font-size: min(calc(var(--header-px, 44px) * 0.5), 22px);
   font-weight: 700;
   line-height: 1;

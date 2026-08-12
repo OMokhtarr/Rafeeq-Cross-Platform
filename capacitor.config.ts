@@ -19,6 +19,16 @@ const config: CapacitorConfig = {
     iosScheme: "ionic",
   },
 
+  android: {
+    // Same floor as browserslist's `chrome >= 79` in package.json — keep the two
+    // in step. 79 is where `max()` lands, which the --safe-inset-* tokens depend
+    // on; below it safe-area layout breaks structurally rather than degrading.
+    // Capacitor's own default is 60 (hard floor 55), so this raises the bar to
+    // what the app actually needs. Below it Capacitor shows a blocking dialog,
+    // which beats loading into a broken layout.
+    minWebViewVersion: 79,
+  },
+
   plugins: {
     SplashScreen: {
       launchShowDuration: 0,

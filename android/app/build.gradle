@@ -159,6 +159,10 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$rootProject.ext.androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$rootProject.ext.androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$rootProject.ext.coreSplashScreenVersion"
+    // MainActivity seeds --rfq-safe-area-inset-* via WebViewCompat's
+    // DOCUMENT_START_SCRIPT. capacitor-android depends on webkit too, but only
+    // as `implementation`, so it is not on this module's compile classpath.
+    implementation "androidx.webkit:webkit:$rootProject.ext.androidxWebkitVersion"
     implementation project(':capacitor-android')
     implementation "androidx.media:media:1.7.0"
     // Media3 ExoPlayer as the native Android playback engine (used behind the
