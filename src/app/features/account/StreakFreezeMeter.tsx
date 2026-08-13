@@ -1,9 +1,11 @@
 /**
- * The freeze meter for one streak: how many freezes are held, what to do to
- * earn another, and whether one was recently spent.
+ * What to do to earn another freeze, and whether one was recently spent.
  *
- * The count alone does not explain the mechanic, so the state line always says
- * what the next action is — that line is the only place freezes are explained.
+ * The count itself is not shown here: the freeze row above this in the card
+ * already carries the pips and the total, and repeating them immediately below
+ * showed the same number twice in the space of a few lines. What that row
+ * cannot say is what to do next, so this keeps the state line — the only place
+ * earning is explained — and the spend notice.
  */
 import React from "react";
 import {
@@ -36,10 +38,7 @@ export function freezeStateLine(
   count: number,
   lang: string,
 ): string {
-  const activity =
-    pool === "hifz"
-      ? lang === "ar" ? "جلسة" : "session"
-      : lang === "ar" ? "اختبار" : "quiz";
+  const activity = lang === "ar" ? "جلسة" : "session";
 
   if (count >= MAX_FREEZES) {
     return lang === "ar"
@@ -48,8 +47,8 @@ export function freezeStateLine(
   }
   if (count > 0) {
     return lang === "ar"
-      ? `${count} من ${MAX_FREEZES}. أكمل ${activity} إضافية اليوم لكسب أخرى.`
-      : `${count} of ${MAX_FREEZES} freezes. Do an extra ${activity} today to earn another.`;
+      ? `أكمل ${activity} إضافية اليوم لكسب أخرى.`
+      : `Do an extra ${activity} today to earn another.`;
   }
   return lang === "ar"
     ? `لا تجميد متبقٍ. كل ${activity} إضافية اليوم تكسبك واحدة.`
@@ -80,29 +79,9 @@ const StreakFreezeMeter: React.FC<Props> = ({ pool, lang, lastActiveDate }) => {
 
   const showNotice = shouldShowSpendNotice(frozen, lastActiveDate, todayStr());
   const stateLine = freezeStateLine(pool, count, lang);
-  const label = lang === "ar" ? "تجميد السلسلة" : "Streak freezes";
 
   return (
     <div className="ac-freeze">
-      <div
-        className="ac-freeze-meter"
-        role="img"
-        aria-label={`${label}: ${count} / ${MAX_FREEZES}`}
-      >
-        {Array.from({ length: MAX_FREEZES }, (_, i) => (
-          <span
-            key={i}
-            aria-hidden="true"
-            className={
-              "ac-freeze-pip" + (i < count ? " ac-freeze-pip--held" : "")
-            }
-          />
-        ))}
-        <span className="ac-freeze-count">
-          {count}/{MAX_FREEZES}
-        </span>
-      </div>
-
       <p className="ac-freeze-state">{stateLine}</p>
 
       {showNotice && (

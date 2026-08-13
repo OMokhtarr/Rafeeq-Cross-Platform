@@ -8,7 +8,11 @@ import {
   type UnitBoundary,
 } from "../../core/services/data/metadata.service";
 // Streak dates are the user's local calendar day — see local-date.util.
-import { localDateStr, daysAgoStr } from "../../core/utils/local-date.util";
+import {
+  localDateStr,
+  daysAgoStr,
+  daysBetween,
+} from "../../core/utils/local-date.util";
 import {
   settleFreezes,
   earnFreezes,
@@ -904,6 +908,59 @@ function allStreakDates(sessions: PlanSession[]): Set<string> {
  */
 export function computeStreakPersistent(sessions: PlanSession[]): number {
   return streakFromDateSet(allStreakDates(sessions));
+}
+
+/**
+ * Longest run of consecutive days ever achieved, anywhere in the history —
+ * unlike computeStreakPersistent, which only measures the run ending now.
+ */
+export function computeLongestStreakPersistent(
+  sessions: PlanSession[],
+): number {
+  const dates = Array.from(allStreakDates(sessions)).sort();
+  let longest = 0;
+  let run = 0;
+  let prev: string | null = null;
+
+  for (const ds of dates) {
+    run = prev && daysBetween(prev, ds) === 1 ? run + 1 : 1;
+    if (run > longest) longest = run;
+    prev = ds;
+  }
+  return longest;
+}
+
+/** One day in the card's week strip. */
+export interface StreakDay {
+  /** YYYY-MM-DD, local. */
+  date: string;
+  /** Counted toward the streak — by real activity or by a freeze. */
+  active: boolean;
+  /** Covered by a spent freeze rather than real activity. */
+  frozen: boolean;
+}
+
+/**
+ * The last 7 days ending today, oldest first.
+ *
+ * Deliberately a rolling window rather than a calendar week: the streak itself
+ * is computed from consecutive days, so a rolling window shows exactly the run
+ * that matters and sidesteps the question of which weekday a week starts on —
+ * which differs between the app's two locales.
+ */
+export function last7Days(sessions: PlanSession[]): StreakDay[] {
+  const dates = allStreakDates(sessions);
+  const days: StreakDay[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const date = isoDaysAgo(i);
+    days.push({
+      date,
+      active: dates.has(date),
+      frozen: wasFrozen("hifz", date),
+    });
+  }
+  return days;
 }
 
 export interface StreakRecoveryInfo {

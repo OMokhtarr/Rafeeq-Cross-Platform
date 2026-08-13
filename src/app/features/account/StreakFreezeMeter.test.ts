@@ -12,31 +12,35 @@ import { todayStr, daysAgoStr } from "../../core/utils/local-date.util";
 
 describe("state line", () => {
   it("says the streak is protected when full", () => {
-    expect(freezeStateLine("quiz", 2, "en")).toMatch(/Both freezes ready/);
+    expect(freezeStateLine("hifz", 2, "en")).toMatch(/Both freezes ready/);
   });
 
   it("says how to earn another when partly spent", () => {
-    expect(freezeStateLine("quiz", 1, "en")).toMatch(
-      /Do an extra quiz today to earn another/,
+    expect(freezeStateLine("hifz", 1, "en")).toMatch(
+      /Do an extra session today to earn another/,
     );
+  });
+
+  it("leaves the count to the freeze row above it", () => {
+    // The row already shows pips and the total; repeating it here showed the
+    // same number twice within a few lines.
+    expect(freezeStateLine("hifz", 1, "en")).not.toMatch(/1 of 2/);
   });
 
   it("says how to recover when empty", () => {
-    expect(freezeStateLine("quiz", 0, "en")).toMatch(
-      /Every extra quiz today earns one back/,
+    expect(freezeStateLine("hifz", 0, "en")).toMatch(
+      /Every extra session today earns one back/,
     );
   });
 
-  it("names the activity that fills each pool", () => {
-    // The pools are refilled independently, so the copy must not tell a Hifz
-    // user to go do a quiz.
+  it("names the activity that fills the pool", () => {
+    // Freezes are earned by extra Hifz sessions, so the copy must name them.
     expect(freezeStateLine("hifz", 0, "en")).toMatch(/extra session/);
-    expect(freezeStateLine("quiz", 0, "en")).toMatch(/extra quiz/);
   });
 
   it("has Arabic copy for every state", () => {
     for (const count of [0, 1, 2]) {
-      const line = freezeStateLine("quiz", count, "ar");
+      const line = freezeStateLine("hifz", count, "ar");
       expect(line).not.toMatch(/[A-Za-z]/);
       expect(line.length).toBeGreaterThan(0);
     }

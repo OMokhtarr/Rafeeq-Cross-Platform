@@ -1,15 +1,14 @@
 /**
  * Streak freezes — a small consumable that absorbs a missed day.
  *
- * Rafeeq already has a *repair*: miss a day, and completing two activities the
+ * Rafeeq already has a *repair*: miss a day, and completing two sessions the
  * next day buys it back. That is retroactive and needs the user to notice the
  * break in time. A freeze is the opposite — earned in advance by doing more
  * than the minimum, spent automatically when a day is missed, so a streak
  * survives a lapse the user never had to react to.
  *
- * Two independent pools, one per streak. Each is refilled only by its own
- * activity: extra Hifz sessions fill the Hifz pool, extra quizzes fill the quiz
- * pool. Repair still applies, as the fallback when a pool is empty.
+ * One pool, refilled by extra Hifz sessions. Repair still applies, as the
+ * fallback when the pool is empty.
  *
  * A spent freeze writes the covered date into the *existing* bridged-days store
  * (`rafiq_*_streak_freeze_v1` — which, despite the name, holds repaired days).
@@ -24,17 +23,16 @@
 
 import { todayStr, daysBetween } from "../../utils/local-date.util";
 
-export type PoolId = "hifz" | "quiz";
+export type PoolId = "hifz";
 
 /** Freezes a pool can hold. */
 export const MAX_FREEZES = 2;
 
-/** Activities in a day beyond this earn freezes. Raised on a repair day. */
+/** Sessions in a day beyond this earn freezes. Raised on a repair day. */
 const BASE_THRESHOLD = 1;
 
 const TOKEN_KEYS: Record<PoolId, string> = {
   hifz: "rafiq_hifz_freeze_tokens_v1",
-  quiz: "rafiq_quiz_freeze_tokens_v1",
 };
 
 /**
@@ -44,7 +42,6 @@ const TOKEN_KEYS: Record<PoolId, string> = {
  */
 const BRIDGED_KEYS: Record<PoolId, string> = {
   hifz: "rafiq_hifz_streak_freeze_v1",
-  quiz: "rafiq_quiz_streak_freeze_v1",
 };
 
 export interface FreezePool {
@@ -132,10 +129,10 @@ export function lastFrozenDate(pool: PoolId): string | null {
 /**
  * Award freezes for the activity just recorded.
  *
- * The first activity of a day keeps the streak alive and earns nothing; each
+ * The first session of a day keeps the streak alive and earns nothing; each
  * one beyond that earns a freeze, capped at MAX_FREEZES. On a day where a
  * repair was performed the threshold rises to the repair cost, so the same two
- * activities cannot both buy back the streak and earn a freeze.
+ * sessions cannot both buy back the streak and earn a freeze.
  *
  * Idempotent per (pool, date): it recomputes from that day's activity count
  * rather than incrementing, so repeated calls converge on the same total.

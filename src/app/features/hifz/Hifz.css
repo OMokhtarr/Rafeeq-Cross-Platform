@@ -1459,11 +1459,29 @@ ion-content::part(scroll) {
 .hifz-stat-icon-done { color: var(--color-quran); }
 .hifz-stat-icon-left { color: #5b8dd9; }
 .hifz-stat-icon-pages { color: var(--color-text-muted); }
-.hifz-stat-icon-streak { color: #e07a3a; }
+/* Gold, not the old ember orange: the streak's mark is a leaf everywhere in
+   the app, and a warm orange leaf read as the flame it replaced. */
+.hifz-stat-icon-streak { color: var(--color-gold); }
 
 .hifz-stat-chip-streak {
-  border-color: rgba(224, 122, 58, 0.25);
+  border-color: var(--color-border-card);
   position: relative;
+}
+
+/* The streak chip opens the full panel, so it needs a press affordance the
+   other (inert) stat chips do not have. */
+.hifz-stat-chip--tappable {
+  cursor: pointer;
+  transition: opacity var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hifz-stat-chip--tappable:active {
+  opacity: 0.65;
+}
+
+.hifz-stat-chip--tappable:focus-visible {
+  outline: none;
+  border-color: var(--color-gold);
 }
 
 /* ── Streak info button (top corner of the streak chip) ─── */
@@ -1705,4 +1723,15 @@ ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+/* ── Streak panel inside the sheet ───────────────────────────────────────
+   The panel is authored for the Account card body, which supplies the column
+   layout and gap. Reproduced here so the shared component needs no host
+   awareness of its own. */
+.hifz-streak-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--space-2) var(--space-1) var(--space-4);
 }

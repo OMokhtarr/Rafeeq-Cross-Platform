@@ -178,11 +178,3 @@ describe("settle on open", () => {
     expect(freezeCount("hifz")).toBe(MAX_FREEZES - 1);
   });
 });
-
-describe("pool independence", () => {
-  it("does not touch the quiz pool", () => {
-    recordHifzSession(noSessions, "s1", daysAgoStr(3));
-    recordHifzSession(noSessions, "s2", todayStr());
-    expect(freezeCount("quiz")).toBe(MAX_FREEZES);
-  });
-});

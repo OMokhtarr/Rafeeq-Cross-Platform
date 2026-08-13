@@ -17,7 +17,6 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
-import { recordQuizCompletion } from "../../../../../../core/services/storage/quiz-streak.service";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -349,7 +348,6 @@ const AkmelAlNehayat: React.FC = () => {
       setShowContext(false);
     } else {
       setQuizComplete(true);
-      recordQuizCompletion();
     }
   };
 

@@ -78,6 +78,13 @@ ion-content::part(scroll) {
   gap: 10px;
 }
 
+/* The streak card does not collapse, so its header is a heading rather than a
+   control: no pointer, no press affordance. The class is shared with the
+   collapsible cards, hence the override rather than a separate rule set. */
+.ac-streak-header--static {
+  cursor: default;
+}
+
 .ac-streak-header-left {
   display: flex;
   align-items: center;
@@ -174,15 +181,13 @@ ion-content::part(scroll) {
    same silhouette at --color-gold-subtle, so the meter's shape stays
    readable at a glance and no new colour enters the palette. */
 
-/* One row per streak, separated from the stats and from each other by the
-   same hairline the card already uses between sections. */
+/* Sits directly under the freeze CTA, which already carries the separating
+   rule — so this row adds spacing only, not a second hairline. */
 .ac-freeze-row {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border-card);
 }
 
 .ac-freeze-row-lbl {
@@ -792,3 +797,290 @@ ion-content::part(scroll) {
 }
 .ac-restore-cancel:active { opacity: 0.6; }
 .ac-restore-cancel:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Week strip ───────────────────────────────────────────────────────────
+   Seven rolling days as a row of leaves. A kept day is a filled gold disc
+   with a check; a day a freeze covered keeps the disc but shows the leaf
+   outline instead, so "held" reads differently from "earned" without
+   introducing a second hue. Missed days stay as empty wells.
+
+   The connector is drawn per-cell as a bar reaching back to the previous
+   day, and only when both days count — a gap in the run is a gap in the
+   branch. It is inset behind the disc via z-index, never over it. */
+
+.ac-week {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2px;
+  padding: var(--space-2) 0 var(--space-3);
+  border-top: 1px solid var(--color-border-card);
+  padding-top: var(--space-3);
+}
+
+.ac-week-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-week-lbl {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1;
+  text-align: center;
+}
+
+/* Positioning context for the connector. */
+.ac-week-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Reaches from this disc back toward the previous one. Mirrored under RTL so
+   it still points at the day that precedes it in reading order. */
+.ac-week-link {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 50%;
+  width: 100%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--color-gold);
+  opacity: 0.55;
+  z-index: 0;
+}
+
+.ac-week-day {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-progress-track);
+  border: 1.5px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-bg-card);
+}
+
+.ac-week-day svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* The leaf is a solid silhouette where the check is an open stroke, so it
+   carries at a slightly smaller size. */
+.ac-week-day--frozen svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* A day that counts: solid gold, check mark punched out in the card colour. */
+.ac-week-day--on {
+  background: var(--color-gold);
+  color: var(--color-bg-card);
+}
+
+/* A day a freeze held. It still counts, so it keeps the filled disc and the
+   run reads as unbroken; the leaf mark instead of the check is what says the
+   day was held rather than earned. The dimmed gold separates the two at a
+   glance without adding a colour. */
+.ac-week-day--frozen {
+  background: var(--color-gold-deep);
+  color: var(--color-bg-card);
+  opacity: 0.85;
+}
+
+/* Today is marked whether or not it has been earned yet, so the strip always
+   says where "now" is. An unearned today carries the full gold ring — on a
+   week with no activity it is the only mark on the row, and a faint one is
+   indistinguishable from the missed-day wells beside it. */
+.ac-week-day--today {
+  box-shadow: 0 0 0 3px var(--color-gold-faint);
+}
+
+.ac-week-day--today:not(.ac-week-day--on) {
+  border-color: var(--color-gold);
+  border-style: dashed;
+}
+
+/* ── Freeze CTA ───────────────────────────────────────────────────────────
+   The row that opens the explainer. It carries the section's hairline and
+   reuses the crescent pip so the count reads the same here as in the meter
+   below it. */
+
+.ac-freeze-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border-card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+  transition: opacity var(--transition-fast);
+}
+
+.ac-freeze-cta:active { opacity: 0.6; }
+
+.ac-freeze-cta-pips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Same crescent as .ac-freeze-pip--held, at the CTA's slightly larger size. */
+.ac-freeze-cta-pip {
+  width: 13px;
+  height: 13px;
+  border-radius: var(--radius-full);
+  box-shadow: inset -4px 0 0 0 var(--color-gold);
+  transform: rotate(-20deg);
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .ac-freeze-cta-pip {
+  box-shadow: inset 4px 0 0 0 var(--color-gold);
+  transform: rotate(20deg);
+}
+
+.ac-freeze-cta-lbl {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.ac-freeze-cta-arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* The chevron points along the reading direction. */
+[dir="rtl"] .ac-freeze-cta-arrow {
+  transform: scaleX(-1);
+}
+
+/* ── Freeze sheet ─────────────────────────────────────────────────────────
+   Centred, generous, one idea per line. The mark is the only large element:
+   everything under it is a single quiet column. */
+
+.ac-fz-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  gap: var(--space-1);
+}
+
+.ac-fz-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-gold);
+  margin-bottom: var(--space-3);
+}
+
+.ac-fz-leaf {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  opacity: 0.3;
+}
+
+.ac-fz-leaf--held {
+  opacity: 1;
+}
+
+.ac-fz-count {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/* The one display line in the sheet. */
+.ac-fz-headline {
+  margin: 0;
+  font-family: var(--font-latin);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-gold);
+  line-height: 1.2;
+}
+
+[dir="rtl"] .ac-fz-headline {
+  font-family: var(--font-arabic-display);
+}
+
+.ac-fz-blurb {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-tight);
+}
+
+.ac-fz-notes {
+  width: 100%;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ac-fz-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.ac-fz-note svg {
+  width: 15px;
+  height: 15px;
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.ac-fz-note--muted {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.ac-fz-got {
+  width: 100%;
+  margin-top: var(--space-5);
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: var(--color-bg-card);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.ac-fz-got:active { opacity: 0.7; }

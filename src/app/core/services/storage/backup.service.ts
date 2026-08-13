@@ -3,7 +3,7 @@
  *
  * Rafeeq has no sign-in and no server, so a plain JSON file is the migration
  * path: export on the old device, import on the new one. Everything the user
- * created (notes, bookmarks, Hifz plan and streaks, quiz streaks, recitation
+ * created (notes, bookmarks, Hifz plan and streaks, recitation
  * history) travels; re-downloadable content caches (tafsir, audio, fonts,
  * Quran text) deliberately do not, since they would bloat the file for data
  * the new device can simply fetch again.
@@ -49,11 +49,6 @@ const BACKED_UP_KEYS = [
   "rafiq_hifz_streak_freeze_v1",
   "rafiq_hifz_session_counts_v1",
   "rafiq_hifz_freeze_tokens_v1",
-  // Quiz streak
-  "rafiq_quiz_streak_dates_v1",
-  "rafiq_quiz_streak_counts_v1",
-  "rafiq_quiz_streak_freeze_v1",
-  "rafiq_quiz_freeze_tokens_v1",
   // Preferences — small, and a restored device should feel identical
   "rafiq_settings_v1",
   "rafiq_theme_v1",
@@ -83,7 +78,6 @@ export interface BackupSummary {
   notes: number;
   bookmarks: number;
   hifzStreakDays: number;
-  quizStreakDays: number;
   hasHifzPlan: boolean;
   exportedAt: string;
 }
@@ -104,7 +98,6 @@ export function summarizeBackup(backup: BackupFile): BackupSummary {
     notes: countJsonEntries(d["rafiq_notes_v1"]),
     bookmarks: countJsonEntries(d["rafiq_bookmarks_v1"]),
     hifzStreakDays: countJsonEntries(d["rafiq_hifz_streak_dates_v1"]),
-    quizStreakDays: countJsonEntries(d["rafiq_quiz_streak_dates_v1"]),
     hasHifzPlan: !!d["rafiq_hifz_v2"],
     exportedAt: backup.exportedAt,
   };

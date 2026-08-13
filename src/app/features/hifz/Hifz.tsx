@@ -6,6 +6,8 @@ import { useTheme } from "../../core/context/ThemeContext";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import { registerOverlay } from "../../core/utils/overlay-registry";
+import AccountModal from "../account/AccountModal";
+import StreakPanel from "../account/StreakPanel";
 import {
   loadPlan,
   loadPlanAsync,
@@ -1064,6 +1066,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const h = t.hifz;
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [showStreakInfo, setShowStreakInfo] = useState(false);
+  const [showStreakPanel, setShowStreakPanel] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
 
   // Put these dialogs on the back ladder so an edge swipe dismisses the dialog
@@ -1077,6 +1080,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     if (!showStreakInfo) return;
     return registerOverlay(() => setShowStreakInfo(false));
   }, [showStreakInfo]);
+
+  useEffect(() => {
+    if (!showStreakPanel) return;
+    return registerOverlay(() => setShowStreakPanel(false));
+  }, [showStreakPanel]);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
   const doneSessions = sessions.filter((s) => s.done).length;
@@ -1239,11 +1247,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <span className="hifz-stat-num">{todaySessions}</span>
           <span className="hifz-stat-lbl">{h.todaySessions}</span>
         </div>
-        <div className="hifz-stat-chip hifz-stat-chip-streak">
+        {/* The chip opens the full streak panel; the (i) inside it opens the
+            recovery explainer, so that button stops the click from reaching
+            the chip behind it. */}
+        <div
+          className="hifz-stat-chip hifz-stat-chip-streak hifz-stat-chip--tappable"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowStreakPanel(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setShowStreakPanel(true);
+            }
+          }}
+        >
           <div className="hifz-stat-icon hifz-stat-icon-streak">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
-              <path d="M2 21c0-3 1.85-5.36 5.08-6" />
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M20 4C10 4 4 9 4 15.5c0 2 .6 3.4 1.4 4.2C9 16 12.5 13.6 17 12c-3.6 2.2-6.6 5-8.7 8.6.9.3 1.9.4 3 .4C18 21 20 12.5 20 4z" />
             </svg>
           </div>
           <span className="hifz-stat-num">{streak}</span>
@@ -1255,7 +1276,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               "hifz-streak-info-btn" +
               (recovery.recoverable ? " hifz-streak-info-btn--alert" : "")
             }
-            onClick={() => setShowStreakInfo(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowStreakInfo(true);
+            }}
             aria-label={h.streakInfoTitle}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
@@ -1287,14 +1311,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </svg>
       </button>
 
+      {/* ── Streak panel — the same read-out the Account tab shows ── */}
+      {showStreakPanel && (
+        <AccountModal
+          title={h.streakInfoTitle}
+          onClose={() => setShowStreakPanel(false)}
+        >
+          <div className="hifz-streak-panel">
+            <StreakPanel sessions={sessions} lang={lang} />
+          </div>
+        </AccountModal>
+      )}
+
       {/* ── Streak recovery info dialog ── */}
       {showStreakInfo && (
         <div className="hifz-confirm-backdrop" onClick={() => setShowStreakInfo(false)}>
           <div className="hifz-confirm-dialog hifz-streak-info-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="hifz-streak-info-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
-                <path d="M2 21c0-3 1.85-5.36 5.08-6" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                <path d="M20 4C10 4 4 9 4 15.5c0 2 .6 3.4 1.4 4.2C9 16 12.5 13.6 17 12c-3.6 2.2-6.6 5-8.7 8.6.9.3 1.9.4 3 .4C18 21 20 12.5 20 4z" />
               </svg>
             </div>
             <p className="hifz-confirm-title">{h.streakInfoTitle}</p>

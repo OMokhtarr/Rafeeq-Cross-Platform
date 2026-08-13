@@ -8,11 +8,6 @@ import {
   lastFrozenDate,
   resetFreezePool,
 } from "./streak-freeze.service";
-import {
-  recordQuizCompletion,
-  computeQuizStreak,
-  quizStreakRecoveryInfo,
-} from "./quiz-streak.service";
 import { todayStr, daysAgoStr } from "../../utils/local-date.util";
 
 beforeEach(() => {
@@ -22,7 +17,6 @@ beforeEach(() => {
 describe("starting state", () => {
   it("starts full so existing users get the safety net immediately", () => {
     expect(freezeCount("hifz")).toBe(MAX_FREEZES);
-    expect(freezeCount("quiz")).toBe(MAX_FREEZES);
   });
 
   it("treats a corrupt store as full rather than losing the net", () => {
@@ -95,13 +89,6 @@ describe("earning", () => {
     localStorage.setItem("rafiq_hifz_freeze_tokens_v1", JSON.stringify(state));
     expect(earnFreezes("hifz", todayStr(), 3, false)).toBe(0);
     expect(freezeCount("hifz")).toBe(0);
-  });
-
-  it("keeps the two pools independent", () => {
-    earnFreezes("hifz", todayStr(), 3, false);
-    expect(freezeCount("hifz")).toBe(2);
-    // quiz pool untouched at its default full value
-    expect(freezeCount("quiz")).toBe(MAX_FREEZES);
   });
 });
 
@@ -179,9 +166,9 @@ describe("spending", () => {
   });
 
   it("writes the covered day where streak maths already looks", () => {
-    settleFreezes("quiz", new Set([daysAgoStr(2)]));
+    settleFreezes("hifz", new Set([daysAgoStr(2)]));
     const bridged = JSON.parse(
-      localStorage.getItem("rafiq_quiz_streak_freeze_v1") ?? "[]",
+      localStorage.getItem("rafiq_hifz_streak_freeze_v1") ?? "[]",
     );
     expect(bridged).toContain(daysAgoStr(1));
   });
@@ -242,39 +229,6 @@ describe("frozen vs repaired", () => {
     expect(lastFrozenDate("hifz")).toBeNull();
     settleFreezes("hifz", new Set([daysAgoStr(3)]));
     expect(lastFrozenDate("hifz")).toBe(daysAgoStr(1));
-  });
-});
-
-describe("no stacking with repair", () => {
-  it("leaves a three-day gap unrecoverable by repair", () => {
-    // The bug a partial spend would create: freezes bridge the two oldest
-    // missed days, which makes the day before yesterday active, which is
-    // precisely what repair requires — so two extra quizzes today would
-    // resurrect a streak that should have died.
-    recordQuizCompletion(daysAgoStr(4));
-    settleFreezes("quiz", new Set([daysAgoStr(4)]));
-
-    expect(quizStreakRecoveryInfo().recoverable).toBe(false);
-
-    recordQuizCompletion(todayStr());
-    recordQuizCompletion(todayStr());
-    expect(computeQuizStreak()).toBe(1); // today only — the old run is gone
-  });
-
-  it("still lets repair work on a one-day gap when freezes are exhausted", () => {
-    localStorage.setItem(
-      "rafiq_quiz_freeze_tokens_v1",
-      JSON.stringify({ count: 0, earnedOn: {}, spentOn: [] }),
-    );
-    recordQuizCompletion(daysAgoStr(3));
-    recordQuizCompletion(daysAgoStr(2));
-    settleFreezes("quiz", new Set([daysAgoStr(3), daysAgoStr(2)]));
-
-    expect(quizStreakRecoveryInfo().recoverable).toBe(true);
-    recordQuizCompletion(todayStr());
-    recordQuizCompletion(todayStr());
-    expect(quizStreakRecoveryInfo().recovered).toBe(true);
-    expect(computeQuizStreak()).toBe(4);
   });
 });
 

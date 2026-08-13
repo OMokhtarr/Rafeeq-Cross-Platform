@@ -10,7 +10,6 @@ import {
 } from "./app/core/services/data/quran.service";
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
-import { useQuizFreezeToasts } from "./app/core/hooks/useFreezeToast";
 import { useDoubleSwipeExit } from "./app/core/hooks/useDoubleSwipeExit";
 import { closeTopOverlay } from "./app/core/utils/overlay-registry";
 import { Capacitor } from "@capacitor/core";
@@ -64,10 +63,6 @@ const ROOT_TAB_PATHS = new Set<string>([
 
 const MainRouterOutlet: React.FC = () => {
   const location = useLocation();
-  // Freeze toasts live here, not on the pages that trigger them: IonRouterOutlet
-  // keeps visited pages mounted, so a per-page listener would fire once per page
-  // the user had already been to.
-  useQuizFreezeToasts();
   const exit = useDoubleSwipeExit();
   // Keep a live ref to whether the *current* route is a root tab. The outlet's
   // swipe handler is created once, so we gate it through this ref rather than

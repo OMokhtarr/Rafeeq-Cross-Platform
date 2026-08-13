@@ -31,7 +31,6 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
-import { recordQuizCompletion } from "../../../../../../core/services/storage/quiz-streak.service";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
@@ -290,7 +289,6 @@ const MutashabihatTest: React.FC = () => {
       setSelectedVerseIdx(0);
     } else {
       setQuizComplete(true);
-      recordQuizCompletion();
     }
   };
 

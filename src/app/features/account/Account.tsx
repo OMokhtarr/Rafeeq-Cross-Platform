@@ -9,19 +9,11 @@ import {
   type Note,
 } from "../../core/services/storage/notes.service";
 import {
-  computeQuizStreak,
-  computeLongestQuizStreak,
-  settleQuizFreezes,
-  loadQuizStreakDates,
-} from "../../core/services/storage/quiz-streak.service";
-import {
   loadPlanAsync,
-  computeStreakPersistent,
   settleHifzFreezes,
-  loadStreakDates,
   type PlanSession,
 } from "../hifz/hifz.service";
-import StreakFreezeMeter from "./StreakFreezeMeter";
+import StreakPanel from "./StreakPanel";
 import {
   exportBackupToFile,
   parseBackup,
@@ -76,8 +68,8 @@ const PRIVACY_SECTIONS: ProseSection[] = [
   {
     headingAr: "٣. لا حاجة إلى حساب",
     headingEn: "3. No account required",
-    bodyAr: "لا يتضمن التطبيق تسجيل دخول ولا حساب مستخدم. وكل ما يحفظه عنك — المواضع المحفوظة والملاحظات وتقدّم الحفظ وسلاسل الحفظ والاختبارات — يبقى على جهازك. ولا تتم مزامنة أي شيء مع خادم، ولا يُربط أي شيء بهويتك.",
-    bodyEn: "The App has no sign-in and no user account. Everything it stores about you — bookmarks, notes, memorisation progress, and your Hifz and quiz streaks — stays on your device. Nothing is synced to a server and nothing is tied to your identity.",
+    bodyAr: "لا يتضمن التطبيق تسجيل دخول ولا حساب مستخدم. وكل ما يحفظه عنك — المواضع المحفوظة والملاحظات وتقدّم الحفظ وسلسلة الحفظ — يبقى على جهازك. ولا تتم مزامنة أي شيء مع خادم، ولا يُربط أي شيء بهويتك.",
+    bodyEn: "The App has no sign-in and no user account. Everything it stores about you — bookmarks, notes, memorisation progress, and your Hifz streak — stays on your device. Nothing is synced to a server and nothing is tied to your identity.",
   },
   {
     headingAr: "٤. الخدمات التي يتصل بها التطبيق",
@@ -172,30 +164,19 @@ const TERMS_SECTIONS: ProseSection[] = [
 const LEGAL_UPDATED_AR = "٩ أغسطس ٢٠٢٦";
 const LEGAL_UPDATED_EN = "9 August 2026";
 
-/** Newest date in a streak store, or null when the streak was never started. */
-function latestDate(dates: string[]): string | null {
-  return dates.length ? dates.slice().sort().pop() ?? null : null;
-}
-
 const Account: React.FC = () => {
   const history = useHistory();
   const { lang, isRTL } = useLang();
 
   const [loading, setLoading] = useState(false);
-  const [streakOpen, setStreakOpen] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
   const [featureText, setFeatureText] = useState("");
   const [featureSent, setFeatureSent] = useState(false);
   const featureRef = useRef<HTMLTextAreaElement>(null);
 
-  // Both streaks are computed from local storage — no account, no network.
-  const [hifzStreak, setHifzStreak] = useState(0);
-  const [quizStreak, setQuizStreak] = useState(0);
-  const [longestQuizStreak, setLongestQuizStreak] = useState(0);
-  // Latest real activity per streak. Null means the streak was never started,
-  // which hides that freeze meter entirely.
-  const [hifzLastActive, setHifzLastActive] = useState<string | null>(null);
-  const [quizLastActive, setQuizLastActive] = useState<string | null>(null);
+  // The streak panel derives everything else from the plan's sessions; this
+  // page only has to load the plan. All local — no account, no network.
+  const [sessions, setSessions] = useState<PlanSession[]>([]);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesError, setNotesError] = useState<string | null>(null);
@@ -217,21 +198,16 @@ const Account: React.FC = () => {
       // The Hifz streak merges the persistent active-day store with the current
       // plan's completed sessions, so the plan has to be loaded to compute it.
       const plan = await loadPlanAsync();
-      const sessions: PlanSession[] = plan?.sessions ?? [];
+      const planSessions: PlanSession[] = plan?.sessions ?? [];
 
       // Cover any missed days with a freeze before computing, so simply
       // opening this page after a lapse shows the streak intact rather than
-      // broken. Both are idempotent and no-op when nothing was missed. Hifz is
-      // settled only once the plan has loaded, or an empty session list would
-      // make the last active day look older than it is.
-      settleQuizFreezes();
-      settleHifzFreezes(sessions);
+      // broken. Idempotent, and a no-op when nothing was missed. Settled only
+      // once the plan has loaded, or an empty session list would make the last
+      // active day look older than it is.
+      settleHifzFreezes(planSessions);
 
-      setHifzStreak(computeStreakPersistent(sessions));
-      setQuizStreak(computeQuizStreak());
-      setLongestQuizStreak(computeLongestQuizStreak());
-      setHifzLastActive(latestDate(loadStreakDates()));
-      setQuizLastActive(latestDate(loadQuizStreakDates()));
+      setSessions(planSessions);
       setNotes(await fetchAllNotes());
     } catch (err) {
       console.error("[Account] loadLocalData failed:", err);
@@ -247,23 +223,11 @@ const Account: React.FC = () => {
     loadLocalData();
   }, [loadLocalData]);
 
-  // Refresh when returning to the page — a quiz or Hifz session finished
-  // elsewhere will have moved the streaks.
+  // Refresh when returning to the page — a Hifz session finished elsewhere
+  // will have moved the streak.
   useIonViewWillEnter(() => {
     loadLocalData();
   });
-
-  // A quiz completed while this page is mounted updates the streak immediately.
-  useEffect(() => {
-    const onQuizStreakChanged = () => {
-      setQuizStreak(computeQuizStreak());
-      setLongestQuizStreak(computeLongestQuizStreak());
-      setQuizLastActive(latestDate(loadQuizStreakDates()));
-    };
-    window.addEventListener("quiz-streak-changed", onQuizStreakChanged);
-    return () =>
-      window.removeEventListener("quiz-streak-changed", onQuizStreakChanged);
-  }, []);
 
   const handleExport = useCallback(async () => {
     setBackupError(null);
@@ -325,7 +289,7 @@ const Account: React.FC = () => {
       setPendingRestore(null);
       await loadLocalData();
       // Nudge any other mounted view that reads these stores directly.
-      window.dispatchEvent(new CustomEvent("quiz-streak-changed"));
+      window.dispatchEvent(new CustomEvent("hifz-streak-changed"));
       setBackupMsg(
         lang === "ar" ? "تمت استعادة بياناتك" : "Your data has been restored",
       );
@@ -355,14 +319,10 @@ const Account: React.FC = () => {
     title:          lang === "ar" ? "حسابي"                              : "My Account",
     subtitle:       lang === "ar" ? "الإحصاءات والإنجازات"               : "Stats & Achievements",
     back:           lang === "ar" ? "رجوع"                               : "Back",
-    streak:         lang === "ar" ? "السلاسل"                            : "Streaks",
+    streak:         lang === "ar" ? "سلسلة الحفظ"                        : "Streak",
     hifzStreak:     lang === "ar" ? "سلسلة الحفظ"                        : "Hifz Streak",
-    quizStreak:     lang === "ar" ? "سلسلة الاختبارات"                   : "Quiz Streak",
-    streakDays:     lang === "ar" ? "يوم متواصل"                         : "day streak",
     days:           lang === "ar" ? "يوم"                                : "days",
-    longest:        lang === "ar" ? "أطول سلسلة"                         : "Longest",
     loading:        lang === "ar" ? "جاري التحميل…"                      : "Loading…",
-    noStreak:       lang === "ar" ? "لا توجد سلاسل بعد — ابدأ اليوم!"    : "No streaks yet — start today!",
     aboutApp:       lang === "ar" ? "عن التطبيق"                         : "About Rafeeq",
     backup:         lang === "ar" ? "النسخ الاحتياطي"                    : "Backup",
     exportData:     lang === "ar" ? "تصدير بياناتي"                      : "Export My Data",
@@ -447,85 +407,25 @@ const Account: React.FC = () => {
 
           <div className="account-body">
 
-            {/* ── Streaks card — Hifz sessions and quizzes, both computed locally ── */}
+            {/* ── Streak card — Hifz sessions, computed locally ── */}
             <div className="ac-card ac-streak-card">
-              <button
-                className="ac-streak-header"
-                onClick={() => setStreakOpen((o) => !o)}
-                aria-expanded={streakOpen}
-              >
+              {/* Always open: the streak is the reason to visit this tab, and
+                  the stats below already carry what a collapsed summary would
+                  have said. */}
+              <div className="ac-streak-header ac-streak-header--static">
                 <div className="ac-streak-header-left">
                   <span className="ac-streak-flame">🍃</span>
-                  <div>
-                    <p className="ac-streak-title">{t.streak}</p>
-                    {!streakOpen && !loading && (
-                      <p className="ac-streak-summary">
-                        {hifzStreak > 0 || quizStreak > 0
-                          ? `${t.hifzStreak}: ${hifzStreak} · ${t.quizStreak}: ${quizStreak}`
-                          : lang === "ar" ? "لا توجد سلسلة نشطة" : "No active streak"}
-                      </p>
-                    )}
-                  </div>
+                  <p className="ac-streak-title">{t.streak}</p>
                 </div>
-                <svg className={`ac-chevron ${streakOpen ? "ac-chevron-up" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
+              </div>
 
-              {streakOpen && (
-                <div className="ac-streak-body">
-                  {loading ? (
-                    <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
-                  ) : (
-                    <>
-                      <div className="ac-streak-stats">
-                        <div className="ac-streak-stat">
-                          <span className="ac-streak-stat-val">{hifzStreak}</span>
-                          <span className="ac-streak-stat-lbl">{t.hifzStreak}</span>
-                        </div>
-                        <div className="ac-streak-stat-div" />
-                        <div className="ac-streak-stat">
-                          <span className="ac-streak-stat-val">{quizStreak}</span>
-                          <span className="ac-streak-stat-lbl">{t.quizStreak}</span>
-                        </div>
-                        <div className="ac-streak-stat-div" />
-                        <div className="ac-streak-stat">
-                          <span className="ac-streak-stat-val">{longestQuizStreak}</span>
-                          <span className="ac-streak-stat-lbl">{t.longest}</span>
-                        </div>
-                      </div>
-
-                      {/* Freeze meters — one per streak, and only for a streak
-                          the user has actually started. Showing an empty meter
-                          for a feature they never use is a standing nag. */}
-                      {hifzLastActive && (
-                        <div className="ac-freeze-row">
-                          <span className="ac-freeze-row-lbl">{t.hifzStreak}</span>
-                          <StreakFreezeMeter
-                            pool="hifz"
-                            lang={lang}
-                            lastActiveDate={hifzLastActive}
-                          />
-                        </div>
-                      )}
-                      {quizLastActive && (
-                        <div className="ac-freeze-row">
-                          <span className="ac-freeze-row-lbl">{t.quizStreak}</span>
-                          <StreakFreezeMeter
-                            pool="quiz"
-                            lang={lang}
-                            lastActiveDate={quizLastActive}
-                          />
-                        </div>
-                      )}
-
-                      {hifzStreak === 0 && quizStreak === 0 && (
-                        <p className="ac-streak-empty">{t.noStreak}</p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+              <div className="ac-streak-body">
+                {loading ? (
+                  <div className="ac-loading"><div className="ac-spinner" /><span>{t.loading}</span></div>
+                ) : (
+                  <StreakPanel sessions={sessions} lang={lang} />
+                )}
+              </div>
             </div>
 
             {/* ── Notes card ── */}
@@ -698,6 +598,8 @@ const Account: React.FC = () => {
         </div>
 
         {/* ── Modals ── */}
+        {/* The freeze sheet is not here: StreakPanel owns it, so both this
+            page and the Hifz sheet get it without either mounting it. */}
 
         {modal === "about" && (
           <AccountModal title={t.aboutApp} onClose={() => setModal(null)}>
@@ -778,10 +680,6 @@ const Account: React.FC = () => {
                 <li>
                   <span>{t.hifzStreak}</span>
                   <strong>{pendingRestore.summary.hifzStreakDays} {t.days}</strong>
-                </li>
-                <li>
-                  <span>{t.quizStreak}</span>
-                  <strong>{pendingRestore.summary.quizStreakDays} {t.days}</strong>
                 </li>
               </ul>
               <div className="ac-restore-actions">

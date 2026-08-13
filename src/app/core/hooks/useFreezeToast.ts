@@ -6,10 +6,9 @@
  * missed day and the streak would just keep going. These toasts are what make
  * earning and spending visible at the moment they happen.
  */
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useIonToast } from "@ionic/react";
 import { useLang } from "../context/LanguageContext";
-import type { QuizFreezeChange } from "../services/storage/quiz-streak.service";
 
 export function useFreezeToast() {
   const [presentToast] = useIonToast();
@@ -54,25 +53,4 @@ export function useFreezeToast() {
   );
 
   return { toastFrozen, toastEarned };
-}
-
-/**
- * Toast freeze changes from any quiz completion while this view is mounted.
- * recordQuizCompletion is a plain function called from several quiz pages, so
- * it announces its freeze changes on the `quiz-streak-changed` event rather
- * than returning them up through each page's own flow.
- */
-export function useQuizFreezeToasts(): void {
-  const { toastFrozen, toastEarned } = useFreezeToast();
-
-  useEffect(() => {
-    const onChange = (e: Event) => {
-      const detail = (e as CustomEvent<QuizFreezeChange>).detail;
-      if (!detail) return;
-      toastFrozen(detail.frozen.length);
-      toastEarned(detail.earned);
-    };
-    window.addEventListener("quiz-streak-changed", onChange);
-    return () => window.removeEventListener("quiz-streak-changed", onChange);
-  }, [toastFrozen, toastEarned]);
 }
