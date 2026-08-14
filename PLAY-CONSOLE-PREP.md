@@ -5,10 +5,14 @@ declares and does. Answers here are meant to be copied into the console verbatim
 
 App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName 1.1.0
 
-> ⚠️ **Blocking before public release:** rotate the Deepgram API key and the Quran
-> Foundation client secret. Both shipped inside the JS bundle of earlier builds and
-> are extractable from any APK already distributed. The broker fix (commit `c18be0b`)
-> stops future leakage but cannot recall what already shipped. See section 7.
+> ✅ **Credentials rotated** 13 Aug 2026 and verified working through the broker.
+>
+> ⚠️ **Blocking before public release: the token broker is not deployed.**
+> Commit `c18be0b` added the `/deepgram/token` route but never shipped to
+> Cloudflare. The live Worker falls through to the Quran Foundation handler and
+> hands the app a QF token where a Deepgram one is expected — so recite mode
+> fails in production even though the endpoint returns HTTP 200. Run
+> `cd token-broker && wrangler deploy`, then `bash token-broker/verify-deploy.sh`.
 
 ---
 
@@ -37,7 +41,7 @@ sign-in, so there are no user OAuth scopes to audit.
 
 **User sign-in:** none. The app has no accounts and requests no OAuth user
 scopes — the token broker only ever fetches machine-to-machine tokens for the
-content API. Notes, bookmarks, and both streaks (Hifz and quiz) are local-only.
+content API. Notes, bookmarks, and the Hifz streak are local-only.
 
 ---
 
@@ -60,7 +64,7 @@ content API. Notes, bookmarks, and both streaks (Hifz and quiz) are local-only.
 - Collected: **No** — the app has no sign-in and never asks for a name or email.
 
 ### App activity → Other user-generated content
-- Notes, bookmarks, and the Hifz and quiz streaks stay on the device and are never
+- Notes, bookmarks, and the Hifz streak stay on the device and are never
   transmitted, so under Play's definition this is **not collected**.
 - Collected: **No**
 
@@ -170,27 +174,90 @@ an explicit "what the app does not do", and deletion routes. The same corrected
 text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and the bracketed
 date/contact placeholders are fixed here and in `terms.html`.
 
+**Aug 2026 — second pass, against the Quran Foundation developer-privacy
+requirements** (email from Basit Minhas, QF Developer Support, and
+<https://api-docs.quran.foundation/legal/developer-privacy/>). Added to
+`privacy.html`, `terms.html`, and the in-app AR/EN mirror:
+
+- QF attribution + an explicit "Rafeeq is an independent app, not an official
+  Quran Foundation application" disclaimer.
+- Religious information treated as **sensitive data**, with Recite Mode framed as
+  the affirmative opt-in (two deliberate acts) and how to withdraw consent.
+- An explicit "we do not train AI models on your content" commitment covering
+  notes/UGC as well as recitation audio, with no repurposing or ad profiling.
+- **Cloudflare** added to the third-party processor table (it hosts the token
+  broker and sees request IPs) — previously undisclosed. Every processor now
+  links to its own privacy policy.
+- A **Security** section: TLS in transit, OS-level encryption at rest, secrets
+  held as Worker secrets + rotation, minimum API scope, and the commitment to
+  report API-related breaches to QF **within 24 hours**.
+- Access/correction/deletion consolidated, stating plainly *why* OAuth
+  revocation and the 30/90-day server-deletion clauses do not apply (no
+  accounts, no QF user login, no user database) rather than copying template
+  language that would misdescribe the app.
+- International transfers, a 30-day response commitment, and a postal address.
+- `terms.html` gained the QF Developer Terms obligations it was missing: no
+  modification of the Quran text, no extraction/redistribution/resale of QF
+  content or raw API data, personal-use-only, and an acceptable-use clause.
+
+- [ ] **Fill in the postal address.** `privacy.html` carries
+      `[POSTAL ADDRESS — FILL IN BEFORE PUBLISHING]`; QF asks for a postal
+      address alongside the contact email. Blocker for publishing the page.
+- [ ] **Then add the same postal address to the in-app policy** — the Contact
+      section of `PRIVACY_SECTIONS` in `Account.tsx` (both `bodyAr` and
+      `bodyEn`). The placeholder was deliberately *not* put there, so a
+      bracketed `[FILL IN]` string never ships inside the APK; the in-app text
+      currently gives the contact email and the 30-day response commitment
+      only. Keep the AR and EN copies in sync.
 - [ ] **Host `privacy.html`** (GitHub Pages, Cloudflare Pages, or alongside the
       token broker) and put the URL in the listing. This is the only page that
       must be hosted — the deletion page is no longer required (section 4).
-- [ ] Confirm the Deepgram privacy-policy link and the Quran Foundation
-      privacy-policy link both resolve.
+      Host `terms.html` beside it: privacy.html now links to it via a relative
+      `privacy.html` ↔ `terms.html` link, so they must sit in the same directory.
+- [ ] Confirm the Deepgram, Cloudflare, jsDelivr and Quran Foundation
+      privacy-policy links all resolve.
+
+### Open compliance question — offline caching vs. the QF 7-day rule
+
+QF's Developer Terms say not to store QF content for more than one week unless
+expressly permitted, or via the Content Sync flow with a sync at least every
+seven days. Rafeeq currently seeds all verses into IndexedDB once per install
+(`seedVerses` / `getPage` in `src/app/core/services/data/quran.service.ts`) and
+caches pages **indefinitely** — there is no 7-day expiry and no periodic
+re-sync. Cached content is only cleared on a DB version bump or a repair pass.
+
+This is an app-behaviour gap that the privacy policy cannot resolve. Two ways
+to close it:
+
+1. Add a ≤7-day refresh: stamp cached pages/verses with a fetch timestamp and
+   re-fetch (or revalidate) anything older than a week when online.
+2. Ask QF for express permission for durable offline storage — plausible for a
+   Quran reader, since offline reading is the point, and the terms allow it
+   "unless expressly permitted". Basit's email invites implementation questions.
+
+- [ ] Decide between (1) and (2) and act on it before release.
 
 ---
 
 ## 6. Store listing assets
 
-- [ ] App icon 512×512 PNG (source: `assets/icon.png`)
-- [ ] Feature graphic 1024×500
-- [ ] ≥2 phone screenshots (16:9 or 9:16, min 320px) — Home, mushaf, quiz, Hifz
+- [x] App icon 512×512 PNG → `play-assets/icon-512.png`
+- [x] Feature graphic 1024×500 → `play-assets/feature-graphic-1024x500.png`
+- [x] ≥2 phone screenshots → four at 1080×1920 (exact 9:16) in `play-assets/`:
+      Home, mushaf, quiz, Azkar. See `play-assets/README.md` for how they were
+      produced and the two caveats (no status bar; Hifz empty-state held back).
 - [ ] Short description (≤80 chars)
 - [ ] Full description (≤4000 chars)
 - [ ] Content rating questionnaire (expect "Everyone"; it is religious/educational
       content with no objectionable material)
 - [ ] Target audience & content — declare whether children are a target audience
 - [ ] Category: Books & Reference, or Lifestyle
-- [ ] **Android Auto:** the listing triggers an extra car-app quality review. Do not
-      submit until the on-device Auto regression pass is done.
+- [ ] **Android Auto:** the listing triggers an extra car-app quality review.
+      In-car regression pass done and working (13 Aug 2026), so this is no longer
+      blocking. Note the car-app review is a separate, stricter track and a common
+      source of first-submission rejections — declaring Auto later, in a follow-up
+      release, keeps the first submission on the standard track. The Auto code ships
+      either way; this only controls whether the listing advertises it.
 
 ---
 
@@ -228,11 +295,21 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 
 ## 8. Release checklist order
 
-1. Rotate both credentials, deploy the broker (section 7)
+1. ~~Rotate both credentials~~ — done 13 Aug 2026, verified live through the broker
+   (QF content token returns 200 with a valid token)
+1b. **⚠️ DEPLOY THE BROKER — outstanding.** Commit `c18be0b` added
+   `/deepgram/token` but was never deployed. The live Worker has no such route,
+   so the request falls through to the QF handler and returns a *Quran Foundation*
+   token. It answers HTTP 200, so the endpoint looks healthy while **recite mode
+   is broken in production**. Fix: `cd token-broker && wrangler deploy`, then
+   `bash token-broker/verify-deploy.sh` (expects a non-QF issuer).
 2. Smoke-test recite mode against the deployed broker
-3. Android Auto regression pass in a real car
-4. Host the privacy policy (section 5) — no deletion page needed
-5. Build the signed AAB (`gradlew bundleRelease`)
-6. Create the Play listing, complete Data safety + foreground service declarations
-7. Start the closed test — ~12 testers × 14 continuous days (personal accounts)
-8. Apply for production access
+3. ~~Android Auto regression pass in a real car~~ — done, working (13 Aug 2026)
+4. **Host the privacy policy (section 5)** — the one remaining hard console blocker
+5. ~~Build the signed AAB (`gradlew bundleRelease`)~~ — done: `Rafeeq-1.1.0-release.aab`,
+   signed with `rafeeq-upload`, current with the latest source
+6. ~~Produce the missing listing assets~~ — done, in `play-assets/`: 512×512 PNG
+   icon, 1024×500 feature graphic, and four 9:16 screenshots
+7. Create the Play listing, complete Data safety + foreground service declarations
+8. Start the closed test — ~12 testers × 14 continuous days (personal accounts)
+9. Apply for production access

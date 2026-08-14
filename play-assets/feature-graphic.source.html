@@ -1,0 +1,171 @@
+<meta charset="utf-8">
+<style>
+  @page { margin: 0 }
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  html, body { width: 1024px; height: 500px; overflow: hidden }
+
+  body {
+    /* Brand tokens: --color-forest-deep #0d1f14, icon field #153022 */
+    background:
+      radial-gradient(120% 150% at 78% 50%, #1b3a29 0%, #143024 42%, #0d1f14 100%);
+    position: relative;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* Paper-grain tooth, same felt texture as the app icon field */
+  .grain {
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(37deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(-52deg, rgba(0,0,0,.03) 0 1px, transparent 1px 4px);
+    mix-blend-mode: overlay;
+  }
+
+  /* ── The signature: one mushaf line caught mid-recitation ───────────
+     Left of the boundary is lit (recited), right falls to dim (ahead).
+     Arabic runs RTL, so recitation travels right → left; the lit side
+     is therefore the RIGHT of the string in reading order. */
+  .verse-stage {
+    position: absolute;
+    top: 50%; right: 46px;
+    transform: translateY(-50%);
+    display: flex; align-items: center;
+    direction: rtl;
+  }
+
+  .verse {
+    font-family: "Traditional Arabic", "Arabic Typesetting", "Amiri", serif;
+    font-size: 72px;
+    line-height: 1.9;
+    white-space: nowrap;
+    letter-spacing: 0;
+    /* The gradient IS the recite boundary. Arabic reads right→left, so the
+       voice has already passed the RIGHT side: parchment-bright there,
+       falling to unlit gold on the left, ahead of the reader. */
+    /* Tight transition band (38%→52%) so this reads as a moving edge the
+       voice is sitting on, not as ambient falloff. */
+    background: linear-gradient(
+      270deg,
+      #faf7f0 0%,
+      #faf7f0 30%,
+      #f7edd8 38%,
+      #efb460 46%,
+      #c9a982 52%,
+      rgba(212,180,140,.34) 60%,
+      rgba(212,180,140,.17) 74%,
+      rgba(212,180,140,.12) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Bloom on the boundary — the leading edge of the voice, ~42% along
+     the verse from its right (lit) end. */
+  .bloom {
+    position: absolute;
+    top: 50%; right: 268px;
+    width: 300px; height: 210px;
+    transform: translate(50%, -50%);
+    background: radial-gradient(
+      50% 50% at 50% 50%,
+      rgba(239,180,96,.30) 0%,
+      rgba(239,180,96,.11) 44%,
+      transparent 73%
+    );
+    filter: blur(8px);
+  }
+
+  /* Hairline the verse sits on. Starts at the lit (right) end and fades
+     out toward the unlit side; stops short of the left plate. */
+  .baseline {
+    position: absolute;
+    top: 50%; right: 46px;
+    margin-top: 64px;
+    width: 520px; height: 1px;
+    background: linear-gradient(270deg,
+      rgba(212,180,140,.50) 0%,
+      rgba(212,180,140,.20) 44%,
+      transparent 92%);
+  }
+
+  /* ── Left column ─────────────────────────────────────────────── */
+  .plate {
+    position: absolute;
+    left: 72px; top: 50%;
+    transform: translateY(-50%);
+    width: 400px;
+    z-index: 2;
+  }
+
+  /* Scrim so the wordmark never fights the verse behind it */
+  .scrim {
+    position: absolute; left: 0; top: 0;
+    /* Wide, gently-eased falloff — a hard stop leaves a visible vertical
+       seam where the scrim ends. */
+    width: 640px; height: 500px;
+    background: linear-gradient(90deg,
+      rgba(13,31,20,.96) 0%, rgba(13,31,20,.90) 38%,
+      rgba(13,31,20,.68) 60%, rgba(13,31,20,.34) 78%,
+      rgba(13,31,20,.10) 90%, transparent 100%);
+  }
+
+  .wordmark {
+    font-family: "Traditional Arabic", "Arabic Typesetting", serif;
+    font-size: 128px;
+    line-height: 1.16;
+    /* RTL for correct shaping, but the glyph run is left-aligned in the
+       plate so it stacks flush with the Latin lockup beneath it. */
+    direction: rtl;
+    text-align: left;
+    background: linear-gradient(168deg, #f6d9a0 0%, #efb460 38%, #d4b48c 68%, #b8936a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 2px;
+  }
+
+  .latin {
+    font-size: 25px;
+    font-weight: 300;
+    letter-spacing: .42em;
+    text-transform: uppercase;
+    color: #d4b48c;
+    margin-bottom: 26px;
+    padding-left: 3px;
+  }
+
+  .rule {
+    width: 62px; height: 2px;
+    background: linear-gradient(90deg, #efb460, rgba(212,180,140,0));
+    margin-bottom: 24px;
+  }
+
+  .line {
+    font-size: 27px;
+    font-weight: 300;
+    line-height: 1.5;
+    color: #f0ead6;
+    letter-spacing: .004em;
+  }
+  .line b { font-weight: 600; color: #fff }
+</style>
+
+<div class="grain"></div>
+
+<div class="verse-stage">
+  <!-- Al-Fatiha 1:2 — the opening line of praise, the verse every reader
+       knows by heart and the natural thing to be mid-recitation on. -->
+  <div class="verse">ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ</div>
+</div>
+<div class="bloom"></div>
+<div class="baseline"></div>
+
+<div class="scrim"></div>
+
+<div class="plate">
+  <div class="wordmark">رَفِيق</div>
+  <div class="latin">Rafeeq</div>
+  <div class="rule"></div>
+  <div class="line">Read, memorise, and <b>recite aloud</b><br>while the page follows along.</div>
+</div>

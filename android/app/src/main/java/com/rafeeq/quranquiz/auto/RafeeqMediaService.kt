@@ -65,6 +65,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // The surah of the persisted queue, so a native fallback (brain died) can restore page
         // markers / repeat-page / duration without the JS brain. 0 when unknown.
         private const val KEY_QUEUE_SURA = "queue_sura"
+        // The reciter of the persisted queue. The persisted URLs already embed the reciter's CDN
+        // path (so cold-start car playback SOUNDS right), but currentReciter resets to "" when the
+        // service restarts — so the car→phone handoff reported an empty reciter and the phone app
+        // switched to the DEFAULT reciter on open. Persisting it lets the handoff report the real
+        // one, and lets a resumed queue fetch the correct duration total.
+        private const val KEY_QUEUE_RECITER = "queue_reciter"
 
         // Home page background (forest-deep, #0d1f14 — see Home.css). Used to tint the
         // media notification card so it matches the app's identity.
@@ -209,9 +215,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         createNotificationChannel()
         buildMediaSession()
         buildPlayer()
-        // Set an initial PlaybackState so Android Auto knows the session accepts play
-        // commands immediately. Without this the session has no advertised actions and
-        // the car's play button is either disabled or does nothing on cold start.
+        // Advertise the transport actions so the car's play button works on cold start, but keep
+        // the state STATE_NONE (not STATE_PAUSED) and publish NO metadata yet. A fresh session that
+        // reports "something paused" with a title makes Android Auto open straight into the
+        // now-playing screen (with a back-to-browse button) instead of the reciter browse list —
+        // which is what the user should see first. STATE_NONE = "nothing to resume", so AA shows
+        // the browse tree. (isActive stays true so media-button routing keeps working; only a real
+        // pause later — after the user actually played something — should present now-playing.)
         val initialState = PlaybackStateCompat.Builder()
             .setActions(
                 PlaybackStateCompat.ACTION_PLAY or
@@ -221,14 +231,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 PlaybackStateCompat.ACTION_STOP or
                 PlaybackStateCompat.ACTION_SEEK_TO
             )
-            .setState(PlaybackStateCompat.STATE_PAUSED, 0L, 0f)
+            .setState(PlaybackStateCompat.STATE_NONE, 0L, 0f)
             .build()
         session.setPlaybackState(initialState)
-        session.setMetadata(
-            MediaMetadataCompat.Builder()
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, "رفيق")
-                .build()
-        )
         // NOTE: we intentionally do NOT call startForeground() here. The service is
         // created either by Android Auto binding (for browsing — no notification needed)
         // or lazily when playback starts. The media notification card only appears once
@@ -416,7 +421,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         nativeVerseStartMs.clear()
         nativeRangeTotalMs = 0L
         fetchNativeRangeTotal(reciter, next)
-        persistQueue(urls, 0, title, sura = next)
+        persistQueue(urls, 0, title, sura = next, reciter = reciter)
         player?.loadList(urls, 0, playWhenReady = true)
         updateTitleMetadata(title)
     }
@@ -425,14 +430,21 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * Persist the last flat queue (resolved URLs/files + display title) so a cold-start
      * car play can begin immediately. Called by the plugin when JS pushes a native queue.
      */
-    fun persistQueue(urls: List<String>, startIndex: Int, title: String, sura: Int = 0) {
-        prefs.edit()
+    fun persistQueue(urls: List<String>, startIndex: Int, title: String, sura: Int = 0, reciter: String = "") {
+        val e = prefs.edit()
             .putString(KEY_QUEUE_URLS, urls.joinToString("\n"))
             .putInt(KEY_QUEUE_INDEX, startIndex)
             .putString(KEY_QUEUE_TITLE, title)
             .putInt(KEY_QUEUE_SURA, sura)
-            .apply()
+        // Only overwrite the persisted reciter when the caller actually knows it. An empty reciter
+        // (e.g. a page-jump re-persist that doesn't carry it) must NOT wipe a good stored value.
+        if (reciter.isNotEmpty()) e.putString(KEY_QUEUE_RECITER, reciter)
+        e.apply()
     }
+
+    /** The reciter of the persisted queue (empty if never stored). The car→phone handoff and a
+     *  resumed cold start use this so they don't fall back to the DEFAULT reciter. */
+    private fun persistedReciter(): String = prefs.getString(KEY_QUEUE_RECITER, "") ?: ""
 
     private fun loadPersistedQueue(): Triple<List<String>, Int, String>? {
         val raw = prefs.getString(KEY_QUEUE_URLS, null) ?: return null
@@ -458,7 +470,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // Remember the reciter the brain is playing so a stall fallback (locked screen / closed
         // app) rebuilds the surah URLs with the SAME reciter instead of the default.
         if (reciter.isNotEmpty()) currentReciter = reciter
-        persistQueue(urls, startIndex, title, sura)
+        persistQueue(urls, startIndex, title, sura, reciter)
     }
 
     /** JS brain feeds a single resolved URL for one verse (it owns progression). */
@@ -517,9 +529,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun nativeCurrentColdSura(): Int = if (!jsDriving) nativeColdStartSura else 0
 
-    /** The reciter slug native cold-start is using (empty if unknown), so the brain adopts the
-     *  same reciter on wake. */
-    fun nativeCurrentReciter(): String = currentReciter
+    /** The reciter native cold-start is using, so the brain adopts the same reciter on wake and
+     *  never switches to the default on app open. Falls back to the PERSISTED reciter if the
+     *  in-memory value was cleared by a service restart (the persisted URLs are that reciter). */
+    fun nativeCurrentReciter(): String = currentReciter.ifEmpty { persistedReciter() }
 
     @androidx.media3.common.util.UnstableApi
     fun nativePlay() { requestAudioFocus(); player?.play() }
@@ -544,6 +557,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             requestAudioFocus()
             jsDriving = false
             nativeRangeBounded = false // car cold-start resume keeps its historical whole-surah behavior
+            // Restore the persisted reciter UNCONDITIONALLY (the persisted URLs ARE this reciter, so
+            // it must win over any folder the user merely browsed and over an empty currentReciter
+            // after a service restart). This is what stops the phone app switching reciter on open,
+            // and makes the duration fetch below use the right reciter instead of the default.
+            val savedReciter = persistedReciter()
+            if (savedReciter.isNotEmpty()) currentReciter = savedReciter
             // Restore the page-nav state for the persisted surah so the prev/next-page +
             // repeat-page buttons appear on this resume path too (not just on a fresh surah
             // selection). Without this, pageMarkers stays empty and the buttons don't show.
@@ -577,7 +596,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 jsDriving = false
                 val title = surahArabicName(1)
                 nativeColdStartSura = 1
-                persistQueue(urls, 0, title, sura = 1)
+                persistQueue(urls, 0, title, sura = 1, reciter = reciter)
                 player?.loadList(urls, 0, playWhenReady = true)
                 updateTitleMetadata(title)
                 dispatchCarEvent("play", aya = 0)
@@ -656,7 +675,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         else player?.setColdRepeatRange(-1, -1)
 
         requestAudioFocus()
-        persistQueue(urls, nextIdx, title, sura)
+        persistQueue(urls, nextIdx, title, sura, currentReciter)
         player?.loadList(urls, nextIdx, playWhenReady = true)
         updateTitleMetadata(title)
     }
@@ -1710,7 +1729,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     nativeVerseStartMs.clear()
                     nativeRangeTotalMs = 0L
                     fetchNativeRangeTotal(reciter, surahNumber)
-                    persistQueue(urls, 0, title, sura = surahNumber)
+                    persistQueue(urls, 0, title, sura = surahNumber, reciter = reciter)
                     player?.loadList(urls, 0, playWhenReady = true)
                     updateTitleMetadata(title)
                 }

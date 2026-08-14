@@ -6,12 +6,17 @@
  * demand, so the mechanic is discoverable without the card carrying a
  * paragraph of copy it would show forever.
  *
+ * The pair is drawn with the shared FreezeSnowflake at MAX_FREEZES, one slot
+ * per freeze, dimmed when spent — so the sheet, the CTA and the week strip all
+ * show the user the same mark for the same thing.
+ *
  * Deliberately reuses AccountModal rather than defining its own sheet: the
  * portal, backdrop, drag handle and slide-up are already solved there.
  */
 import React from "react";
 import AccountModal from "./AccountModal";
 import { MAX_FREEZES } from "../../core/services/storage/streak-freeze.service";
+import FreezeSnowflake from "./FreezeSnowflake";
 
 interface Props {
   /** Freezes currently held. */
@@ -19,31 +24,6 @@ interface Props {
   lang: string;
   onClose: () => void;
 }
-
-/**
- * A leaf held in reserve — the same silhouette the week strip uses for a day a
- * freeze covered, drawn large. Inline SVG so it inherits the gold token in
- * both themes; held and spent differ by fill, so the pair reads as a count
- * without needing two separate glyphs.
- *
- * The outline is asymmetric with a curved midrib: a symmetric teardrop reads
- * as a seed or a droplet, which is the wrong plant and the wrong metaphor.
- */
-const DormantLeaf: React.FC<{ held: boolean }> = ({ held }) => (
-  <svg
-    className={"ac-fz-leaf" + (held ? " ac-fz-leaf--held" : "")}
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
-    <path
-      d="M20 4C10 4 4 9 4 15.5c0 2 .6 3.4 1.4 4.2C9 16 12.5 13.6 17 12c-3.6 2.2-6.6 5-8.7 8.6.9.3 1.9.4 3 .4C18 21 20 12.5 20 4z"
-      fill={held ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={held ? 0 : 1.4}
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 const StreakFreezeSheet: React.FC<Props> = ({ count, lang, onClose }) => {
   const ar = lang === "ar";
@@ -71,7 +51,7 @@ const StreakFreezeSheet: React.FC<Props> = ({ count, lang, onClose }) => {
           aria-label={`${count} / ${MAX_FREEZES}`}
         >
           {Array.from({ length: MAX_FREEZES }, (_, i) => (
-            <DormantLeaf key={i} held={i < count} />
+            <FreezeSnowflake key={i} className="ac-fz-flake" held={i < count} />
           ))}
         </div>
 

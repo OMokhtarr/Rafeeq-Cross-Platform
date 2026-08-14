@@ -1,6 +1,6 @@
 /**
- * The streak read-out: current and longest run, the last seven days, and the
- * freeze row that opens the explainer.
+ * The streak read-out: current and longest run, the week centred on today, and
+ * the freeze row that opens the explainer.
  *
  * Shared by the Account tab (as a card body) and the Hifz page (inside a
  * sheet), so the two can never drift apart. It loads its own data rather than
@@ -17,11 +17,12 @@ import React, { useState } from "react";
 import {
   computeStreakPersistent,
   computeLongestStreakPersistent,
-  last7Days,
+  streakWindow,
   loadStreakDates,
   type PlanSession,
 } from "../hifz/hifz.service";
 import { loadFreezePool } from "../../core/services/storage/streak-freeze.service";
+import FreezeSnowflake from "./FreezeSnowflake";
 import StreakFreezeMeter from "./StreakFreezeMeter";
 import StreakFreezeSheet from "./StreakFreezeSheet";
 import StreakWeekStrip from "./StreakWeekStrip";
@@ -48,7 +49,7 @@ const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
   // session completed while a host page is mounted is reflected on reopen.
   const streak = computeStreakPersistent(sessions);
   const longest = computeLongestStreakPersistent(sessions);
-  const week = last7Days(sessions);
+  const week = streakWindow(sessions);
   const freezeCount = loadFreezePool("hifz").count;
   const lastActive = latestDate(loadStreakDates());
 
@@ -86,7 +87,7 @@ const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
           <button className="ac-freeze-cta" onClick={() => setFreezeSheet(true)}>
             <span className="ac-freeze-cta-pips" aria-hidden="true">
               {Array.from({ length: freezeCount }, (_, i) => (
-                <span key={i} className="ac-freeze-cta-pip" />
+                <FreezeSnowflake key={i} className="ac-freeze-cta-pip" />
               ))}
             </span>
             <span className="ac-freeze-cta-lbl">

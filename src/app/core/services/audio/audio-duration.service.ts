@@ -46,11 +46,19 @@ const AUDIO_RECITER_ID_MAP: Record<string, string> = {};
  * the numeric id so duration lookups don't silently fail and leave the total at 0.
  */
 const RECITER_SLUG_TO_ID: Record<string, string> = {
+  // Car browse slugs
   "minshawi-murattal": "9",
   abdul_basit_murattal: "2",
+  abdul_basit_mujawwad: "1",
   sudais: "3",
+  shatri: "4",
+  rifai: "5",
   husary: "6",
   alafasy: "7",
+  // Legacy in-app settings slugs (strings.ts) — aliases in case a slug (not a numeric id) ever
+  // reaches here; the timestamp endpoint needs numeric, so map them.
+  afasy: "7",
+  minshawi: "8", // Al-Minshawi Mujawwad
 };
 
 function chapterReciterId(reciterId: string): string {

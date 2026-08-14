@@ -60,7 +60,6 @@ TEST YOURSELF
 • Complete the Verse — recite or type the rest of a verse from memory
 • Mutashabihat — tell apart verses that begin the same way and complete the right one
 • Complete the Ending — choose the correct ending after the Waqf sign
-• A separate quiz streak, so revision and testing both count
 
 RECITE MODE
 Recite aloud and Rafeeq follows along with the text, highlighting as you go and catching where you pause. Recite mode is entirely optional and only listens while you are actively using it.

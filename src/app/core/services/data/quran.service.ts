@@ -5,8 +5,18 @@ import {
   fetchTranslationsByPage as apiFetchTranslationsByPage,
   fetchTafsirForAyah as apiFetchTafsirForAyah,
   fetchTafsirResources as apiFetchTafsirResources,
+  fetchPagesLookup as apiFetchPagesLookup,
 } from "../api/quran-data-provider";
 export type { TafsirResource } from "../api/quran-api.client";
+import type {
+  PagesLookupResult,
+  PagesLookupScope,
+} from "../api/quran-api.client";
+export type {
+  PagesLookupResult,
+  PagesLookupScope,
+  PageBoundary,
+} from "../api/quran-api.client";
 import { idb } from "../storage/idb.service";
 import type { Verse, VerseWord } from "../../../shared/models/verse.model";
 import {
@@ -14,7 +24,7 @@ import {
   getSurahNameEnglish,
   estimatePageForVerse,
 } from "./metadata.service";
-import { MUSHAFS, DEFAULT_MUSHAF } from "../api/mushaf.config";
+import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../api/mushaf.config";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   normalizeArabic,
@@ -125,6 +135,7 @@ export async function getPage(page: number): Promise<Verse[]> {
     const apiVerses: any[] = (await fetchVersesByPage(
       page,
       MUSHAFS[mushaf].wordFields,
+      mushafIdFor(mushaf),
     )) as any[];
     const verses: Verse[] = apiVerses.map(mapApiVerseToVerse);
 
@@ -201,11 +212,14 @@ export async function getSurahVersesList(suraIndex: number): Promise<Verse[]> {
 
 export async function getJuzVerses(juzNumbers: number[]): Promise<Verse[]> {
   const out: Verse[] = [];
-  const wordFields = MUSHAFS[readSelectedMushaf()].wordFields;
+  const mushaf = readSelectedMushaf();
+  const wordFields = MUSHAFS[mushaf].wordFields;
+  const mushafId = mushafIdFor(mushaf);
   for (const juz of juzNumbers) {
     const apiVerses: any[] = (await fetchVersesByJuz(
       juz,
       wordFields,
+      mushafId,
     )) as any[];
     out.push(...apiVerses.map(mapApiVerseToVerse));
   }
@@ -230,8 +244,13 @@ export async function repairPagesCache(): Promise<void> {
   // Clear existing pages store to ensure we fetch fresh data
   await idb.clear("pages");
   const wordFields = MUSHAFS[DEFAULT_MUSHAF].wordFields;
+  const mushafId = mushafIdFor(DEFAULT_MUSHAF);
   for (let page = 1; page <= TOTAL_PAGES; page++) {
-    const apiVerses = (await fetchVersesByPage(page, wordFields)) as any[];
+    const apiVerses = (await fetchVersesByPage(
+      page,
+      wordFields,
+      mushafId,
+    )) as any[];
     if (!apiVerses || apiVerses.length === 0) {
       console.warn(`[Quran] No verses returned for page ${page}`);
       continue;
@@ -293,7 +312,89 @@ export async function getPageTranslations(
   page: number,
   editionId: string,
 ): Promise<{ verseKey: string; text: string }[]> {
-  return apiFetchTranslationsByPage(page, editionId);
+  // Same mushaf id as getPage() — the layout decides which verses are on the
+  // page, so the two calls must agree or the translations describe a different
+  // verse set than the one rendered.
+  return apiFetchTranslationsByPage(
+    page,
+    editionId,
+    mushafIdFor(readSelectedMushaf()),
+  );
+}
+
+// ─── Page boundaries (pages lookup) ──────────────────────────────────────────
+/**
+ * Authoritative page boundaries from the API's `/pages/lookup`, cached in IDB
+ * per (scope, mushaf) so it works offline after the first call.
+ *
+ * Relationship to `estimatePageForVerse`: that helper binary-searches the
+ * static PAGE_STARTS table, which was verified against this endpoint for the
+ * 604-page Madani layout and matched on every sampled surah — so it is exact
+ * there despite its name, and remains the synchronous fast path used across
+ * the UI. Lookup matters when the answer must come from the API rather than a
+ * bundled table: a mushaf whose layout differs from PAGE_STARTS, or verifying
+ * the table still agrees after an API-side layout change.
+ */
+const PAGES_LOOKUP_CACHE_VERSION = "v1";
+
+function pagesLookupCacheKey(
+  scope: PagesLookupScope,
+  mushafId: number | undefined,
+): string {
+  const parts = Object.entries(scope)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join("&");
+  return `pages_lookup_${PAGES_LOOKUP_CACHE_VERSION}_${mushafId ?? "default"}_${parts}`;
+}
+
+export async function getPagesLookup(
+  scope: PagesLookupScope,
+): Promise<PagesLookupResult | null> {
+  const mushafId = mushafIdFor(readSelectedMushaf());
+  const cacheKey = pagesLookupCacheKey(scope, mushafId);
+
+  try {
+    const cached = await idb.get<{ key: string; value: PagesLookupResult }>(
+      "meta",
+      cacheKey,
+    );
+    if (cached?.value?.pages?.length) return cached.value;
+  } catch {}
+
+  try {
+    const result = await apiFetchPagesLookup(scope, mushafId);
+    if (result.pages.length) {
+      idb.put("meta", { key: cacheKey, value: result }).catch(() => {});
+    }
+    return result;
+  } catch {
+    // Offline or the endpoint is unavailable — callers fall back to the static
+    // PAGE_STARTS table via estimatePageForVerse.
+    return null;
+  }
+}
+
+/**
+ * Page containing a verse, preferring the API's layout and falling back to the
+ * static table. Async by nature; the synchronous `estimatePageForVerse` stays
+ * the right choice inside render paths.
+ */
+export async function getPageForVerse(
+  sura: number,
+  aya: number,
+): Promise<number> {
+  const lookup = await getPagesLookup({ chapterNumber: sura });
+  if (lookup) {
+    for (const p of lookup.pages) {
+      const [ls, la] = p.lastVerseKey.split(":").map(Number);
+      if (Number.isFinite(ls) && Number.isFinite(la)) {
+        if (ls > sura || (ls === sura && la >= aya)) return p.page;
+      }
+    }
+  }
+  return estimatePageForVerse(sura, aya);
 }
 
 // ─── Audio ──────────────────────────────────────────────────────────────────

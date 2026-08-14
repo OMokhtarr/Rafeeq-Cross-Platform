@@ -72,7 +72,10 @@
   </head>
   <body>
     <h1>Privacy Policy</h1>
-    <p class="updated"><strong>Last updated:</strong> 9 August 2026</p>
+    <p class="updated">
+      <strong>Last updated:</strong> 14 August 2026 &nbsp;·&nbsp;
+      <strong>Effective:</strong> 14 August 2026
+    </p>
 
     <p>
       Rafeeq ("the App") is a Quran reader, memorisation aid, and quiz app. This
@@ -85,6 +88,18 @@
       ordinary use. The one feature that sends data off your device — Recite
       Mode — is optional and is described below.
     </p>
+
+    <div class="callout">
+      <strong>Rafeeq is an independent application.</strong> It uses the
+      <a href="https://api-docs.quran.foundation/" target="_blank" rel="noopener"
+        >Quran Foundation APIs</a
+      >
+      and displays Quran text, translations, tafsir, and recitation audio
+      sourced from Quran.com. Rafeeq is <em>not</em> an official Quran
+      Foundation application, and it is not endorsed by, affiliated with, or
+      operated by the Quran Foundation. Questions about this App should come to
+      the contact address at the bottom of this page, not to the Foundation.
+    </div>
 
     <h2>1. Data stored on your device</h2>
     <p>
@@ -137,36 +152,118 @@
       </li>
     </ul>
 
-    <h2>3. No account required</h2>
+    <h2>3. Religious information and your consent</h2>
+    <p>
+      Recitation audio, memorisation progress, and reading activity reveal
+      religious practice, and many privacy laws treat that as a
+      <strong>special category of sensitive personal data</strong>. Rafeeq
+      treats it that way regardless of where you live.
+    </p>
+    <ul>
+      <li>
+        <strong>Nothing sensitive is processed by default.</strong> Reading,
+        memorisation, and quiz activity never leave your device at all, so no
+        consent is needed for them — there is no collection to consent to.
+      </li>
+      <li>
+        <strong>Recite Mode is strictly opt-in.</strong> It is the only feature
+        that transmits anything derived from your religious practice. It
+        transmits only while you deliberately start a session, and it requires
+        two separate affirmative acts: you must open Recite Mode yourself, and
+        you must grant the Android microphone permission. Declining either one
+        leaves every other part of the App fully usable.
+      </li>
+      <li>
+        You can withdraw that consent at any time by revoking the microphone
+        permission in Android Settings → Apps → Rafeeq → Permissions, or simply
+        by not using Recite Mode. Withdrawal takes effect immediately; because
+        no audio is retained, there is nothing left to delete.
+      </li>
+    </ul>
+
+    <h2>4. We do not train AI models on your content</h2>
+    <p>
+      Your notes, reflections, bookmarks, memorisation records, and recitation
+      audio are <strong>never</strong> used to train, fine-tune, or evaluate any
+      machine-learning model, by us or by anyone else, and they are never sold,
+      mined, or repurposed for any feature beyond the ones described in this
+      policy. We build no advertising or behavioural profiles of any kind. If
+      that ever changes, it would require your separate, explicit opt-in consent
+      first — continuing to use the App would not be treated as agreement.
+    </p>
+
+    <h2>5. No account required</h2>
     <p>
       The App has no sign-in and no user account. Your notes, bookmarks,
-      memorisation progress, and your Hifz and quiz streaks are written only to
+      memorisation progress, and your Hifz streak are written only to
       this device — they are never uploaded, never synced, and are not tied to
       your identity in any way.
     </p>
 
-    <h2>4. Services the App connects to</h2>
+    <h2>6. Third parties the App connects to</h2>
+    <p>
+      These are every external service the App contacts, what each one is for,
+      and what it receives. Each operates under its own privacy policy, linked
+      below. None of them is given access to your notes, bookmarks, or
+      memorisation data, because that data never leaves your device.
+    </p>
     <table>
       <thead>
         <tr>
           <th>Service</th>
           <th>Purpose</th>
-          <th>What is sent</th>
+          <th>What it receives</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Quran Foundation</td>
+          <td>
+            <a
+              href="https://quran.foundation/privacy"
+              target="_blank"
+              rel="noopener"
+              >Quran Foundation</a
+            >
+          </td>
           <td>Quran text, translations, tafsir, recitation audio</td>
-          <td>Nothing that identifies you</td>
+          <td>
+            Which pages and verses the App requests. No account, no user
+            identifier, and nothing that identifies you.
+          </td>
         </tr>
         <tr>
-          <td>Deepgram</td>
+          <td>
+            <a
+              href="https://www.cloudflare.com/privacypolicy/"
+              target="_blank"
+              rel="noopener"
+              >Cloudflare</a
+            >
+          </td>
+          <td>
+            Hosts our token broker, a small service that holds our API
+            credentials so they are never shipped inside the App
+          </td>
+          <td>
+            Standard connection metadata such as your IP address, as with any
+            web request. No content of yours passes through it.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://deepgram.com/privacy" target="_blank" rel="noopener"
+              >Deepgram</a
+            >
+          </td>
           <td>Speech recognition for Recite Mode</td>
           <td>Live microphone audio, only while Recite Mode is running</td>
         </tr>
         <tr>
-          <td>jsDelivr (CDN)</td>
+          <td>
+            <a href="https://www.jsdelivr.com/terms" target="_blank" rel="noopener"
+              >jsDelivr (CDN)</a
+            >
+          </td>
           <td>Mushaf fonts</td>
           <td>Nothing beyond a standard web request</td>
         </tr>
@@ -174,7 +271,18 @@
     </table>
     <p>All connections use encrypted transport (HTTPS/WSS).</p>
 
-    <h2>5. What the App does not do</h2>
+    <h2>7. International data transfers</h2>
+    <p>
+      Deepgram and Cloudflare are based in the United States, and Cloudflare
+      serves requests from data centres worldwide, so if you use Recite Mode
+      outside the US your audio is processed there. The safeguards that apply:
+      audio travels only over an encrypted connection (WSS), is transcribed in
+      the moment and never stored by us, is never linked to an account or
+      identity because the App has none, and reaches no third party beyond the
+      transcription provider itself.
+    </p>
+
+    <h2>8. What the App does not do</h2>
     <ul>
       <li>No advertising, and no advertising identifiers</li>
       <li>No analytics or behavioural tracking SDKs</li>
@@ -184,7 +292,42 @@
       </li>
     </ul>
 
-    <h2>6. Backing up your data</h2>
+    <h2>9. Security</h2>
+    <p>The measures protecting the small amount of data that moves at all:</p>
+    <ul>
+      <li>
+        <strong>In transit:</strong> every connection uses TLS (HTTPS for API
+        and font requests, WSS for the Recite Mode audio stream). The App makes
+        no unencrypted network calls.
+      </li>
+      <li>
+        <strong>At rest:</strong> your notes, bookmarks, streaks, and cached
+        Quran content are held in the App's private storage area, which Android
+        isolates from other apps and encrypts at the OS level on any device with
+        device encryption enabled. We operate no user database, so there is no
+        server-side store of your data to protect.
+      </li>
+      <li>
+        <strong>Credentials:</strong> API keys and secrets are never bundled
+        into the App package. They are held as encrypted secrets in the token
+        broker, which returns only short-lived tokens — the Recite Mode token
+        expires in about a minute. Secrets are rotated whenever a compromise is
+        suspected and can be revoked immediately at the provider.
+      </li>
+      <li>
+        <strong>Access control:</strong> the token broker exposes only the two
+        endpoints the App needs, and requests the minimum API scope required to
+        read Quran content — no broader permission is requested or held.
+      </li>
+      <li>
+        <strong>Breach reporting:</strong> any actual or suspected unauthorised
+        access, breach, or exposure of data involving the Quran Foundation APIs
+        will be reported to the Quran Foundation within 24 hours of discovery,
+        alongside any notification the law requires us to give you.
+      </li>
+    </ul>
+
+    <h2>10. Backing up your data</h2>
     <p>
       Because there is no account, the App gives you a file instead. In
       <strong>Account → Backup</strong>, "Export My Data" writes your notes,
@@ -193,36 +336,68 @@
       App never uploads it anywhere.
     </p>
 
-    <h2>7. Deleting your data</h2>
+    <h2>11. Accessing, correcting, and deleting your data</h2>
     <p>
-      <strong>On-device data:</strong> uninstall the App, or clear its storage
-      from Android Settings → Apps → Rafeeq → Storage.
+      <strong>Access and correction.</strong> Everything the App holds about you
+      is on your device and directly visible in the App — your notes, bookmarks,
+      memorisation progress, and streaks can be read, edited, or removed
+      individually at any time in the App itself. "Export My Data" in
+      <strong>Account → Backup</strong> gives you the whole set as a portable
+      file.
     </p>
     <p>
-      Because nothing is synced to a server, that removes everything
-      permanently — there is no account to close, no server-side copy, and no
-      request to make. If you want to keep your notes and streaks first, export
-      them from <strong>Account → Backup</strong> before uninstalling.
+      <strong>Deletion.</strong> Uninstall the App, or clear its storage from
+      Android Settings → Apps → Rafeeq → Storage. Deletion is immediate and
+      permanent — there is no account to close, no server-side copy, and no
+      request to send us. If you want to keep your notes and streaks first,
+      export them from <strong>Account → Backup</strong> before uninstalling.
     </p>
+    <div class="callout">
+      <strong
+        >Why the usual account-deletion and OAuth-revocation steps do not apply
+        here.</strong
+      >
+      Rafeeq has no sign-in, does not use Quran Foundation user accounts, and
+      requests no OAuth permission from you, so there is no authorisation to
+      revoke and no linked account whose deletion could affect your data. We
+      operate no user database and hold no copy of your content on any server,
+      which means there is nothing for us to delete on request and nothing of
+      yours in any backup of ours. Should Rafeeq ever add an account system, we
+      would honour deletion requests by permanently deleting the data within 30
+      days and purging it from backups within 90 days, and deleting your Quran
+      Foundation account would delete the associated data held here — but today
+      no such data exists.
+    </div>
 
-    <h2>8. Children's privacy</h2>
+    <h2>12. Children's privacy</h2>
     <p>
       The App is suitable for all ages and does not knowingly collect personal
       information from children under 13. Recite Mode requires microphone
       permission, which on most devices requires the device owner to grant it.
     </p>
 
-    <h2>9. Changes to this policy</h2>
+    <h2>13. Changes to this policy</h2>
     <p>
       If this policy changes materially — particularly regarding what data
       leaves your device — the "Last updated" date above will change and the
-      change will be described in the app listing's release notes.
+      change will be described in the app listing's release notes. Where a
+      change would involve newly collecting or transmitting sensitive religious
+      information, we will ask for your explicit consent before it takes effect
+      rather than relying on your continued use of the App.
     </p>
 
     <h2>Contact</h2>
     <p>
-      Questions about this policy:
+      Questions, privacy requests, or complaints about this policy:
       <a href="mailto:or.mokhtar@gmail.com">or.mokhtar@gmail.com</a>
+    </p>
+    <p>
+      Postal address:
+      <strong>[POSTAL ADDRESS — FILL IN BEFORE PUBLISHING]</strong>
+    </p>
+    <p>
+      We aim to acknowledge and respond to any privacy request within
+      <strong>30 days</strong> of receiving it.
     </p>
   </body>
 </html>

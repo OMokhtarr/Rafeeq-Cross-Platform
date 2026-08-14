@@ -174,12 +174,7 @@ ion-content::part(scroll) {
   padding: 4px 0 2px;
 }
 
-/* ── Freeze meter ─────────────────────────────────────────────────────────
-   A pip is a crescent rather than a dot: the card's whole language is gold
-   mushaf furniture, and a crescent held in reserve reads as "in hand"
-   without needing a legend. Held pips are solid gold; spent ones keep the
-   same silhouette at --color-gold-subtle, so the meter's shape stays
-   readable at a glance and no new colour enters the palette. */
+/* ── Freeze meter ───────────────────────────────────────────────────────── */
 
 /* Sits directly under the freeze CTA, which already carries the separating
    rule — so this row adds spacing only, not a second hairline. */
@@ -218,31 +213,6 @@ ion-content::part(scroll) {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* The crescent: a disc with a second disc punched out by an offset shadow. */
-.ac-freeze-pip {
-  width: 11px;
-  height: 11px;
-  border-radius: var(--radius-full);
-  background: transparent;
-  box-shadow: inset -3px 0 0 0 var(--color-gold-subtle);
-  transform: rotate(-20deg);
-  flex-shrink: 0;
-}
-
-.ac-freeze-pip--held {
-  box-shadow: inset -3px 0 0 0 var(--color-gold);
-}
-
-/* Mirror the crescent's opening with the reading direction. */
-[dir="rtl"] .ac-freeze-pip {
-  box-shadow: inset 3px 0 0 0 var(--color-gold-subtle);
-  transform: rotate(20deg);
-}
-
-[dir="rtl"] .ac-freeze-pip--held {
-  box-shadow: inset 3px 0 0 0 var(--color-gold);
 }
 
 .ac-freeze-count {
@@ -799,10 +769,11 @@ ion-content::part(scroll) {
 .ac-restore-cancel:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Week strip ───────────────────────────────────────────────────────────
-   Seven rolling days as a row of leaves. A kept day is a filled gold disc
-   with a check; a day a freeze covered keeps the disc but shows the leaf
-   outline instead, so "held" reads differently from "earned" without
-   introducing a second hue. Missed days stay as empty wells.
+   Seven rolling days centred on today. A kept day is a filled gold disc with
+   a check; a day a freeze covered keeps the disc but shows a snowflake
+   instead, so "held" reads differently from "earned" without introducing a
+   second hue. Missed days stay as empty wells, and days still ahead get a
+   quieter well again so they do not read as losses already taken.
 
    The connector is drawn per-cell as a bar reaching back to the previous
    day, and only when both days count — a gap in the run is a gap in the
@@ -877,11 +848,17 @@ ion-content::part(scroll) {
   height: 15px;
 }
 
-/* The leaf is a solid silhouette where the check is an open stroke, so it
-   carries at a slightly smaller size. */
+/* The snowflake fills its viewBox corner to corner where the check is inset,
+   so it stays a touch smaller than the disc's other marks to keep the spoke
+   tips off the rim. The stroke is nudged up because the glyph's own 1.5 weight
+   thins out to near-invisible at this size. */
 .ac-week-day--frozen svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+}
+
+.ac-week-day--frozen svg path {
+  stroke-width: 1.9;
 }
 
 /* A day that counts: solid gold, check mark punched out in the card colour. */
@@ -891,13 +868,23 @@ ion-content::part(scroll) {
 }
 
 /* A day a freeze held. It still counts, so it keeps the filled disc and the
-   run reads as unbroken; the leaf mark instead of the check is what says the
-   day was held rather than earned. The dimmed gold separates the two at a
-   glance without adding a colour. */
+   run reads as unbroken; the blue disc and the white snowflake are what say
+   the day was held rather than earned. Ice reads as "held" far faster than a
+   second shade of gold did, and this is the one place in the card worth
+   spending a non-gold hue on. */
 .ac-week-day--frozen {
-  background: var(--color-gold-deep);
-  color: var(--color-bg-card);
-  opacity: 0.85;
+  background: var(--color-freeze);
+  color: #fff;
+}
+
+/* A day still ahead. Empty like a missed day but visibly quieter, because the
+   two mean opposite things: a well behind today is a break in the run, one
+   ahead is simply not here yet. Drawing them alike would read as gaps the user
+   has already lost. */
+.ac-week-day--future {
+  background: transparent;
+  border: 1.5px dashed var(--color-border-card);
+  opacity: 0.65;
 }
 
 /* Today is marked whether or not it has been earned yet, so the strip always
@@ -915,8 +902,8 @@ ion-content::part(scroll) {
 
 /* ── Freeze CTA ───────────────────────────────────────────────────────────
    The row that opens the explainer. It carries the section's hairline and
-   reuses the crescent pip so the count reads the same here as in the meter
-   below it. */
+   draws one snowflake per held freeze, the same mark the week strip and the
+   explainer sheet use, so a freeze looks like a freeze everywhere. */
 
 .ac-freeze-cta {
   display: flex;
@@ -943,19 +930,26 @@ ion-content::part(scroll) {
   flex-shrink: 0;
 }
 
-/* Same crescent as .ac-freeze-pip--held, at the CTA's slightly larger size. */
+/* The same snowflake the week strip and the sheet draw, at the CTA's size.
+   Needs no RTL mirroring — the mark is symmetric about its vertical axis, so
+   unlike the crescent it replaced there is no opening to turn around. */
+/* A blue disc with a white flake, the same pairing the week strip uses for a
+   held day, so the count and the days it will cover read as one thing. */
 .ac-freeze-cta-pip {
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
   border-radius: var(--radius-full);
-  box-shadow: inset -4px 0 0 0 var(--color-gold);
-  transform: rotate(-20deg);
+  background: var(--color-freeze);
+  color: #fff;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-[dir="rtl"] .ac-freeze-cta-pip {
-  box-shadow: inset 4px 0 0 0 var(--color-gold);
-  transform: rotate(20deg);
+/* Same reason as the strip's frozen mark: the glyph's own weight is tuned for
+   the sheet's 54px and reads as a grey smudge this small. */
+.ac-freeze-cta-pip path {
+  stroke-width: 1.8;
 }
 
 .ac-freeze-cta-lbl {
@@ -995,19 +989,31 @@ ion-content::part(scroll) {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  color: var(--color-gold);
   margin-bottom: var(--space-3);
 }
 
-.ac-fz-leaf {
-  width: 54px;
-  height: 54px;
+/* The pair drawn large: a white flake on a blue disc, the same pairing the
+   strip and the CTA use. A spent slot keeps the disc's footprint but empties
+   it — an outline with a faded flake — so the pair still reads as a count of
+   two rather than as one mark that moved. */
+.ac-fz-flake {
+  width: 64px;
+  height: 64px;
+  padding: 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-freeze);
+  color: #fff;
   flex-shrink: 0;
-  opacity: 0.3;
+  box-sizing: border-box;
 }
 
-.ac-fz-leaf--held {
-  opacity: 1;
+/* No opacity here: an outlined blue disc is already quiet, and fading it as
+   well sank the empty slot into the dark theme's card until the pair read as
+   one freeze rather than one of two. */
+.ac-fz-flake.is-spent {
+  background: transparent;
+  border: 2px solid var(--color-freeze);
+  color: var(--color-freeze);
 }
 
 .ac-fz-count {

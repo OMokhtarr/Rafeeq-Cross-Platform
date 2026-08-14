@@ -4,6 +4,8 @@ import type {
   TafsirText,
   TafsirResource,
   AudioTimestampResult,
+  PagesLookupResult,
+  PagesLookupScope,
 } from "./quran-api.client";
 
 export type { AudioTimestampResult } from "./quran-api.client";
@@ -30,12 +32,31 @@ async function trySdkOrFallback<Args extends any[], Return>(
   return await fallbackFn(...args);
 }
 
-export async function fetchVersesByPage(page: number, wordFields: string) {
-  return trySdkOrFallback("fetchVersesByPage", page, wordFields);
+export async function fetchVersesByPage(
+  page: number,
+  wordFields: string,
+  mushafId?: number,
+) {
+  return trySdkOrFallback("fetchVersesByPage", page, wordFields, mushafId);
 }
 
-export async function fetchVersesByJuz(juz: number, wordFields?: string) {
-  return trySdkOrFallback("fetchVersesByJuz", juz, wordFields);
+export async function fetchVersesByJuz(
+  juz: number,
+  wordFields?: string,
+  mushafId?: number,
+) {
+  return trySdkOrFallback("fetchVersesByJuz", juz, wordFields, mushafId);
+}
+
+export async function fetchPagesLookup(
+  scope: PagesLookupScope,
+  mushafId?: number,
+): Promise<PagesLookupResult> {
+  return trySdkOrFallback<[PagesLookupScope, number | undefined], PagesLookupResult>(
+    "fetchPagesLookup",
+    scope,
+    mushafId,
+  );
 }
 
 export async function fetchAudioForAyah(
@@ -74,12 +95,12 @@ export async function fetchJuzs() {
 export async function fetchTranslationsByPage(
   page: number,
   translationId: string | number,
+  mushafId?: number,
 ): Promise<PageTranslation[]> {
-  return trySdkOrFallback<[number, string | number], PageTranslation[]>(
-    "fetchTranslationsByPage",
-    page,
-    translationId,
-  );
+  return trySdkOrFallback<
+    [number, string | number, number | undefined],
+    PageTranslation[]
+  >("fetchTranslationsByPage", page, translationId, mushafId);
 }
 
 export async function fetchTafsirForAyah(

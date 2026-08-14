@@ -938,26 +938,38 @@ export interface StreakDay {
   active: boolean;
   /** Covered by a spent freeze rather than real activity. */
   frozen: boolean;
+  /** Still ahead — never active, and not a gap in the run either. */
+  future: boolean;
 }
 
 /**
- * The last 7 days ending today, oldest first.
+ * Seven days centred on today: three behind, today, three ahead. Oldest first.
  *
- * Deliberately a rolling window rather than a calendar week: the streak itself
- * is computed from consecutive days, so a rolling window shows exactly the run
- * that matters and sidesteps the question of which weekday a week starts on —
- * which differs between the app's two locales.
+ * Deliberately a rolling window rather than a calendar week — the streak is
+ * computed from consecutive days, so a rolling window shows exactly the run
+ * that matters and sidesteps which weekday a week starts on, which differs
+ * between the app's two locales.
+ *
+ * Centring it rather than ending at today puts the run in the middle of the
+ * row and gives the days ahead somewhere to appear, so the strip reads as a
+ * streak in progress rather than a record that stops at the right edge. The
+ * days ahead carry `future` because an empty cell means two different things
+ * either side of today: behind, it is a break in the run; ahead, it has simply
+ * not happened yet, and drawing them alike would invent gaps that do not exist.
  */
-export function last7Days(sessions: PlanSession[]): StreakDay[] {
+export function streakWindow(sessions: PlanSession[]): StreakDay[] {
   const dates = allStreakDates(sessions);
+  const today = todayStr();
   const days: StreakDay[] = [];
 
-  for (let i = 6; i >= 0; i--) {
+  for (let i = 3; i >= -3; i--) {
     const date = isoDaysAgo(i);
     days.push({
       date,
       active: dates.has(date),
       frozen: wasFrozen("hifz", date),
+      // ISO dates sort lexicographically, so a string compare is a date compare.
+      future: date > today,
     });
   }
   return days;

@@ -10,7 +10,7 @@
 import {
   recordStreakDay,
   computeLongestStreakPersistent,
-  last7Days,
+  streakWindow,
   type PlanSession,
 } from "./hifz.service";
 import { todayStr, daysAgoStr } from "../../core/utils/local-date.util";
@@ -78,22 +78,23 @@ describe("longest streak", () => {
 });
 
 describe("week strip", () => {
-  it("always returns seven days, oldest first, ending today", () => {
-    const days = last7Days(noSessions);
+  it("returns seven days centred on today, oldest first", () => {
+    const days = streakWindow(noSessions);
     expect(days).toHaveLength(7);
-    expect(days[0].date).toBe(daysAgoStr(6));
-    expect(days[6].date).toBe(todayStr());
+    expect(days[0].date).toBe(daysAgoStr(3));
+    expect(days[3].date).toBe(todayStr());
+    expect(days[6].date).toBe(daysAgoStr(-3));
   });
 
   it("marks nothing active on an untouched week", () => {
-    expect(last7Days(noSessions).every((d) => !d.active)).toBe(true);
+    expect(streakWindow(noSessions).every((d) => !d.active)).toBe(true);
   });
 
   it("marks the days that were earned", () => {
     recordStreakDay(todayStr());
     recordStreakDay(daysAgoStr(2));
     const byDate = Object.fromEntries(
-      last7Days(noSessions).map((d) => [d.date, d]),
+      streakWindow(noSessions).map((d) => [d.date, d]),
     );
     expect(byDate[todayStr()].active).toBe(true);
     expect(byDate[daysAgoStr(2)].active).toBe(true);
@@ -104,7 +105,7 @@ describe("week strip", () => {
     // The card draws these differently: a held day, not an earned one.
     bridge(daysAgoStr(2));
     spendFreezeOn(daysAgoStr(2));
-    const day = last7Days(noSessions).find((d) => d.date === daysAgoStr(2))!;
+    const day = streakWindow(noSessions).find((d) => d.date === daysAgoStr(2))!;
     expect(day.active).toBe(true);
     expect(day.frozen).toBe(true);
   });
@@ -112,19 +113,40 @@ describe("week strip", () => {
   it("does not flag a repaired day as frozen", () => {
     // Repair writes the same bridged store; only spentOn tells them apart.
     bridge(daysAgoStr(2));
-    const day = last7Days(noSessions).find((d) => d.date === daysAgoStr(2))!;
+    const day = streakWindow(noSessions).find((d) => d.date === daysAgoStr(2))!;
     expect(day.active).toBe(true);
     expect(day.frozen).toBe(false);
   });
 
   it("does not flag an earned day as frozen", () => {
     recordStreakDay(todayStr());
-    const day = last7Days(noSessions).find((d) => d.date === todayStr())!;
+    const day = streakWindow(noSessions).find((d) => d.date === todayStr())!;
     expect(day.frozen).toBe(false);
   });
 
   it("ignores activity older than the window", () => {
-    recordStreakDay(daysAgoStr(7));
-    expect(last7Days(noSessions).every((d) => !d.active)).toBe(true);
+    recordStreakDay(daysAgoStr(4));
+    expect(streakWindow(noSessions).every((d) => !d.active)).toBe(true);
+  });
+
+  it("flags only the days after today as future", () => {
+    // The strip draws a future well differently from a missed one, so today
+    // must fall on the past side of the line: it is still earnable.
+    const days = streakWindow(noSessions);
+    expect(days.filter((d) => d.future).map((d) => d.date)).toEqual([
+      daysAgoStr(-1),
+      daysAgoStr(-2),
+      daysAgoStr(-3),
+    ]);
+    expect(days.find((d) => d.date === todayStr())!.future).toBe(false);
+  });
+
+  it("never marks a future day active", () => {
+    recordStreakDay(todayStr());
+    expect(
+      streakWindow(noSessions)
+        .filter((d) => d.future)
+        .every((d) => !d.active && !d.frozen),
+    ).toBe(true);
   });
 });

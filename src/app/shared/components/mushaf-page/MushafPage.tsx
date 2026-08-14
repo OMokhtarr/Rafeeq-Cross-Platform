@@ -36,6 +36,7 @@ import type { Verse, VerseWord } from "../../models/verse.model";
 import {
   ensurePageFont,
   ensureBismillahFont,
+  ensureSurahNamesFont,
   fontFamilyForPage,
   paletteNameForPage,
   setMonoPaletteColor,
@@ -43,13 +44,16 @@ import {
 } from "../../../core/services/api/font.loader";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import { useTheme } from "../../../core/context/ThemeContext";
+import { findLineGaps, gapBeforeLine } from "./page-line-gaps";
+import {
+  SURAH_BANNER_PATH,
+  SURAH_BANNER_VIEWBOX,
+} from "./surah-banner.art";
 import "./MushafPage.css";
 
 interface Props {
   page: number;
   verses: Verse[];
-  /** First verse of the next page — used to show a trailing surah header when the next page starts a new surah and this page has a free slot. */
-  nextPageFirstVerse?: { sura: number; aya: number } | null;
   target?: { sura: number; aya: number };
   flash?: { sura: number; aya: number };
   selected?: Set<string>;
@@ -81,7 +85,6 @@ const LONG_PRESS_MS = 350;
 const MushafPage: React.FC<Props> = ({
   page,
   verses,
-  nextPageFirstVerse,
   target,
   flash,
   selected,
@@ -141,57 +144,71 @@ const MushafPage: React.FC<Props> = ({
   // bismillah row positioned right before the line where the new surah's
   // first word lives. The page-start surah (verses[0].aya === 1) stays
   // handled by the top-of-page banner so existing layouts don't shift.
-  // Count distinct verse line slots on this page.
-  const verseLineCount = React.useMemo(() => {
-    const lineNums = new Set<number>();
-    for (const v of verses)
-      for (const w of v.words ?? []) lineNums.add(w.lineNumber);
-    return lineNums.size;
-  }, [verses]);
-
   const surahStartVerse =
     verses.length > 0 && verses[0].aya === 1 ? verses[0] : null;
 
-  // Free slots = 15 minus actual verse lines.
-  //
-  // Rules (each case uses exactly as many free slots as available):
-  //   freeSlots >= 2, surah starts here → header (top) + bismillah (top)
-  //   freeSlots == 1, surah starts here → bismillah only (header goes on prev page — not our concern)
-  //   freeSlots == 1, next page starts a surah → trailing header (bottom)
-  //   freeSlots == 0 → nothing extra
-  //   Tawbah (9) never gets a bismillah.
-  const freeSlots = 15 - verseLineCount;
+  // Where this page reserves lines for surah headers / bismillah. Derived from
+  // the API's own line numbering — see page-line-gaps.ts for why.
+  const lineGaps = React.useMemo(() => {
+    const usedLines: number[] = [];
+    for (const v of verses)
+      for (const w of v.words ?? []) usedLines.push(w.lineNumber);
+    return findLineGaps(usedLines);
+  }, [verses]);
 
-  const showTopHeader = !!surahStartVerse && freeSlots >= 2;
+  const gapBefore = React.useCallback(
+    (line: number) => gapBeforeLine(lineGaps, line),
+    [lineGaps],
+  );
+
+  const topGap = surahStartVerse?.words?.length
+    ? gapBefore(surahStartVerse.words[0].lineNumber)
+    : null;
+
+  // Pages 1-2 (Al-Fatihah / start of Al-Baqarah) are centered blocks with a
+  // large leading gap rather than the standard 15-line grid, so they keep the
+  // existing top-of-page treatment instead of gap-derived slots.
+  const isOpeningPage = page <= 2;
+
+  const showTopHeader = !!surahStartVerse && (isOpeningPage || !!topGap);
   const showTopBismillah =
     !!surahStartVerse &&
     surahStartVerse.sura !== 9 &&
-    freeSlots >= 1 &&
-    page > 1;
+    page > 1 &&
+    (isOpeningPage || (topGap?.size ?? 0) >= 2);
 
-  const slotsUsedByTop = (showTopHeader ? 1 : 0) + (showTopBismillah ? 1 : 0);
-  const trailingSura =
-    nextPageFirstVerse?.aya === 1 && nextPageFirstVerse.sura !== 9
-      ? nextPageFirstVerse.sura
-      : null;
-  const showTrailingHeader =
-    !!trailingSura && freeSlots - slotsUsedByTop >= 1 && page > 2;
+  // NB: there is deliberately no "trailing header" for the next page's surah.
+  // The printed page never carries it: when a surah's header belongs at the
+  // bottom of a page, that page's own line data contains the gap *and* the
+  // surah's opening text. Drawing one ahead of the page break is what made the
+  // header appear on two consecutive pages.
 
   const midPageSurahStarts = React.useMemo(() => {
     if (verses.length === 0) return [];
     return verses
       .filter((v, idx) => idx > 0 && v.aya === 1 && v.words?.length)
-      .map((v) => ({
-        sura: v.sura,
-        lineNumber: v.words[0].lineNumber,
-        showBismillah: v.sura !== 9,
-      }));
-  }, [verses]);
+      .map((v) => {
+        const gap = gapBefore(v.words[0].lineNumber);
+        return {
+          sura: v.sura,
+          lineNumber: v.words[0].lineNumber,
+          // Only claim a bismillah row when the page actually reserved two
+          // lines for this surah. At-Tawbah gets a one-line gap (header only),
+          // and the data says so without needing a special case.
+          showBismillah: v.sura !== 9 && (gap?.size ?? 0) >= 2,
+        };
+      });
+  }, [verses, gapBefore]);
 
   // Bismillah font is needed if the top bismillah is shown OR any mid-page
   // surah start renders its own inline bismillah.
   const needsBismillahFont =
     showTopBismillah || midPageSurahStarts.some((s) => s.showBismillah);
+
+  // Surah-name font is needed wherever a banner is drawn — at the top of the
+  // page or before any mid-page surah start.
+  const needsSurahNamesFont =
+    showTopHeader || midPageSurahStarts.length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -199,6 +216,7 @@ const MushafPage: React.FC<Props> = ({
     Promise.all([
       ensurePageFont(page),
       needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
+      needsSurahNamesFont ? ensureSurahNamesFont() : Promise.resolve(),
     ])
       .then(() => {
         if (!cancelled) setFontReady(true);
@@ -210,7 +228,7 @@ const MushafPage: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [page, needsBismillahFont]);
+  }, [page, needsBismillahFont, needsSurahNamesFont]);
 
   // Keep --slot-px in sync with the container height so the surah header and
   // bismillah always occupy exactly 1/15 of the page (no font-size fitting).
@@ -235,14 +253,14 @@ const MushafPage: React.FC<Props> = ({
       // Header and bismillah have a fixed height (--slot-px) that comes out
       // of the flex space-between distribution — they don't shrink the text.
       const byHeight = slotPx / 2.0;
-      const byWidth = w * (showTrailingHeader ? 0.048 : 0.052);
+      const byWidth = w * 0.052;
       el.style.fontSize = `${Math.round(Math.min(byHeight, byWidth))}px`;
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fontReady, showTrailingHeader]);
+  }, [fontReady, page]);
 
   // Measure hidden-word spans after layout and compute one overlay bar per
   // contiguous hidden segment on each mushaf line.
@@ -335,17 +353,43 @@ const MushafPage: React.FC<Props> = ({
     handler?.(key);
   };
 
-  const surahHeaderName = surahStartVerse
-    ? getSurahNameArabic(surahStartVerse.sura)
-    : null;
-
+  /**
+   * Ornamental surah banner, drawn the way the printed Mushaf does it: the
+   * name and its frame are a single glyph in the SurahNames font, selected by
+   * typing the zero-padded surah number ("081" → At-Takwir). The digits are a
+   * glyph selector rather than readable content, so they are hidden from
+   * assistive tech (the real name goes on aria-label) and marked
+   * translate="no" so a page translator can't rewrite them into another
+   * numeral system and break the ligature.
+   */
   const renderSurahHeader = (sura: number, key: string) => {
     const name = getSurahNameArabic(sura);
-    if (!name) return null;
     return (
-      <div className="mushaf-surah-header" aria-label={name} key={key}>
-        <span className="mushaf-surah-header-frame">
-          <span className="mushaf-surah-header-name">سُورَةُ {name}</span>
+      <div
+        className="mushaf-surah-header"
+        role="heading"
+        aria-level={2}
+        aria-label={name ? `سُورَةُ ${name}` : undefined}
+        key={key}
+      >
+        {/* Illuminated band. Sits behind the name and scales to the slot; the
+            path is the ornament's ink, so it picks up the header's color. */}
+        <svg
+          className="mushaf-surah-header-frame"
+          viewBox={SURAH_BANNER_VIEWBOX}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path fill="currentColor" fillRule="evenodd" d={SURAH_BANNER_PATH} />
+        </svg>
+        {/* The name, centered in the cartouche the artwork leaves clear. */}
+        <span
+          className="mushaf-surah-header-name"
+          translate="no"
+          aria-hidden="true"
+        >
+          {String(sura).padStart(3, "0")}
         </span>
       </div>
     );
@@ -363,16 +407,15 @@ const MushafPage: React.FC<Props> = ({
 
   // When header and bismillah appear together they each get their own full slot
   // (13-line pages have 2 free slots — header takes slot 1, bismillah takes slot 2).
-  const renderHeaderWithBismillah = (sura: number, keyPrefix: string) => {
-    const name = getSurahNameArabic(sura);
-    if (!name) return null;
-    return (
-      <React.Fragment key={keyPrefix}>
-        {renderSurahHeader(sura, `${keyPrefix}-header`)}
-        {renderBismillah(`${keyPrefix}-bismillah`)}
-      </React.Fragment>
-    );
-  };
+  const renderHeaderWithBismillah = (sura: number, keyPrefix: string) => (
+    // No name lookup guard here: the banner is a glyph keyed off the surah
+    // number, so it renders even if the Arabic name isn't in metadata yet
+    // (the name is only used for the accessible label).
+    <React.Fragment key={keyPrefix}>
+      {renderSurahHeader(sura, `${keyPrefix}-header`)}
+      {renderBismillah(`${keyPrefix}-bismillah`)}
+    </React.Fragment>
+  );
 
   const midStartsByLine = new Map<number, typeof midPageSurahStarts>();
   for (const s of midPageSurahStarts) {
@@ -544,8 +587,6 @@ const MushafPage: React.FC<Props> = ({
           </React.Fragment>
         );
       })}
-      {showTrailingHeader &&
-        renderSurahHeader(trailingSura!, "trailing-header")}
     </>
   );
 
@@ -565,7 +606,7 @@ const MushafPage: React.FC<Props> = ({
 
     const flowItems: FlowItem[] = [];
 
-    if (surahHeaderName && surahStartVerse) {
+    if (showTopHeader && surahStartVerse) {
       flowItems.push({
         type: "header",
         sura: surahStartVerse.sura,

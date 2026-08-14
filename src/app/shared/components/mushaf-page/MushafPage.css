@@ -240,64 +240,79 @@
   text-shadow: 0 0 7px rgba(61, 220, 132, 0.45);
 }
 
-/* Decorative surah header. The ink (frame fill + name text) is forced to
-   pure monochrome — black on day, white on night — to match the printed
-   Mushaf's ornamental style. The background follows the page parchment so
-   the header sits flush against the page without a visible seam. */
-.mushaf-surah-header {
-  --sh-ink: #000000;
-  --sh-bg: var(--color-mushaf-bg);
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 4px;
-  width: 100%;
-  /* Fill exactly one slot — same height as a verse line. */
-  height: var(--header-px, 44px);
-  background: var(--sh-bg);
-  box-sizing: border-box;
-  flex-shrink: 0;
+/* Surah name font. Each surah is a single ornamental glyph — the calligraphic
+   name and its decorative frame are drawn into the character itself, exactly
+   as the printed Mushaf sets them. Selected by typing the zero-padded surah
+   number ("081"), which the font's `liga` feature substitutes for the glyph.
+   Bundled locally (imported from src/assets so the bundler fingerprints and
+   inlines the path) so the header renders offline on first launch. */
+@font-face {
+  font-family: "SurahNames";
+  src:
+    url("../../../../assets/fonts/sura_names.woff2") format("woff2"),
+    url("../../../../assets/fonts/sura_names.woff") format("woff");
+  font-display: block;
 }
 
-.mushaf-surah-header-frame {
+/* Illuminated surah header — the KFGQPC Madani banner: arabesque scrollwork,
+   two medallions, and a lobed cartouche holding the name. The ornament is an
+   inline SVG (surah-banner.art.ts) layered behind the name.
+
+   Ink is pure monochrome — black on day, white on night — matching the
+   bismillah row. Both the ornament and the name inherit `currentColor` from
+   this element, so one declaration themes the whole band and no second asset
+   or filter is needed.
+
+   The band fills exactly one line slot, so a header consumes the same vertical
+   space the Mushaf reserves for it and the 15-line grid stays intact. */
+.mushaf-surah-header {
   position: relative;
-  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--sh-ink);
-  box-shadow: none;
+  width: 100%;
+  height: var(--header-px, 44px);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  color: #000000;
 }
 
 [data-theme="night"] .mushaf-surah-header {
-  --sh-ink: #ffffff;
+  color: #ffffff;
 }
 
+/* The ornament fills the slot. `preserveAspectRatio="none"` on the element lets
+   it stretch to the page width the way the printed band does, rather than
+   letterboxing and leaving the row short. */
+.mushaf-surah-header-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* The name sits in the clear cartouche at the centre of the artwork. The
+   cartouche spans roughly the middle half of the band, so the name is capped
+   to that window and never collides with the medallions on either side.
+   Sized to fill the cartouche — larger crowds the lobed ends on long names
+   like الانفطار. */
 .mushaf-surah-header-name {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(100% - 8px);
-  height: calc(100% - 8px);
-  clip-path: var(--lobe);
-  background: var(--sh-bg);
-  font-family: var(--font-arabic-display);
-  font-size: min(calc(var(--header-px, 44px) * 0.5), 22px);
-  font-weight: 700;
+  max-width: 54%;
+  overflow: hidden;
+  font-family: "SurahNames";
+  /* Ligatures are the whole mechanism here — never let them be disabled. */
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "liga" 1;
+  font-size: min(calc(var(--header-px, 44px) * 0.68), 33px);
   line-height: 1;
-  color: var(--sh-ink);
-  letter-spacing: 0.04em;
   white-space: nowrap;
-  padding: 0 0.6em;
-  text-shadow: none;
+  /* The digits are a glyph selector, not content to translate or transform. */
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* In the compact MushafContextViewer, distribute the 15 lines evenly across

@@ -314,12 +314,14 @@ export interface PageVerseDTO {
 export async function fetchVersesByPage(
   page: number,
   wordFields: string,
+  mushafId?: number,
 ): Promise<PageVerseDTO[]> {
   const data = await apiFetch<VersesByPageResponse>(`/verses/by_page/${page}`, {
     words: "true",
     word_fields: wordFields,
     fields: "text_uthmani,page_number,juz_number",
     per_page: 50,
+    mushaf: mushafId,
   });
 
   return data.verses.map((v) => {
@@ -360,12 +362,14 @@ export async function fetchVersesByPage(
 export async function fetchVersesByJuz(
   juz: number,
   wordFields?: string,
+  mushafId?: number,
 ): Promise<PageVerseDTO[]> {
   const data = await apiFetch<VersesByPageResponse>(`/verses/by_juz/${juz}`, {
     words: "true",
     word_fields: wordFields,
     fields: "text_uthmani,page_number,juz_number",
     per_page: 300,
+    mushaf: mushafId,
   });
 
   return data.verses.map((v) => {
@@ -401,6 +405,84 @@ export async function fetchVersesByJuz(
       words,
     };
   });
+}
+
+// ─── Pages lookup ─────────────────────────────────────────────────────────────
+// GET /pages/lookup — authoritative page boundaries for a given mushaf layout.
+//   - Scope with ONE of: chapter_number / juz_number / hizb_number /
+//     rub_el_hizb_number / page_number, or a `from`+`to` verse-key range.
+//   - `mushaf` selects the layout; boundaries differ between layouts, so it
+//     should be the same id used to fetch the verses themselves.
+//   - Returns `pages` keyed by page NUMBER AS A STRING, each carrying the
+//     first/last verse key on that page.
+
+export interface PageBoundary {
+  page: number;
+  firstVerseKey: string;
+  lastVerseKey: string;
+}
+
+export interface PagesLookupResult {
+  from: string;
+  to: string;
+  totalPages: number;
+  pages: PageBoundary[];
+}
+
+export interface PagesLookupScope {
+  chapterNumber?: number;
+  juzNumber?: number;
+  hizbNumber?: number;
+  rubElHizbNumber?: number;
+  pageNumber?: number;
+  from?: string;
+  to?: string;
+}
+
+interface ApiPagesLookupResponse {
+  total_page?: number;
+  lookup_range?: { from?: string; to?: string };
+  pages?: Record<
+    string,
+    {
+      first_verse_key?: string;
+      last_verse_key?: string;
+      from?: string;
+      to?: string;
+    }
+  >;
+}
+
+export async function fetchPagesLookup(
+  scope: PagesLookupScope,
+  mushafId?: number,
+): Promise<PagesLookupResult> {
+  const data = await apiFetch<ApiPagesLookupResponse>("/pages/lookup", {
+    chapter_number: scope.chapterNumber,
+    juz_number: scope.juzNumber,
+    hizb_number: scope.hizbNumber,
+    rub_el_hizb_number: scope.rubElHizbNumber,
+    page_number: scope.pageNumber,
+    from: scope.from,
+    to: scope.to,
+    mushaf: mushafId,
+  });
+
+  const pages: PageBoundary[] = Object.entries(data.pages ?? {})
+    .map(([pageStr, v]) => ({
+      page: parseInt(pageStr, 10),
+      firstVerseKey: v.first_verse_key ?? v.from ?? "",
+      lastVerseKey: v.last_verse_key ?? v.to ?? "",
+    }))
+    .filter((p) => Number.isFinite(p.page))
+    .sort((a, b) => a.page - b.page);
+
+  return {
+    from: data.lookup_range?.from ?? "",
+    to: data.lookup_range?.to ?? "",
+    totalPages: data.total_page ?? pages.length,
+    pages,
+  };
 }
 
 // ─── Chapters / Juzs ─────────────────────────────────────────────────────────
@@ -599,9 +681,17 @@ export interface PageTranslation {
   text: string;
 }
 
+/**
+ * Translations for one page. `mushafId` must match the value used by
+ * `fetchVersesByPage` — this is the same `/verses/by_page/` endpoint, and the
+ * `mushaf` layout decides which verses fall on the page. Passing a different
+ * id (or omitting it on one call but not the other) can leave the translation
+ * list describing a different set of verses than the page actually renders.
+ */
 export async function fetchTranslationsByPage(
   page: number,
   translationId: string | number,
+  mushafId?: number,
 ): Promise<PageTranslation[]> {
   const data = await apiFetch<VersesByPageWithTranslationsResponse>(
     `/verses/by_page/${page}`,
@@ -610,6 +700,7 @@ export async function fetchTranslationsByPage(
       fields: "verse_key",
       per_page: 50,
       words: "false",
+      mushaf: mushafId,
     },
   );
   const out: PageTranslation[] = [];

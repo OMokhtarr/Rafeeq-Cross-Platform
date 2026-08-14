@@ -16,7 +16,13 @@ const DB_NAME = "rafeeq-quran";
 //     and the `fonts` records hold V1 TTF blobs. Both stores are wiped on
 //     upgrade so the next read repopulates them with V4 data.
 // v6: added `hifz` store for persisting Hifz plan, best-plan, and reading-session data.
-const DB_VERSION = 6;
+// v7: page fetches now send the `mushaf` layout id. Records cached before this
+//     were built from the API's default layout, whose `line_number` values
+//     disagree with the V4 layout on many pages, so a stale `pages` record
+//     renders with line breaks in the wrong places. `translations` is keyed by
+//     page too and is invalidated for the same reason. `fonts` stays valid —
+//     the glyphs are unchanged, only which line a word belongs to.
+const DB_VERSION = 7;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -83,6 +89,19 @@ export class IDBService {
           }
           if (db.objectStoreNames.contains("fonts")) {
             tx.objectStore("fonts").clear();
+          }
+        }
+
+        // v7: pages cached before the `mushaf` layout id was sent carry
+        // line_number values from the API's default layout. Drop them (and the
+        // page-keyed translations) so the next read repopulates from the
+        // layout that matches the fonts we render with.
+        if (oldVersion > 0 && oldVersion < 7 && tx) {
+          if (db.objectStoreNames.contains("pages")) {
+            tx.objectStore("pages").clear();
+          }
+          if (db.objectStoreNames.contains("translations")) {
+            tx.objectStore("translations").clear();
           }
         }
       };

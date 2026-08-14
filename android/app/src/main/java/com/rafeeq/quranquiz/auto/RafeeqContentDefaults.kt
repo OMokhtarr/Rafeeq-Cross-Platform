@@ -18,12 +18,22 @@ package com.rafeeq.quranquiz.auto
  */
 object RafeeqContentDefaults {
 
+    // Bilingual labels (Arabic — English) so the car list reads the same regardless of the phone's
+    // system language. Android Auto follows the PHONE'S language, not the app's in-app language, so
+    // a single bilingual string is the reliable way to show both. Arabic goes first (direction-
+    // stable: Arabic, em-dash, Latin) to avoid the mixed-bidi mangling seen in the reciter dropdown.
+    // Every reciter with a HEAD-verified public CDN folder. Duplicate reciters carry their style
+    // (Murattal/Mujawwad) so the two entries are distinguishable — same rule as the in-app dropdown.
     val RECITERS: List<RafeeqMediaService.ReciterItem> = listOf(
-        RafeeqMediaService.ReciterItem("minshawi-murattal", "المنشاوي - مرتل"),
-        RafeeqMediaService.ReciterItem("abdul_basit_murattal", "عبد الباسط - مرتل"),
-        RafeeqMediaService.ReciterItem("sudais", "السديس"),
-        RafeeqMediaService.ReciterItem("husary", "الحصري"),
-        RafeeqMediaService.ReciterItem("alafasy", "العفاسي"),
+        RafeeqMediaService.ReciterItem("minshawi-murattal", "المنشاوي (مرتل) — Al-Minshawi (Murattal)"),
+        RafeeqMediaService.ReciterItem("minshawi", "المنشاوي (مجود) — Al-Minshawi (Mujawwad)"),
+        RafeeqMediaService.ReciterItem("abdul_basit_murattal", "عبد الباسط (مرتل) — Abdul Basit (Murattal)"),
+        RafeeqMediaService.ReciterItem("abdul_basit_mujawwad", "عبد الباسط (مجود) — Abdul Basit (Mujawwad)"),
+        RafeeqMediaService.ReciterItem("sudais", "السديس — As-Sudais"),
+        RafeeqMediaService.ReciterItem("shatri", "الشاطري — Al-Shatri"),
+        RafeeqMediaService.ReciterItem("rifai", "الرفاعي — Ar-Rifai"),
+        RafeeqMediaService.ReciterItem("husary", "الحصري — Al-Husary"),
+        RafeeqMediaService.ReciterItem("alafasy", "العفاسي — Al-Afasy"),
     )
 
     // Index 0 is a placeholder so surah number == array index (1-based).

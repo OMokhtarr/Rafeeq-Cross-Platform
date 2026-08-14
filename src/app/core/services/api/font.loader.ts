@@ -99,6 +99,28 @@ export async function ensureBismillahFont(): Promise<void> {
   bismillahInjected = true;
 }
 
+/**
+ * Surah-name banner font.
+ *
+ * Unlike the page and bismillah fonts this one is bundled with the app
+ * (public/fonts, declared as @font-face in MushafPage.css), so there is
+ * nothing to fetch or cache — we only wait for the browser to finish loading
+ * the face. Without that wait the header would paint its raw glyph-selector
+ * digits ("081") for a frame before the ornament swaps in.
+ */
+export const SURAH_NAMES_FONT_FAMILY = "SurahNames";
+
+export async function ensureSurahNamesFont(): Promise<void> {
+  if (typeof document === "undefined" || !document.fonts) return;
+  try {
+    // Any size works; the font has a single weight/style.
+    await document.fonts.load(`16px "${SURAH_NAMES_FONT_FAMILY}"`);
+  } catch {
+    // A failed load leaves the digits visible, which is a degraded header but
+    // still a readable page — never block rendering on it.
+  }
+}
+
 async function loadOrFetchBismillahFont(): Promise<Blob> {
   // Use page-slot 0 in the fonts store (no real page uses slot 0).
   const BSML_CACHE_KEY = 0;

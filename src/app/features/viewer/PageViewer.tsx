@@ -121,10 +121,6 @@ const PageViewer: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [verses, setVerses] = useState<Verse[]>([]);
-  const [nextPageFirstVerse, setNextPageFirstVerse] = useState<{
-    sura: number;
-    aya: number;
-  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Activity tracking: record time spent on each page for streak purposes
@@ -323,7 +319,10 @@ const PageViewer: React.FC = () => {
     }
   }, [location.search]);
 
-  // Maps our internal mushaf kind to the QF numeric mushafId (integers only)
+  // Load the current page: persist any reveal progress from the page we're
+  // leaving, then fetch and install the new page's verses.
+  // (Mushaf-kind → numeric mushaf id mapping lives in mushaf.config.ts and is
+  // applied by quran.service when it calls the API.)
   useEffect(() => {
     // Persist reveal progress on the page we're leaving — otherwise the
     // reveal-next walk position (local state) is lost and the page would
@@ -364,19 +363,6 @@ const PageViewer: React.FC = () => {
       }
       prefetchPage(currentPage - 1);
       prefetchPage(currentPage + 1);
-      if (currentPage < totalPages) {
-        getPage(currentPage + 1)
-          .then((nextVerses) => {
-            if (cancelled) return;
-            const first = nextVerses[0] ?? null;
-            setNextPageFirstVerse(
-              first ? { sura: first.sura, aya: first.aya } : null,
-            );
-          })
-          .catch(() => {});
-      } else {
-        setNextPageFirstVerse(null);
-      }
     });
     return () => {
       cancelled = true;
@@ -1413,7 +1399,6 @@ const PageViewer: React.FC = () => {
                 <MushafPage
                   page={currentPage}
                   verses={verses}
-                  nextPageFirstVerse={nextPageFirstVerse}
                   selected={selected}
                   hidden={displayHiddenForPage}
                   partialTarget={displayPartialTargetForPage}

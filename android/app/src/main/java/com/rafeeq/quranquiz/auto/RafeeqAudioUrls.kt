@@ -35,20 +35,40 @@ object RafeeqAudioUrls {
      * Husary maps to a different host entirely, so its value is a full template containing
      * the "SSSAAA" placeholder rather than just a folder. buildVerseUrl handles both.
      */
+    // Reciter → CDN path. Every reciter is registered under ALL the spellings that can reach here:
+    // the car browse SLUG, the numeric recitation id, AND legacy in-app slugs (afasy / minshawi).
+    // Without every spelling, a native stall fallback (locked screen) rebuilding URLs for a reciter
+    // could fall through buildVerseUrl's DEFAULT_RECITER fallback and silently switch the listener
+    // to Al-Minshawi. Recitation ids are authoritative from api.quran.com /resources/recitations;
+    // each CDN folder is HEAD-verified (verse 1:1, 2:286, and 114:6).
     private val RECITER_PATH: Map<String, String> = mapOf(
-        // Minshawi (Murattal) — numeric id 9
+        // Minshawi — Murattal (id 9)
         "minshawi-murattal" to "$QF_BASE/Minshawi/Murattal/mp3",
         "9" to "$QF_BASE/Minshawi/Murattal/mp3",
-        // Abdul Basit (Murattal) — numeric id 2
+        // Minshawi — Mujawwad (id 8). In-app settings slug is bare "minshawi".
+        "minshawi" to "$QF_BASE/Minshawi/Mujawwad/mp3",
+        "minshawi-mujawwad" to "$QF_BASE/Minshawi/Mujawwad/mp3",
+        "8" to "$QF_BASE/Minshawi/Mujawwad/mp3",
+        // Abdul Basit — Murattal (id 2)
         "abdul_basit_murattal" to "$QF_BASE/AbdulBaset/Murattal/mp3",
         "2" to "$QF_BASE/AbdulBaset/Murattal/mp3",
-        // Sudais — numeric id 3
+        // Abdul Basit — Mujawwad (id 1)
+        "abdul_basit_mujawwad" to "$QF_BASE/AbdulBaset/Mujawwad/mp3",
+        "1" to "$QF_BASE/AbdulBaset/Mujawwad/mp3",
+        // Sudais (id 3)
         "sudais" to "$QF_BASE/Sudais/mp3",
         "3" to "$QF_BASE/Sudais/mp3",
-        // Alafasy — numeric id 7
+        // Abu Bakr al-Shatri (id 4)
+        "shatri" to "$QF_BASE/Shatri/mp3",
+        "4" to "$QF_BASE/Shatri/mp3",
+        // Hani ar-Rifai (id 5)
+        "rifai" to "$QF_BASE/Rifai/mp3",
+        "5" to "$QF_BASE/Rifai/mp3",
+        // Alafasy (id 7). Car slug is "alafasy"; in-app settings slug is "afasy".
         "alafasy" to "$QF_BASE/Alafasy/mp3",
+        "afasy" to "$QF_BASE/Alafasy/mp3",
         "7" to "$QF_BASE/Alafasy/mp3",
-        // Husary — numeric id 6 — DIFFERENT HOST (full template with SSSAAA placeholder)
+        // Husary (id 6) — DIFFERENT HOST (full template with SSSAAA placeholder)
         "husary" to "https://mirrors.quranicaudio.com/everyayah/Husary_64kbps/SSSAAA.mp3",
         "6" to "https://mirrors.quranicaudio.com/everyayah/Husary_64kbps/SSSAAA.mp3",
     )
@@ -104,11 +124,15 @@ object RafeeqAudioUrls {
      * Returns null for unknown reciters.
      */
     fun timestampReciterId(reciter: String): String? = when (reciter) {
-        "minshawi-murattal", "9" -> "9"
+        "abdul_basit_mujawwad", "1" -> "1"
         "abdul_basit_murattal", "2" -> "2"
         "sudais", "3" -> "3"
+        "shatri", "4" -> "4"
+        "rifai", "5" -> "5"
         "husary", "6" -> "6"
-        "alafasy", "7" -> "7"
+        "alafasy", "afasy", "7" -> "7"
+        "minshawi", "minshawi-mujawwad", "8" -> "8"
+        "minshawi-murattal", "9" -> "9"
         else -> null
     }
 

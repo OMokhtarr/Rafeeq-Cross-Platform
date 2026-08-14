@@ -38,30 +38,62 @@ const ALL_SURAHS = Array.from({ length: 114 }, (_, i) => ({
 
 // Subset of popular reciters exposed in the car UI.
 // Keys must match the reciter IDs your audio service uses.
+// Bilingual labels (Arabic — English) so the car list reads the same on any phone language.
+// Android Auto follows the PHONE'S system language, not the app's in-app language, so a single
+// bilingual string is the reliable way to show both. Every reciter has a HEAD-verified public CDN
+// folder (see RafeeqAudioUrls.kt RECITER_PATH). Duplicates carry their style (Murattal/Mujawwad).
+// Keep in sync with RafeeqContentDefaults.kt.
 const CAR_RECITERS = [
-  { id: "minshawi-murattal", name: "المنشاوي - مرتل" },
-  { id: "abdul_basit_murattal", name: "عبد الباسط - مرتل" },
-  { id: "sudais", name: "السديس" },
-  { id: "husary", name: "الحصري" },
-  { id: "alafasy", name: "العفاسي" },
+  { id: "minshawi-murattal", name: "المنشاوي (مرتل) — Al-Minshawi (Murattal)" },
+  { id: "minshawi", name: "المنشاوي (مجود) — Al-Minshawi (Mujawwad)" },
+  { id: "abdul_basit_murattal", name: "عبد الباسط (مرتل) — Abdul Basit (Murattal)" },
+  { id: "abdul_basit_mujawwad", name: "عبد الباسط (مجود) — Abdul Basit (Mujawwad)" },
+  { id: "sudais", name: "السديس — As-Sudais" },
+  { id: "shatri", name: "الشاطري — Al-Shatri" },
+  { id: "rifai", name: "الرفاعي — Ar-Rifai" },
+  { id: "husary", name: "الحصري — Al-Husary" },
+  { id: "alafasy", name: "العفاسي — Al-Afasy" },
 ];
 
+// Keyed by BOTH the car slug AND the numeric recitation id, because the displayed reciter
+// (currentReciterId) can be either: the in-app dropdown sets numeric ids, and the car→phone
+// handoff now resolves to the numeric id too. Missing the numeric keys made the notification show
+// the raw id (e.g. "7") as the reciter name.
 const RECITER_DISPLAY_NAME: Record<string, string> = {
-  "minshawi-murattal": "المنشاوي - مرتل",
-  abdul_basit_murattal: "عبد الباسط - مرتل",
-  sudais: "السديس",
-  husary: "الحصري",
-  alafasy: "العفاسي",
+  "minshawi-murattal": "المنشاوي (مرتل) — Al-Minshawi (Murattal)",
+  "9": "المنشاوي (مرتل) — Al-Minshawi (Murattal)",
+  minshawi: "المنشاوي (مجود) — Al-Minshawi (Mujawwad)",
+  "8": "المنشاوي (مجود) — Al-Minshawi (Mujawwad)",
+  abdul_basit_murattal: "عبد الباسط (مرتل) — Abdul Basit (Murattal)",
+  "2": "عبد الباسط (مرتل) — Abdul Basit (Murattal)",
+  abdul_basit_mujawwad: "عبد الباسط (مجود) — Abdul Basit (Mujawwad)",
+  "1": "عبد الباسط (مجود) — Abdul Basit (Mujawwad)",
+  sudais: "السديس — As-Sudais",
+  "3": "السديس — As-Sudais",
+  shatri: "الشاطري — Al-Shatri",
+  "4": "الشاطري — Al-Shatri",
+  rifai: "الرفاعي — Ar-Rifai",
+  "5": "الرفاعي — Ar-Rifai",
+  husary: "الحصري — Al-Husary",
+  "6": "الحصري — Al-Husary",
+  alafasy: "العفاسي — Al-Afasy",
+  "7": "العفاسي — Al-Afasy",
 };
 
 // The car browse tree exposes reciters by SLUG (see CAR_RECITERS), but the audio API
 // resolves verses by NUMERIC recitation id. Map the car's slug → numeric id so a surah
 // selected from Android Auto resolves audio correctly (without this, fetchAudioForAyah
 // gets the slug and 404s). Numbers verified against /resources/recitations.
+// Car browse slug → numeric recitation id (from api.quran.com /resources/recitations). The audio
+// API resolves verses by numeric id; without this the slug 404s.
 const CAR_RECITER_SLUG_TO_ID: Record<string, string> = {
   "minshawi-murattal": "9",
+  minshawi: "8",
   abdul_basit_murattal: "2",
+  abdul_basit_mujawwad: "1",
   sudais: "3",
+  shatri: "4",
+  rifai: "5",
   husary: "6",
   alafasy: "7",
 };
@@ -375,11 +407,15 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
             }),
           );
           if (event.reciter) {
-            // event.reciter is the car's slug; resolve audio with the numeric id.
+            // event.reciter is the reciter native is actually playing (a car slug OR a numeric id,
+            // whichever was persisted with the queue). Resolve to the numeric recitation id and use
+            // it for BOTH audio and the displayed reciter, so opening the phone app adopts the car's
+            // reciter exactly and the in-app dropdown (which is keyed by numeric id) matches — no
+            // switch to the default reciter.
             const numericId =
               CAR_RECITER_SLUG_TO_ID[event.reciter] ?? event.reciter;
             q.setReciter(numericId);
-            setCurrentReciterIdRef.current(event.reciter);
+            setCurrentReciterIdRef.current(numericId);
           }
           // `aya` carries the cold-list index the native player is already on. When the brain
           // wakes up later (e.g. the user opens the phone app after selecting in the car), adopt

@@ -196,6 +196,13 @@
   --color-quiz: #c8773a;
   --color-azkar: #5a9fd4;
 
+  /* Freeze — the one non-gold accent in the streak UI. A freeze is the only
+     thing in the card that is not an earned day, and ice is the metaphor the
+     mark already carries, so it gets a colour of its own rather than another
+     shade of gold that would read as a slightly different kind of win. */
+  --color-freeze: #3d8fd1;
+  --color-freeze-deep: #2f6fa8;
+
   /* Borders */
   --color-border-gold: var(--color-gold);
   --color-border-subtle: rgba(255, 255, 255, 0.08);
@@ -283,6 +290,11 @@
   --color-quran: #1a9a72;
   --color-quiz: #c5551e;
   --color-azkar: #2a6fa5;
+
+  /* Freeze — deepened so a white flake keeps its contrast on the light theme's
+     brighter card. */
+  --color-freeze: #2f7fc4;
+  --color-freeze-deep: #235f93;
 
   /* Borders — gold-tinted like night mode */
   --color-border-gold: var(--color-gold);
