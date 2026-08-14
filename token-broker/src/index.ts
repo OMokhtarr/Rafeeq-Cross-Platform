@@ -70,6 +70,22 @@ export default {
       return handleDeepgramToken(env, corsHeaders);
     }
 
+    // ── Unknown paths ─────────────────────────────────────────────────────
+    // Anything that is not a known route must 404 rather than fall through to
+    // the Content API handler below. That fall-through is how an undeployed
+    // /deepgram/token route stayed invisible: the request returned 200 with a
+    // Quran Foundation token, which passed every client-side check and was
+    // only rejected later, by Deepgram, as a generic socket close.
+    //
+    // "/" stays valid: quran-api.client.ts POSTs the bare broker URL for
+    // content tokens, and network.service.ts probes it for reachability.
+    if (url.pathname !== "/" && url.pathname !== "") {
+      return new Response(JSON.stringify({ error: "not found" }), {
+        status: 404,
+        headers: { "content-type": "application/json", ...corsHeaders },
+      });
+    }
+
     // ── Default: Content API client credentials ───────────────────────────
     const now = Math.floor(Date.now() / 1000);
     if (cache && cache.expires_at - 60 > now) {
@@ -224,12 +240,21 @@ async function handleDeepgramToken(
     if (!res.ok) {
       const text = await res.text();
       console.error("Deepgram grant error", res.status, text);
-      // Deliberately vague to the client — never echo upstream auth errors,
-      // which can leak key state.
-      return new Response(JSON.stringify({ error: "token grant failed" }), {
-        status: 502,
-        headers: { "content-type": "application/json", ...corsHeaders },
-      });
+      // The upstream message is still withheld — it can leak key state. The
+      // status alone does not, and naming it turns three failures that were
+      // indistinguishable from the client (bad key, insufficient scope, and
+      // the fetch throwing) into one glance: 401 rotate the key, 403 the key
+      // lacks grant permission, 402 the account balance is empty.
+      return new Response(
+        JSON.stringify({
+          error: "token grant failed",
+          code: `upstream_${res.status}`,
+        }),
+        {
+          status: 502,
+          headers: { "content-type": "application/json", ...corsHeaders },
+        },
+      );
     }
 
     const tok = (await res.json()) as {
@@ -254,10 +279,15 @@ async function handleDeepgramToken(
     );
   } catch (err) {
     console.error("Deepgram grant threw", err);
-    return new Response(JSON.stringify({ error: "token grant failed" }), {
-      status: 502,
-      headers: { "content-type": "application/json", ...corsHeaders },
-    });
+    // Distinct from upstream_*: we never got a response at all, so this is a
+    // network/runtime fault on our side rather than a credential problem.
+    return new Response(
+      JSON.stringify({ error: "token grant failed", code: "grant_threw" }),
+      {
+        status: 502,
+        headers: { "content-type": "application/json", ...corsHeaders },
+      },
+    );
   }
 }
 
