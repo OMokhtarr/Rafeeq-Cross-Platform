@@ -254,10 +254,13 @@ class RafeeqAutoPlugin : Plugin() {
         val queueLength = call.getInt("queueLength") ?: 0
         val rangeLoops = call.getBoolean("rangeLoops") ?: true
         val rangeRemainingPasses = call.getInt("rangeRemainingPasses") ?: -1
+        // Current in-app playback speed, so the car's speed-button label follows an in-app change.
+        // -1 (default) means "not provided" → the service keeps its current speed.
+        val speed = (call.getDouble("speed") ?: -1.0).toFloat()
 
         Log.d("RafeeqAuto", "updatePlaybackState: markersArr=${markersArr?.length() ?: "null"} parsed=${pageMarkers?.size ?: "null"} page=$currentPage surah=$surahName repeatPage=$repeatPageActive qIdx=$queueIndex qLen=$queueLength loops=$rangeLoops remain=$rangeRemainingPasses")
 
-        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage, repeatPageActive, queueIndex, queueLength, rangeLoops, rangeRemainingPasses)
+        service.updateState(isPlaying, surahName, verseKey, reciterName, positionMs, durationMs, pageMarkers, currentPage, repeatPageActive, queueIndex, queueLength, rangeLoops, rangeRemainingPasses, speed)
         call.resolve()
     }
 
@@ -393,7 +396,10 @@ class RafeeqAutoPlugin : Plugin() {
         // other's pendingEvent (so advance() silently dropped → playback stalled after
         // the first ayah).
         if (action == "nativePosition" || action == "nativeTrackEnded" ||
-            action == "nativeIntroEnded" || action == "nativePlaying") {
+            action == "nativeIntroEnded" || action == "nativePlaying" ||
+            action == "setSpeed") {
+            // setSpeed is a live sync (native already applied the speed); if JS isn't ready there's
+            // nothing to sync and we must NOT wake the activity for a speed tap.
             if (jsReady) notifyListeners("carAction", data)
             return
         }

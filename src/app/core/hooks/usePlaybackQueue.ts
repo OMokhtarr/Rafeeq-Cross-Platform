@@ -96,6 +96,7 @@ export interface PlaybackControls {
   notifyNativePlaying: (playing: boolean) => void;
   setRepeatPageRange: (range: { first: number; last: number } | null) => void;
   setPlaybackRate: (rate: number) => void;
+  getPlaybackRate: () => number;
   setReciter: (reciter: string) => void;
   setRepeatVerse: (mode: RepeatMode) => void;
   setRepeatRange: (mode: RepeatMode) => void;
@@ -1183,6 +1184,8 @@ export function usePlaybackQueue(
     }
     if (audioRef.current) audioRef.current.playbackRate = rate;
   }, []);
+  // Current playback rate, so the car's speed-button label can follow an in-app speed change.
+  const getPlaybackRate = useCallback(() => playbackRateRef.current, []);
   const setReciter = useCallback((r: string) => {
     reciterRef.current = r;
   }, []);
@@ -1219,6 +1222,7 @@ export function usePlaybackQueue(
     notifyNativePlaying,
     setRepeatPageRange,
     setPlaybackRate,
+    getPlaybackRate,
     setReciter,
     setRepeatVerse,
     setRepeatRange,

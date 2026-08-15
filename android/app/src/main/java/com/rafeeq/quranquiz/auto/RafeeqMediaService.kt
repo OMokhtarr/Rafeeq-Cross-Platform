@@ -114,6 +114,29 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     private var currentPage: Int = 0
     private var repeatPageActive: Boolean = false
 
+    // ── Playback speed (Android Auto speed button) ──────────────────────────────
+    // The current playback speed, shown on the car's speed custom action and cycled by tapping it.
+    // Kept in sync with the JS brain: a car tap dispatches "setSpeed" to JS (which updates the
+    // in-app rate), and JS pushes its rate back via updateState so the button label follows an
+    // in-app change too. The cycle mirrors the in-app speed options.
+    private var currentSpeed: Float = 1.0f
+    // 1 → 1.25 → 1.5 → 1.75 → 2, then wraps back to 1 (the list starts at 1, so nextSpeedInCycle
+    // returns to it after 2). Normal-and-faster only; no slow speeds.
+    private val SPEED_CYCLE = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
+    /** The next speed in the cycle after the current one (wraps around). */
+    private fun nextSpeedInCycle(): Float {
+        val i = SPEED_CYCLE.indexOfFirst { kotlin.math.abs(it - currentSpeed) < 0.01f }
+        return SPEED_CYCLE[(if (i < 0) 0 else i + 1) % SPEED_CYCLE.size]
+    }
+
+    /** Speed formatted for the button label: "1x", "1.25x", "1.5x", "1.75x", "2x". */
+    private fun speedLabel(s: Float): String {
+        val txt = if (s == s.toLong().toFloat()) s.toLong().toString()
+        else s.toString().trimEnd('0').trimEnd('.')
+        return "${txt}x"
+    }
+
     // The surah being played by the NATIVE cold-start path (no JS brain). Non-zero only when
     // native is the playback driver; used to recompute the current page from the player's
     // track index so the page-nav buttons track playback. Cleared when JS takes over.
@@ -975,10 +998,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     }
 
     /**
-     * Build the prev-page / next-page / replay-page custom actions from the current
-     * pageMarkers + currentPage + repeatPageActive. Returns empty when the surah fits on a
-     * single page. Shared by updateState (JS-driven) and the native cold-start path so the
-     * page-nav buttons appear in both — no-op slots keep the button positions fixed.
+     * Build the prev-page / next-page / replay-page + speed custom actions from the current
+     * pageMarkers + currentPage + repeatPageActive + currentSpeed. The page trio only appears when
+     * the surah spans more than one page; the SPEED button always appears (to the right of the
+     * repeat-page button). Shared by updateState (JS-driven) and the native cold-start path so the
+     * buttons appear in both — no-op slots keep the button positions fixed.
      */
     private fun buildPageCustomActions(): List<PlaybackStateCompat.CustomAction> {
         val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
@@ -1018,6 +1042,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
             )
         }
+        // Speed button — ALWAYS present, to the right of the repeat-page button. Tapping cycles the
+        // playback speed; the label shows the CURRENT speed (e.g. "1.5x").
+        actions.add(
+            PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
+        )
         return actions
     }
 
@@ -1261,11 +1290,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         queueIndex: Int = -1,
         queueLength: Int = 0,
         rangeLoops: Boolean = true,
-        rangeRemainingPasses: Int = -1
+        rangeRemainingPasses: Int = -1,
+        speed: Float = -1f
     ) {
         if (newPageMarkers != null) pageMarkers = newPageMarkers
         if (newCurrentPage > 0) currentPage = newCurrentPage
         this.repeatPageActive = repeatPageActive
+        // Follow an in-app speed change so the car's speed-button label matches (>0 = provided).
+        if (speed > 0f) currentSpeed = speed
 
         // Track the brain's live position WITHIN THE SELECTED RANGE so a stall fallback continues
         // the persisted range from the exact queue index and stops/loops at its end — instead of
@@ -1673,6 +1705,38 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     updateNativeRepeatPageRange()
                     // Rebuild the buttons so the repeat icon reflects the new on/off state.
                     currentCustomActions = buildPageCustomActions()
+                    publishPlaybackState(player?.isPlaying() == true, nativeCumulativePositionMs())
+                }
+            }
+            if (action == "cycleSpeed") {
+                // Cycle to the next speed and apply it to the native player right away (works in
+                // both modes — ExoPlayer is the output whether or not the brain is driving).
+                currentSpeed = nextSpeedInCycle()
+                player?.setPlaybackSpeed(currentSpeed)
+                // Tell the JS brain so the in-app playback rate + settings follow the car change.
+                // (When JS isn't alive this simply no-ops; native already applied the speed.)
+                dispatchCarEvent("setSpeed", positionMs = (currentSpeed * 1000f).toLong())
+                // Rebuild the buttons so the speed label updates immediately, and republish.
+                currentCustomActions = buildPageCustomActions()
+                if (jsDriving) {
+                    // JS owns position/duration while driving; just refresh the actions on the
+                    // current state (a full updateState will follow from the brain).
+                    val cur = session.controller.playbackState
+                    val pos = cur?.position ?: 0L
+                    val playing = player?.isPlaying() == true
+                    val sb = PlaybackStateCompat.Builder()
+                        .setActions(
+                            PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or
+                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                            PlaybackStateCompat.ACTION_STOP or PlaybackStateCompat.ACTION_SEEK_TO
+                        )
+                        .setState(
+                            if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                            pos, if (playing) currentSpeed else 0f
+                        )
+                    currentCustomActions.forEach { sb.addCustomAction(it) }
+                    session.setPlaybackState(sb.build())
+                } else {
                     publishPlaybackState(player?.isPlaying() == true, nativeCumulativePositionMs())
                 }
             }

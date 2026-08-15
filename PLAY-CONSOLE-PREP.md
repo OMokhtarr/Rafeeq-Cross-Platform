@@ -7,12 +7,78 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName
 
 > ✅ **Credentials rotated** 13 Aug 2026 and verified working through the broker.
 >
-> ⚠️ **Blocking before public release: the token broker is not deployed.**
-> Commit `c18be0b` added the `/deepgram/token` route but never shipped to
-> Cloudflare. The live Worker falls through to the Quran Foundation handler and
-> hands the app a QF token where a Deepgram one is expected — so recite mode
-> fails in production even though the endpoint returns HTTP 200. Run
-> `cd token-broker && wrangler deploy`, then `bash token-broker/verify-deploy.sh`.
+> ✅ **Token broker deployed and verified** 15 Aug 2026.
+> `bash token-broker/verify-deploy.sh` passes: `/deepgram/token` is live and
+> mints real Deepgram ASR grants (`asr:write` scope), not the Quran Foundation
+> fallback token. Recite mode smoke-tested against this deployment and working.
+
+---
+
+## 0. Status at a glance
+
+Last updated 15 Aug 2026. Section numbers link to the detail below.
+
+### Outstanding
+
+Ordered by category: work that changes the app first, then what we're waiting on
+someone else for, then paperwork that can be filled in any time.
+
+#### A. Needs work on the app — do these first
+
+| # | Task | § | Blocking |
+|---|---|---|---|
+| A1 | **QF 7-day caching rule** — implement Content Sync for translations/tafsir/audio; Quran script depends on the QF answer (B1) | 5 | **Yes** |
+| A2 | Fill in the postal address in `privacy.html` | 5 | **Yes** |
+| A3 | Mirror that address into `PRIVACY_SECTIONS` in `Account.tsx` (AR + EN in sync) | 5 | **Yes** |
+| A4 | **Surah-header ornament** — if QF (B2) says the trace is not permitted, replace `SURAH_BANNER_PATH` in `surah-banner.art.ts` with original artwork | 5 | Depends on B2 |
+| A5 | Record the foreground-service demo video (playback → background → notification controls) | 3 | **Yes** |
+| A6 | Rebuild + re-sign the AAB after A1–A4 land | 8 | **Yes** |
+
+#### B. Blocked on someone else — chase these in parallel
+
+| # | Task | § | Blocking |
+|---|---|---|---|
+| B1 | **QF reply — Content Sync scope** for the Quran script (`/verses/by_page/` is not a syncable resource group) | 5 | **Yes** |
+| B2 | **QF reply — surah-header artwork**: is a traced KFGQPC page ornament permitted, or is there an official asset? | 5 | Yes, if unfavourable |
+| B3 | Recruit ~12 testers and start the closed test — 14 **continuous** days | 8 | **Yes** |
+| B4 | Confirm the QF client secret was rotated (Deepgram key confirmed via broker) | 7 | **Yes** |
+
+#### C. Paperwork — no dependencies, do any time
+
+| # | Task | § | Blocking |
+|---|---|---|---|
+| C1 | Short description (≤80 chars) | 6 | **Yes** |
+| C2 | Full description (≤4000 chars) | 6 | **Yes** |
+| C3 | Data safety form — answers drafted in §2 | 2 | **Yes** |
+| C4 | Foreground service declaration text (§3 has the justification) | 3 | **Yes** |
+| C5 | Content rating questionnaire (expect "Everyone") | 6 | **Yes** |
+| C6 | Target audience & content declaration | 6 | **Yes** |
+| C7 | Category — Books & Reference, or Lifestyle | 6 | **Yes** |
+| C8 | Create the Play listing | 8 | **Yes** |
+| C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** (after A2) |
+| C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No |
+| C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No |
+| C12 | Apply for production access | 8 | **Yes** — last step |
+
+**Critical path:** B3 is the long pole — 14 continuous days, and nothing gates
+starting it, so recruit testers today. B1/B2 are outside our control and both
+ride on the same email, so send it first; B1 decides how much of A1 is needed
+and B2 decides whether A4 exists at all. Everything in C can be done while
+waiting. A5's demo video is the most commonly underestimated item.
+
+### Done
+
+| Item | When |
+|---|---|
+| Credentials rotated, verified through the broker | 13 Aug 2026 |
+| Android Auto in-car regression pass | 13 Aug 2026 |
+| Token broker deployed + `verify-deploy.sh` passing | 15 Aug 2026 |
+| Recite mode smoke-tested against the live broker | 15 Aug 2026 |
+| Signed AAB — `Rafeeq-1.1.0-release.aab`, `rafeeq-upload` key | — |
+| Listing assets — icon, feature graphic, 4 × 9:16 screenshots in `play-assets/` | — |
+| Account deletion confirmed out of scope (no sign-in) | — |
+| Privacy policy rewritten, incl. the QF developer-privacy pass | Aug 2026 |
+| Source TODOs — Settings persisted data, Mushaf page layout | 15 Aug 2026 |
 
 ---
 
@@ -237,6 +303,40 @@ to close it:
 
 - [ ] Decide between (1) and (2) and act on it before release.
 
+### Open licensing question — the traced surah-header ornament
+
+`src/app/shared/components/mushaf-page/surah-banner.art.ts` renders the
+illuminated band around each surah title — arabesque scrollwork, two medallions,
+a lobed cartouche. Its header comment records how it was made: **traced from an
+official KFGQPC Madani page render**, then simplified onto a half-scale grid.
+
+That makes it a derivative of KFGQPC page artwork rather than a licensed asset.
+KFGQPC materials are generally licensed for distribution *unmodified*, so a
+traced-and-simplified reproduction may fall outside permitted use. Two things
+narrow the exposure but do not remove it:
+
+- The surah **name** is not part of the trace — it comes from the `sura_names`
+  font shipped with the Quran.com assets, which is openly distributed for this
+  purpose. Only the surrounding frame was traced.
+- The band carries no Quran text, so it does not touch the "Quran text is never
+  modified" commitment in `terms.html` and the in-app terms.
+
+Practical risk is low — Play does not audit ornamental provenance, and this
+surfaces through complaints rather than review. But it is undisclosed anywhere
+in the listing or terms, and it is cheap to resolve now versus after visibility.
+
+Asked of QF in the same email as the caching question (see the reply draft):
+whether a traced reproduction is acceptable, whether it needs express KFGQPC
+permission, and whether an official vector/glyph asset exists that we should
+adopt instead.
+
+Replacement is contained if the answer is unfavourable: one exported constant
+(`SURAH_BANNER_PATH`) in one file, with the cartouche window already expressed as
+fractions, so original artwork drops in without touching layout maths.
+
+- [ ] Await the QF answer (B2), then either keep the trace, adopt an official
+      asset, or commission/redraw an original ornament.
+
 ---
 
 ## 6. Store listing assets
@@ -297,13 +397,10 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 
 1. ~~Rotate both credentials~~ — done 13 Aug 2026, verified live through the broker
    (QF content token returns 200 with a valid token)
-1b. **⚠️ DEPLOY THE BROKER — outstanding.** Commit `c18be0b` added
-   `/deepgram/token` but was never deployed. The live Worker has no such route,
-   so the request falls through to the QF handler and returns a *Quran Foundation*
-   token. It answers HTTP 200, so the endpoint looks healthy while **recite mode
-   is broken in production**. Fix: `cd token-broker && wrangler deploy`, then
-   `bash token-broker/verify-deploy.sh` (expects a non-QF issuer).
-2. Smoke-test recite mode against the deployed broker
+1b. ~~Deploy the broker~~ — done, verified 15 Aug 2026.
+   `verify-deploy.sh` confirms `/deepgram/token` mints a real `asr:write` grant
+   rather than falling through to the Quran Foundation handler.
+2. ~~Smoke-test recite mode against the deployed broker~~ — done, working
 3. ~~Android Auto regression pass in a real car~~ — done, working (13 Aug 2026)
 4. **Host the privacy policy (section 5)** — the one remaining hard console blocker
 5. ~~Build the signed AAB (`gradlew bundleRelease`)~~ — done: `Rafeeq-1.1.0-release.aab`,

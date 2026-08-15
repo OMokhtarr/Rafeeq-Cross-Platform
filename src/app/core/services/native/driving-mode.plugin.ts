@@ -40,6 +40,9 @@ export interface DrivingModePlaybackState {
   /** Full range passes still to play, including the one in progress. -1 = loop (infinite). Lets
    *  the native stall fallback stop a finite Nx range after exactly N passes while locked. */
   rangeRemainingPasses?: number;
+  /** Current playback speed (e.g. 1, 1.25, 1.5). Keeps the car's speed-button label in sync when
+   *  the user changes speed IN-APP. Omitted → native keeps its current speed. */
+  speed?: number;
 }
 
 export type CarActionType =
@@ -52,6 +55,9 @@ export type CarActionType =
   | "jumpToAya"
   | "replayPage"
   | "seekTo"
+  // Fired when the car's speed button cycles the playback speed. The new speed is carried in
+  // positionMs as (speed × 1000). The JS brain applies it to its rate and persists it.
+  | "setSpeed"
   // Fired by the native ExoPlayer when the current track finishes. The JS brain
   // applies repeat/range/page logic and feeds the next verse. `aya` carries the
   // index of the track that ended.

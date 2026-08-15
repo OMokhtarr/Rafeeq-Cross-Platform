@@ -322,6 +322,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         rangeLoops: queue.getRepeatRange() === "loop",
         // Remaining full passes for a finite Nx range (-1 = loop), so native stops after exactly N.
         rangeRemainingPasses: queue.getRangeRemainingPasses(),
+        // Current speed, so the car's speed-button label follows an in-app speed change.
+        speed: queue.getPlaybackRate(),
       }).catch(() => {});
     },
     [isNative, currentReciterId, queue.queue, queue.state],
@@ -456,6 +458,25 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           // positionMs from its deps to avoid fighting the scrubber), so without this the
           // notification thumb would snap back to where playback was before the seek.
           pushSeekedPositionRef.current(seekPos);
+          break;
+        }
+        case "setSpeed": {
+          // The car's speed button cycled the playback speed. Native already applied it to the
+          // ExoPlayer output; here we keep the JS brain's rate in sync and persist it so the
+          // in-app speed control shows the same value next time it opens. The rate is carried in
+          // positionMs as (speed × 1000) since CarActionEvent has no dedicated speed field.
+          if (event.positionMs == null) break;
+          const rate = event.positionMs / 1000;
+          if (rate <= 0) break;
+          q.setPlaybackRate(rate);
+          try {
+            const raw = localStorage.getItem("rafiq_settings_v1");
+            const base = raw ? JSON.parse(raw) : {};
+            localStorage.setItem(
+              "rafiq_settings_v1",
+              JSON.stringify({ ...base, playbackRate: rate }),
+            );
+          } catch {}
           break;
         }
         case "nativeTrackEnded": {
