@@ -107,6 +107,19 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // the car/notification by publishing a PlaybackState without them.
     private var currentCustomActions: List<PlaybackStateCompat.CustomAction> = emptyList()
 
+    // The transport actions advertised on EVERY PlaybackState. SKIP_TO_NEXT/PREVIOUS MUST stay in
+    // the mask: the phone notification's prev/next-verse buttons use
+    // MediaButtonReceiver.buildMediaButtonPendingIntent(ACTION_SKIP_TO_*), which returns a usable
+    // PendingIntent ONLY when that action bit is advertised here. Dropping them (an earlier attempt
+    // to free Android Auto slots) silently made the notification's per-ayah skip buttons inert.
+    private val TRANSPORT_ACTIONS =
+        PlaybackStateCompat.ACTION_PLAY or
+        PlaybackStateCompat.ACTION_PAUSE or
+        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+        PlaybackStateCompat.ACTION_STOP or
+        PlaybackStateCompat.ACTION_SEEK_TO
+
     private var reciters: List<ReciterItem> = emptyList()
     private var surahs: List<SurahItem> = emptyList()
     private var currentReciter: String = ""
@@ -246,14 +259,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // the browse tree. (isActive stays true so media-button routing keeps working; only a real
         // pause later — after the user actually played something — should present now-playing.)
         val initialState = PlaybackStateCompat.Builder()
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY or
-                PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_STOP or
-                PlaybackStateCompat.ACTION_SEEK_TO
-            )
+            .setActions(TRANSPORT_ACTIONS)
             .setState(PlaybackStateCompat.STATE_NONE, 0L, 0f)
             .build()
         session.setPlaybackState(initialState)
@@ -984,28 +990,29 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         }
         val st = if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
         val sb = PlaybackStateCompat.Builder()
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY or
-                PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_STOP or
-                PlaybackStateCompat.ACTION_SEEK_TO
-            )
+            .setActions(TRANSPORT_ACTIONS)
             .setState(st, positionMs, if (playing) 1f else 0f)
         currentCustomActions.forEach { sb.addCustomAction(it) }
         session.setPlaybackState(sb.build())
     }
 
     /**
-     * Build the prev-page / next-page / replay-page + speed custom actions from the current
-     * pageMarkers + currentPage + repeatPageActive + currentSpeed. The page trio only appears when
-     * the surah spans more than one page; the SPEED button always appears (to the right of the
-     * repeat-page button). Shared by updateState (JS-driven) and the native cold-start path so the
-     * buttons appear in both — no-op slots keep the button positions fixed.
+     * Build the speed + prev-page / next-page / replay-page custom actions from the current
+     * currentSpeed + pageMarkers + currentPage + repeatPageActive. The SPEED button always appears
+     * and is FIRST (so Android Auto's small custom-action budget never truncates it); the page trio
+     * only appears when the surah spans more than one page. Shared by updateState (JS-driven) and
+     * the native cold-start path so the buttons appear in both — no-op slots keep positions fixed.
      */
     private fun buildPageCustomActions(): List<PlaybackStateCompat.CustomAction> {
         val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
+        // Speed button FIRST so it's guaranteed visible even where a head unit caps the custom-
+        // action row (~3–4). Icon is a speedometer (ic_speed); the label shows the CURRENT speed
+        // ("1x".."2x") — the label renders on the phone notification and most AA units, though some
+        // cars hide custom-action labels and show only the icon. onCustomAction matches by action
+        // id, not position.
+        actions.add(
+            PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
+        )
         if (pageMarkers.size > 1) {
             val currentIdx = pageMarkers.indexOfFirst { it.page == currentPage }
                 .let { if (it < 0) pageMarkers.indexOfFirst { it.page >= currentPage }.let { i -> if (i < 0) pageMarkers.lastIndex else i } else it }
@@ -1042,11 +1049,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     PlaybackStateCompat.CustomAction.Builder("replayPage_noop", "↺", R.drawable.ic_repeat_page).build()
             )
         }
-        // Speed button — ALWAYS present, to the right of the repeat-page button. Tapping cycles the
-        // playback speed; the label shows the CURRENT speed (e.g. "1.5x").
-        actions.add(
-            PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
-        )
         return actions
     }
 
@@ -1320,14 +1322,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         Log.d("RafeeqMedia", "updateState: isPlaying=$isPlaying surah=$surahName verse=$verseKey page=$currentPage markers=${pageMarkers.size} -> ${pageMarkers.map { "p${it.page}a${it.aya}" }} repeatPage=$repeatPageActive")
 
         val stateBuilder = PlaybackStateCompat.Builder()
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY or
-                PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_STOP or
-                PlaybackStateCompat.ACTION_SEEK_TO
-            )
+            .setActions(TRANSPORT_ACTIONS)
             .setState(
                 if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
                 positionMs,
@@ -1725,11 +1720,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     val pos = cur?.position ?: 0L
                     val playing = player?.isPlaying() == true
                     val sb = PlaybackStateCompat.Builder()
-                        .setActions(
-                            PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or
-                            PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                            PlaybackStateCompat.ACTION_STOP or PlaybackStateCompat.ACTION_SEEK_TO
-                        )
+                        .setActions(TRANSPORT_ACTIONS)
                         .setState(
                             if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
                             pos, if (playing) currentSpeed else 0f
