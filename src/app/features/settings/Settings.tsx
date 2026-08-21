@@ -34,10 +34,6 @@ interface AppSettings {
   // Quran
   mushaf: MushafKind;
   reciter: string;
-  /** Translation edition identifier (e.g. "en.asad" or numeric id as string). Empty = none. */
-  translation: string;
-  /** Whether the PageViewer should render the translation panel. */
-  showTranslation: boolean;
   showTajweedColors: boolean;
   autoNextPage: boolean;
   /** Recite Mode STT engine. */
@@ -59,8 +55,6 @@ const DEFAULTS: AppSettings = {
   showTransliteration: false,
   mushaf: DEFAULT_MUSHAF,
   reciter: "husary",
-  translation: "",
-  showTranslation: false,
   showTajweedColors: true,
   autoNextPage: false,
   reciteEngine: DEFAULT_RECITE_ENGINE,

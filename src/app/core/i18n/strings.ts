@@ -37,7 +37,7 @@ export interface AppStrings {
     download: string;
     /** Recite mode (needs live speech-to-text). */
     recite: string;
-    /** Tafsir and translation fetching. */
+    /** Tafsir fetching. */
     tafsir: string;
     /** Full-text search that needs pages not yet cached. */
     search: string;
@@ -178,10 +178,6 @@ export interface AppStrings {
     pageLabelInResult: string;
     fontSize: string;
     fontType: string;
-    translation: string;
-    showTranslation: string;
-    hideTranslation: string;
-    translationDisabledHint: string;
     moreSettings: string;
     hideSelected: string;
     clearSelection: string;
@@ -199,8 +195,6 @@ export interface AppStrings {
     closeLabel: string;
     fontSizeOptions: { value: string; label: string }[];
     fontTypeOptions: { value: string; label: string }[];
-    translationLoading: string;
-    translationError: string;
     audioError: string;
     actionSheetTitle: (verseKey: string) => string;
     play: string;
@@ -209,7 +203,6 @@ export interface AppStrings {
     tafsirUnavailable: string;
     tafsirLoading: string;
     tafsirError: string;
-    translationUnavailable: string;
     toggleHideTitle: string;
     toggleShowTitle: string;
     nextVerseTitle: string;
@@ -439,7 +432,7 @@ const ar: AppStrings = {
     message: "هذه الميزة تتطلب الاتصال بالإنترنت",
     download: "تحميل التلاوات يتطلب الاتصال بالإنترنت",
     recite: "وضع التسميع يتطلب الاتصال بالإنترنت",
-    tafsir: "التفسير والترجمة يتطلبان الاتصال بالإنترنت",
+    tafsir: "التفسير يتطلب الاتصال بالإنترنت",
     search: "البحث في هذه الصفحات يتطلب الاتصال بالإنترنت",
   },
   azkar: {
@@ -576,10 +569,6 @@ const ar: AppStrings = {
     pageLabelInResult: "صفحة",
     fontSize: "حجم الخط",
     fontType: "نوع الخط",
-    translation: "الترجمة",
-    showTranslation: "إظهار الترجمة",
-    hideTranslation: "إخفاء الترجمة",
-    translationDisabledHint: "اختر ترجمة من الإعدادات أولاً",
     moreSettings: "المزيد من الإعدادات",
     hideSelected: "إخفاء الآيات المحددة",
     clearSelection: "إلغاء التحديد",
@@ -607,8 +596,6 @@ const ar: AppStrings = {
       { value: "uthmani", label: "عثمان" },
       { value: "naskh", label: "نسخ" },
     ],
-    translationLoading: "جاري تحميل الترجمة…",
-    translationError: "تعذر تحميل الترجمة",
     audioError: "تعذر تشغيل الصوت",
     actionSheetTitle: (verseKey: string) => `الآية ${verseKey}`,
     play: "تشغيل",
@@ -617,7 +604,6 @@ const ar: AppStrings = {
     tafsirUnavailable: "التفسير غير متوفر بعد",
     tafsirLoading: "جاري تحميل التفسير…",
     tafsirError: "تعذر تحميل التفسير",
-    translationUnavailable: "اختر ترجمة من الإعدادات",
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
     nextVerseTitle: "إظهار الآية التالية",
@@ -811,15 +797,15 @@ const ar: AppStrings = {
     sessionPrevious: "السابقة",
     viewAllSessions: "عرض جميع الجلسات",
     sessionsAll: "جميع الجلسات",
-    daysActive: "يوم منذ البداية",
+    daysActive: "أيام منذ البداية",
     todaySessions: "جلسة اليوم",
-    bestPlan: "أفضل خطة",
-    latestPlan: "آخر خطة",
+    bestPlan: "أفضل جولة",
+    latestPlan: "آخر جولة",
     sessionsWord: "جلسة",
     bestPlanDays: "يوم",
     bestPlanPages: "ص",
     bestPlanNone: "لا يوجد بعد",
-    heroToday: "جلسة اليوم",
+    heroToday: "جلسات اليوم",
     heroBestDay: "أفضل يوم",
     resetConfirmTitle: "إعادة الخطة؟",
     resetConfirmBody: "سيتم مسح تقدمك في جميع الجلسات. هل أنت متأكد؟",
@@ -861,7 +847,7 @@ const en: AppStrings = {
     message: "This feature is only available when connected to the Internet",
     download: "Downloading recitations requires an Internet connection",
     recite: "Recite mode requires an Internet connection",
-    tafsir: "Tafsir and translation require an Internet connection",
+    tafsir: "Tafsir requires an Internet connection",
     search: "Searching these pages requires an Internet connection",
   },
   azkar: {
@@ -999,10 +985,6 @@ const en: AppStrings = {
     pageLabelInResult: "Page",
     fontSize: "Font size",
     fontType: "Font type",
-    translation: "Translation",
-    showTranslation: "Show translation",
-    hideTranslation: "Hide translation",
-    translationDisabledHint: "Pick a translation in Settings first",
     moreSettings: "More settings",
     hideSelected: "Hide selected verses",
     clearSelection: "Clear selection",
@@ -1030,8 +1012,6 @@ const en: AppStrings = {
       { value: "uthmani", label: "Uthmani" },
       { value: "naskh", label: "Naskh" },
     ],
-    translationLoading: "Loading translation…",
-    translationError: "Could not load translation",
     audioError: "Could not play audio",
     actionSheetTitle: (verseKey: string) => `Verse ${verseKey}`,
     play: "Play",
@@ -1040,7 +1020,6 @@ const en: AppStrings = {
     tafsirUnavailable: "Tafsir is not available yet",
     tafsirLoading: "Loading tafsir…",
     tafsirError: "Could not load tafsir",
-    translationUnavailable: "Pick a translation in Settings",
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
     nextVerseTitle: "Reveal next verse",
@@ -1237,16 +1216,16 @@ const en: AppStrings = {
     sessionPrevious: "Previous",
     viewAllSessions: "View All Sessions",
     sessionsAll: "All Sessions",
-    daysActive: "days active",
+    daysActive: "Days Since Start",
     todaySessions: "today",
-    bestPlan: "Best Plan",
-    latestPlan: "Latest Plan",
+    bestPlan: "Best Round",
+    latestPlan: "Last Round",
     sessionsWord: "sessions",
     bestPlanDays: "d",
     bestPlanPages: "pg",
     bestPlanNone: "None yet",
-    heroToday: "today",
-    heroBestDay: "best day",
+    heroToday: "Sessions Today",
+    heroBestDay: "Best Day",
     resetConfirmTitle: "Reset Plan?",
     resetConfirmBody: "This will clear your progress on all sessions. Are you sure?",
     resetConfirmYes: "Reset",

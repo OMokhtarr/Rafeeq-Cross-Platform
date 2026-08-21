@@ -205,9 +205,6 @@ const SearchResults: React.FC = () => {
                       <p className="result-arabic" dir="rtl">
                         {r.text}
                       </p>
-                      {/* Optional translation slot — the search API returns
-                          Arabic text only; if a future edition is wired we
-                          can drop the English line in here. */}
                       <div className="result-actions">
                         <button
                           type="button"

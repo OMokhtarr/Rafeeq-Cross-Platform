@@ -1,6 +1,5 @@
 import * as fallback from "./quran-api.client";
 import type {
-  PageTranslation,
   TafsirText,
   TafsirResource,
   AudioTimestampResult,
@@ -90,17 +89,6 @@ export async function fetchChapters() {
 
 export async function fetchJuzs() {
   return trySdkOrFallback("fetchJuzs");
-}
-
-export async function fetchTranslationsByPage(
-  page: number,
-  translationId: string | number,
-  mushafId?: number,
-): Promise<PageTranslation[]> {
-  return trySdkOrFallback<
-    [number, string | number, number | undefined],
-    PageTranslation[]
-  >("fetchTranslationsByPage", page, translationId, mushafId);
 }
 
 export async function fetchTafsirForAyah(

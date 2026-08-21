@@ -3,7 +3,6 @@ import { useHistory } from "react-router-dom";
 import {
   fetchTafsirForAyah,
   getTafsirResources,
-  getPageTranslations,
   getPage,
 } from "../../../core/services/data/quran.service";
 import type { TafsirResource } from "../../../core/services/data/quran.service";
@@ -25,8 +24,6 @@ import { registerOverlay } from "../../../core/utils/overlay-registry";
 import NoteModal from "../note-modal/NoteModal";
 import "./VerseActionSheet.css";
 
-type Tab = "translation" | "tafsir";
-
 interface Props {
   open: boolean;
   /** "sura:aya" of the initially long-pressed verse. */
@@ -34,7 +31,6 @@ interface Props {
   /** Ordered verse keys for the current page — used for prev/next in tafsir. */
   pageVerseKeys?: string[];
   page: number;
-  translationId: string;
   tafsirId?: string;
   /** Reciter ID used for audio playback (numeric string, e.g. "4"). */
   reciter?: string;
@@ -50,7 +46,6 @@ const VerseActionSheet: React.FC<Props> = ({
   verseKey,
   pageVerseKeys = [],
   page,
-  translationId,
   tafsirId,
   reciter = DEFAULT_RECITER,
   onClose,
@@ -133,16 +128,8 @@ const VerseActionSheet: React.FC<Props> = ({
     setNoteModalOpen(true);
   }, []);
 
-  // ── Tab ────────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<Tab>("tafsir");
-
-  // ── Translation ────────────────────────────────────────────────────────────
-  const [translation, setTranslation] = useState<string | null>(null);
-  const [translationLoading, setTranslationLoading] = useState(false);
-  const [translationError, setTranslationError] = useState<string | null>(null);
-
   // ── Tafsir navigation ──────────────────────────────────────────────────────
-  // currentKey tracks which verse is shown in the tafsir tab (can differ from
+  // currentKey tracks which verse is shown in the tafsir panel (can differ from
   // the initially pressed verseKey via prev/next).
   const [currentKey, setCurrentKey] = useState<string | null>(verseKey);
 
@@ -176,44 +163,12 @@ const VerseActionSheet: React.FC<Props> = ({
   // ── Reset on open / verse change ──────────────────────────────────────────
   useEffect(() => {
     if (!open) {
-      setTranslationError(null);
       setTafsirError(null);
       return;
     }
-    setTranslation(null);
     setTafsir("");
-    setActiveTab("tafsir");
     setCurrentKey(verseKey);
   }, [open, verseKey]);
-
-  // ── Fetch translation ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!open || !verseKey) return;
-    if (!translationId) {
-      setTranslation(null);
-      setTranslationError(null);
-      return;
-    }
-    let cancelled = false;
-    setTranslationLoading(true);
-    setTranslationError(null);
-    getPageTranslations(page, translationId)
-      .then((rows) => {
-        if (cancelled) return;
-        const hit = rows.find((r) => r.verseKey === verseKey);
-        setTranslation(hit?.text ?? null);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setTranslationError(t.mushaf.translationError);
-      })
-      .finally(() => {
-        if (!cancelled) setTranslationLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, verseKey, page, translationId, t]);
 
   // ── Fetch tafsir resource list (once per open) ────────────────────────────
   useEffect(() => {
@@ -418,179 +373,126 @@ const VerseActionSheet: React.FC<Props> = ({
           </div>
         </header>
 
-        <div className="vas-tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={activeTab === "tafsir"}
-            className={`vas-tab${
-              activeTab === "tafsir" ? " vas-tab--active" : ""
-            }`}
-            onClick={() => setActiveTab("tafsir")}
-          >
-            {t.mushaf.tafsir}
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === "translation"}
-            className={`vas-tab${
-              activeTab === "translation" ? " vas-tab--active" : ""
-            }`}
-            onClick={() => setActiveTab("translation")}
-          >
-            {t.mushaf.translation}
-          </button>
+        {/* ── Tafsir ── */}
+        {/* Resource selector — shows only downloaded tafsirs */}
+        <div className={`vas-resource-bar${nightClass}`}>
+          {resourcesLoading ? (
+            <span
+              className="vas-spinner vas-spinner--sm"
+              aria-hidden="true"
+            />
+          ) : downloadedResources.length === 0 ? (
+            /* No downloads yet — show a prompt to go to settings */
+            <button
+              className={`vas-tafsir-settings-link${nightClass}`}
+              onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>
+                {lang === "ar" ? "احفظ تفسيراً من مكتبة التفاسير" : "Save a tafsir from the library"}
+              </span>
+            </button>
+          ) : (
+            <div className="vas-resource-bar-inner">
+              <InlineSelect
+                value={effectiveResourceId}
+                options={downloadedResources.map((r) => ({
+                  value: r.id,
+                  label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
+                }))}
+                onChange={setSelectedResourceId}
+                night={isNight}
+                fullWidth
+                aria-label={t.mushaf.tafsir}
+              />
+              <button
+                className={`vas-tafsir-gear${nightClass}`}
+                onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+                aria-label={lang === "ar" ? "إعدادات التفاسير" : "Tafsir settings"}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ── Translation tab ── */}
-        {activeTab === "translation" && (
-          <div className="vas-body">
-            <section className="vas-panel" aria-label={t.mushaf.translation}>
-              {!translationId ? (
-                <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
-              ) : translationLoading ? (
-                <div className="vas-loading">
-                  <span className="vas-spinner" aria-hidden="true" />
-                  <span>{t.mushaf.translationLoading}</span>
-                </div>
-              ) : translationError ? (
-                <p className="vas-error" role="alert">
-                  {translationError}
-                </p>
-              ) : translation ? (
-                <p className="vas-translation" lang="en" dir="ltr">
-                  {translation}
-                </p>
-              ) : (
-                <p className="vas-empty">{t.mushaf.translationUnavailable}</p>
-              )}
-            </section>
+        {/* Verse + nav row */}
+        <div className={`vas-verse-row${nightClass}`}>
+          <div className="vas-verse-center">
+            <div className="vas-nav-inline">
+              <button
+                className={`vas-nav-btn${nightClass}`}
+                onClick={goPrev}
+                disabled={!hasPrev}
+                aria-label={
+                  isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
+                }
+              >
+                {isRTL ? "›" : "‹"}
+              </button>
+              <span className={`vas-nav-key${nightClass}`}>
+                {lang === "ar"
+                  ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
+                  : `${dSura}:${dAya}`}
+              </span>
+              <button
+                className={`vas-nav-btn${nightClass}`}
+                onClick={goNext}
+                disabled={!hasNext}
+                aria-label={
+                  isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
+                }
+              >
+                {isRTL ? "‹" : "›"}
+              </button>
+            </div>
+            {verseText && (
+              <p
+                className={`vas-verse-text${nightClass}`}
+                dir="rtl"
+                lang="ar"
+              >
+                {verseText}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* ── Tafsir tab ── */}
-        {activeTab === "tafsir" && (
-          <>
-            {/* Resource selector — shows only downloaded tafsirs */}
-            <div className={`vas-resource-bar${nightClass}`}>
-              {resourcesLoading ? (
-                <span
-                  className="vas-spinner vas-spinner--sm"
-                  aria-hidden="true"
-                />
-              ) : downloadedResources.length === 0 ? (
-                /* No downloads yet — show a prompt to go to settings */
-                <button
-                  className={`vas-tafsir-settings-link${nightClass}`}
-                  onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                  <span>
-                    {lang === "ar" ? "احفظ تفسيراً من مكتبة التفاسير" : "Save a tafsir from the library"}
-                  </span>
-                </button>
-              ) : (
-                <div className="vas-resource-bar-inner">
-                  <InlineSelect
-                    value={effectiveResourceId}
-                    options={downloadedResources.map((r) => ({
-                      value: r.id,
-                      label: r.name + (r.authorName ? ` — ${r.authorName}` : ""),
-                    }))}
-                    onChange={setSelectedResourceId}
-                    night={isNight}
-                    fullWidth
-                    aria-label={t.mushaf.tafsir}
-                  />
-                  <button
-                    className={`vas-tafsir-gear${nightClass}`}
-                    onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
-                    aria-label={lang === "ar" ? "إعدادات التفاسير" : "Tafsir settings"}
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
+        {/* Tafsir body */}
+        <div className="vas-body" ref={tafsirBodyRef}>
+          <section className="vas-panel" aria-label={t.mushaf.tafsir}>
+            {/* Resource name label */}
+            {selectedResource && (
+              <p className={`vas-resource-label${nightClass}`}>
+                {selectedResource.name}
+                {selectedResource.authorName
+                  ? ` — ${selectedResource.authorName}`
+                  : ""}
+              </p>
+            )}
 
-            {/* Verse + nav row */}
-            <div className={`vas-verse-row${nightClass}`}>
-              <div className="vas-verse-center">
-                <div className="vas-nav-inline">
-                  <button
-                    className={`vas-nav-btn${nightClass}`}
-                    onClick={goPrev}
-                    disabled={!hasPrev}
-                    aria-label={
-                      isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
-                    }
-                  >
-                    {isRTL ? "›" : "‹"}
-                  </button>
-                  <span className={`vas-nav-key${nightClass}`}>
-                    {lang === "ar"
-                      ? `${toHindiNumbers(dSura)}:${toHindiNumbers(dAya)}`
-                      : `${dSura}:${dAya}`}
-                  </span>
-                  <button
-                    className={`vas-nav-btn${nightClass}`}
-                    onClick={goNext}
-                    disabled={!hasNext}
-                    aria-label={
-                      isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
-                    }
-                  >
-                    {isRTL ? "‹" : "›"}
-                  </button>
-                </div>
-                {verseText && (
-                  <p
-                    className={`vas-verse-text${nightClass}`}
-                    dir="rtl"
-                    lang="ar"
-                  >
-                    {verseText}
-                  </p>
-                )}
+            {tafsirLoading ? (
+              <div className="vas-loading">
+                <span className="vas-spinner" aria-hidden="true" />
+                <span>{t.mushaf.tafsirLoading}</span>
               </div>
-            </div>
-
-            {/* Tafsir body */}
-            <div className="vas-body" ref={tafsirBodyRef}>
-              <section className="vas-panel" aria-label={t.mushaf.tafsir}>
-                {/* Resource name label */}
-                {selectedResource && (
-                  <p className={`vas-resource-label${nightClass}`}>
-                    {selectedResource.name}
-                    {selectedResource.authorName
-                      ? ` — ${selectedResource.authorName}`
-                      : ""}
-                  </p>
-                )}
-
-                {tafsirLoading ? (
-                  <div className="vas-loading">
-                    <span className="vas-spinner" aria-hidden="true" />
-                    <span>{t.mushaf.tafsirLoading}</span>
-                  </div>
-                ) : tafsirError ? (
-                  <p className="vas-error" role="alert">
-                    {tafsirError}
-                  </p>
-                ) : tafsir ? (
-                  <p className="vas-tafsir">{tafsir}</p>
-                ) : (
-                  <p className="vas-empty">{t.mushaf.tafsirUnavailable}</p>
-                )}
-              </section>
-            </div>
-          </>
-        )}
+            ) : tafsirError ? (
+              <p className="vas-error" role="alert">
+                {tafsirError}
+              </p>
+            ) : tafsir ? (
+              <p className="vas-tafsir">{tafsir}</p>
+            ) : (
+              <p className="vas-empty">{t.mushaf.tafsirUnavailable}</p>
+            )}
+          </section>
+        </div>
       </aside>
 
       <NoteModal

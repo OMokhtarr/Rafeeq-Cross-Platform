@@ -7,7 +7,6 @@
  *   - the slide‑up playback sheet (instead of navigating away)
  *   - per‑verse recitation playback
  *   - the hamburger side drawer (surah list, search, settings, selection ops)
- *   - optional translation panel under each verse
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -69,8 +68,6 @@ const SETTINGS_KEY = "rafiq_settings_v1";
 interface ReadSettings {
   reciter: string;
   soundEffects: boolean;
-  translation: string;
-  showTranslation: boolean;
 }
 
 function readSettings(): ReadSettings {
@@ -81,16 +78,12 @@ function readSettings(): ReadSettings {
       return {
         reciter: s.reciter ?? "4",
         soundEffects: s.soundEffects ?? true,
-        translation: s.translation ?? "",
-        showTranslation: s.showTranslation ?? false,
       };
     }
   } catch {}
   return {
     reciter: "4",
     soundEffects: true,
-    translation: "",
-    showTranslation: false,
   };
 }
 
@@ -1442,7 +1435,6 @@ const PageViewer: React.FC = () => {
             verseKey={sheetVerseKey}
             pageVerseKeys={verses.map((v) => `${v.sura}:${v.aya}`)}
             page={currentPage}
-            translationId={settings.translation}
             reciter={settings.reciter}
             onClose={closeSheet}
           />

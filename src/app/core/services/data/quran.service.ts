@@ -2,7 +2,6 @@ import {
   fetchVersesByPage,
   fetchVersesByJuz,
   fetchAudioForAyah as providerAudioForAyah,
-  fetchTranslationsByPage as apiFetchTranslationsByPage,
   fetchTafsirForAyah as apiFetchTafsirForAyah,
   fetchTafsirResources as apiFetchTafsirResources,
   fetchPagesLookup as apiFetchPagesLookup,
@@ -305,21 +304,6 @@ export async function fetchTafsirForAyah(
 
 export async function getTafsirResources() {
   return apiFetchTafsirResources();
-}
-
-// ─── Translation ──────────────────────────────────────────────────────────────
-export async function getPageTranslations(
-  page: number,
-  editionId: string,
-): Promise<{ verseKey: string; text: string }[]> {
-  // Same mushaf id as getPage() — the layout decides which verses are on the
-  // page, so the two calls must agree or the translations describe a different
-  // verse set than the one rendered.
-  return apiFetchTranslationsByPage(
-    page,
-    editionId,
-    mushafIdFor(readSelectedMushaf()),
-  );
 }
 
 // ─── Page boundaries (pages lookup) ──────────────────────────────────────────

@@ -259,52 +259,6 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ── Tabs ─────────────────────────────────────────────────────────────────── */
-
-.vas-tabs {
-  display: flex;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
-  flex-shrink: 0;
-}
-
-.vas-tab {
-  flex: 1;
-  padding: var(--space-3, 0.75rem) var(--space-2, 0.5rem);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary, #3a3a3a);
-  font-family: var(--font-arabic, "Scheherazade New", serif);
-  font-size: var(--text-base, 0.9rem);
-  font-weight: 600;
-  cursor: pointer;
-  transition: color var(--transition-fast, 0.15s),
-              border-color var(--transition-fast, 0.15s);
-  margin-bottom: -1px;
-}
-
-.vas-tab:hover {
-  color: var(--color-text-primary);
-}
-
-.vas-tab--active {
-  color: var(--color-gold, #b8860b);
-  border-bottom-color: var(--color-gold, #b8860b);
-}
-
-.vas-sheet--night .vas-tab {
-  color: var(--color-text-secondary, #b0a898);
-}
-
-.vas-sheet--night .vas-tab:hover {
-  color: var(--color-text-primary, #e8e8e8);
-}
-
-.vas-sheet--night .vas-tab--active {
-  color: var(--color-gold, #d4b48c);
-  border-bottom-color: var(--color-gold, #d4b48c);
-}
-
 /* ── Resource bar (tafsir source selector) ────────────────────────────────── */
 
 .vas-resource-bar {
@@ -483,18 +437,6 @@
 }
 
 /* ── Content text ─────────────────────────────────────────────────────────── */
-
-.vas-translation {
-  margin: 0;
-  font-family: var(--font-latin, Georgia, serif);
-  font-size: var(--text-base, 0.9rem);
-  line-height: var(--leading-normal, 1.7);
-  color: var(--color-text-primary, #111111);
-}
-
-.vas-sheet--night .vas-translation {
-  color: var(--color-text-primary, #e8e8e8);
-}
 
 .vas-tafsir {
   margin: 0;

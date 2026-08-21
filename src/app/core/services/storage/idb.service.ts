@@ -22,7 +22,10 @@ const DB_NAME = "rafeeq-quran";
 //     renders with line breaks in the wrong places. `translations` is keyed by
 //     page too and is invalidated for the same reason. `fonts` stays valid —
 //     the glyphs are unchanged, only which line a word belongs to.
-const DB_VERSION = 7;
+// v8: translations were removed from the app entirely, so the `translations`
+//     store is deleted. It held nothing in practice even while the feature
+//     existed — `getPageTranslations` always went to the network.
+const DB_VERSION = 8;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -61,12 +64,6 @@ export class IDBService {
           db.createObjectStore("fonts", { keyPath: "page" });
         }
 
-        // translations store: cached translation payloads per (edition, page).
-        // record shape: { id: `${editionId}:${page}`, edition, page, items }
-        if (!db.objectStoreNames.contains("translations")) {
-          db.createObjectStore("translations", { keyPath: "id" });
-        }
-
         // audio store: cached per-ayah recitation blobs.
         // record shape: { id: `${reciter}:${sura}:${aya}`, blob: Blob, mime: string }
         if (!db.objectStoreNames.contains("audio")) {
@@ -93,16 +90,20 @@ export class IDBService {
         }
 
         // v7: pages cached before the `mushaf` layout id was sent carry
-        // line_number values from the API's default layout. Drop them (and the
-        // page-keyed translations) so the next read repopulates from the
-        // layout that matches the fonts we render with.
+        // line_number values from the API's default layout. Drop them so the
+        // next read repopulates from the layout that matches the fonts we
+        // render with. (The page-keyed `translations` store was cleared here
+        // too until v8 removed it outright.)
         if (oldVersion > 0 && oldVersion < 7 && tx) {
           if (db.objectStoreNames.contains("pages")) {
             tx.objectStore("pages").clear();
           }
-          if (db.objectStoreNames.contains("translations")) {
-            tx.objectStore("translations").clear();
-          }
+        }
+
+        // v8: translations are gone from the app; drop the store on any install
+        // that still carries it.
+        if (db.objectStoreNames.contains("translations")) {
+          db.deleteObjectStore("translations");
         }
       };
 

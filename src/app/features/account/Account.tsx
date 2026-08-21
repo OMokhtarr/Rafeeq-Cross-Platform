@@ -50,14 +50,14 @@ const PRIVACY_SECTIONS: ProseSection[] = [
   {
     headingAr: null,
     headingEn: null,
-    bodyAr: "يلتزم تطبيق رفيق (\"التطبيق\") بحماية خصوصيتك. توضح هذه السياسة كيفية تعاملنا مع بياناتك.\nورفيق تطبيق مستقل يستخدم واجهات Quran Foundation البرمجية ويعرض النص القرآني والترجمات والتفسير والتلاوات من Quran.com. وهو ليس تطبيقًا رسميًا لمؤسسة القرآن، ولا يتبعها ولا تعتمده.",
-    bodyEn: "Rafeeq (\"the App\") is committed to protecting your privacy. This policy explains how we handle your data.\nRafeeq is an independent app that uses the Quran Foundation APIs and displays Quran text, translations, tafsir and recitation audio from Quran.com. It is not an official Quran Foundation application, and is not endorsed by or affiliated with the Foundation.",
+    bodyAr: "يلتزم تطبيق رفيق (\"التطبيق\") بحماية خصوصيتك. توضح هذه السياسة كيفية تعاملنا مع بياناتك.\nورفيق تطبيق مستقل يستخدم واجهات Quran Foundation البرمجية ويعرض النص القرآني والتفسير والتلاوات من Quran.com. وهو ليس تطبيقًا رسميًا لمؤسسة القرآن، ولا يتبعها ولا تعتمده.",
+    bodyEn: "Rafeeq (\"the App\") is committed to protecting your privacy. This policy explains how we handle your data.\nRafeeq is an independent app that uses the Quran Foundation APIs and displays Quran text, tafsir and recitation audio from Quran.com. It is not an official Quran Foundation application, and is not endorsed by or affiliated with the Foundation.",
   },
   {
     headingAr: "١. البيانات المحفوظة على جهازك",
     headingEn: "1. Data stored on your device",
-    bodyAr: "تُحفظ تفضيلاتك ومواضعك المحفوظة وملاحظاتك وموضع القراءة وتقدّم الحفظ وسلاسل المواظبة، إضافة إلى النص القرآني والترجمات والخطوط والمقاطع الصوتية المُنزَّلة، على جهازك فقط. وإلغاء تثبيت التطبيق، أو مسح مساحة تخزينه من إعدادات أندرويد، يحذفها جميعًا نهائيًا.",
-    bodyEn: "Your preferences, bookmarks, notes, reading position, memorisation progress and streaks, plus cached Quran text, translations, fonts and downloaded audio are stored only on your device. Uninstalling the App, or clearing its storage in Android settings, removes all of it permanently.",
+    bodyAr: "تُحفظ تفضيلاتك ومواضعك المحفوظة وملاحظاتك وموضع القراءة وتقدّم الحفظ وسلاسل المواظبة، إضافة إلى النص القرآني والتفسير والخطوط والمقاطع الصوتية المُنزَّلة، على جهازك فقط. وإلغاء تثبيت التطبيق، أو مسح مساحة تخزينه من إعدادات أندرويد، يحذفها جميعًا نهائيًا.",
+    bodyEn: "Your preferences, bookmarks, notes, reading position, memorisation progress and streaks, plus cached Quran text, tafsir, fonts and downloaded audio are stored only on your device. Uninstalling the App, or clearing its storage in Android settings, removes all of it permanently.",
   },
   {
     headingAr: "٢. وضع التلاوة والميكروفون",
@@ -86,8 +86,8 @@ const PRIVACY_SECTIONS: ProseSection[] = [
   {
     headingAr: "٦. الجهات الخارجية التي يتصل بها التطبيق",
     headingEn: "6. Third parties the App connects to",
-    bodyAr: "Quran Foundation — النص القرآني والترجمات والتفسير والتلاوات الصوتية؛ ولا يُرسَل أي شيء يدل على هويتك.\nCloudflare — تستضيف وسيط الرموز الذي يحفظ بيانات اعتماد الواجهة البرمجية خارج التطبيق؛ ويستقبل بيانات الاتصال المعتادة مثل عنوان IP، ولا يمر عبره أي من محتواك.\nDeepgram — التعرّف على الكلام في وضع التلاوة؛ ويستقبل صوت الميكروفون المباشر أثناء تشغيل وضع التلاوة فقط.\njsDelivr — خطوط المصحف.\nوجميع الاتصالات تجري عبر نقل مُشفَّر (HTTPS/WSS). ولكل جهة سياسة خصوصية خاصة بها، ولا يصل أي منها إلى ملاحظاتك أو مواضعك المحفوظة أو بيانات حفظك لأنها لا تغادر جهازك.",
-    bodyEn: "Quran Foundation — Quran text, translations, tafsir and recitation audio; nothing identifying you is sent.\nCloudflare — hosts our token broker, which keeps API credentials out of the App; receives standard connection metadata such as your IP address. None of your content passes through it.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS). Each operates under its own privacy policy, and none of them can reach your notes, bookmarks or memorisation data, because that never leaves your device.",
+    bodyAr: "Quran Foundation — النص القرآني والتفسير والتلاوات الصوتية؛ ولا يُرسَل أي شيء يدل على هويتك.\nCloudflare — تستضيف وسيط الرموز الذي يحفظ بيانات اعتماد الواجهة البرمجية خارج التطبيق؛ ويستقبل بيانات الاتصال المعتادة مثل عنوان IP، ولا يمر عبره أي من محتواك.\nDeepgram — التعرّف على الكلام في وضع التلاوة؛ ويستقبل صوت الميكروفون المباشر أثناء تشغيل وضع التلاوة فقط.\njsDelivr — خطوط المصحف.\nوجميع الاتصالات تجري عبر نقل مُشفَّر (HTTPS/WSS). ولكل جهة سياسة خصوصية خاصة بها، ولا يصل أي منها إلى ملاحظاتك أو مواضعك المحفوظة أو بيانات حفظك لأنها لا تغادر جهازك.",
+    bodyEn: "Quran Foundation — Quran text, tafsir and recitation audio; nothing identifying you is sent.\nCloudflare — hosts our token broker, which keeps API credentials out of the App; receives standard connection metadata such as your IP address. None of your content passes through it.\nDeepgram — speech recognition for Recite Mode; receives live microphone audio only while Recite Mode is running.\njsDelivr — mushaf fonts.\nAll connections use encrypted transport (HTTPS/WSS). Each operates under its own privacy policy, and none of them can reach your notes, bookmarks or memorisation data, because that never leaves your device.",
   },
   {
     headingAr: "٧. نقل البيانات دوليًا",
@@ -155,8 +155,8 @@ const TERMS_SECTIONS: ProseSection[] = [
   {
     headingAr: "٢. الاستقلال عن مؤسسة القرآن",
     headingEn: "2. Independence from the Quran Foundation",
-    bodyAr: "رفيق تطبيق مستقل يستخدم واجهات Quran Foundation البرمجية ويعرض النص القرآني والترجمات والتفسير والتلاوات من Quran.com. وهو ليس تطبيقًا رسميًا لمؤسسة القرآن، ولا يتبعها ولا تعتمده ولا تُشغّله. ويرجى توجيه الأسئلة المتعلقة بالتطبيق إلى عنوان التواصل أدناه لا إلى المؤسسة.",
-    bodyEn: "Rafeeq is an independent application. It uses the Quran Foundation APIs and displays Quran text, translations, tafsir and recitation audio from Quran.com. It is not an official Quran Foundation application, and is not endorsed by, affiliated with or operated by the Foundation. Please direct questions about this App to the contact address below rather than to the Foundation.",
+    bodyAr: "رفيق تطبيق مستقل يستخدم واجهات Quran Foundation البرمجية ويعرض النص القرآني والتفسير والتلاوات من Quran.com. وهو ليس تطبيقًا رسميًا لمؤسسة القرآن، ولا يتبعها ولا تعتمده ولا تُشغّله. ويرجى توجيه الأسئلة المتعلقة بالتطبيق إلى عنوان التواصل أدناه لا إلى المؤسسة.",
+    bodyEn: "Rafeeq is an independent application. It uses the Quran Foundation APIs and displays Quran text, tafsir and recitation audio from Quran.com. It is not an official Quran Foundation application, and is not endorsed by, affiliated with or operated by the Foundation. Please direct questions about this App to the contact address below rather than to the Foundation.",
   },
   {
     headingAr: "٣. الخصوصية والبيانات",
@@ -167,8 +167,8 @@ const TERMS_SECTIONS: ProseSection[] = [
   {
     headingAr: "٤. المحتوى القرآني والملكية الفكرية",
     headingEn: "4. Quran content and intellectual property",
-    bodyAr: "النص القرآني والخطوط والترجمات والتفسير والتلاوات الصوتية مُقدَّمة من Quran Foundation والمساهمين فيها بموجب التراخيص الخاصة بها، وتبقى ملكًا لأصحابها. أما التطبيق نفسه وشيفرته الأصلية فهي ملك للمطوِّر.\nولا يُعدَّل النص القرآني أبدًا، بل يُعرض كما تُورده واجهات المؤسسة دون أي تغيير أو اختصار.\nولا يجوز استخراج المحتوى القرآني أو بيانات الواجهة البرمجية أو نسخها أو إعادة نشرها أو بيعها أو إتاحتها خارج التطبيق. والمحتوى مُتاح لاستخدامك الشخصي في القراءة والحفظ والدراسة فقط.\nويظل المحتوى المُخزَّن على جهازك للقراءة دون اتصال خاضعًا لهذه الشروط ولشروط مؤسسة القرآن.\nأما ما تكتبه أنت من ملاحظات وتأمّلات فيبقى ملكك، ويحفظه التطبيق على جهازك فقط دون أن يدّعي أي حق فيه.",
-    bodyEn: "Quran text, fonts, translations, tafsir and audio are provided by the Quran Foundation and its contributors under their respective licenses and remain the property of their owners. The App itself and its original code are owned by the developer.\nThe Quran text is never modified — it is displayed exactly as delivered by the Quran Foundation APIs, with no alteration or abridgement.\nYou may not extract, copy, redistribute, republish, sell or otherwise make available the Quran content or raw API data outside the App experience. Content is provided for your own reading, memorisation and study only.\nContent cached on your device for offline reading remains subject to these terms and to the Quran Foundation's terms.\nYour own notes and reflections remain yours; the App stores them only on your device and makes no claim to them.",
+    bodyAr: "النص القرآني والخطوط والتفسير والتلاوات الصوتية مُقدَّمة من Quran Foundation والمساهمين فيها بموجب التراخيص الخاصة بها، وتبقى ملكًا لأصحابها. أما التطبيق نفسه وشيفرته الأصلية فهي ملك للمطوِّر.\nولا يُعدَّل النص القرآني أبدًا، بل يُعرض كما تُورده واجهات المؤسسة دون أي تغيير أو اختصار.\nولا يجوز استخراج المحتوى القرآني أو بيانات الواجهة البرمجية أو نسخها أو إعادة نشرها أو بيعها أو إتاحتها خارج التطبيق. والمحتوى مُتاح لاستخدامك الشخصي في القراءة والحفظ والدراسة فقط.\nويظل المحتوى المُخزَّن على جهازك للقراءة دون اتصال خاضعًا لهذه الشروط ولشروط مؤسسة القرآن.\nأما ما تكتبه أنت من ملاحظات وتأمّلات فيبقى ملكك، ويحفظه التطبيق على جهازك فقط دون أن يدّعي أي حق فيه.",
+    bodyEn: "Quran text, fonts, tafsir and audio are provided by the Quran Foundation and its contributors under their respective licenses and remain the property of their owners. The App itself and its original code are owned by the developer.\nThe Quran text is never modified — it is displayed exactly as delivered by the Quran Foundation APIs, with no alteration or abridgement.\nYou may not extract, copy, redistribute, republish, sell or otherwise make available the Quran content or raw API data outside the App experience. Content is provided for your own reading, memorisation and study only.\nContent cached on your device for offline reading remains subject to these terms and to the Quran Foundation's terms.\nYour own notes and reflections remain yours; the App stores them only on your device and makes no claim to them.",
   },
   {
     headingAr: "٥. الاستخدام المقبول",
