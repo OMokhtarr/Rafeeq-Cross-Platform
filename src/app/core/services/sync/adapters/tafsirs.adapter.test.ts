@@ -46,6 +46,48 @@ describe("tafsirRowsFrom", () => {
     const rows = tafsirRowsFrom([{ text: "orphan" }], 169, 1);
     expect(rows).toHaveLength(0);
   });
+
+  it("expands a cross-surah range (104:1 -> 105:5) across both surahs", () => {
+    // Real Ibn Kathir (169) data: a single commentary spans the end of
+    // Al-Humazah (104, 9 verses) into the start of Al-Fil (105, 5 verses).
+    // Every verse of 104 after the anchor, plus 105:1-105:5, must resolve.
+    const rows = tafsirRowsFrom(
+      [{ verse_key: "104:1", text: "on humazah and fil", group_verse_key_from: "104:1", group_verse_key_to: "105:5" }],
+      169,
+      1,
+    );
+    expect(rows).toHaveLength(14);
+    expect(rows[0].recordKey).toBe("104:1");
+    expect(rows[rows.length - 1].recordKey).toBe("105:5");
+    expect(new Set(rows.map((r) => (r.data as { text: string }).text)).size).toBe(1);
+  });
+
+  it("degrades a reversed same-surah range to one row without hanging", () => {
+    const rows = tafsirRowsFrom(
+      [{ verse_key: "2:5", text: "x", group_verse_key_from: "2:5", group_verse_key_to: "2:1" }],
+      169,
+      1,
+    );
+    expect(rows.map((r) => r.recordKey)).toEqual(["2:5"]);
+  });
+
+  it("degrades a range where the end surah precedes the start surah to one row", () => {
+    const rows = tafsirRowsFrom(
+      [{ verse_key: "105:1", text: "x", group_verse_key_from: "105:1", group_verse_key_to: "104:1" }],
+      169,
+      1,
+    );
+    expect(rows.map((r) => r.recordKey)).toEqual(["105:1"]);
+  });
+
+  it("degrades a malformed key to one row without throwing", () => {
+    const rows = tafsirRowsFrom(
+      [{ verse_key: "2:1", text: "x", group_verse_key_from: "2:1", group_verse_key_to: "notakey" }],
+      169,
+      1,
+    );
+    expect(rows.map((r) => r.recordKey)).toEqual(["2:1"]);
+  });
 });
 
 describe("readCachedTafsir", () => {
