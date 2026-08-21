@@ -62,6 +62,22 @@ describe("sync state", () => {
     expect(s.trackedResources).toHaveLength(1);
     expect(s.trackedResources[0].group).toBe("recitations");
   });
+
+  it("handles concurrent mutations without losing writes", async () => {
+    // Fire three concurrent trackResource calls without awaiting each one.
+    // Without serialization, read-modify-write cycles can interleave and lose
+    // writes since idb.get and idb.put each open their own transaction.
+    await Promise.all([
+      trackResource("tafsirs", 169),
+      trackResource("recitations", 7),
+      trackResource("tafsirs", 15),
+    ]);
+    const s = await readSyncState();
+    expect(s.trackedResources).toHaveLength(3);
+    expect(await isTracked("tafsirs", 169)).toBe(true);
+    expect(await isTracked("recitations", 7)).toBe(true);
+    expect(await isTracked("tafsirs", 15)).toBe(true);
+  });
 });
 
 describe("resourcesFilter", () => {

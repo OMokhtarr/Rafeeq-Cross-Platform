@@ -20,6 +20,20 @@ interface StateRecord extends SyncState {
   key: string;
 }
 
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Serializes read-modify-write cycles. idb.get and idb.put each open their own
+ * transaction, so concurrent mutators would otherwise interleave and lose a
+ * write — bootstrapResource() has no in-flight guard and reciter tracking is
+ * fire-and-forget, so overlap is reachable in normal use.
+ */
+function enqueue<T>(op: () => Promise<T>): Promise<T> {
+  const next = writeQueue.then(op, op);
+  writeQueue = next.catch(() => {});
+  return next;
+}
+
 export async function readSyncState(): Promise<SyncState> {
   const rec = await idb.get<StateRecord>("sync_meta", META_KEY);
   if (!rec) return { ...EMPTY_SYNC_STATE };
@@ -45,16 +59,18 @@ export async function trackResource(
   group: SyncGroup,
   resourceId: number,
 ): Promise<void> {
-  const state = await readSyncState();
-  if (state.trackedResources.some((r) => r.group === group && r.resourceId === resourceId)) {
-    return;
-  }
-  await writeSyncState({
-    ...state,
-    trackedResources: [
-      ...state.trackedResources,
-      { group, resourceId, bootstrappedAt: null },
-    ],
+  return enqueue(async () => {
+    const state = await readSyncState();
+    if (state.trackedResources.some((r) => r.group === group && r.resourceId === resourceId)) {
+      return;
+    }
+    await writeSyncState({
+      ...state,
+      trackedResources: [
+        ...state.trackedResources,
+        { group, resourceId, bootstrappedAt: null },
+      ],
+    });
   });
 }
 
@@ -63,12 +79,14 @@ export async function untrackResource(
   group: SyncGroup,
   resourceId: number,
 ): Promise<void> {
-  const state = await readSyncState();
-  await writeSyncState({
-    ...state,
-    trackedResources: state.trackedResources.filter(
-      (r) => !(r.group === group && r.resourceId === resourceId),
-    ),
+  return enqueue(async () => {
+    const state = await readSyncState();
+    await writeSyncState({
+      ...state,
+      trackedResources: state.trackedResources.filter(
+        (r) => !(r.group === group && r.resourceId === resourceId),
+      ),
+    });
   });
 }
 
@@ -77,14 +95,16 @@ export async function markBootstrapped(
   group: SyncGroup,
   resourceId: number,
 ): Promise<void> {
-  const state = await readSyncState();
-  await writeSyncState({
-    ...state,
-    trackedResources: state.trackedResources.map((r) =>
-      r.group === group && r.resourceId === resourceId
-        ? { ...r, bootstrappedAt: Date.now() }
-        : r,
-    ),
+  return enqueue(async () => {
+    const state = await readSyncState();
+    await writeSyncState({
+      ...state,
+      trackedResources: state.trackedResources.map((r) =>
+        r.group === group && r.resourceId === resourceId
+          ? { ...r, bootstrappedAt: Date.now() }
+          : r,
+      ),
+    });
   });
 }
 
