@@ -1,5 +1,6 @@
 import type { TafsirResource } from "../api/quran-api.client";
 import { fetchTafsirResources } from "../api/quran-api.client";
+import { hasCachedTafsir } from "../sync/adapters/tafsirs.adapter";
 
 const DOWNLOADED_KEY = "rafiq_downloaded_tafsirs_v1";
 const RESOURCES_CACHE_KEY = "rafiq_tafsir_resources_v1";
@@ -31,6 +32,17 @@ export function removeDownloadedTafsir(id: string): void {
 
 export function isTafsirDownloaded(id: string): boolean {
   return getDownloadedTafsirIds().includes(id);
+}
+
+/**
+ * The localStorage list records the user's INTENT to have a tafsir offline.
+ * This asks whether the text is actually present — the two diverge when a
+ * bootstrap is interrupted, and the UI should say "incomplete" rather than
+ * claim a download that never finished.
+ */
+export async function isTafsirAvailableOffline(id: string): Promise<boolean> {
+  if (!isTafsirDownloaded(id)) return false;
+  return hasCachedTafsir(Number(id));
 }
 
 /** Cached resource list so the TafsirSettings page loads instantly offline. */
