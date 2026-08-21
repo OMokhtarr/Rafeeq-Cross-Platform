@@ -1303,15 +1303,33 @@ ion-content::part(scroll) {
   margin: var(--space-2) 0;
 }
 
-/* ── Hero page 2: two big stat blocks ────────────────────── */
-.hifz-hero-page-stats {
+/* ── Stats hero pages (2 & 3) ─────────────────────────────
+   The page is a column wrapping a single stat row, so the row keeps the
+   original .hifz-hero-page-stats layout unchanged. */
+.hifz-hero-page-titled {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
   gap: 0;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-3) var(--space-4);
 }
 
-/* Three stats in one row (Days · Latest · Best) — tighten so they fit. */
+.hifz-hero-page-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+/* ── Hero stats rows: two or three big stat blocks ───────── */
+.hifz-hero-page-stats {
+  gap: 0;
+  padding: var(--space-4) var(--space-2) var(--space-2);
+}
+
+/* Three stats in one row (Days · Today · Best day) — tighten so they fit. */
 .hifz-hero-page-stats--tri {
-  padding: var(--space-5) var(--space-2);
+  padding: var(--space-4) 0 var(--space-2);
 }
 .hifz-hero-page-stats--tri .hifz-hero-big-stat {
   padding: var(--space-2) var(--space-1);
@@ -1321,6 +1339,9 @@ ion-content::part(scroll) {
 }
 .hifz-hero-page-stats--tri .hifz-hero-big-sub {
   font-size: 0.62rem;
+}
+.hifz-hero-page-stats--tri .hifz-hero-big-lbl {
+  font-size: var(--text-xs);
 }
 
 .hifz-hero-big-stat {
@@ -1348,14 +1369,16 @@ ion-content::part(scroll) {
   margin-left: 2px;
 }
 
+/* The gold header naming each stat. Sized and weighted to read as a
+   heading over its number, not as a caption under it. */
 .hifz-hero-big-lbl {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  font-weight: 600;
   letter-spacing: var(--tracking-wide);
   color: var(--color-gold);
   font-family: var(--font-arabic);
   text-align: center;
-  opacity: 0.85;
+  line-height: 1.25;
 }
 
 .hifz-hero-big-sub {

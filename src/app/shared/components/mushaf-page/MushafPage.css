@@ -49,7 +49,7 @@
 .mushaf-bismillah {
   text-align: center;
   height: var(--header-px, 44px);
-  font-size: min(calc(var(--header-px, 44px) * 0.6), 28px);
+  font-size: calc(min(calc(var(--header-px, 44px) * 0.6), 28px) / var(--text-zoom, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -307,7 +307,7 @@
   /* Ligatures are the whole mechanism here — never let them be disabled. */
   font-variant-ligatures: common-ligatures;
   font-feature-settings: "liga" 1;
-  font-size: min(calc(var(--header-px, 44px) * 0.68), 33px);
+  font-size: calc(min(calc(var(--header-px, 44px) * 0.68), 33px) / var(--text-zoom, 1));
   line-height: 1;
   white-space: nowrap;
   /* The digits are a glyph selector, not content to translate or transform. */

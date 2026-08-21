@@ -16,7 +16,7 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName
 
 ## 0. Status at a glance
 
-Last updated 15 Aug 2026. Section numbers link to the detail below.
+Last updated 20 Aug 2026. Section numbers link to the detail below.
 
 ### Outstanding
 
@@ -45,26 +45,39 @@ someone else for, then paperwork that can be filled in any time.
 
 #### C. Paperwork — no dependencies, do any time
 
-| # | Task | § | Blocking |
-|---|---|---|---|
-| C1 | Short description (≤80 chars) | 6 | **Yes** |
-| C2 | Full description (≤4000 chars) | 6 | **Yes** |
-| C3 | Data safety form — answers drafted in §2 | 2 | **Yes** |
-| C4 | Foreground service declaration text (§3 has the justification) | 3 | **Yes** |
-| C5 | Content rating questionnaire (expect "Everyone") | 6 | **Yes** |
-| C6 | Target audience & content declaration | 6 | **Yes** |
-| C7 | Category — Books & Reference, or Lifestyle | 6 | **Yes** |
-| C8 | Create the Play listing | 8 | **Yes** |
-| C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** (after A2) |
-| C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No |
-| C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No |
-| C12 | Apply for production access | 8 | **Yes** — last step |
+All the copy and questionnaire answers now live in **`PLAY-LISTING-COPY.md`**,
+ready to paste. What remains in C is console entry, hosting, and two decisions.
+
+| # | Task | § | Blocking | Status |
+|---|---|---|---|---|
+| C1 | Short description (≤80 chars) | 6 | **Yes** | ✅ Drafted — EN + AR, 3 options each |
+| C2 | Full description (≤4000 chars) | 6 | **Yes** | ✅ Drafted — EN 2,794 / AR 2,497 chars |
+| C3 | Data safety form — answers drafted in §2 | 2 | **Yes** | Answers ready; console entry outstanding |
+| C4 | Foreground service declaration text (§3 has the justification) | 3 | **Yes** | Text ready; console entry outstanding |
+| C5 | Content rating questionnaire (expect "Everyone") | 6 | **Yes** | ✅ Pre-answered, every question |
+| C6 | Target audience & content declaration | 6 | **Yes** | ✅ Pre-answered — 13+ |
+| C7 | Category — Books & Reference, or Lifestyle | 6 | **Yes** | ✅ Decided — Books & Reference |
+| C8 | Create the Play listing | 8 | **Yes** | Console only |
+| C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** (after A2) | Blocked on A2 |
+| C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No | Not started |
+| C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No | ⏳ Recommendation written — **your call** |
+| C12 | Apply for production access | 8 | **Yes** — last step | Console only |
 
 **Critical path:** B3 is the long pole — 14 continuous days, and nothing gates
 starting it, so recruit testers today. B1/B2 are outside our control and both
 ride on the same email, so send it first; B1 decides how much of A1 is needed
-and B2 decides whether A4 exists at all. Everything in C can be done while
-waiting. A5's demo video is the most commonly underestimated item.
+and B2 decides whether A4 exists at all. A5's demo video is the most commonly
+underestimated item.
+
+Most of C is now drafted (see `PLAY-LISTING-COPY.md`); what is left there is
+console entry, hosting (C9, blocked on A2), the link check (C10), and the
+Android Auto decision (C11).
+
+> ⚠️ **Tripwire for the subscription tier.** The content rating answers
+> "no digital purchases" and "no user interaction" are correct for versionCode 2
+> only. When the RevenueCat Pro tier ships, digital purchases becomes **Yes**
+> and the rating questionnaire must be re-run *before* that build goes out.
+> Same for §4's account-deletion scope the moment sign-in is added.
 
 ### Done
 
@@ -79,6 +92,7 @@ waiting. A5's demo video is the most commonly underestimated item.
 | Account deletion confirmed out of scope (no sign-in) | — |
 | Privacy policy rewritten, incl. the QF developer-privacy pass | Aug 2026 |
 | Source TODOs — Settings persisted data, Mushaf page layout | 15 Aug 2026 |
+| Listing copy + questionnaires (C1, C2, C5, C6, C7) — `PLAY-LISTING-COPY.md` | 20 Aug 2026 |
 
 ---
 
@@ -346,13 +360,28 @@ fractions, so original artwork drops in without touching layout maths.
 - [x] ≥2 phone screenshots → four at 1080×1920 (exact 9:16) in `play-assets/`:
       Home, mushaf, quiz, Azkar. See `play-assets/README.md` for how they were
       produced and the two caveats (no status bar; Hifz empty-state held back).
-- [ ] Short description (≤80 chars)
-- [ ] Full description (≤4000 chars)
-- [ ] Content rating questionnaire (expect "Everyone"; it is religious/educational
-      content with no objectionable material)
-- [ ] Target audience & content — declare whether children are a target audience
-- [ ] Category: Books & Reference, or Lifestyle
-- [ ] **Android Auto:** the listing triggers an extra car-app quality review.
+- [x] Short description (≤80 chars) — **`PLAY-LISTING-COPY.md`**, EN + AR,
+      three options each, character counts measured
+- [x] Full description (≤4000 chars) — same file. EN 2,794 chars, AR 2,497.
+      The Arabic is a parallel version, not a literal translation; the privacy
+      paragraph and QF disclaimer are kept faithful in both, since they carry
+      compliance weight
+- [x] Content rating questionnaire — every IARC question pre-answered in
+      `PLAY-LISTING-COPY.md`. Expect "Everyone". Religious content is not a
+      rating factor; do not answer Yes to violence on account of scriptural
+      references to warfare
+- [x] Target audience & content — **13+**. Any under-13 band pulls the app into
+      Play's Families policy, and recite mode streams mic audio to Deepgram —
+      exactly what draws COPPA scrutiny
+- [x] Category: **Books & Reference** (not Lifestyle — it is where Quran.com,
+      Tarteel and Ayah sit, and where the browse traffic is)
+- [ ] **Android Auto (C11 — your call):** recommendation in
+      `PLAY-LISTING-COPY.md` is to **hold the declaration for a follow-up
+      release** and drop the Auto bullet from the description, so a car-app
+      review rejection cannot delay the whole launch and the 14-day test clock.
+      The Auto code ships either way. Full reasoning below.
+
+      The listing triggers an extra car-app quality review.
       In-car regression pass done and working (13 Aug 2026), so this is no longer
       blocking. Note the car-app review is a separate, stricter track and a common
       source of first-submission rejections — declaring Auto later, in a follow-up

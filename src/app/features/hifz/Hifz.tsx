@@ -1157,55 +1157,59 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             size={100}
           />
         </div>
-        {/* Page 2: Days active + latest plan + best plan */}
-        <div className="hifz-hero-page hifz-hero-page-stats hifz-hero-page-stats--tri">
-          <div className="hifz-hero-big-stat">
-            <span className="hifz-hero-big-num">{daysActive}</span>
-            <span className="hifz-hero-big-lbl">{h.daysActive}</span>
-          </div>
-          <div className="hifz-hero-stat-divider" />
-          <div className="hifz-hero-big-stat">
-            {latestPlan ? (
-              <>
-                <span className="hifz-hero-big-num">{latestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
-                <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
-                <span className="hifz-hero-big-sub">{latestPlan.totalPages}{h.bestPlanPages} · {latestPlan.totalSessions} {h.sessionsWord}</span>
-              </>
-            ) : (
-              <>
-                <span className="hifz-hero-big-num">—</span>
-                <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
-                <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
-              </>
-            )}
-          </div>
-          <div className="hifz-hero-stat-divider" />
-          <div className="hifz-hero-big-stat">
-            {bestPlan ? (
-              <>
-                <span className="hifz-hero-big-num">{bestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
-                <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
-                <span className="hifz-hero-big-sub">{bestPlan.totalPages}{h.bestPlanPages} · {bestPlan.totalSessions} {h.sessionsWord}</span>
-              </>
-            ) : (
-              <>
-                <span className="hifz-hero-big-num">—</span>
-                <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
-                <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
-              </>
-            )}
+        {/* Page 2: Plan activity — days since start, today, best day */}
+        <div className="hifz-hero-page hifz-hero-page-titled">
+          <div className="hifz-hero-page-body hifz-hero-page-stats hifz-hero-page-stats--tri">
+            <div className="hifz-hero-big-stat">
+              <span className="hifz-hero-big-num">{daysActive}</span>
+              <span className="hifz-hero-big-lbl">{h.daysActive}</span>
+            </div>
+            <div className="hifz-hero-stat-divider" />
+            <div className="hifz-hero-big-stat">
+              <span className="hifz-hero-big-num">{todaySessions}</span>
+              <span className="hifz-hero-big-lbl">{h.heroToday}</span>
+            </div>
+            <div className="hifz-hero-stat-divider" />
+            <div className="hifz-hero-big-stat">
+              <span className="hifz-hero-big-num">{maxSessionsPerDay || "—"}</span>
+              <span className="hifz-hero-big-lbl">{h.heroBestDay}</span>
+            </div>
           </div>
         </div>
-        {/* Page 3: Today's sessions + best day */}
-        <div className="hifz-hero-page hifz-hero-page-stats">
-          <div className="hifz-hero-big-stat">
-            <span className="hifz-hero-big-num">{todaySessions}</span>
-            <span className="hifz-hero-big-lbl">{h.heroToday}</span>
-          </div>
-          <div className="hifz-hero-stat-divider" />
-          <div className="hifz-hero-big-stat">
-            <span className="hifz-hero-big-num">{maxSessionsPerDay || "—"}</span>
-            <span className="hifz-hero-big-lbl">{h.heroBestDay}</span>
+        {/* Page 3: Round duration — latest plan vs best plan */}
+        <div className="hifz-hero-page hifz-hero-page-titled">
+          <div className="hifz-hero-page-body hifz-hero-page-stats">
+            <div className="hifz-hero-big-stat">
+              {latestPlan ? (
+                <>
+                  <span className="hifz-hero-big-num">{latestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
+                  <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
+                  <span className="hifz-hero-big-sub">{latestPlan.totalPages}{h.bestPlanPages} · {latestPlan.totalSessions} {h.sessionsWord}</span>
+                </>
+              ) : (
+                <>
+                  <span className="hifz-hero-big-num">—</span>
+                  <span className="hifz-hero-big-lbl">{h.latestPlan}</span>
+                  <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
+                </>
+              )}
+            </div>
+            <div className="hifz-hero-stat-divider" />
+            <div className="hifz-hero-big-stat">
+              {bestPlan ? (
+                <>
+                  <span className="hifz-hero-big-num">{bestPlan.daysToFinish}<span className="hifz-hero-big-unit">{h.bestPlanDays}</span></span>
+                  <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
+                  <span className="hifz-hero-big-sub">{bestPlan.totalPages}{h.bestPlanPages} · {bestPlan.totalSessions} {h.sessionsWord}</span>
+                </>
+              ) : (
+                <>
+                  <span className="hifz-hero-big-num">—</span>
+                  <span className="hifz-hero-big-lbl">{h.bestPlan}</span>
+                  <span className="hifz-hero-big-sub">{h.bestPlanNone}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

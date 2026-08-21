@@ -95,6 +95,45 @@ ion-content::part(scroll) {
   overflow: hidden;
 }
 
+/* ── Scroll region ────────────────────────────────────────────────────────
+   Everything above the pinned CTA scrolls. The body is a fixed-height flex
+   column, so this child takes the leftover space (flex:1 + min-height:0) and
+   scrolls internally rather than growing and pushing the CTA off-screen.
+   Scrollbars stay hidden globally (src/index.css) — nothing to add here.
+   ──────────────────────────────────────────────────────────────────────── */
+.pb-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Breathing room so the last card doesn't sit flush against the CTA bar. */
+  padding-bottom: var(--space-2, 8px);
+}
+
+/* ── Pinned CTA footer ────────────────────────────────────────────────────
+   Always visible at the bottom of the sheet, never scrolls away.
+
+   The bottom padding clears the Android gesture/nav bar: without the
+   safe-area inset the button renders underneath the system bar and cannot be
+   tapped — which is worse at large OS font sizes, because the taller content
+   above leaves the button pressed right against the screen edge.
+   ──────────────────────────────────────────────────────────────────────── */
+.pb-footer {
+  flex-shrink: 0;
+  padding-top: var(--space-2, 8px);
+  /* calc(), not max(): the inset only clears the system nav bar, so the gap has
+     to sit on top of it. With max() the inset swallows the gap and the button
+     ends up flush against the nav bar.
+     Fixed px rather than a rem token: this is physical clearance from the
+     screen edge, so it should not grow with the OS text-size setting. */
+  padding-bottom: calc(16px + var(--safe-inset-bottom));
+  background: var(--color-bg-content);
+  border-top: 1px solid var(--color-row-border);
+}
+
 /* ── Section ──────────────────────────────────────────────────────────────── */
 .pb-section {
   display: flex;

@@ -45,6 +45,7 @@ import {
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import { useTheme } from "../../../core/context/ThemeContext";
 import { findLineGaps, gapBeforeLine } from "./page-line-gaps";
+import { measureTextZoom } from "./text-zoom";
 import {
   SURAH_BANNER_PATH,
   SURAH_BANNER_VIEWBOX,
@@ -243,9 +244,22 @@ const MushafPage: React.FC<Props> = ({
       const slotPx = Math.round(h / 15);
       el.style.setProperty("--slot-px", `${slotPx}px`);
       el.style.setProperty("--header-px", `${slotPx}px`);
+      // The OS text-size setting reaches the WebView as a post-layout glyph
+      // multiplier (see text-zoom.ts). The Mushaf page is a fixed 15-line grid
+      // whose lines must never wrap or run past the page edge, so its glyph
+      // size is dictated by the page geometry alone: divide the zoom back out
+      // so Quran text renders at its designed size at any OS font setting.
+      // Every other surface in the app still scales normally.
+      const zoom = measureTextZoom();
+      // Published so the CSS-sized slots (bismillah, surah name) can cancel
+      // the same multiplier — they must stay inside their fixed-height slot.
+      el.style.setProperty("--text-zoom", `${zoom}`);
+      const setFontPx = (px: number) => {
+        el.style.fontSize = `${px / zoom}px`;
+      };
       // Pages 1-2 stack naturally from top — width-only sizing.
       if (page <= 2) {
-        el.style.fontSize = `${Math.round(Math.min(w * 0.055, 28))}px`;
+        setFontPx(Math.round(Math.min(w * 0.055, 28)));
         return;
       }
       // Font size is always derived from a full 15-slot page so text stays
@@ -254,7 +268,7 @@ const MushafPage: React.FC<Props> = ({
       // of the flex space-between distribution — they don't shrink the text.
       const byHeight = slotPx / 2.0;
       const byWidth = w * 0.052;
-      el.style.fontSize = `${Math.round(Math.min(byHeight, byWidth))}px`;
+      setFontPx(Math.round(Math.min(byHeight, byWidth)));
     };
     update();
     const ro = new ResizeObserver(update);

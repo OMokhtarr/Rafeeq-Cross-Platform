@@ -624,14 +624,16 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             );
           })}
         </div>
-        <button
-          type="button"
-          className={`pb-cta pb-cta-ghost${nightCls}`}
-          onClick={handleClearCache}
-          disabled={Object.keys(surahDownloads).length === 0}
-        >
-          {tp.downloadClear}
-        </button>
+        <div className="pb-footer">
+          <button
+            type="button"
+            className={`pb-cta pb-cta-ghost${nightCls}`}
+            onClick={handleClearCache}
+            disabled={Object.keys(surahDownloads).length === 0}
+          >
+            {tp.downloadClear}
+          </button>
+        </div>
       </div>
     </div>
   ) : (
@@ -654,6 +656,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
       </header>
 
       <div className="pb-body">
+        <div className="pb-scroll">
         {playingLabel && (
           <div className={`pb-now-playing${nightCls}`}>
             <span>{playingLabel}</span>
@@ -806,15 +809,18 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             </button>
           </div>
         </section>
+        </div>
 
-        <button
-          type="button"
-          className="pb-cta"
-          onClick={handleCta}
-          disabled={queue.state.isLoading}
-        >
-          {ctaLabel}
-        </button>
+        <div className="pb-footer">
+          <button
+            type="button"
+            className="pb-cta"
+            onClick={handleCta}
+            disabled={queue.state.isLoading}
+          >
+            {ctaLabel}
+          </button>
+        </div>
       </div>
     </div>
   );
