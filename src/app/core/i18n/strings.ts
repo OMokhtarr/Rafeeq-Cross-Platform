@@ -203,6 +203,9 @@ export interface AppStrings {
     tafsirUnavailable: string;
     tafsirLoading: string;
     tafsirError: string;
+    tafsirDownloading: string;
+    tafsirDownloadFailed: string;
+    tafsirIncomplete: string;
     toggleHideTitle: string;
     toggleShowTitle: string;
     nextVerseTitle: string;
@@ -604,6 +607,9 @@ const ar: AppStrings = {
     tafsirUnavailable: "التفسير غير متوفر بعد",
     tafsirLoading: "جاري تحميل التفسير…",
     tafsirError: "تعذر تحميل التفسير",
+    tafsirDownloading: "جاري التنزيل…",
+    tafsirDownloadFailed: "تعذّر التنزيل",
+    tafsirIncomplete: "التنزيل غير مكتمل",
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
     nextVerseTitle: "إظهار الآية التالية",
@@ -1020,6 +1026,9 @@ const en: AppStrings = {
     tafsirUnavailable: "Tafsir is not available yet",
     tafsirLoading: "Loading tafsir…",
     tafsirError: "Could not load tafsir",
+    tafsirDownloading: "Downloading…",
+    tafsirDownloadFailed: "Download failed",
+    tafsirIncomplete: "Download incomplete",
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
     nextVerseTitle: "Reveal next verse",

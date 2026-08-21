@@ -10,7 +10,11 @@ import {
   removeDownloadedTafsir,
   getCachedTafsirResources,
   fetchAndCacheTafsirResources,
+  isTafsirAvailableOffline,
 } from "../../core/services/data/tafsir-cache.service";
+import { bootstrapResource } from "../../core/services/sync/content-sync.service";
+import { untrackResource } from "../../core/services/sync/sync-state.service";
+import { purgeResource } from "../../core/services/sync/sync-store.service";
 import "./TafsirSettings.css";
 
 const TafsirSettings: React.FC = () => {
@@ -33,6 +37,10 @@ const TafsirSettings: React.FC = () => {
   );
   // Track which IDs are currently mid-"save" animation
   const [saving, setSaving] = useState<Set<string>>(new Set());
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  // Downloaded IDs whose rows are missing on disk — an interrupted download.
+  const [incompleteIds, setIncompleteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +69,24 @@ const TafsirSettings: React.FC = () => {
     return () => window.removeEventListener("rafiq-tafsir-downloads-changed", handler);
   }, []);
 
+  // A tafsir can be in the downloaded list but have no rows on disk when a
+  // previous bootstrap was interrupted. Recheck whenever the list changes.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      downloadedIds.map(async (id) => {
+        const available = await isTafsirAvailableOffline(id);
+        return available ? null : id;
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      setIncompleteIds(new Set(results.filter((id): id is string => id !== null)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [downloadedIds]);
+
   const downloadedResources = allResources.filter((r) =>
     downloadedIds.includes(r.id),
   );
@@ -86,20 +112,41 @@ const TafsirSettings: React.FC = () => {
     return a.localeCompare(b);
   });
 
-  const handleSave = (id: string) => {
+  const handleSave = async (id: string) => {
     setSaving((prev) => new Set(prev).add(id));
-    setTimeout(() => {
+    setFailed((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    try {
+      // A tafsir snapshot runs to ~12 MB, so this is a real download and the
+      // progress readout matters.
+      await bootstrapResource("tafsirs", Number(id), (pct) =>
+        setProgress((p) => ({ ...p, [id]: pct })),
+      );
       addDownloadedTafsir(id);
       setDownloadedIds(getDownloadedTafsirIds());
+    } catch {
+      setFailed((prev) => new Set(prev).add(id));
+    } finally {
       setSaving((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
-    }, 400);
+      setProgress((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
+    // tracked ⟺ rows on disk — never leave one without the other.
+    await purgeResource("tafsirs", Number(id));
+    await untrackResource("tafsirs", Number(id));
     removeDownloadedTafsir(id);
     setDownloadedIds(getDownloadedTafsirIds());
   };
@@ -142,29 +189,48 @@ const TafsirSettings: React.FC = () => {
                     <p className="tfs-empty-hint">{ts.noDownloadsHint}</p>
                   </div>
                 ) : (
-                  downloadedResources.map((r, i) => (
-                    <div
-                      key={r.id}
-                      className={`tfs-row${i < downloadedResources.length - 1 ? " tfs-row--border" : ""}`}
-                    >
-                      <div className="tfs-row-info">
-                        <p className="tfs-row-name">{r.name}</p>
-                        {r.authorName && (
-                          <p className="tfs-row-author">{r.authorName}</p>
-                        )}
-                        {r.languageName && (
-                          <span className="tfs-row-lang">{r.languageName}</span>
-                        )}
-                      </div>
-                      <button
-                        className={`tfs-btn tfs-btn--remove${nightCls}`}
-                        onClick={() => handleRemove(r.id)}
-                        aria-label={ts.remove}
+                  downloadedResources.map((r, i) => {
+                    const isSaving = saving.has(r.id);
+                    const isIncomplete = incompleteIds.has(r.id) && !isSaving;
+                    return (
+                      <div
+                        key={r.id}
+                        className={`tfs-row${i < downloadedResources.length - 1 ? " tfs-row--border" : ""}`}
                       >
-                        ✕
-                      </button>
-                    </div>
-                  ))
+                        <div className="tfs-row-info">
+                          <p className="tfs-row-name">{r.name}</p>
+                          {r.authorName && (
+                            <p className="tfs-row-author">{r.authorName}</p>
+                          )}
+                          {r.languageName && (
+                            <span className="tfs-row-lang">{r.languageName}</span>
+                          )}
+                          {isIncomplete && (
+                            <p className="tfs-row-incomplete">{t.mushaf.tafsirIncomplete}</p>
+                          )}
+                        </div>
+                        {isIncomplete && (
+                          <button
+                            className={`tfs-btn tfs-btn--save${nightCls}${isSaving ? " tfs-btn--saving" : ""}${isSaving ? " tfs-btn--wide" : ""}`}
+                            onClick={() => handleSave(r.id)}
+                            disabled={isSaving}
+                            aria-label={isSaving ? ts.downloading : ts.download}
+                          >
+                            {isSaving
+                              ? `${t.mushaf.tafsirDownloading} ${progress[r.id] ?? 0}%`
+                              : "+"}
+                          </button>
+                        )}
+                        <button
+                          className={`tfs-btn tfs-btn--remove${nightCls}`}
+                          onClick={() => handleRemove(r.id)}
+                          aria-label={ts.remove}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -204,12 +270,16 @@ const TafsirSettings: React.FC = () => {
                             )}
                           </div>
                           <button
-                            className={`tfs-btn tfs-btn--save${nightCls}${isSaving ? " tfs-btn--saving" : ""}`}
+                            className={`tfs-btn tfs-btn--save${nightCls}${isSaving ? " tfs-btn--saving" : ""}${isSaving || failed.has(r.id) ? " tfs-btn--wide" : ""}`}
                             onClick={() => handleSave(r.id)}
                             disabled={isSaving}
                             aria-label={isSaving ? ts.downloading : ts.download}
                           >
-                            {isSaving ? "…" : "+"}
+                            {isSaving
+                              ? `${t.mushaf.tafsirDownloading} ${progress[r.id] ?? 0}%`
+                              : failed.has(r.id)
+                                ? t.mushaf.tafsirDownloadFailed
+                                : "+"}
                           </button>
                         </div>
                       );
