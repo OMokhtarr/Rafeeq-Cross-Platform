@@ -9,12 +9,16 @@ Section 3.1(3)(b) of the Quran Foundation Developer Terms caps offline retention
 of QF content at one week, unless the content is maintained through the Content
 Sync APIs — synced at least every 7 days, with all available changes applied.
 
-Rafeeq caches four kinds of QF content. Three of them map onto Content Sync
-resource groups and are in scope here:
+Rafeeq handles four kinds of QF content. Two of them are in scope here:
 
-- translations
 - tafsirs
 - recitations
+
+**Translations are being removed from the app entirely** (decision of
+2026-08-21) — the panel, the tab, the settings, and the fetch layer all go. See
+"Translation removal" below. Content that is never fetched is content that never
+needs syncing, so translations leave the compliance surface altogether rather
+than joining it.
 
 The fourth — the Quran script and page-layout/glyph data from `/verses/by_page/`
 — is **out of scope**. It is not a supported resource group, and on 2026-08-21
@@ -30,15 +34,14 @@ that no longer exists):
 
 | Group | Retained offline today? | Where |
 |---|---|---|
-| Translations | **No** | `getPageTranslations` in `quran.service.ts` calls the API on every read. The IDB `translations` store exists but is never read or written. |
 | Tafsirs | **No** for text | `tafsir-cache.service.ts` caches the resource *list* and a "downloaded" flag in localStorage. The text is fetched live in `VerseActionSheet`. |
 | Recitations | **Yes** | IDB `audio` blobs (web/iOS) and `quran-audio/` files on Android. |
+| Translations | **No** | `getPageTranslations` calls the API on every read; the IDB `translations` store exists but is never read or written. Being removed. |
 
 So only recitations currently retain content past one week — they are the sole
-present compliance gap. Translations and tafsirs are not in breach; they simply
-have no offline support. For those two, this work is not a migration but the
-first implementation of offline caching, built on the sync protocol from the
-start.
+present compliance gap. Tafsir text is not in breach; it simply has no offline
+support. For tafsirs, this work is not a migration but the first implementation
+of offline caching, built on the sync protocol from the start.
 
 A consequence worth stating plainly: `isTafsirDownloaded()` currently returns
 true for a tafsir whose text was never stored. The flag records intent, not
@@ -90,8 +93,8 @@ One documentation note relevant to the email thread: the anchor
 including `word_by_word_translations`. Rafeeq does not use word-by-word
 translations — every `wordFields` value in `mushaf.config.ts` is an Arabic
 script variant (`code_v2`, `text_uthmani`, `text_indopak`, `text_imlaei`) plus
-layout fields, which is script data covered by the 3.1(3)(a) permission. Scope
-remains three groups.
+layout fields, which is script data covered by the 3.1(3)(a) permission. Neither
+group is used by Rafeeq, so scope remains tafsirs and recitations.
 
 ## Architecture
 
@@ -100,12 +103,11 @@ A sync engine over a uniform row store, with per-group adapters.
 The API's mutation vocabulary is already uniform — `resource_group`,
 `resource_id`, `record_type`, `record_key` for every group. Mirroring that shape
 in storage means applying a mutation is one upsert or delete, with the engine
-knowing nothing about translations vs tafsirs. Adding `articles` later is an
+knowing nothing about tafsirs vs recitations. Adding another group later is an
 adapter, not engine surgery.
 
 ```
 content-sync.service.ts     engine: fetch, paginate, order, apply, persist state
-  adapters/translations.ts  bootstrap + read path
   adapters/tafsirs.ts       bootstrap + read path
   adapters/recitations.ts   write-side only: blob eviction on invalidate
 ```
@@ -113,7 +115,7 @@ content-sync.service.ts     engine: fetch, paginate, order, apply, persist state
 Rejected alternatives:
 
 - **Writing directly into each existing cache.** The mutation logic would need
-  to know three storage shapes, and `RESOURCE_INVALIDATE` ("replace all local
+  to know each storage shape, and `RESOURCE_INVALIDATE` ("replace all local
   rows") would mean deleting audio across two backends from inside the engine.
 - **Full rewrite onto a normalized schema.** Cleanest end state, but it would
   touch the Android filesystem cache and the ExoPlayer cold-start queue — both
@@ -131,19 +133,18 @@ sync_meta     keyPath "key"  →  single "state" record
 Row shape: `{ id, resourceGroup, resourceId, recordType, recordKey, data, sequence }`.
 
 Index on `[resourceGroup, resourceId]` — reads are always "every row for this
-resource", and without the index each read scans the whole store (a full
-translation is ~6,236 rows).
+resource", and without the index each read scans the whole store (a full tafsir
+runs to ~6,236 rows).
 
-The v8 upgrade **deletes the unused `translations` store**. It has never been
-read or written; leaving it invites someone to wire the dead store instead of
-the synced one. `pages`, `fonts`, `audio`, `verses`, `hifz`, and `meta` are
-untouched — `pages`/`fonts` hold the script data covered by the separate
-permission and must not change here.
+The v8 upgrade **deletes the `translations` store**, which the translation
+removal leaves permanently dead. `pages`, `fonts`, `audio`, `verses`, `hifz`,
+and `meta` are untouched — `pages`/`fonts` hold the script data covered by the
+separate permission and must not change here.
 
-Verse keys are not lexically ordered (`"2:10"` sorts before `"2:9"`), so page
-reads fetch a resource's rows through the index and build a `Map` keyed by verse
-key, rather than attempting range queries. One indexed read per resource per
-page, then O(1) lookups.
+Verse keys are not lexically ordered (`"2:10"` sorts before `"2:9"`), so reads
+fetch a resource's rows through the index and build a `Map` keyed by verse key,
+rather than attempting range queries. One indexed read per resource, then O(1)
+lookups.
 
 ### Audio stays where it is
 
@@ -155,9 +156,10 @@ ExoPlayer's direct file access out of this change entirely.
 
 ### Storage cost
 
-A full translation is roughly 1.5–3 MB. A full tafsir can run to tens of MB.
-This is why bootstrap is per-selection rather than eager, and why tafsir
-download shows progress rather than appearing to hang.
+A full tafsir can run to tens of MB — considerably heavier per row than the
+short verse texts of a translation. This is why bootstrap is per-selection
+rather than eager, and why tafsir download shows progress rather than appearing
+to hang.
 
 ## Sync state
 
@@ -190,13 +192,15 @@ invariant is:
 > **tracked ⟺ rows on disk.** Never one without the other.
 
 Deriving the `resources` filter from live settings is simpler, but fails badly.
-A user selects translation 20, still has translation 19's rows on disk, and goes
-offline for two weeks. QF issues a correction to 19. Because 19 is not in the
-filter, the correction never arrives — and when the user switches back, Rafeeq
-serves the uncorrected text indefinitely, with no signal and no self-correction.
+A user downloads tafsir 151, later downloads tafsir 168 and reads that instead,
+but 151's rows are still on disk. They go offline for two weeks. QF issues a
+correction to 151. Because 151 is no longer the active selection, it is not in
+the filter, so the correction never arrives — and the next time the user opens
+151, Rafeeq serves the uncorrected text indefinitely, with no signal and no
+self-correction.
 
 That is retained-but-unmaintained content: precisely what the 3.1(3)(b)
-exception does not cover. For Qur'anic translation specifically, serving text QF
+exception does not cover. For Qur'anic commentary specifically, serving text QF
 has since corrected is worse than an ordinary staleness bug.
 
 The cost of tracking independently is that scope only grows. Closing that loop:
@@ -240,20 +244,13 @@ Android is therefore harmless.
 
 ## Adapters
 
-### Translations
-
-Read rows for `translations:{editionId}`, build the verse-key map, return the
-page's verses. Falls back to the API only when the resource is not tracked (user
-picked an edition while offline, never bootstrapped).
-
-`getPageTranslations`'s signature is unchanged, so `VerseActionSheet.tsx:200`
-and `PageViewer.tsx:1445` need no changes. The user-visible effect: the
-translation panel works offline for the first time.
-
 ### Tafsirs
 
-Same pattern, keyed by verse, replacing the live fetch at
-`VerseActionSheet.tsx:279`.
+Read rows for `tafsirs:{resourceId}` through the index, build the verse-key map,
+return the verse's text — replacing the live fetch at `VerseActionSheet.tsx:279`.
+Falls back to the API only when the resource is not tracked (user selected a
+tafsir while offline, never bootstrapped). The user-visible effect: tafsir works
+offline for the first time.
 
 `isTafsirDownloaded()` becomes a real query — tracked **and** rows present. The
 existing localStorage list remains the user's *intent* to have the tafsir;
@@ -290,10 +287,9 @@ design deliberately avoids.
 
 All call `runSync()`, which self-throttles.
 
-**Bootstrap-on-selection**, three call sites, all fire-and-forget so no UI blocks
+**Bootstrap-on-selection**, two call sites, both fire-and-forget so no UI blocks
 on the network:
 
-- Translation changed in `Settings.tsx` → `bootstrapResource("translations", id)`
 - Tafsir downloaded in `TafsirSettings.tsx` → `bootstrapResource("tafsirs", id)`, with progress
 - Reciter first cached → `bootstrapResource("recitations", id)`
 
@@ -323,6 +319,35 @@ per the eviction decision above.
 Follows the CSS rules in CLAUDE.md: no new scrollable containers, existing row
 components, `var(--max-width-mobile, 600px)` inherited from the page wrapper.
 
+## Translation removal
+
+Translations are removed from Rafeeq entirely. This lands **first, as its own
+commit**, before any sync work: it shrinks the surface the sync engine touches,
+and mixing "delete a feature" with "add a subsystem" in one changeset makes both
+harder to review and to revert.
+
+Four parts:
+
+1. **UI** — the translation tab in `VerseActionSheet.tsx` and the optional
+   panel in `PageViewer.tsx`. With translations gone the sheet has one tab left,
+   so the tab bar is removed and tafsir becomes a plain titled panel; a one-tab
+   tab bar reads as broken.
+2. **State** — the `translation` and `showTranslation` fields and their
+   `rafiq_settings_v1` reads. Stale keys left in existing installs are harmless,
+   so there is no migration.
+3. **Data layer** — `getPageTranslations` (`quran.service.ts`),
+   `fetchTranslationsByPage` in both `quran-api.client.ts` and
+   `quran-data-provider.ts`, and the dead IDB `translations` store (dropped in
+   the v8 upgrade).
+4. **Copy** — the translation strings in `strings.ts` (EN + AR), and the legal
+   text in `Account.tsx`. The privacy policy, third-party list, and attribution
+   sections currently state that Rafeeq displays and caches translations. Once
+   it does not, that copy is inaccurate and must be corrected — this is
+   user-facing legal text, not incidental wording.
+
+Explicitly **not** touched: `Azkar.tsx`, whose `zikr.translation` is its own
+bundled content and unrelated to the QF translations API.
+
 ## Testing
 
 TDD, engine before UI. Tests colocated, matching `mushaf-layout.test.ts` and
@@ -340,6 +365,9 @@ TDD, engine before UI. Tests colocated, matching `mushaf-layout.test.ts` and
 - **Tracking** — untrack only on explicit removal or `RESOURCE_DELETE`; never on
   deselection
 
+For the removal, the check is that the app builds and the viewer and verse sheet
+render with no translation affordance and no dead imports.
+
 Not covered by automated tests, to be checked manually on device:
 
 - Live network calls against the real endpoint
@@ -350,6 +378,9 @@ Not covered by automated tests, to be checked manually on device:
 - **The Quran script.** Covered by the 3.1(3)(a) permission; `pages`/`fonts`
   are untouched. Revisit when QF adds script support to Content Sync.
 - **`articles` and `word_by_word_translations`.** Not used by Rafeeq.
+- **Translations.** Removed from the app rather than synced; see above. If
+  translations are ever reinstated, they return as a third adapter — the engine
+  needs no change to accommodate one.
 - **Background scheduled sync.** A native periodic task would add a
   background-work permission and Play Store scrutiny right before release, to
   solve a problem that does not exist: the 7-day rule is conditioned on
@@ -363,6 +394,11 @@ Not covered by automated tests, to be checked manually on device:
 Arising from the QF correspondence of 2026-08-15 → 2026-08-21, and not
 satisfied by this design:
 
+0. **Tell QF that translations are gone.** The 2026-08-15 email told Basit that
+   translations, tafsirs, and recitations would all move onto Content Sync.
+   Removing the feature is a stronger answer than syncing it, but if the thread
+   continues it is worth a line saying Rafeeq no longer fetches or caches
+   translations at all, rather than leaving him expecting that integration.
 1. **Weekly documentation check.** QF asked that the Content Sync docs be
    checked approximately weekly for Quran script support. When it lands, migrate
    the script off the 3.1(3)(a) permission and onto Content Sync.
@@ -374,7 +410,7 @@ satisfied by this design:
    rule on the traced ornament and deferred entirely to KFGQPC's terms. Contact
    with KFGQPC is still outstanding. Unrelated to this design, but it gates the
    same release.
-4. **The "sync promptly on reconnect" reading is unconfirmed** for the three
-   syncable groups. QF confirmed offline readability only for the script, and via
+4. **The "sync promptly on reconnect" reading is unconfirmed** for the syncable
+   groups. QF confirmed offline readability only for the script, and via
    the separate 3.1(3)(a) grant. Do not assume it carries over: the 24h throttle
    is deliberately conservative for this reason.
