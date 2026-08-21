@@ -819,3 +819,87 @@ export async function fetchRubElHizb(
     throw err;
   }
 }
+
+// ─── Content Sync ─────────────────────────────────────────────────────────────
+
+/** Exposed so callers can resolve the API's relative snapshot_url values. */
+export const CONTENT_API_BASE_URL = CONTENT_API_BASE;
+
+/**
+ * One page of the sync feed. Returns the raw body — parsing lives in
+ * parse-mutation.ts, the single wire boundary.
+ *
+ * `resources` is required by the endpoint; omitting it is a 422.
+ */
+export async function fetchSyncPage(params: {
+  resources: string;
+  bootstrap?: boolean;
+  syncToken?: string;
+  perPage?: number;
+}): Promise<unknown> {
+  return apiFetch<unknown>("/resources/sync", {
+    resources: params.resources,
+    bootstrap: params.bootstrap ? "true" : undefined,
+    sync_token: params.syncToken,
+    per_page: params.perPage,
+  });
+}
+
+/**
+ * A resource snapshot: every current row for one resource.
+ *
+ * Takes an absolute URL (from resolveSnapshotUrl) rather than a path, so it
+ * cannot go through apiFetch. Payloads are large — a tafsir snapshot measured
+ * ~11.8 MB — so the module's 4 s default timeout would abort every call.
+ */
+export async function fetchSnapshot(
+  url: string,
+): Promise<{ records: unknown[]; syncSequence: number }> {
+  assertMaybeOnline();
+
+  let attempt = 0;
+  let lastErr: unknown = null;
+
+  while (attempt < 2) {
+    attempt++;
+    try {
+      const token = await getAccessToken(attempt > 1);
+      const res = await timedFetch(
+        url,
+        {
+          headers: {
+            accept: "application/json",
+            authorization: `Bearer ${token}`,
+            "x-auth-token": token,
+            ...(CLIENT_ID_HEADER ? { "x-client-id": CLIENT_ID_HEADER } : {}),
+          },
+        },
+        120000,
+      );
+
+      if (res.status === 401 && attempt === 1) {
+        tokenState = null;
+        continue;
+      }
+      if (!res.ok) {
+        throw new QuranApiError(res.status, `snapshot failed: ${res.status}`);
+      }
+      const body = (await res.json()) as {
+        records?: unknown[];
+        sync_sequence?: number;
+      };
+      return {
+        records: body.records ?? [],
+        syncSequence: Number(body.sync_sequence ?? 0),
+      };
+    } catch (err) {
+      lastErr = err;
+      if (isNetworkFailure(err)) {
+        markOffline();
+        throw new QuranApiOffline();
+      }
+      if (attempt >= 2) throw err;
+    }
+  }
+  throw lastErr ?? new QuranApiError(0, "snapshot failed");
+}
