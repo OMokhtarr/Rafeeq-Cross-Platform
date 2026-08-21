@@ -17,22 +17,33 @@ import { EMPTY_SYNC_STATE, SyncRow } from "./content-sync.types";
 import { idb } from "../storage/idb.service";
 import * as api from "../api/quran-api.client";
 
-jest.mock("../api/quran-api.client", () => ({
-  __esModule: true,
-  CONTENT_API_BASE_URL: "https://apis.quran.foundation/content/api/v4",
-  fetchSyncPage: jest.fn(),
-  fetchSnapshot: jest.fn(),
-  QuranApiOffline: class QuranApiOffline extends Error {
-    status = 0;
-  },
-  QuranApiError: class QuranApiError extends Error {
+jest.mock("../api/quran-api.client", () => {
+  // Mirrors the production hierarchy in quran-api.client.ts: QuranApiOffline
+  // EXTENDS QuranApiError. handleRunError checks `instanceof QuranApiOffline`
+  // before the 4xx token-clearing branch, and that ordering only matters
+  // because every offline error is also a QuranApiError — a sibling mock
+  // would let a misordered check pass anyway.
+  class QuranApiError extends Error {
     status: number;
     constructor(status: number, msg: string) {
       super(msg);
       this.status = status;
     }
-  },
-}));
+  }
+  class QuranApiOffline extends QuranApiError {
+    constructor() {
+      super(0, "offline: no usable network connection");
+    }
+  }
+  return {
+    __esModule: true,
+    CONTENT_API_BASE_URL: "https://apis.quran.foundation/content/api/v4",
+    fetchSyncPage: jest.fn(),
+    fetchSnapshot: jest.fn(),
+    QuranApiOffline,
+    QuranApiError,
+  };
+});
 
 const mockSync = api.fetchSyncPage as jest.Mock;
 const mockSnap = api.fetchSnapshot as jest.Mock;
@@ -93,6 +104,9 @@ describe("bootstrapResource", () => {
     mockSnap.mockRejectedValue(new Error("boom"));
     await expect(bootstrapResource("tafsirs", 169)).rejects.toThrow();
     const state = await readSyncState();
+    // A failed snapshot must not roll tracking back either — the resource
+    // stays tracked (so a later run retries it), just not yet bootstrapped.
+    expect(state.trackedResources).toHaveLength(1);
     expect(state.trackedResources[0].bootstrappedAt).toBeNull();
   });
 });
