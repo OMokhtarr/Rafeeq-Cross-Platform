@@ -211,14 +211,16 @@ const TafsirSettings: React.FC = () => {
                         </div>
                         {isIncomplete && (
                           <button
-                            className={`tfs-btn tfs-btn--save${nightCls}${isSaving ? " tfs-btn--saving" : ""}${isSaving ? " tfs-btn--wide" : ""}`}
+                            className={`tfs-btn tfs-btn--save${nightCls}${isSaving ? " tfs-btn--saving" : ""}${isSaving || failed.has(r.id) ? " tfs-btn--wide" : ""}`}
                             onClick={() => handleSave(r.id)}
                             disabled={isSaving}
                             aria-label={isSaving ? ts.downloading : ts.download}
                           >
                             {isSaving
                               ? `${t.mushaf.tafsirDownloading} ${progress[r.id] ?? 0}%`
-                              : "+"}
+                              : failed.has(r.id)
+                                ? t.mushaf.tafsirDownloadFailed
+                                : "+"}
                           </button>
                         )}
                         <button
