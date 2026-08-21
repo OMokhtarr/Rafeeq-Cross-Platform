@@ -3,6 +3,12 @@
 Date: 2026-08-21
 Status: Designed. Not yet implemented.
 
+> **Wire format verified 2026-08-21.** Five inferred details in this document
+> were wrong — see `2026-08-21-content-sync-wire-format.md`, which supersedes
+> this file wherever the two disagree. The most important: bootstrap does **not**
+> emit a mutation for every resource, so `bootstrapResource()` must fetch the
+> snapshot directly rather than relying on the sync feed.
+
 ## Problem
 
 Section 3.1(3)(b) of the Quran Foundation Developer Terms caps offline retention
@@ -78,15 +84,18 @@ Mutation types:
 | `ROW_CREATE` / `ROW_UPDATE` | Upsert by (`resource_group`, `resource_id`, `record_type`, `record_key`) |
 | `ROW_DELETE` | Delete by the same key |
 
-### Known gap in the documentation
+### Known gap in the documentation — now closed
 
 The docs give no example response bodies, and say nothing about `sync_token`
-lifetime or expiry. Mutation handling below is designed from the documented
-description of each type; the exact JSON field nesting is **inferred**.
+lifetime or expiry. Mutation handling was designed from the documented
+description of each type.
 
-Mitigation: all wire parsing is isolated in a single `parseMutation` function so
-a shape surprise is a one-function fix. Verify against a real bootstrap response
-before building on top of it.
+This was probed against the live API on 2026-08-21; results are in
+`2026-08-21-content-sync-wire-format.md`. Responses are wrapped in a `sync`
+envelope, `resources` is a required parameter, and `snapshot_url` is a relative
+path needing rewriting. ROW-level mutations were never observed, so their shape
+is still inferred — all wire parsing stays isolated in a single `parseMutation`
+function.
 
 One documentation note relevant to the email thread: the anchor
 `#content-available-for-offline-sync` now resolves, and lists **five** groups
@@ -225,6 +234,12 @@ bootstrapResource(group, resourceId): Promise<void>
 getSyncState(): SyncState
 ```
 
+**Bootstrap fetches the snapshot directly.** Verified: bootstrap returns zero
+mutations for most resources even though they have full snapshots, so
+`bootstrapResource()` calls `/resources/snapshots/{group}/{id}` unconditionally
+and the sync feed serves only the incremental path. Relying on the feed would
+leave a tracked resource holding zero rows.
+
 **Throttle:** run when `force || now - lastSyncedAt > 24h`. Twenty-four hours
 against a 7-day obligation leaves six missed windows of headroom.
 
@@ -245,6 +260,10 @@ Android is therefore harmless.
 ## Adapters
 
 ### Tafsirs
+
+Tafsir records can span a verse **range** (`group_verse_key_from` / `_to`), so
+the adapter expands ranges when building the map rather than assuming one record
+per verse.
 
 Read rows for `tafsirs:{resourceId}` through the index, build the verse-key map,
 return the verse's text — replacing the live fetch at `VerseActionSheet.tsx:279`.
