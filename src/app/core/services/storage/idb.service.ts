@@ -25,7 +25,11 @@ const DB_NAME = "rafeeq-quran";
 // v8: translations were removed from the app entirely, so the `translations`
 //     store is deleted. It held nothing in practice even while the feature
 //     existed — `getPageTranslations` always went to the network.
-const DB_VERSION = 8;
+// v9: added `content_sync` (Content Sync row store, key
+//     `${group}:${resourceId}:${recordType}:${recordKey}`, indexed by
+//     [resourceGroup, resourceId]) and `sync_meta` (single "state" record
+//     holding the sync token, timestamps and tracked resources).
+const DB_VERSION = 9;
 
 export class IDBService {
   private db: IDBDatabase | null = null;
@@ -74,6 +78,21 @@ export class IDBService {
         // record shape: { id: "plan" | "best-plan" | "reading-session", data: string }
         if (!db.objectStoreNames.contains("hifz")) {
           db.createObjectStore("hifz", { keyPath: "id" });
+        }
+
+        // content_sync store: one row per synced record, keyed by the composite the
+        // API's ROW mutations carry. The index is required — reads are always
+        // "every row for this resource", and a tafsir runs to 6,236 rows.
+        if (!db.objectStoreNames.contains("content_sync")) {
+          const os = db.createObjectStore("content_sync", { keyPath: "id" });
+          os.createIndex("by_resource", ["resourceGroup", "resourceId"], {
+            unique: false,
+          });
+        }
+
+        // sync_meta store: a single { key: "state", ... } record.
+        if (!db.objectStoreNames.contains("sync_meta")) {
+          db.createObjectStore("sync_meta", { keyPath: "key" });
         }
 
         // v5: switching from QPC V1 to V4 invalidates `pages` (verses now
@@ -154,6 +173,24 @@ export class IDBService {
       const tx = this.db!.transaction(store, "readonly");
       const req = tx.objectStore(store).getAllKeys();
       req.onsuccess = () => resolve(req.result as string[]);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /**
+   * All records matching an index key. Used to pull one resource's rows out of
+   * `content_sync` without scanning the whole store.
+   */
+  async getAllByIndex<T>(
+    store: string,
+    index: string,
+    key: IDBValidKey,
+  ): Promise<T[]> {
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(store, "readonly");
+      const req = tx.objectStore(store).index(index).getAll(key);
+      req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
   }
