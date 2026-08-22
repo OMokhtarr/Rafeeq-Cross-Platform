@@ -729,3 +729,7 @@ ion-content::part(scroll) {
 .settings-sync-note--error {
   color: #c0392b;
 }
+
+.settings-sync-note--overdue {
+  color: var(--color-warning, #b7791f);
+}

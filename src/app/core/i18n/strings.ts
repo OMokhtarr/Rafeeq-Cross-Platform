@@ -275,6 +275,10 @@ export interface AppStrings {
     syncTracked: string;
     syncNothingToSync: string;
     syncUpToDate: string;
+    syncToday: string;
+    syncYesterday: string;
+    syncDaysAgo: (n: number) => string;
+    syncOverdue: string;
     fontSize: string;
     fontSizeDesc: string;
     nightMode: string;
@@ -689,6 +693,10 @@ const ar: AppStrings = {
     syncTracked: "المصادر المتتبَّعة",
     syncNothingToSync: "لا يوجد محتوى محفوظ للمزامنة بعد",
     syncUpToDate: "المحتوى مُحدَّث",
+    syncToday: "اليوم",
+    syncYesterday: "أمس",
+    syncDaysAgo: (n: number) => `قبل ${n} يوم`,
+    syncOverdue: "المحتوى بحاجة إلى مزامنة",
     fontSize: "حجم الخط العربي",
     fontSizeDesc: "حجم النصوص القرآنية والأذكار",
     nightMode: "الوضع الليلي",
@@ -1118,6 +1126,10 @@ const en: AppStrings = {
     syncTracked: "Tracked sources",
     syncNothingToSync: "No saved content to sync yet",
     syncUpToDate: "Content is up to date",
+    syncToday: "Today",
+    syncYesterday: "Yesterday",
+    syncDaysAgo: (n: number) => `${n} days ago`,
+    syncOverdue: "Content is due a sync",
     fontSize: "Arabic Font Size",
     fontSizeDesc: "Size of Quranic and Azkar text",
     nightMode: "Night Mode",

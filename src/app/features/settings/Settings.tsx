@@ -29,6 +29,10 @@ import {
   getSyncStatus,
 } from "../../core/services/sync/content-sync.service";
 import type { SyncState } from "../../core/services/sync/content-sync.types";
+import {
+  isSyncOverdue,
+  relativeDays,
+} from "./sync-status";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -767,12 +771,20 @@ const Settings: React.FC = () => {
                       <p className="settings-row-label">{ts.syncLastSynced}</p>
                       <p className="settings-row-desc">
                         {syncState?.lastSyncedAt
-                          ? new Date(syncState.lastSyncedAt).toLocaleDateString(
-                              lang === "ar" ? "ar" : "en",
-                              { year: "numeric", month: "short", day: "numeric" },
-                            )
+                          ? `${relativeDays(syncState.lastSyncedAt, ts)} · ${new Date(
+                              syncState.lastSyncedAt,
+                            ).toLocaleDateString(lang === "ar" ? "ar" : "en", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}`
                           : ts.syncNever}
                       </p>
+                      {isSyncOverdue(syncState?.lastSyncedAt ?? null) && (
+                        <p className="settings-sync-note settings-sync-note--overdue">
+                          {ts.syncOverdue}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="settings-row-controls">
