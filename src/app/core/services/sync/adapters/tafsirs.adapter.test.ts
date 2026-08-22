@@ -88,6 +88,47 @@ describe("tafsirRowsFrom", () => {
     );
     expect(rows.map((r) => r.recordKey)).toEqual(["2:1"]);
   });
+
+  it("keeps the populated record's text when the live QF shape sends one record per verse in a group, only the first carrying text (Ya-Sin 36:1-36:7)", () => {
+    // Verified live shape (Ibn Kathir, 169): a group is NOT one record with
+    // group bounds — QF emits one record PER VERSE in the group, every one
+    // carrying the SAME group_verse_key_from/_to, and only the first has
+    // text. Naive expansion makes every record overwrite the same row ids,
+    // so the empty ones (arriving after the populated one) blank it out.
+    // Measured: 4,328 of 6,236 tafsir records are empty-text records whose
+    // range overlaps a populated verse.
+    const records = [
+      { verse_key: "36:1", text: "on ya-sin", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:2", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:3", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:4", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:5", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:6", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:7", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+    ];
+    const rows = tafsirRowsFrom(records, 169, 1);
+    const byKey = new Map(rows.map((r) => [r.recordKey, (r.data as { text: string }).text]));
+    for (let ayah = 1; ayah <= 7; ayah++) {
+      expect(byKey.get(`36:${ayah}`)).toBe("on ya-sin");
+    }
+  });
+
+  it("keeps the populated record's text even when the empty records arrive BEFORE it (reverse order)", () => {
+    const records = [
+      { verse_key: "36:7", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:6", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:5", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:4", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:3", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:2", text: "", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+      { verse_key: "36:1", text: "on ya-sin", group_verse_key_from: "36:1", group_verse_key_to: "36:7" },
+    ];
+    const rows = tafsirRowsFrom(records, 169, 1);
+    const byKey = new Map(rows.map((r) => [r.recordKey, (r.data as { text: string }).text]));
+    for (let ayah = 1; ayah <= 7; ayah++) {
+      expect(byKey.get(`36:${ayah}`)).toBe("on ya-sin");
+    }
+  });
 });
 
 describe("readCachedTafsir", () => {

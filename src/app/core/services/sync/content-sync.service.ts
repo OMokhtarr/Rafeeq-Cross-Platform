@@ -42,14 +42,21 @@ import {
 /** 24 h against a 7-day obligation — six missed windows of headroom. */
 export const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-const PER_PAGE = 200;
+/**
+ * The live API rejects anything above 100: per_page=200 -> 422
+ * {"error":{"code":"invalid_per_page","message":"per_page cannot exceed 100"}}
+ * (verified against apis.quran.foundation). Must stay <= 100 or every sync
+ * attempt fails.
+ */
+export const PER_PAGE = 100;
 
 /**
  * Pagination has never actually been observed against the live API — every
  * real response returned has_more: false (see the wire-format spec). This is
  * a guard against a server that always claims more is coming, not a real
- * limit: PER_PAGE=200 against thousands of tracked rows would never come
- * close in practice.
+ * limit: at PER_PAGE=100, the largest resource observed (a tafsir snapshot's
+ * mutation feed, 6,236 records) would need ~63 pages, so 500 leaves roughly
+ * 8x headroom over anything seen in practice.
  */
 const MAX_PAGES = 500;
 

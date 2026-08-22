@@ -10,6 +10,7 @@ import {
   bootstrapResource,
   registerAdapter,
   SYNC_INTERVAL_MS,
+  PER_PAGE,
 } from "./content-sync.service";
 import { readSyncState, writeSyncState, trackResource } from "./sync-state.service";
 import { readResourceRows } from "./sync-store.service";
@@ -388,5 +389,14 @@ describe("runSync", () => {
     expect(mockSync.mock.calls.length).toBeLessThan(1000);
     const state = await readSyncState();
     expect(state.lastError).toBeTruthy();
+  });
+});
+
+describe("PER_PAGE", () => {
+  it("never exceeds the live API's maximum of 100 (per_page > 100 -> 422 invalid_per_page)", () => {
+    // Verified against apis.quran.foundation: per_page=200 is rejected with
+    // {"error":{"code":"invalid_per_page","message":"per_page cannot exceed 100"}}.
+    // Every sync attempt failed in production until this was corrected.
+    expect(PER_PAGE).toBeLessThanOrEqual(100);
   });
 });

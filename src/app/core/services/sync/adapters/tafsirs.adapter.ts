@@ -9,6 +9,11 @@
  * Kathir (169) snapshot, e.g. 104:1 -> 105:5 (end of Al-Humazah into the
  * start of Al-Fil), 14 such records out of 6236. expandRange() walks verse
  * counts across surahs to cover these correctly.
+ *
+ * Live data also does NOT always send one record per group: most groups
+ * arrive as one record PER VERSE in the group, all sharing the same
+ * group_verse_key_from/_to, with text only on the first. See the
+ * populated-wins rule documented on tafsirRowsFrom().
  */
 
 import { registerAdapter } from "../content-sync.service";
@@ -76,12 +81,30 @@ function expandRange(from: string, to: string): string[] {
   return [from]; // exceeded the sane upper bound — degrade safely
 }
 
+/**
+ * Live QF data (verified against the Ibn Kathir / 169 snapshot) does not
+ * always give one record per group with the full range on it. For most
+ * groups it instead emits one record PER VERSE in the group, every one
+ * carrying the SAME group_verse_key_from/_to, and only the first record has
+ * text — the rest have text: "". Naive last-write-wins on `key` then depends
+ * on arrival order: whichever record is processed last for a given verse
+ * key overwrites the others, so an empty record arriving after the
+ * populated one blanks it (measured: 4,328 of 6,236 records this way).
+ *
+ * Rule applied here, independent of arrival order: a record with non-empty
+ * text always wins over one with empty text for the same verse key. Between
+ * two records that both have non-empty text for the same key (not observed
+ * live, but not ruled out), the first one encountered wins — deterministic
+ * and stable regardless of input order beyond that.
+ */
 export function tafsirRowsFrom(
   records: unknown[],
   resourceId: number,
   sequence: number,
 ): SyncRow[] {
-  const rows: SyncRow[] = [];
+  const textByKey = new Map<string, string>();
+  const order: string[] = [];
+
   for (const raw of records as TafsirRecord[]) {
     const anchor = raw.verse_key ?? raw.group_verse_key_from ?? null;
     if (!anchor) continue;
@@ -89,18 +112,29 @@ export function tafsirRowsFrom(
     const to = raw.group_verse_key_to ?? from;
     const text = raw.text ?? "";
     for (const key of expandRange(from, to)) {
-      rows.push({
-        id: `tafsirs:${resourceId}:tafsir:${key}`,
-        resourceGroup: "tafsirs",
-        resourceId,
-        recordType: "tafsir",
-        recordKey: key,
-        data: { text },
-        sequence,
-      });
+      const existing = textByKey.get(key);
+      if (existing === undefined) {
+        order.push(key);
+        textByKey.set(key, text);
+      } else if (existing === "" && text !== "") {
+        // A populated record always beats an empty placeholder, regardless
+        // of which arrived first.
+        textByKey.set(key, text);
+      }
+      // Otherwise keep what's already stored: either it's already populated
+      // (first-populated-wins), or both are empty and there's nothing to gain.
     }
   }
-  return rows;
+
+  return order.map((key) => ({
+    id: `tafsirs:${resourceId}:tafsir:${key}`,
+    resourceGroup: "tafsirs",
+    resourceId,
+    recordType: "tafsir",
+    recordKey: key,
+    data: { text: textByKey.get(key) ?? "" },
+    sequence,
+  }));
 }
 
 export async function readCachedTafsir(
