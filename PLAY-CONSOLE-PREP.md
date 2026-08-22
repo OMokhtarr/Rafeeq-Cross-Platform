@@ -11,12 +11,16 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName
 > `bash token-broker/verify-deploy.sh` passes: `/deepgram/token` is live and
 > mints real Deepgram ASR grants (`asr:write` scope), not the Quran Foundation
 > fallback token. Recite mode smoke-tested against this deployment and working.
+>
+> ✅ **QF 7-day caching rule closed** 22 Aug 2026. Content Sync is implemented and
+> merged for tafsirs and recitations; the Quran script is covered by express
+> written permission from Quran Foundation. See §5 and `docs/licensing-decisions.md`.
 
 ---
 
 ## 0. Status at a glance
 
-Last updated 20 Aug 2026. Section numbers link to the detail below.
+Last updated 22 Aug 2026. Section numbers link to the detail below.
 
 ### Outstanding
 
@@ -27,19 +31,19 @@ someone else for, then paperwork that can be filled in any time.
 
 | # | Task | § | Blocking |
 |---|---|---|---|
-| A1 | **QF 7-day caching rule** — implement Content Sync for translations/tafsir/audio; Quran script depends on the QF answer (B1) | 5 | **Yes** |
+| ~~A1~~ | ~~**QF 7-day caching rule**~~ | 5 | ✅ **Done 22 Aug 2026** |
 | A2 | Fill in the postal address in `privacy.html` | 5 | **Yes** |
 | A3 | Mirror that address into `PRIVACY_SECTIONS` in `Account.tsx` (AR + EN in sync) | 5 | **Yes** |
-| A4 | **Surah-header ornament** — if QF (B2) says the trace is not permitted, replace `SURAH_BANNER_PATH` in `surah-banner.art.ts` with original artwork | 5 | Depends on B2 |
+| ~~A4~~ | ~~**Surah-header ornament**~~ — decision taken to ship the trace as-is | 5 | ✅ **Closed 22 Aug 2026** (risk accepted) |
 | A5 | Record the foreground-service demo video (playback → background → notification controls) | 3 | **Yes** |
-| A6 | Rebuild + re-sign the AAB after A1–A4 land | 8 | **Yes** |
+| A6 | Rebuild + re-sign the AAB — **A1 landed after the current AAB was built, so this is now required** | 8 | **Yes** |
 
 #### B. Blocked on someone else — chase these in parallel
 
 | # | Task | § | Blocking |
 |---|---|---|---|
-| B1 | **QF reply — Content Sync scope** for the Quran script (`/verses/by_page/` is not a syncable resource group) | 5 | **Yes** |
-| B2 | **QF reply — surah-header artwork**: is a traced KFGQPC page ornament permitted, or is there an official asset? | 5 | Yes, if unfavourable |
+| ~~B1~~ | ~~**QF reply — Content Sync scope**~~ — answered: express permission granted under §3.1(3)(a) | 5 | ✅ **Resolved 21 Aug 2026** |
+| ~~B2~~ | ~~**QF reply — surah-header artwork**~~ — QF cannot grant on KFGQPC's behalf; proceeding without a reply | 5 | ✅ **Closed 22 Aug 2026** (risk accepted) |
 | B3 | Recruit ~12 testers and start the closed test — 14 **continuous** days | 8 | **Yes** |
 | B4 | Confirm the QF client secret was rotated (Deepgram key confirmed via broker) | 7 | **Yes** |
 
@@ -63,10 +67,12 @@ ready to paste. What remains in C is console entry, hosting, and two decisions.
 | C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No | ⏳ Recommendation written — **your call** |
 | C12 | Apply for production access | 8 | **Yes** — last step | Console only |
 
-**Critical path:** B3 is the long pole — 14 continuous days, and nothing gates
-starting it, so recruit testers today. B1/B2 are outside our control and both
-ride on the same email, so send it first; B1 decides how much of A1 is needed
-and B2 decides whether A4 exists at all. A5's demo video is the most commonly
+**Critical path:** B3 is now the only long pole — 14 continuous days, and nothing
+gates starting it, so recruit testers today. Everything that was waiting on Quran
+Foundation (B1, B2) is resolved, and the caching work they gated (A1) is merged,
+which also closes A4. What remains that touches the app is the postal address
+(A2/A3) and a rebuild (A6) — **the current signed AAB predates Content Sync, so it
+must be rebuilt before submission**. A5's demo video is the most commonly
 underestimated item.
 
 Most of C is now drafted (see `PLAY-LISTING-COPY.md`); what is left there is
@@ -87,12 +93,15 @@ Android Auto decision (C11).
 | Android Auto in-car regression pass | 13 Aug 2026 |
 | Token broker deployed + `verify-deploy.sh` passing | 15 Aug 2026 |
 | Recite mode smoke-tested against the live broker | 15 Aug 2026 |
-| Signed AAB — `Rafeeq-1.1.0-release.aab`, `rafeeq-upload` key | — |
+| ~~Signed AAB~~ — built, but **now stale**: predates Content Sync. Rebuild required (A6) | — |
 | Listing assets — icon, feature graphic, 4 × 9:16 screenshots in `play-assets/` | — |
 | Account deletion confirmed out of scope (no sign-in) | — |
 | Privacy policy rewritten, incl. the QF developer-privacy pass | Aug 2026 |
 | Source TODOs — Settings persisted data, Mushaf page layout | 15 Aug 2026 |
 | Listing copy + questionnaires (C1, C2, C5, C6, C7) — `PLAY-LISTING-COPY.md` | 20 Aug 2026 |
+| QF express permission for offline Quran script (§3.1(3)(a)) — `docs/licensing-decisions.md` | 21 Aug 2026 |
+| **Content Sync implemented and merged** — tafsirs + recitations, verified live | 22 Aug 2026 |
+| KFGQPC ornament — decision taken to ship without KFGQPC permission | 22 Aug 2026 |
 
 ---
 
@@ -297,59 +306,89 @@ requirements** (email from Basit Minhas, QF Developer Support, and
 - [ ] Confirm the Deepgram, Cloudflare, jsDelivr and Quran Foundation
       privacy-policy links all resolve.
 
-### Open compliance question — offline caching vs. the QF 7-day rule
+### Offline caching vs. the QF 7-day rule — RESOLVED
 
 QF's Developer Terms say not to store QF content for more than one week unless
 expressly permitted, or via the Content Sync flow with a sync at least every
-seven days. Rafeeq currently seeds all verses into IndexedDB once per install
-(`seedVerses` / `getPage` in `src/app/core/services/data/quran.service.ts`) and
-caches pages **indefinitely** — there is no 7-day expiry and no periodic
-re-sync. Cached content is only cleared on a DB version bump or a repair pass.
+seven days. Rafeeq caches content indefinitely, so both halves of that rule had
+to be satisfied. They were closed in two different ways, and the distinction
+matters if this is ever audited.
 
-This is an app-behaviour gap that the privacy policy cannot resolve. Two ways
-to close it:
+**1. Tafsirs and recitations — closed by implementing Content Sync**
+(merged 22 Aug 2026).
 
-1. Add a ≤7-day refresh: stamp cached pages/verses with a fetch timestamp and
-   re-fetch (or revalidate) anything older than a week when online.
-2. Ask QF for express permission for durable offline storage — plausible for a
-   Quran reader, since offline reading is the point, and the terms allow it
-   "unless expressly permitted". Basit's email invites implementation questions.
+- Sync runs against `GET /resources/sync` with `sync_token` checkpoints and
+  sequence-ordered mutations; a resource is bootstrapped from its snapshot the
+  first time it is tracked.
+- Resources become tracked when the user actually downloads them — a tafsir
+  download or a cached recitation — so nothing is synced that isn't held.
+- Triggered on app resume, throttled to once per 24 h, well inside the 7-day
+  obligation. Settings shows the last sync age and warns once it passes 7 days,
+  and offers a manual **Sync now** control.
+- Eviction is explicit-only: content is untracked when the user removes it or
+  the API sends `RESOURCE_DELETE`.
 
-- [ ] Decide between (1) and (2) and act on it before release.
+Verified end-to-end against the live QF API through the token broker, not just
+against mocks — which is how two release-blocking bugs were caught that a fully
+green 173-test suite did not (`per_page` above the API maximum, and empty
+placeholder records overwriting populated tafsir rows). Details and the
+remaining follow-ups are in
+`docs/superpowers/specs/2026-08-22-content-sync-followups.md`.
 
-### Open licensing question — the traced surah-header ornament
+**2. The Quran script — closed by express written permission.**
+
+`/verses/by_page/` is not a syncable resource group, so Content Sync could not
+cover it. Quran Foundation granted express permission under **Section 3.1(3)(a)**
+of the Developer Terms to store the Quran script and its page-layout/glyph data
+locally beyond one week, and to keep it readable offline.
+
+Two conditions ride with that grant and are easy to lose track of:
+
+- It is limited to use inside Rafeeq. No modification, sale, sublicensing,
+  export, or redistribution.
+- It lasts **until** Content Sync supports the Quran script. QF asked that the
+  Content Sync docs be checked roughly weekly; once that support appears, this
+  data must migrate onto Content Sync.
+
+The grant, its exact scope, and that ongoing obligation are recorded in
+**`docs/licensing-decisions.md`** — in-repo rather than in an inbox, so it
+survives a laptop change and is findable at audit time.
+
+> ⚠️ **Known gap, not a blocker.** Android recitation eviction is still a stub:
+> `evictRecitation` clears the IndexedDB store used by web/iOS, but on Android
+> the blobs are files under `quran-audio/` and that branch does nothing. A
+> `RESOURCE_INVALIDATE` for a recitation therefore evicts nothing on the primary
+> release platform. This affects content *freshness*, not the retention rule —
+> sync still runs and the terms obligation is met. Highest-priority follow-up.
+
+### The traced surah-header ornament — DECISION TAKEN, not resolved
 
 `src/app/shared/components/mushaf-page/surah-banner.art.ts` renders the
-illuminated band around each surah title — arabesque scrollwork, two medallions,
-a lobed cartouche. Its header comment records how it was made: **traced from an
-official KFGQPC Madani page render**, then simplified onto a half-scale grid.
+illuminated band around each surah title, **traced from an official KFGQPC Madani
+page render** and simplified. That makes it a derivative of KFGQPC page artwork
+rather than a licensed asset.
 
-That makes it a derivative of KFGQPC page artwork rather than a licensed asset.
-KFGQPC materials are generally licensed for distribution *unmodified*, so a
-traced-and-simplified reproduction may fall outside permitted use. Two things
-narrow the exposure but do not remove it:
+QF was asked and **replied that it cannot grant permission on KFGQPC's behalf**:
+KFGQPC's own terms control the source artwork, and if those terms are unclear,
+KFGQPC should be contacted directly before publishing.
 
-- The surah **name** is not part of the trace — it comes from the `sura_names`
-  font shipped with the Quran.com assets, which is openly distributed for this
-  purpose. Only the surrounding frame was traced.
+**KFGQPC was not contacted, and no permission was obtained.** The decision taken
+on 22 Aug 2026 is to ship the trace and accept the risk. This is recorded as a
+*decision to publish without an answer*, not as a determination that the trace is
+permitted — the underlying question is still open.
+
+What keeps the exposure contained:
+
+- The surah **name** is not traced; it comes from the openly distributed
+  `sura_names` font. Only the surrounding frame was traced.
 - The band carries no Quran text, so it does not touch the "Quran text is never
-  modified" commitment in `terms.html` and the in-app terms.
+  modified" commitment in `terms.html`.
+- Replacement is one exported constant (`SURAH_BANNER_PATH`) in one file, with
+  the cartouche window already expressed as fractions. Original artwork drops in
+  without touching layout maths — and that remains cheap after release, which is
+  what makes accepting the risk reasonable.
 
-Practical risk is low — Play does not audit ornamental provenance, and this
-surfaces through complaints rather than review. But it is undisclosed anywhere
-in the listing or terms, and it is cheap to resolve now versus after visibility.
-
-Asked of QF in the same email as the caching question (see the reply draft):
-whether a traced reproduction is acceptable, whether it needs express KFGQPC
-permission, and whether an official vector/glyph asset exists that we should
-adopt instead.
-
-Replacement is contained if the answer is unfavourable: one exported constant
-(`SURAH_BANNER_PATH`) in one file, with the cartouche window already expressed as
-fractions, so original artwork drops in without touching layout maths.
-
-- [ ] Await the QF answer (B2), then either keep the trace, adopt an official
-      asset, or commission/redraw an original ornament.
+Full reasoning in **`docs/licensing-decisions.md` §2**.
 
 ---
 
@@ -432,8 +471,10 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 2. ~~Smoke-test recite mode against the deployed broker~~ — done, working
 3. ~~Android Auto regression pass in a real car~~ — done, working (13 Aug 2026)
 4. **Host the privacy policy (section 5)** — the one remaining hard console blocker
-5. ~~Build the signed AAB (`gradlew bundleRelease`)~~ — done: `Rafeeq-1.1.0-release.aab`,
-   signed with `rafeeq-upload`, current with the latest source
+5. **Rebuild + re-sign the AAB (`gradlew bundleRelease`)** — ⚠️ the existing
+   `Rafeeq-1.1.0-release.aab` was built **before** Content Sync merged (22 Aug 2026)
+   and before the postal address is filled in, so it is stale. Do not submit it.
+   Rebuild after A2/A3, sign with `rafeeq-upload`, and bump `versionCode`
 6. ~~Produce the missing listing assets~~ — done, in `play-assets/`: 512×512 PNG
    icon, 1024×500 feature graphic, and four 9:16 screenshots
 7. Create the Play listing, complete Data safety + foreground service declarations
