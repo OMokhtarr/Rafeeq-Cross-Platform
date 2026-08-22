@@ -273,6 +273,8 @@ export interface AppStrings {
     syncOffline: string;
     syncFailed: string;
     syncTracked: string;
+    syncNothingToSync: string;
+    syncUpToDate: string;
     fontSize: string;
     fontSizeDesc: string;
     nightMode: string;
@@ -685,6 +687,8 @@ const ar: AppStrings = {
     syncOffline: "دون اتصال — ستتم المزامنة عند الاتصال",
     syncFailed: "تعذّرت المزامنة",
     syncTracked: "المصادر المتتبَّعة",
+    syncNothingToSync: "لا يوجد محتوى محفوظ للمزامنة بعد",
+    syncUpToDate: "المحتوى مُحدَّث",
     fontSize: "حجم الخط العربي",
     fontSizeDesc: "حجم النصوص القرآنية والأذكار",
     nightMode: "الوضع الليلي",
@@ -1112,6 +1116,8 @@ const en: AppStrings = {
     syncOffline: "Offline — will sync when connected",
     syncFailed: "Sync failed",
     syncTracked: "Tracked sources",
+    syncNothingToSync: "No saved content to sync yet",
+    syncUpToDate: "Content is up to date",
     fontSize: "Arabic Font Size",
     fontSizeDesc: "Size of Quranic and Azkar text",
     nightMode: "Night Mode",

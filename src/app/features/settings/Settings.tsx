@@ -655,10 +655,19 @@ const Settings: React.FC = () => {
     setSyncNote(null);
     try {
       const res = await runSync({ force: true });
-      // Offline is a neutral outcome, not a failure: runSync resolves with
-      // reason "offline" rather than throwing, so it must be read from the
-      // result, not caught.
-      if (res.reason === "offline") setSyncNote(ts.syncOffline);
+      // Every outcome needs a word, or tapping the button looks broken.
+      // runSync resolves rather than throwing for the non-error cases, so
+      // these must be read from the result, not caught.
+      if (res.reason === "offline") {
+        // Neutral, not a failure — there is simply no connection right now.
+        setSyncNote(ts.syncOffline);
+      } else if (res.reason === "no-resources") {
+        // Nothing is tracked yet: no tafsir downloaded, no audio cached. This
+        // is the state every fresh install starts in.
+        setSyncNote(ts.syncNothingToSync);
+      } else if (res.ran) {
+        setSyncNote(ts.syncUpToDate);
+      }
       setSyncState(await getSyncStatus());
     } catch {
       setSyncNote(ts.syncFailed);
