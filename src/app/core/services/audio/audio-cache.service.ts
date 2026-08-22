@@ -17,6 +17,8 @@ import {
   ensureCachedFile,
   hasCachedFile,
 } from "./audio-file-cache.service";
+import { isTracked } from "../sync/sync-state.service";
+import { bootstrapResource } from "../sync/content-sync.service";
 
 const STORE = "audio";
 
@@ -28,6 +30,21 @@ interface AudioRecord {
 
 function key(reciter: string, sura: number, aya: number): string {
   return `${reciter}:${sura}:${aya}`;
+}
+
+/**
+ * Bring a reciter under Content Sync the first time we keep audio for it.
+ * Fire-and-forget: playback must never wait on this, and being offline here is
+ * fine — the resource is tracked and the next successful run bootstraps it.
+ */
+function ensureRecitationTracked(reciter: string): void {
+  const id = Number(reciter);
+  if (!Number.isFinite(id)) return;
+  isTracked("recitations", id)
+    .then((tracked) => {
+      if (!tracked) return bootstrapResource("recitations", id);
+    })
+    .catch(() => {});
 }
 
 export async function hasCached(
@@ -96,6 +113,7 @@ export async function downloadAndCache(
 ): Promise<boolean> {
   if (usesFileCache()) {
     await ensureCachedFile(reciter, sura, aya, signal);
+    ensureRecitationTracked(reciter);
     return true;
   }
   if (await hasCached(reciter, sura, aya)) return true;
@@ -109,6 +127,7 @@ export async function downloadAndCache(
     mime: blob.type || "audio/mpeg",
   };
   await idb.put(STORE, rec);
+  ensureRecitationTracked(reciter);
   return true;
 }
 

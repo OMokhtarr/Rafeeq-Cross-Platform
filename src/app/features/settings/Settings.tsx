@@ -24,6 +24,15 @@ import {
   DEFAULT_RECITE_ENGINE,
   type ReciteEngineChoice,
 } from "../../core/services/audio/stt-engine.config";
+import {
+  runSync,
+  getSyncStatus,
+} from "../../core/services/sync/content-sync.service";
+import type { SyncState } from "../../core/services/sync/content-sync.types";
+import {
+  isSyncOverdue,
+  relativeDays,
+} from "./sync-status";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -609,6 +618,9 @@ const Settings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [tajweedInfoOpen, setTajweedInfoOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [syncState, setSyncState] = useState<SyncState | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -634,6 +646,39 @@ const Settings: React.FC = () => {
   };
 
   const ts = t.settings;
+
+  // Load the last-known sync status on mount so the readout is populated
+  // even before the user ever taps "Sync now" — sync also runs silently on
+  // app resume, so this surface is the only place that record is visible.
+  useEffect(() => {
+    getSyncStatus().then(setSyncState).catch(() => {});
+  }, []);
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    setSyncNote(null);
+    try {
+      const res = await runSync({ force: true });
+      // Every outcome needs a word, or tapping the button looks broken.
+      // runSync resolves rather than throwing for the non-error cases, so
+      // these must be read from the result, not caught.
+      if (res.reason === "offline") {
+        // Neutral, not a failure — there is simply no connection right now.
+        setSyncNote(ts.syncOffline);
+      } else if (res.reason === "no-resources") {
+        // Nothing is tracked yet: no tafsir downloaded, no audio cached. This
+        // is the state every fresh install starts in.
+        setSyncNote(ts.syncNothingToSync);
+      } else if (res.ran) {
+        setSyncNote(ts.syncUpToDate);
+      }
+      setSyncState(await getSyncStatus());
+    } catch {
+      setSyncNote(ts.syncFailed);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <IonPage>
@@ -712,6 +757,78 @@ const Settings: React.FC = () => {
                   onChange={(v) => set("showTajweedColors", v)}
                   onInfo={() => setTajweedInfoOpen(true)}
                 />
+              </div>
+            </div>
+
+            {/* ── Offline content (Content Sync) ── */}
+            <div className="settings-section">
+              <p className="settings-section-title">{ts.sectionSync}</p>
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <span className="settings-row-icon">{ICONS.refresh}</span>
+                    <div className="settings-row-text">
+                      <p className="settings-row-label">{ts.syncLastSynced}</p>
+                      <p className="settings-row-desc">
+                        {syncState?.lastSyncedAt
+                          ? `${relativeDays(syncState.lastSyncedAt, ts)} · ${new Date(
+                              syncState.lastSyncedAt,
+                            ).toLocaleDateString(lang === "ar" ? "ar" : "en", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}`
+                          : ts.syncNever}
+                      </p>
+                      {isSyncOverdue(syncState?.lastSyncedAt ?? null) && (
+                        <p className="settings-sync-note settings-sync-note--overdue">
+                          {ts.syncOverdue}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="settings-row-controls">
+                    <button
+                      type="button"
+                      className="settings-sync-btn"
+                      onClick={handleSyncNow}
+                      disabled={syncing}
+                    >
+                      {syncing ? ts.syncRunning : ts.syncNow}
+                    </button>
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <div className="settings-row-text">
+                      <p className="settings-row-label">{ts.syncTracked}</p>
+                      <p className="settings-row-desc">
+                        {syncState?.trackedResources.length ?? 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {syncNote && (
+                  <div className="settings-row">
+                    <p
+                      className={
+                        "settings-sync-note" +
+                        (syncNote === ts.syncOffline
+                          ? " settings-sync-note--offline"
+                          : "")
+                      }
+                    >
+                      {syncNote}
+                    </p>
+                  </div>
+                )}
+                {!syncNote && syncState?.lastError && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note settings-sync-note--error">
+                      {ts.syncFailed}: {syncState.lastError}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

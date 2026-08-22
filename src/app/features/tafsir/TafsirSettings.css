@@ -196,6 +196,12 @@ ion-content::part(scroll) {
   display: inline-block;
 }
 
+.tfs-row-incomplete {
+  font-size: 0.68rem;
+  color: #c0392b;
+  margin: 3px 0 0;
+}
+
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .tfs-btn {
   width: 34px;
@@ -228,6 +234,15 @@ ion-content::part(scroll) {
 .tfs-btn--save.tfs-btn--saving {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Wide variant — fits the "Downloading… NN%" / "Download failed" label */
+.tfs-btn--wide {
+  width: auto;
+  min-width: 34px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .tfs-btn--remove {

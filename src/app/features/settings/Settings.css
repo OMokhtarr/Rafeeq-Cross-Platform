@@ -689,3 +689,47 @@ ion-content::part(scroll) {
 .settings-version strong {
   color: var(--color-gold);
 }
+
+/* ── Content Sync ──────────────────────────────── */
+.settings-sync-btn {
+  background: none;
+  border: 1.5px solid var(--color-input-border);
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  white-space: nowrap;
+  transition:
+    opacity var(--transition-base),
+    background var(--transition-base);
+}
+
+.settings-sync-btn:hover:not(:disabled) {
+  background: var(--color-gold-faint);
+  opacity: 0.9;
+}
+
+.settings-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.settings-sync-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.settings-sync-note--offline {
+  color: var(--color-text-secondary);
+}
+
+.settings-sync-note--error {
+  color: #c0392b;
+}
+
+.settings-sync-note--overdue {
+  color: var(--color-warning, #b7791f);
+}

@@ -9,6 +9,7 @@ import type { TafsirResource } from "../../../core/services/data/quran.service";
 import {
   getDownloadedTafsirIds,
 } from "../../../core/services/data/tafsir-cache.service";
+import { readCachedTafsir } from "../../../core/services/sync/adapters/tafsirs.adapter";
 import { useLang } from "../../../core/context/LanguageContext";
 import { useTheme } from "../../../core/context/ThemeContext";
 import InlineSelect from "../inline-select/InlineSelect";
@@ -231,15 +232,24 @@ const VerseActionSheet: React.FC<Props> = ({
     setTafsirLoading(true);
     setTafsirError(null);
     setTafsir("");
-    fetchTafsirForAyah(s, a, effectiveResourceId)
-      .then((res) => {
-        if (!cancelled) {
-          setTafsir(res.text);
-          tafsirBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    readCachedTafsir(Number(effectiveResourceId), currentKey)
+      .then((cached) => {
+        if (cancelled) return null;
+        // Offline-first: a downloaded tafsir renders with no network at all.
+        if (cached) {
+          setTafsir(cached);
+          return null;
         }
+        return fetchTafsirForAyah(s, a, effectiveResourceId);
+      })
+      .then((res) => {
+        if (cancelled || !res) return;
+        setTafsir(res.text);
+        tafsirBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       })
       .catch(() => {
-        if (!cancelled) setTafsirError(t.mushaf.tafsirError);
+        if (cancelled) return;
+        setTafsirError(t.mushaf.tafsirError);
       })
       .finally(() => {
         if (!cancelled) setTafsirLoading(false);

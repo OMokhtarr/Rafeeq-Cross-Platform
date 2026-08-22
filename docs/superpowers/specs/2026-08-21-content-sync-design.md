@@ -413,22 +413,24 @@ Not covered by automated tests, to be checked manually on device:
 Arising from the QF correspondence of 2026-08-15 → 2026-08-21, and not
 satisfied by this design:
 
-0. **Tell QF that translations are gone.** The 2026-08-15 email told Basit that
-   translations, tafsirs, and recitations would all move onto Content Sync.
-   Removing the feature is a stronger answer than syncing it, but if the thread
-   continues it is worth a line saying Rafeeq no longer fetches or caches
-   translations at all, rather than leaving him expecting that integration.
+0. **QF has not been told that translations were removed.** The 2026-08-15
+   email said translations, tafsirs and recitations would all move onto Content
+   Sync; what shipped removes translations from the app entirely instead, so
+   they leave the compliance surface rather than joining it. The developer
+   chose not to follow up (2026-08-22). Noted so the divergence between what
+   was stated and what shipped is on the record.
 1. **Weekly documentation check.** QF asked that the Content Sync docs be
    checked approximately weekly for Quran script support. When it lands, migrate
    the script off the 3.1(3)(a) permission and onto Content Sync.
-2. **The 3.1(3)(a) permission should be recorded in-repo.** It currently exists
-   only as an email. It is scoped to the QF-provided script and page-layout/glyph
+2. **The 3.1(3)(a) permission is recorded in-repo** at
+   `docs/licensing-decisions.md` (done 2026-08-22; it previously existed only
+   as an email). It is scoped to the QF-provided script and page-layout/glyph
    data inside Rafeeq, and does not permit modification, sale, sublicensing,
    export, or redistribution.
-3. **KFGQPC surah-header ornament — unresolved release blocker.** QF declined to
-   rule on the traced ornament and deferred entirely to KFGQPC's terms. Contact
-   with KFGQPC is still outstanding. Unrelated to this design, but it gates the
-   same release.
+3. **KFGQPC surah-header ornament — closed 2026-08-22.** No longer a release
+   blocker: the developer decided to publish without seeking KFGQPC's
+   permission, accepting the risk. Recorded in `docs/licensing-decisions.md`
+   as a decision, not as a resolution of the underlying licensing question.
 4. **The "sync promptly on reconnect" reading is unconfirmed** for the syncable
    groups. QF confirmed offline readability only for the script, and via
    the separate 3.1(3)(a) grant. Do not assume it carries over: the 24h throttle

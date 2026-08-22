@@ -11,6 +11,7 @@ import {
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { useDoubleSwipeExit } from "./app/core/hooks/useDoubleSwipeExit";
+import { useContentSync } from "./app/core/hooks/useContentSync";
 import { closeTopOverlay } from "./app/core/utils/overlay-registry";
 import { Capacitor } from "@capacitor/core";
 
@@ -188,6 +189,8 @@ const App: React.FC = () => {
   // Only true once a preload is genuinely under way, so the progress bar is
   // never left stranded at 0% on an offline launch where it never starts.
   const [preloading, setPreloading] = useState(false);
+
+  useContentSync();
 
   useEffect(() => {
     let cancelled = false;
