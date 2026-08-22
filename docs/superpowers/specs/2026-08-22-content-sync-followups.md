@@ -122,12 +122,31 @@ The lesson worth keeping: a fully green mocked suite told us nothing about
 either. Any future change to `parse-mutation.ts`, the adapters, or the request
 parameters deserves one live run before it ships.
 
-## Done — RTL static review
+## Done — RTL
 
 New CSS in `Settings.css` and `TafsirSettings.css` contains no physical
 `left`/`right`; the section inherits `dir` from the page wrapper as its siblings
-do; the date formatter switches on `lang === "ar"`; all eight sync strings exist
-in both languages. Not visually confirmed — see below.
+do; the date formatter switches on `lang === "ar"`; all sync strings exist in
+both languages.
+
+**Confirmed visually in dev by the developer (2026-08-22) — no RTL issues.**
+
+## Done — syncing in dev
+
+**Confirmed working in dev by the developer (2026-08-22).**
+
+Two things that will bite anyone testing this fresh, both since addressed:
+
+- `network.service.ts` probes reachability with a `HEAD` to the token broker,
+  which only accepts `POST`, so the console logs `405 Method Not Allowed` on
+  every launch. Harmless: the probe is `mode: "no-cors"`, so the response is
+  opaque and only the fact that it resolved matters. Fix it by making the probe
+  POST if the noise is unwanted.
+- Sync does nothing until a resource is tracked, and nothing is tracked until a
+  tafsir is downloaded or audio cached — the state every fresh install starts
+  in. `Sync now` used to report nothing at all in that case, which is
+  indistinguishable from a broken button. Now every outcome has a message
+  (commit `2b4e4a7`).
 
 ## Outstanding — needs a device
 
@@ -155,10 +174,6 @@ today eviction does nothing on the primary release platform (item 1 above).
 5. Interrupt a download mid-way and confirm the tafsir shows "Download
    incomplete" with the resume affordance, rather than claiming success.
 
-### C. RTL visual pass
+### C. RTL visual pass — DONE
 
-Switch the app to Arabic and look at the new Settings "المحتوى دون اتصال"
-section. The string `"دون اتصال — ستتم المزامنة عند الاتصال"` is considerably
-longer than its English counterpart and shares a row with the sync button — that
-is the most likely place for a layout problem. Also check the tafsir
-downloading/failed/incomplete states, whose Arabic labels are wider than `"+"`.
+Confirmed by the developer in dev on 2026-08-22. No issues.
