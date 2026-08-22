@@ -6,13 +6,12 @@ import { useTheme } from "../../core/context/ThemeContext";
 import type { TafsirResource } from "../../core/services/api/quran-api.client";
 import {
   getDownloadedTafsirIds,
-  addDownloadedTafsir,
+  downloadTafsir,
   removeDownloadedTafsir,
   getCachedTafsirResources,
   fetchAndCacheTafsirResources,
   isTafsirAvailableOffline,
 } from "../../core/services/data/tafsir-cache.service";
-import { bootstrapResource } from "../../core/services/sync/content-sync.service";
 import { untrackResource } from "../../core/services/sync/sync-state.service";
 import { purgeResource } from "../../core/services/sync/sync-store.service";
 import "./TafsirSettings.css";
@@ -121,15 +120,19 @@ const TafsirSettings: React.FC = () => {
     });
     try {
       // A tafsir snapshot runs to ~12 MB, so this is a real download and the
-      // progress readout matters.
-      await bootstrapResource("tafsirs", Number(id), (pct) =>
+      // progress readout matters. downloadTafsir() adds the id to the
+      // downloaded list BEFORE awaiting the bootstrap, so a failed first
+      // download still shows up in the Downloaded section with the
+      // "incomplete" resume affordance, instead of vanishing silently.
+      await downloadTafsir(id, (pct) =>
         setProgress((p) => ({ ...p, [id]: pct })),
       );
-      addDownloadedTafsir(id);
-      setDownloadedIds(getDownloadedTafsirIds());
     } catch {
       setFailed((prev) => new Set(prev).add(id));
     } finally {
+      // downloadTafsir() adds the id to the downloaded list before the
+      // bootstrap settles, so this must refresh on both success and failure.
+      setDownloadedIds(getDownloadedTafsirIds());
       setSaving((prev) => {
         const next = new Set(prev);
         next.delete(id);

@@ -44,6 +44,15 @@ export const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const PER_PAGE = 200;
 
+/**
+ * Pagination has never actually been observed against the live API — every
+ * real response returned has_more: false (see the wire-format spec). This is
+ * a guard against a server that always claims more is coming, not a real
+ * limit: PER_PAGE=200 against thousands of tracked rows would never come
+ * close in practice.
+ */
+const MAX_PAGES = 500;
+
 export interface SyncResult {
   ran: boolean;
   reason?: "throttled" | "no-resources" | "offline";
@@ -133,15 +142,60 @@ async function doRun(force: boolean): Promise<SyncResult> {
     return { ran: false, reason: "throttled", applied: 0 };
   }
 
-  const filter = resourcesFilter(state.trackedResources);
+  // A resource can be tracked with no rows on disk: trackResource() runs
+  // before the snapshot fetch in bootstrapResource(), so a failure there
+  // (very plausible — it can fire while offline) leaves it tracked forever
+  // with bootstrappedAt: null. isTracked() guards like
+  // ensureRecitationTracked() in audio-cache.service.ts then never retry it.
+  // Recover here so the resource does not hold zero rows indefinitely.
+  const recovery = await recoverUnbootstrappedResources(state.trackedResources);
+  if (recovery.failures.length > 0) {
+    // Being offline must stay the quiet non-event it already is — only a
+    // genuine (non-offline) failure to recover blocks a clean success.
+    const allOffline = recovery.failures.every(
+      (f) => f.error instanceof QuranApiOffline,
+    );
+    if (allOffline) {
+      await writeSyncState({
+        ...(await readSyncState()),
+        lastAttemptAt: Date.now(),
+        lastError: null,
+      });
+      return { ran: false, reason: "offline", applied: 0 };
+    }
+
+    const message = recovery.failures
+      .map((f) => `${f.group}:${f.resourceId} — ${describeError(f.error)}`)
+      .join("; ");
+    await writeSyncState({
+      ...(await readSyncState()),
+      lastAttemptAt: Date.now(),
+      // A run in which recovery failed must not read as a clean success —
+      // lastSyncedAt is deliberately left untouched.
+      lastError: `Failed to bootstrap: ${message}`,
+    });
+    return { ran: false, applied: 0 };
+  }
+
+  // Re-read: recovery above may have changed trackedResources' bootstrappedAt.
+  const stateAfterRecovery = await readSyncState();
+  const filter = resourcesFilter(stateAfterRecovery.trackedResources);
   let applied = 0;
-  let token = state.syncToken;
+  let token = stateAfterRecovery.syncToken;
   let finalToken: string | null = null;
 
   try {
     let hasMore = true;
     let first = true;
+    let pages = 0;
     while (hasMore) {
+      if (pages >= MAX_PAGES) {
+        throw new Error(
+          `sync pagination exceeded ${MAX_PAGES} pages without has_more: false — aborting`,
+        );
+      }
+      pages++;
+
       const body = await fetchSyncPage({
         resources: filter,
         bootstrap: token === null && first ? true : undefined,
@@ -166,19 +220,52 @@ async function doRun(force: boolean): Promise<SyncResult> {
       token = parsed.nextSyncToken ?? token;
     }
   } catch (err) {
-    return handleRunError(err, state);
+    return handleRunError(err, stateAfterRecovery);
   }
 
   // Only now — a mid-run failure above leaves the previous checkpoint intact.
   await writeSyncState({
     ...(await readSyncState()),
-    syncToken: finalToken ?? state.syncToken,
+    syncToken: finalToken ?? stateAfterRecovery.syncToken,
     lastSyncedAt: Date.now(),
     lastAttemptAt: Date.now(),
     lastError: null,
   });
 
   return { ran: true, applied };
+}
+
+interface RecoveryFailure {
+  group: SyncGroup;
+  resourceId: number;
+  error: unknown;
+}
+
+function describeError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Bootstrap every tracked resource still missing rows on disk
+ * (bootstrappedAt === null). A single failing resource must not abort the
+ * others or the run — failures are collected and returned so the caller
+ * decides how the overall run should be recorded.
+ */
+async function recoverUnbootstrappedResources(
+  tracked: SyncState["trackedResources"],
+): Promise<{ failures: RecoveryFailure[] }> {
+  const missing = tracked.filter((r) => r.bootstrappedAt === null);
+  const failures: RecoveryFailure[] = [];
+
+  for (const r of missing) {
+    try {
+      await bootstrapResource(r.group, r.resourceId);
+    } catch (error) {
+      failures.push({ group: r.group, resourceId: r.resourceId, error });
+    }
+  }
+
+  return { failures };
 }
 
 async function handleRunError(

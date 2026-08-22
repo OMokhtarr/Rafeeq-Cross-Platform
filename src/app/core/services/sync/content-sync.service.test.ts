@@ -79,6 +79,11 @@ beforeEach(async () => {
   await idb.clear("sync_meta");
   await idb.clear("content_sync");
   jest.clearAllMocks();
+  // Default so trackResource()-only fixtures (a resource tracked but never
+  // bootstrapped) don't have to know about the FIX-1 recovery step doRun()
+  // now runs first — recovery succeeds trivially with zero rows unless a
+  // test overrides mockSnap itself to exercise bootstrap/recovery directly.
+  mockSnap.mockResolvedValue({ records: [], syncSequence: 0 });
 });
 
 describe("bootstrapResource", () => {
@@ -294,5 +299,94 @@ describe("runSync", () => {
 
     const rows = await readResourceRows("tafsirs", 169);
     expect((rows[0].data as { text: string }).text).toBe("corrected");
+  });
+
+  it("bootstraps a tracked resource whose bootstrappedAt is still null", async () => {
+    // e.g. ensureRecitationTracked in audio-cache.service tracks the resource
+    // first and the snapshot fetch fails while offline — isTracked then
+    // guards it forever unless the next runSync retries the bootstrap.
+    await trackResource("tafsirs", 169);
+    mockSnap.mockResolvedValue({
+      records: [{ verse_key: "1:1", text: "recovered" }],
+      syncSequence: 5,
+    });
+    mockSync.mockResolvedValue(page());
+
+    await runSync({ force: true });
+
+    expect(mockSnap).toHaveBeenCalled();
+    const rows = await readResourceRows("tafsirs", 169);
+    expect(rows).toHaveLength(1);
+    expect((rows[0].data as { text: string }).text).toBe("recovered");
+    const state = await readSyncState();
+    expect(state.trackedResources[0].bootstrappedAt).toBeGreaterThan(0);
+  });
+
+  it("does not re-fetch the snapshot for an already-bootstrapped resource", async () => {
+    await trackResource("tafsirs", 169);
+    mockSnap.mockResolvedValue({
+      records: [{ verse_key: "1:1", text: "x" }],
+      syncSequence: 1,
+    });
+    await bootstrapResource("tafsirs", 169);
+    mockSnap.mockClear();
+
+    mockSync.mockResolvedValue(page());
+    await runSync({ force: true });
+
+    // A wasted ~12MB refetch for content already on disk.
+    expect(mockSnap).not.toHaveBeenCalled();
+  });
+
+  it("does not report clean success when recovery bootstrap fails", async () => {
+    await trackResource("tafsirs", 169);
+    mockSnap.mockRejectedValue(new Error("still offline"));
+    mockSync.mockResolvedValue(page());
+
+    const res = await runSync({ force: true });
+
+    expect(res.ran).toBe(false);
+    const state = await readSyncState();
+    // A run that could not recover the missing snapshot must not be
+    // recorded as a clean, fully-completed sync.
+    expect(state.lastSyncedAt).toBeNull();
+    expect(state.trackedResources[0].bootstrappedAt).toBeNull();
+  });
+
+  it("does not abort the whole run when only one of several resources fails to recover", async () => {
+    await trackResource("tafsirs", 169);
+    await trackResource("tafsirs", 15);
+    mockSnap.mockImplementation(async (url: string) => {
+      if (url.includes("/169")) throw new Error("still offline");
+      return { records: [{ verse_key: "1:1", text: "ok" }], syncSequence: 1 };
+    });
+    mockSync.mockResolvedValue(page());
+
+    await runSync({ force: true });
+
+    const okRows = await readResourceRows("tafsirs", 15);
+    expect(okRows).toHaveLength(1);
+    const state = await readSyncState();
+    const t169 = state.trackedResources.find((r) => r.resourceId === 169);
+    const t15 = state.trackedResources.find((r) => r.resourceId === 15);
+    expect(t169?.bootstrappedAt).toBeNull();
+    expect(t15?.bootstrappedAt).toBeGreaterThan(0);
+  });
+
+  it("caps pagination and records an error instead of looping forever", async () => {
+    await trackResource("tafsirs", 169);
+    // Every page claims more is coming — an untested but possible server
+    // behaviour per the wire-format spec's "pagination never observed" note.
+    mockSync.mockResolvedValue(
+      page({ has_more: true, next_sync_token: "tok-loop" }),
+    );
+
+    const res = await runSync({ force: true });
+
+    expect(res.ran).toBe(false);
+    // Bounded: fetchSyncPage must not be called an unbounded number of times.
+    expect(mockSync.mock.calls.length).toBeLessThan(1000);
+    const state = await readSyncState();
+    expect(state.lastError).toBeTruthy();
   });
 });

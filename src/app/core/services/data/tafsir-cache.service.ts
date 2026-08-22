@@ -1,6 +1,7 @@
 import type { TafsirResource } from "../api/quran-api.client";
 import { fetchTafsirResources } from "../api/quran-api.client";
 import { hasCachedTafsir } from "../sync/adapters/tafsirs.adapter";
+import { bootstrapResource } from "../sync/content-sync.service";
 
 const DOWNLOADED_KEY = "rafiq_downloaded_tafsirs_v1";
 const RESOURCES_CACHE_KEY = "rafiq_tafsir_resources_v1";
@@ -43,6 +44,29 @@ export function isTafsirDownloaded(id: string): boolean {
 export async function isTafsirAvailableOffline(id: string): Promise<boolean> {
   if (!isTafsirDownloaded(id)) return false;
   return hasCachedTafsir(Number(id));
+}
+
+/**
+ * Save (bootstrap) a tafsir and enter it into the downloaded list.
+ *
+ * The tafsir is added to the downloaded list BEFORE the (potentially slow,
+ * ~12MB) bootstrap is awaited — not after. If bootstrapResource() rejects
+ * (e.g. the device goes offline mid-download), the id must already be in the
+ * downloaded list: isTafsirAvailableOffline() then correctly reports it as
+ * downloaded-but-not-yet-cached, which is exactly the "incomplete / resume"
+ * state the Settings UI exists to surface. Adding it only on success would
+ * make a failed first download invisible: never shown in the Downloaded
+ * section, and the resume affordance never fires.
+ *
+ * Rethrows on failure so callers (TafsirSettings) can still drive their own
+ * saving/progress/failed UI state exactly as before.
+ */
+export async function downloadTafsir(
+  id: string,
+  onProgress?: (pct: number) => void,
+): Promise<void> {
+  addDownloadedTafsir(id);
+  await bootstrapResource("tafsirs", Number(id), onProgress);
 }
 
 /** Cached resource list so the TafsirSettings page loads instantly offline. */
