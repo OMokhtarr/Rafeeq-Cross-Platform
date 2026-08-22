@@ -88,3 +88,77 @@ Manual checks still outstanding:
 - tafsir rendering with the network disabled after a download;
 - Android blob eviction on hardware;
 - RTL layout of the new Settings section and the tafsir incomplete/resume state.
+
+
+---
+
+# Verification status (2026-08-22)
+
+## Done — live end-to-end against the real API
+
+The real compiled engine and tafsir adapter were driven against the live QF API
+through the token broker (only IndexedDB was substituted, via fake-indexeddb).
+All checks pass:
+
+- `bootstrapResource("tafsirs", 169)` completes in ~3.3 s and stores 6,236 rows
+- the cross-surah range `104:1 → 105:5` resolves on every one of its 14 verses
+- **all 6,236 verse keys resolve — zero missing**, verified against a per-surah
+  ayah-count table
+- `runSync({force:true})` returns `{ran:true, applied:1}` and persists a real
+  `sync_token` with `lastError: null`
+
+**This run found two Critical bugs the 162-test suite could not**, because the
+suite mocks the API. Both are fixed (commit `680024a`):
+
+1. **`PER_PAGE` was 200; the API caps it at 100.** Every `runSync` returned 422
+   `invalid_per_page`. Sync was broken in production, full stop.
+2. **Empty placeholder records overwrote populated ones.** QF emits one record
+   per verse in a group, all carrying the same range, but only the first has
+   text. Range expansion let the empty ones clobber the populated one —
+   **4,328 of 6,236 verses affected**. `readCachedTafsir(169, "36:1")` returned
+   NULL despite 3,374 characters of commentary existing upstream.
+
+The lesson worth keeping: a fully green mocked suite told us nothing about
+either. Any future change to `parse-mutation.ts`, the adapters, or the request
+parameters deserves one live run before it ships.
+
+## Done — RTL static review
+
+New CSS in `Settings.css` and `TafsirSettings.css` contains no physical
+`left`/`right`; the section inherits `dir` from the page wrapper as its siblings
+do; the date formatter switches on `lang === "ar"`; all eight sync strings exist
+in both languages. Not visually confirmed — see below.
+
+## Outstanding — needs a device
+
+### A. Android recitation eviction
+
+The reason this matters: `evictRecitation`'s Android branch is a **stub**, so
+today eviction does nothing on the primary release platform (item 1 above).
+
+1. Build and install on a device.
+2. Download a reciter's audio for a surah; confirm files appear under the app's
+   data dir at `quran-audio/{reciter}_{sura}_{aya}.mp3`.
+3. Trigger an invalidate for that recitation.
+4. **Expected once implemented:** those files are gone and re-download on next
+   play. **Expected today:** they remain — that is the known gap, not a new bug.
+
+### B. Offline tafsir after a real download
+
+1. Download a tafsir in Settings; watch the progress readout advance (this is a
+   real ~12 MB fetch now, not the old fake 400 ms timer).
+2. Force-quit the app, enable airplane mode, relaunch.
+3. Open a verse → tafsir must render from cache with no network.
+4. Check a verse inside a grouped range — e.g. **36:1 through 36:7**, or
+   **105:1 through 105:5** — since those are the two shapes that were broken and
+   are now fixed. All verses in a group must show the same commentary.
+5. Interrupt a download mid-way and confirm the tafsir shows "Download
+   incomplete" with the resume affordance, rather than claiming success.
+
+### C. RTL visual pass
+
+Switch the app to Arabic and look at the new Settings "المحتوى دون اتصال"
+section. The string `"دون اتصال — ستتم المزامنة عند الاتصال"` is considerably
+longer than its English counterpart and shares a row with the sync button — that
+is the most likely place for a layout problem. Also check the tafsir
+downloading/failed/incomplete states, whose Arabic labels are wider than `"+"`.
