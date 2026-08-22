@@ -113,6 +113,7 @@ export async function downloadAndCache(
 ): Promise<boolean> {
   if (usesFileCache()) {
     await ensureCachedFile(reciter, sura, aya, signal);
+    ensureRecitationTracked(reciter);
     return true;
   }
   if (await hasCached(reciter, sura, aya)) return true;
