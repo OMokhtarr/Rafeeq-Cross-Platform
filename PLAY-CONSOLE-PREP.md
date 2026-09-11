@@ -3,7 +3,22 @@
 Everything needed for the Play Store listing, derived from what the app actually
 declares and does. Answers here are meant to be copied into the console verbatim.
 
-App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName 1.1.0
+App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 3 / versionName 1.1.0
+
+> ⚠️ **The package name is `com.rafeeq.quranquiz` — note the trailing `z`.**
+> The first Play Console entry was created as `com.rafeeq.quranqui` (one character
+> short), which rejected every upload with "your bundle needs to have the package
+> name com.rafeeq.quranqui". That message echoes what the console entry was
+> registered with; it is not a statement about what the bundle should contain.
+>
+> A console entry's package name **cannot be changed, and cannot be reused even
+> after deleting the app**. The fix was to create a new app entry with the correct
+> name (done 11 Sep 2026); the old draft entry was never used for a test, so
+> nothing was lost. When creating an entry, paste the package name and count the
+> characters — 20, ending in `z`.
+>
+> versionCode 3 rather than 1 because 2 was uploaded to the old entry before the
+> mistake was found. The new app has no upload history, so this is cosmetic.
 
 > ✅ **Credentials rotated** 13 Aug 2026 and verified working through the broker.
 >
@@ -120,6 +135,7 @@ video (A5).
 | QF client secret rotated — credential rotation now complete (B4) | 11 Sep 2026 |
 | Play listing created; Data safety + foreground-service declarations submitted (C3, C4, C8) | 11 Sep 2026 |
 | Android Auto declared in the listing — car-app review accepted (C11) | 11 Sep 2026 |
+| Play entry recreated with the correct package name after a typo in the first one | 11 Sep 2026 |
 
 ---
 
