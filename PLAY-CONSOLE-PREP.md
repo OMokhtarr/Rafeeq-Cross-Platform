@@ -20,7 +20,7 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 2 / versionName
 
 ## 0. Status at a glance
 
-Last updated 22 Aug 2026. Section numbers link to the detail below.
+Last updated 11 Sep 2026. Section numbers link to the detail below.
 
 ### Outstanding
 
@@ -32,11 +32,11 @@ someone else for, then paperwork that can be filled in any time.
 | # | Task | § | Blocking |
 |---|---|---|---|
 | ~~A1~~ | ~~**QF 7-day caching rule**~~ | 5 | ✅ **Done 22 Aug 2026** |
-| A2 | Fill in the postal address in `privacy.html` | 5 | **Yes** |
-| A3 | Mirror that address into `PRIVACY_SECTIONS` in `Account.tsx` (AR + EN in sync) | 5 | **Yes** |
+| ~~A2~~ | ~~**Postal address in `privacy.html`**~~ | 5 | ✅ **Done 11 Sep 2026** |
+| ~~A3~~ | ~~**Address mirrored into `Account.tsx`**~~ (AR + EN in sync) | 5 | ✅ **Done 11 Sep 2026** — changes app code, so A6 rebuild required |
 | ~~A4~~ | ~~**Surah-header ornament**~~ — decision taken to ship the trace as-is | 5 | ✅ **Closed 22 Aug 2026** (risk accepted) |
 | A5 | Record the foreground-service demo video (playback → background → notification controls) | 3 | **Yes** |
-| A6 | Rebuild + re-sign the AAB — **A1 landed after the current AAB was built, so this is now required** | 8 | **Yes** |
+| A6 | Rebuild + re-sign the AAB — **required twice over: the current bundle predates both Content Sync (A1) and the A3 address change** | 8 | **Yes** |
 
 #### B. Blocked on someone else — chase these in parallel
 
@@ -45,7 +45,7 @@ someone else for, then paperwork that can be filled in any time.
 | ~~B1~~ | ~~**QF reply — Content Sync scope**~~ — answered: express permission granted under §3.1(3)(a) | 5 | ✅ **Resolved 21 Aug 2026** |
 | ~~B2~~ | ~~**QF reply — surah-header artwork**~~ — QF cannot grant on KFGQPC's behalf; proceeding without a reply | 5 | ✅ **Closed 22 Aug 2026** (risk accepted) |
 | B3 | Recruit ~12 testers and start the closed test — 14 **continuous** days | 8 | **Yes** |
-| B4 | Confirm the QF client secret was rotated (Deepgram key confirmed via broker) | 7 | **Yes** |
+| ~~B4~~ | ~~**QF client secret rotation**~~ | 7 | ✅ **Done 11 Sep 2026** |
 
 #### C. Paperwork — no dependencies, do any time
 
@@ -62,22 +62,26 @@ ready to paste. What remains in C is console entry, hosting, and two decisions.
 | C6 | Target audience & content declaration | 6 | **Yes** | ✅ Pre-answered — 13+ |
 | C7 | Category — Books & Reference, or Lifestyle | 6 | **Yes** | ✅ Decided — Books & Reference |
 | C8 | Create the Play listing | 8 | **Yes** | Console only |
-| C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** (after A2) | Blocked on A2 |
-| C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No | Not started |
+| C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** | ✅ Done 11 Sep 2026 — GitHub Pages, `gh-pages` branch |
+| C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No | ✅ Done 11 Sep 2026 — found + fixed a dead QF link |
 | C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No | ⏳ Recommendation written — **your call** |
 | C12 | Apply for production access | 8 | **Yes** — last step | Console only |
 
-**Critical path:** B3 is now the only long pole — 14 continuous days, and nothing
-gates starting it, so recruit testers today. Everything that was waiting on Quran
-Foundation (B1, B2) is resolved, and the caching work they gated (A1) is merged,
-which also closes A4. What remains that touches the app is the postal address
-(A2/A3) and a rebuild (A6) — **the current signed AAB predates Content Sync, so it
-must be rebuilt before submission**. A5's demo video is the most commonly
-underestimated item.
+**Critical path:** B3 is the only long pole — 14 **continuous** days, and nothing
+gates starting it, so recruit testers today. Credential rotation (B4) is complete,
+so nothing is blocked on a third party any more.
 
-Most of C is now drafted (see `PLAY-LISTING-COPY.md`); what is left there is
-console entry, hosting (C9, blocked on A2), the link check (C10), and the
-Android Auto decision (C11).
+The privacy policy is filled in, hosted, link-checked and in the listing
+(A2, A3, C9, C10). What remains that touches the app is **A5** (foreground-service
+demo video — the most commonly underestimated item) and **A6** (rebuild + re-sign
+the AAB). A6 is doubly required now: the current bundle predates Content Sync
+*and* predates the A3 address change.
+
+Note the privacy-link fix touched only the hosted page, not the app, so it does
+not itself force a rebuild.
+
+Everything in C is drafted (see `PLAY-LISTING-COPY.md`); what is left is console
+entry (C3, C4, C8), the Android Auto decision (C11), and production access (C12).
 
 > ⚠️ **Tripwire for the subscription tier.** The content rating answers
 > "no digital purchases" and "no user interaction" are correct for versionCode 2
@@ -102,6 +106,10 @@ Android Auto decision (C11).
 | QF express permission for offline Quran script (§3.1(3)(a)) — `docs/licensing-decisions.md` | 21 Aug 2026 |
 | **Content Sync implemented and merged** — tafsirs + recitations, verified live | 22 Aug 2026 |
 | KFGQPC ornament — decision taken to ship without KFGQPC permission | 22 Aug 2026 |
+| Postal address filled in + mirrored in-app (A2/A3) | 11 Sep 2026 |
+| Privacy policy + terms hosted on GitHub Pages, listing updated (C9) | 11 Sep 2026 |
+| Processor links verified; dead QF privacy link fixed (C10) | 11 Sep 2026 |
+| QF client secret rotated — credential rotation now complete (B4) | 11 Sep 2026 |
 
 ---
 
@@ -289,22 +297,31 @@ requirements** (email from Basit Minhas, QF Developer Support, and
   modification of the Quran text, no extraction/redistribution/resale of QF
   content or raw API data, personal-use-only, and an acceptable-use clause.
 
-- [ ] **Fill in the postal address.** `privacy.html` carries
-      `[POSTAL ADDRESS — FILL IN BEFORE PUBLISHING]`; QF asks for a postal
-      address alongside the contact email. Blocker for publishing the page.
-- [ ] **Then add the same postal address to the in-app policy** — the Contact
-      section of `PRIVACY_SECTIONS` in `Account.tsx` (both `bodyAr` and
-      `bodyEn`). The placeholder was deliberately *not* put there, so a
-      bracketed `[FILL IN]` string never ships inside the APK; the in-app text
-      currently gives the contact email and the 30-day response commitment
-      only. Keep the AR and EN copies in sync.
-- [ ] **Host `privacy.html`** (GitHub Pages, Cloudflare Pages, or alongside the
-      token broker) and put the URL in the listing. This is the only page that
-      must be hosted — the deletion page is no longer required (section 4).
-      Host `terms.html` beside it: privacy.html now links to it via a relative
-      `privacy.html` ↔ `terms.html` link, so they must sit in the same directory.
-- [ ] Confirm the Deepgram, Cloudflare, jsDelivr and Quran Foundation
-      privacy-policy links all resolve.
+- [x] **Postal address filled in** (11 Sep 2026). Compound Dar Misr, Phase 2 —
+      Building 49, Apartment 23, El Shorouk, Cairo, Egypt.
+- [x] **Address mirrored into the in-app policy** (11 Sep 2026) — the Contact
+      section of `PRIVACY_SECTIONS` in `Account.tsx`, `bodyAr` and `bodyEn` in
+      sync. Arabic uses Arabic-Indic numerals to match the surrounding copy;
+      `privacy.html` is transliterated, being an English document read by store
+      reviewers. ⚠️ This changed app code — the AAB must be rebuilt (A6).
+- [x] **Hosted on GitHub Pages** (11 Sep 2026), from an orphan `gh-pages` branch
+      holding only the two pages, so serving the site does not publish the source
+      tree. Both are live and the Play listing has been updated:
+
+      - <https://omokhtarr.github.io/Rafeeq-Cross-Platform/privacy.html>
+      - <https://omokhtarr.github.io/Rafeeq-Cross-Platform/terms.html>
+
+      They link to each other with **relative** hrefs, so they must stay in the
+      same directory — do not move one without the other. The deletion page is
+      not required (section 4).
+- [x] **Processor links checked** (11 Sep 2026). Deepgram, Cloudflare, jsDelivr
+      and the QF api-docs link all return 200. **`https://quran.foundation/privacy`
+      returned 404** and was replaced with <https://quran.com/privacy> — the
+      end-user policy for the service whose content the App consumes. Not to be
+      confused with the *Developer* Privacy Policy Packet at
+      `api-docs.quran.foundation/legal/developer-privacy/`, which covers our
+      obligations to QF rather than the user's data. Worth re-running this check
+      whenever the policy is edited.
 
 ### Offline caching vs. the QF 7-day rule — RESOLVED
 
@@ -429,15 +446,17 @@ Full reasoning in **`docs/licensing-decisions.md` §2**.
 
 ---
 
-## 7. Credential rotation (blocking)
+## 7. Credential rotation — ✅ COMPLETE
 
-Both of these were extractable from shipped APKs:
+Both of these were extractable from shipped APKs. Both have now been rotated:
 
-- [ ] **Deepgram API key** — mint a new one in the Deepgram dashboard, revoke the old
+- [x] **Deepgram API key** — rotated and verified live through the broker (13 Aug 2026).
+      Mint a new one in the Deepgram dashboard, revoke the old
       one, then `wrangler secret put DEEPGRAM_API_KEY` in `token-broker/`. Never put
       it back in a `.env` file.
-- [ ] **Quran Foundation client secret** — rotate in the QF dashboard and update the
-      Worker secret. It is no longer referenced by the app at all.
+- [x] **Quran Foundation client secret** — rotated, confirmed 11 Sep 2026.
+      Rotate in the QF dashboard and update the Worker secret. It is no longer
+      referenced by the app at all.
 
 Deploy the broker after rotating:
 
@@ -470,7 +489,8 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
    rather than falling through to the Quran Foundation handler.
 2. ~~Smoke-test recite mode against the deployed broker~~ — done, working
 3. ~~Android Auto regression pass in a real car~~ — done, working (13 Aug 2026)
-4. **Host the privacy policy (section 5)** — the one remaining hard console blocker
+4. ~~Host the privacy policy (section 5)~~ — done 11 Sep 2026, live on GitHub
+   Pages and in the listing; processor links verified
 5. **Rebuild + re-sign the AAB (`gradlew bundleRelease`)** — ⚠️ the existing
    `Rafeeq-1.1.0-release.aab` was built **before** Content Sync merged (22 Aug 2026)
    and before the postal address is filled in, so it is stale. Do not submit it.
