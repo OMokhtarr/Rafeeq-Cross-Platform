@@ -3,7 +3,7 @@
 Everything needed for the Play Store listing, derived from what the app actually
 declares and does. Answers here are meant to be copied into the console verbatim.
 
-App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 3 / versionName 1.1.0
+App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 4 / versionName 1.1.0
 
 > ⚠️ **The package name is `com.rafeeq.quranquiz` — note the trailing `z`.**
 > The first Play Console entry was created as `com.rafeeq.quranqui` (one character
@@ -17,8 +17,9 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 3 / versionName
 > nothing was lost. When creating an entry, paste the package name and count the
 > characters — 20, ending in `z`.
 >
-> versionCode 3 rather than 1 because 2 was uploaded to the old entry before the
-> mistake was found. The new app has no upload history, so this is cosmetic.
+> versionCode is 4. It is not 1 because earlier codes were spent against the old
+> entry before the mistake was found. The new app has its own history, so the
+> starting number is cosmetic — versionCode only ever has to increase.
 
 > ✅ **Credentials rotated** 13 Aug 2026 and verified working through the broker.
 >
