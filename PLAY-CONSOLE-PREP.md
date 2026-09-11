@@ -56,12 +56,12 @@ ready to paste. What remains in C is console entry, hosting, and two decisions.
 |---|---|---|---|---|
 | C1 | Short description (≤80 chars) | 6 | **Yes** | ✅ Drafted — EN + AR, 3 options each |
 | C2 | Full description (≤4000 chars) | 6 | **Yes** | ✅ Drafted — EN 2,794 / AR 2,497 chars |
-| C3 | Data safety form — answers drafted in §2 | 2 | **Yes** | Answers ready; console entry outstanding |
-| C4 | Foreground service declaration text (§3 has the justification) | 3 | **Yes** | Text ready; console entry outstanding |
+| C3 | Data safety form — answers in §2 | 2 | **Yes** | ✅ Submitted 11 Sep 2026 — ⚠️ see the Deepgram retention caveat in §2 |
+| C4 | Foreground service declaration (§3 has the justification) | 3 | **Yes** | ✅ Submitted 11 Sep 2026 — demo video (A5) still required |
 | C5 | Content rating questionnaire (expect "Everyone") | 6 | **Yes** | ✅ Pre-answered, every question |
 | C6 | Target audience & content declaration | 6 | **Yes** | ✅ Pre-answered — 13+ |
 | C7 | Category — Books & Reference, or Lifestyle | 6 | **Yes** | ✅ Decided — Books & Reference |
-| C8 | Create the Play listing | 8 | **Yes** | Console only |
+| C8 | Create the Play listing | 8 | **Yes** | ✅ Done 11 Sep 2026 |
 | C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** | ✅ Done 11 Sep 2026 — GitHub Pages, `gh-pages` branch |
 | C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No | ✅ Done 11 Sep 2026 — found + fixed a dead QF link |
 | C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No | ⏳ Recommendation written — **your call** |
@@ -80,8 +80,15 @@ the AAB). A6 is doubly required now: the current bundle predates Content Sync
 Note the privacy-link fix touched only the hosted page, not the app, so it does
 not itself force a rebuild.
 
-Everything in C is drafted (see `PLAY-LISTING-COPY.md`); what is left is console
-entry (C3, C4, C8), the Android Auto decision (C11), and production access (C12).
+Console entry is done — the listing is created and the Data safety and
+foreground-service declarations are submitted (C3, C4, C8). What is left in C is
+the Android Auto decision (C11) and production access (C12), which is the last
+step and gated on the closed test finishing.
+
+⚠️ Two submitted answers are conditional and worth re-checking before release:
+the Data safety "processed ephemerally" claim depends on Deepgram's retention
+setting (§2), and the foreground-service declaration still needs its demo
+video (A5).
 
 > ⚠️ **Tripwire for the subscription tier.** The content rating answers
 > "no digital purchases" and "no user interaction" are correct for versionCode 2
@@ -110,6 +117,7 @@ entry (C3, C4, C8), the Android Auto decision (C11), and production access (C12)
 | Privacy policy + terms hosted on GitHub Pages, listing updated (C9) | 11 Sep 2026 |
 | Processor links verified; dead QF privacy link fixed (C10) | 11 Sep 2026 |
 | QF client secret rotated — credential rotation now complete (B4) | 11 Sep 2026 |
+| Play listing created; Data safety + foreground-service declarations submitted (C3, C4, C8) | 11 Sep 2026 |
 
 ---
 
@@ -153,9 +161,13 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 - Required or optional: **Optional** — only recite mode uses the mic.
 - Purpose: **App functionality**
 
-> Verify Deepgram's own retention setting in your Deepgram account before submitting.
-> If their default retains audio/transcripts, "processed ephemerally" no longer holds
-> and you must disclose retention instead.
+> ⚠️ **Still open, and now load-bearing — the form was submitted on 11 Sep 2026
+> declaring "processed ephemerally".** That answer depends on Deepgram's retention
+> setting, which lives in your Deepgram account, not in this repo. If their default
+> retains audio or transcripts, the declaration is inaccurate as filed and the Data
+> safety form must be corrected to disclose retention. Verify it in the Deepgram
+> dashboard; an incorrect Data safety declaration is an enforcement risk, not a
+> cosmetic one.
 
 ### Personal info → Name / Email
 - Collected: **No** — the app has no sign-in and never asks for a name or email.
