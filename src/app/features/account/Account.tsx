@@ -134,8 +134,8 @@ const PRIVACY_SECTIONS: ProseSection[] = [
   {
     headingAr: "التواصل",
     headingEn: "Contact",
-    bodyAr: "لأي أسئلة أو طلبات أو شكاوى تتعلق بالخصوصية، يرجى التواصل معنا على or.mokhtar@gmail.com. ونسعى للرد على أي طلب يخص الخصوصية خلال ٣٠ يومًا من استلامه.",
-    bodyEn: "For questions, privacy requests or complaints about this policy, contact us at or.mokhtar@gmail.com. We aim to respond to any privacy request within 30 days of receiving it.",
+    bodyAr: "لأي أسئلة أو طلبات أو شكاوى تتعلق بالخصوصية، يرجى التواصل معنا على or.mokhtar@gmail.com.\nالعنوان البريدي: كمبوند دار مصر المرحلة الثانية — عمارة ٤٩ شقة ٢٣، الشروق، القاهرة، مصر.\nونسعى للرد على أي طلب يخص الخصوصية خلال ٣٠ يومًا من استلامه.",
+    bodyEn: "For questions, privacy requests or complaints about this policy, contact us at or.mokhtar@gmail.com.\nPostal address: Compound Dar Misr, Phase 2 — Building 49, Apartment 23, El Shorouk, Cairo, Egypt.\nWe aim to respond to any privacy request within 30 days of receiving it.",
   },
 ];
 
