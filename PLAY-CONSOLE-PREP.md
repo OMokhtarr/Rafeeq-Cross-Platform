@@ -64,7 +64,7 @@ ready to paste. What remains in C is console entry, hosting, and two decisions.
 | C8 | Create the Play listing | 8 | **Yes** | ✅ Done 11 Sep 2026 |
 | C9 | Host `privacy.html` + `terms.html` in the same directory; add URL to the listing | 5 | **Yes** | ✅ Done 11 Sep 2026 — GitHub Pages, `gh-pages` branch |
 | C10 | Confirm the Deepgram / Cloudflare / jsDelivr / QF policy links resolve | 5 | No | ✅ Done 11 Sep 2026 — found + fixed a dead QF link |
-| C11 | Decide: declare Android Auto now, or in a follow-up release | 6 | No | ⏳ Recommendation written — **your call** |
+| ~~C11~~ | ~~**Android Auto declaration**~~ — **declared now**, against the recommendation below | 6 | ✅ **Decided 11 Sep 2026** — submission now also goes through car-app quality review |
 | C12 | Apply for production access | 8 | **Yes** — last step | Console only |
 
 **Critical path:** B3 is the only long pole — 14 **continuous** days, and nothing
@@ -81,9 +81,10 @@ Note the privacy-link fix touched only the hosted page, not the app, so it does
 not itself force a rebuild.
 
 Console entry is done — the listing is created and the Data safety and
-foreground-service declarations are submitted (C3, C4, C8). What is left in C is
-the Android Auto decision (C11) and production access (C12), which is the last
-step and gated on the closed test finishing.
+foreground-service declarations are submitted (C3, C4, C8). Android Auto is
+**declared** (C11), so the submission also goes through car-app quality review.
+What is left in C is production access (C12), the last step, gated on the closed
+test finishing.
 
 ⚠️ Two submitted answers are conditional and worth re-checking before release:
 the Data safety "processed ephemerally" claim depends on Deepgram's retention
@@ -118,6 +119,7 @@ video (A5).
 | Processor links verified; dead QF privacy link fixed (C10) | 11 Sep 2026 |
 | QF client secret rotated — credential rotation now complete (B4) | 11 Sep 2026 |
 | Play listing created; Data safety + foreground-service declarations submitted (C3, C4, C8) | 11 Sep 2026 |
+| Android Auto declared in the listing — car-app review accepted (C11) | 11 Sep 2026 |
 
 ---
 
@@ -443,18 +445,28 @@ Full reasoning in **`docs/licensing-decisions.md` §2**.
       exactly what draws COPPA scrutiny
 - [x] Category: **Books & Reference** (not Lifestyle — it is where Quran.com,
       Tarteel and Ayah sit, and where the browse traffic is)
-- [ ] **Android Auto (C11 — your call):** recommendation in
-      `PLAY-LISTING-COPY.md` is to **hold the declaration for a follow-up
-      release** and drop the Auto bullet from the description, so a car-app
-      review rejection cannot delay the whole launch and the 14-day test clock.
-      The Auto code ships either way. Full reasoning below.
+- [x] **Android Auto — DECLARED** (11 Sep 2026). The listing declares Auto
+      support, so the submission goes through Google's **car-app quality review**
+      as well as the standard review.
 
-      The listing triggers an extra car-app quality review.
-      In-car regression pass done and working (13 Aug 2026), so this is no longer
-      blocking. Note the car-app review is a separate, stricter track and a common
-      source of first-submission rejections — declaring Auto later, in a follow-up
-      release, keeps the first submission on the standard track. The Auto code ships
-      either way; this only controls whether the listing advertises it.
+      This was taken **against** the recommendation recorded here, which was to
+      hold the declaration for a follow-up release so a car-app rejection could
+      not delay the whole launch. Recorded as a decision, not as a resolution of
+      the risk — the risk is accepted, not removed.
+
+      What makes it defensible: the in-car regression pass was done in a real car
+      and working (13 Aug 2026), and the implementation is a real Media3
+      `MediaBrowserService` (`RafeeqMediaService`), not a shim.
+
+      What to expect: car-app review is a separate, stricter track and a common
+      source of first-submission rejections. If it rejects, the **whole app** is
+      held, not just the Auto surface. The fallback if that happens is to pull the
+      Auto declaration from the listing and resubmit on the standard track — the
+      Auto code can stay in the build, since the declaration is what triggers the
+      review.
+
+      Because Auto is now advertised, the listing description **should** keep its
+      Auto bullet, and the store assets should not contradict it.
 
 ---
 

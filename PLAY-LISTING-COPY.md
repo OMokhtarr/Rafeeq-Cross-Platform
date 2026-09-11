@@ -118,9 +118,12 @@ The only feature that sends anything off your device is Recite Mode, which strea
 Quran text, translations, tafsir, and recitation audio are provided by the Quran Foundation. Rafeeq is an independent application and is not an official Quran Foundation app.
 ```
 
-> **Android Auto line** — remove the "Android Auto support for listening while
-> driving" bullet if you go with the *declare Auto later* option (see below).
-> Advertising Auto in the description is itself a declaration.
+> **Android Auto line** — ✅ **Keep it.** Auto was declared in the listing on
+> 11 Sep 2026, so the bullet stays in both the English and Arabic descriptions
+> (Arabic carries it inline as `دعم أندرويد أوتو`). The removal instruction
+> below applied only to the *declare Auto later* option, which was not taken.
+> Note that advertising Auto in the description is itself a declaration, so the
+> copy and the console checkbox now agree.
 
 ### Arabic (ar) — 2,497 characters
 
@@ -251,7 +254,16 @@ rated Everyone. Do not answer Yes to the violence question on that basis.
 
 ---
 
-## Android Auto — declare now or later?
+## Android Auto — DECLARED (decided 11 Sep 2026)
+
+> ✅ **Decision: Auto was declared in the listing**, against the recommendation
+> below. The submission therefore also goes through car-app quality review. The
+> reasoning below is kept as the record of what the trade-off was — the risk was
+> accepted, not removed. If car-app review rejects, the fallback is to pull the
+> Auto declaration and resubmit on the standard track; the Auto code can stay in
+> the build, since the declaration is what triggers the review.
+
+### Original analysis — declare now or later?
 
 **Recommendation: hold the Auto declaration for a follow-up release**, and drop
 the Auto bullet from the description for the first submission.
