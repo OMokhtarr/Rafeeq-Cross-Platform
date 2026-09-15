@@ -1,5 +1,6 @@
 import {
   mushafRowsFrom,
+  createMushafRowAccumulator,
   evictMushafLayout,
   MushafPageData,
 } from "../mushafs.adapter";
@@ -204,6 +205,45 @@ describe("mushafRowsFrom", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].recordKey).toBe("50");
+  });
+});
+
+describe("createMushafRowAccumulator", () => {
+  it("builds the same rows from batches as from one array", async () => {
+    const all = [PAGE_50_RECORD, ...PAGE_50_WORDS];
+    const oneShot = mushafRowsFrom(all, 19, 1399);
+
+    const acc = createMushafRowAccumulator(19, 1399);
+    for (let i = 0; i < all.length; i += 4) acc.add(all.slice(i, i + 4));
+
+    expect(acc.rows()).toEqual(oneShot);
+  });
+
+  it("orders correctly when a page's words arrive across batches", async () => {
+    // The whole point: a page is split over several network batches, so the
+    // sort cannot happen per batch — it has to happen once at the end.
+    const acc = createMushafRowAccumulator(19, 1399);
+    acc.add([PAGE_50_RECORD]);
+    // Feed the words in reverse, split across batches.
+    const reversed = [...PAGE_50_WORDS].reverse();
+    for (let i = 0; i < reversed.length; i += 5) {
+      acc.add(reversed.slice(i, i + 5));
+    }
+
+    const data = acc.rows()[0].data as MushafPageData;
+    expect(data.words.map((w) => w.codeV2).slice(12, 15)).toEqual([
+      "ﱍ",
+      "ﱎ",
+      "ﱏ",
+    ]);
+  });
+
+  it("carries the resource id and sequence onto every row", () => {
+    const acc = createMushafRowAccumulator(19, 4242);
+    acc.add([PAGE_50_RECORD, ...PAGE_50_WORDS]);
+    const row = acc.rows()[0];
+    expect(row.id).toBe("mushafs:19:mushaf_page:50");
+    expect(row.sequence).toBe(4242);
   });
 });
 

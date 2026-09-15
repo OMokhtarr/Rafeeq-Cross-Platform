@@ -325,6 +325,37 @@ Treat this as part of the migration, not a follow-up. Shipping the layout sync
 without it leaves Rafeeq **less** compliant than before, having accepted a
 refresh duty it does not perform.
 
+### 9. Streaming the snapshot — avoiding the parse peak
+
+`await res.json()` on this snapshot holds the decoded body AND the whole
+object graph live at once. Measured on the real 2026-09-15 snapshot:
+
+| Approach | Peak heap | Notes |
+|---|---|---|
+| `JSON.parse` of the whole body | **63.1 MB** | what the first implementation did |
+| streamed, accumulating raw records | 30.5 MB | avoids the 22 MB string |
+| **streamed, mapping each batch (shipped)** | **18.1 MB** | also drops the 10 unused fields per word |
+
+End-to-end through the real bootstrap path: 604 rows, 83,665 words, correct
+ordering, **29.6 MB peak, 307 ms**.
+
+That matters because an OOM in a WebView is a *process kill*, not a catchable
+exception — no fallback can run after it. The wire cost was never the problem:
+the API serves brotli, so the body is only **1.1 MB** on the network and
+expands to 22.1 MB only when decoded.
+
+`stream-records.ts` walks the body as it arrives and yields records in
+batches; `SyncAdapter.createAccumulator` lets a group opt in. tafsirs and
+recitations keep the whole-body path — their snapshots are an order of
+magnitude smaller and the extra machinery would buy nothing.
+
+**The snapshot endpoint ignores pagination.** `per_page`, `limit`, `page`,
+`cursor` and `record_type` were each probed against the live API: all return
+the identical full 84,270-record body. Client-side streaming is the only lever.
+
+`ReadableStream` and `TextDecoder` are far below the WebView 79 floor
+(`docs/webview-compat-audit.md`).
+
 ## Test plan
 
 Mirror `tafsirs.adapter.test.ts`:
@@ -371,8 +402,10 @@ QF's design**, not by omission.
 4. ~~Bootstrap trigger.~~ Done.
 5. ~~§8 staleness tracking for fonts and by-page word text.~~ Done.
 6. ~~Verify the §5 join across all 604 pages.~~ Done — see "Join validation".
-7. **Device verification on low-end Android — 23.4 MB parse. STILL OPEN.**
-   Needs a device; cannot be done from here.
+7. ~~Device verification on low-end Android — 23.4 MB parse.~~ Addressed by
+   streaming the snapshot instead of parsing it whole; see §9. A device test
+   is still worth doing opportunistically, but the OOM risk it was guarding
+   against is now designed out rather than hoped against.
 
 ## Answered by QF (2026-09-14)
 

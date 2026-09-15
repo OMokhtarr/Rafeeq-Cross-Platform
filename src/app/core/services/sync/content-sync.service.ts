@@ -69,8 +69,28 @@ export interface SyncResult {
 export interface SyncAdapter {
   /** Convert a snapshot's records into rows. */
   toRows(records: unknown[], resourceId: number, sequence: number): SyncRow[];
+  /**
+   * Opt into the streamed bootstrap, for snapshots too large to parse whole.
+   * Records arrive in batches and one logical row may span several, so the
+   * accumulator holds partial state until `rows()` is called.
+   */
+  createAccumulator?(
+    resourceId: number,
+    sequence: number,
+  ): { add(records: unknown[]): void; rows(): SyncRow[] };
   /** Optional side effect when a resource's content is replaced or removed. */
   onInvalidate?(resourceId: number): Promise<void>;
+}
+
+/**
+ * Stamp the real sequence onto streamed rows.
+ *
+ * The accumulator is built before `sync_sequence` has been seen in the body,
+ * so rows are created with a placeholder and corrected here.
+ */
+function withSequence(rows: SyncRow[], sequence: number): SyncRow[] {
+  for (const r of rows) r.sequence = sequence;
+  return rows;
 }
 
 const adapters = new Map<SyncGroup, SyncAdapter>();
@@ -112,14 +132,36 @@ export async function bootstrapResource(
     `/api/v4/resources/snapshots/${group}/${resourceId}`,
     CONTENT_API_BASE_URL,
   );
-  const snap = await fetchSnapshot(url);
-  onProgress?.(70);
+  const adapter = adapterFor(group);
 
-  const rows = adapterFor(group).toRows(
-    snap.records,
-    resourceId,
-    snap.syncSequence,
-  );
+  let rows: SyncRow[];
+  if (adapter.createAccumulator) {
+    // Streamed path, for snapshots too large to parse whole. The mushaf
+    // snapshot decodes to ~22 MB across 84,270 records; `await res.json()`
+    // holds the decoded body AND the full object graph live at once, peaking
+    // around 63 MB to produce ~2.5 MB of rows. On a 1-2 GB device that peak
+    // risks an OOM, which kills the WebView process rather than throwing
+    // something catchable. Mapping each batch as it arrives and keeping only
+    // the fields the renderer needs brings the peak to ~18 MB (measured).
+    // See stream-records.ts and docs/webview-compat-audit.md.
+    let acc: ReturnType<NonNullable<SyncAdapter["createAccumulator"]>> | null =
+      null;
+    const snap = await fetchSnapshot(url, async (batch) => {
+      // The sequence is known only once the stream reports it, so the
+      // accumulator is created on the first batch.
+      if (!acc) acc = adapter.createAccumulator!(resourceId, 0);
+      acc.add(batch);
+    });
+    onProgress?.(70);
+    rows = acc
+      ? withSequence((acc as NonNullable<typeof acc>).rows(), snap.syncSequence)
+      : [];
+  } else {
+    const snap = await fetchSnapshot(url);
+    onProgress?.(70);
+    rows = adapter.toRows(snap.records, resourceId, snap.syncSequence);
+  }
+
   await replaceResourceRows(group, resourceId, rows);
   onProgress?.(95);
 

@@ -16,6 +16,7 @@
 
 import type { VerseWord } from "../../../shared/models/verse.model";
 import { idb } from "../storage/idb.service";
+import { streamRecords } from "../sync/stream-records";
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CONTENT_API_BASE =
@@ -868,6 +869,7 @@ export async function fetchSyncPage(params: {
  */
 export async function fetchSnapshot(
   url: string,
+  onBatch?: (records: unknown[]) => Promise<void>,
 ): Promise<{ records: unknown[]; syncSequence: number }> {
   assertMaybeOnline();
 
@@ -898,6 +900,18 @@ export async function fetchSnapshot(
       if (!res.ok) {
         throw new QuranApiError(res.status, `snapshot failed: ${res.status}`);
       }
+      if (onBatch) {
+        // Streamed path: the caller maps and discards each batch, so the whole
+        // decoded body is never resident. Used for the mushaf snapshot, which
+        // decodes to ~22 MB — see stream-records.ts.
+        let syncSequence = 0;
+        for await (const batch of streamRecords(res)) {
+          if (batch.syncSequence !== undefined) syncSequence = batch.syncSequence;
+          if (batch.records.length) await onBatch(batch.records);
+        }
+        return { records: [], syncSequence };
+      }
+
       const body = (await res.json()) as {
         records?: unknown[];
         sync_sequence?: number;

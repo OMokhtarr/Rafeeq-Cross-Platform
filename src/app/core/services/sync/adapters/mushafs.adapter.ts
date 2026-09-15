@@ -82,47 +82,83 @@ function toVerseWord(raw: MushafWordRecord): VerseWord {
   };
 }
 
+/**
+ * Collects records arriving in batches into page rows.
+ *
+ * The snapshot is streamed rather than parsed whole (see stream-records.ts),
+ * so records reach the adapter a batch at a time and one page's words can
+ * span several batches. Only the fields the renderer needs are kept, which is
+ * what keeps the bootstrap's peak memory near the ~2.5 MB of mapped output
+ * instead of the 22 MB of decoded JSON. Sorting happens once at the end,
+ * because batch order says nothing about page order.
+ */
+export function createMushafRowAccumulator(
+  resourceId: number,
+  sequence: number,
+) {
+  const wordsByPage = new Map<number, MushafWordRecord[]>();
+  const mappingByPage = new Map<number, Record<string, string>>();
+
+  return {
+    add(records: unknown[]): void {
+      for (const raw of records as (MushafWordRecord & MushafPageRecord)[]) {
+        const page = raw?.page_number;
+        if (typeof page !== "number") continue;
+
+        if (raw.record_type === "mushaf_word") {
+          // Keep only the five fields that survive into a VerseWord; the raw
+          // record carries ten more that would otherwise stay resident.
+          const slim: MushafWordRecord = {
+            page_number: page,
+            line_number: raw.line_number,
+            position_in_verse: raw.position_in_verse,
+            position_in_page: raw.position_in_page,
+            text: raw.text,
+            char_type_name: raw.char_type_name,
+          };
+          const bucket = wordsByPage.get(page);
+          if (bucket) bucket.push(slim);
+          else wordsByPage.set(page, [slim]);
+        } else if (raw.record_type === "mushaf_page") {
+          mappingByPage.set(page, raw.verse_mapping ?? {});
+        }
+      }
+    },
+
+    // Pages with words but no page record still hold the layout; a page record
+    // with no words would store nothing useful, so only words create rows.
+    rows(): SyncRow[] {
+      const out: SyncRow[] = [];
+      for (const [page, words] of wordsByPage) {
+        const data: MushafPageData = {
+          pageNumber: page,
+          verseMapping: mappingByPage.get(page) ?? {},
+          words: orderWords(words).map(toVerseWord),
+        };
+        out.push({
+          id: `mushafs:${resourceId}:mushaf_page:${page}`,
+          resourceGroup: "mushafs",
+          resourceId,
+          recordType: "mushaf_page",
+          recordKey: String(page),
+          data,
+          sequence,
+        });
+      }
+      return out;
+    },
+  };
+}
+
+/** Whole-array form, kept for the SyncAdapter contract and ROW mutations. */
 export function mushafRowsFrom(
   records: unknown[],
   resourceId: number,
   sequence: number,
 ): SyncRow[] {
-  const wordsByPage = new Map<number, MushafWordRecord[]>();
-  const mappingByPage = new Map<number, Record<string, string>>();
-
-  for (const raw of records as (MushafWordRecord & MushafPageRecord)[]) {
-    const page = raw?.page_number;
-    if (typeof page !== "number") continue;
-
-    if (raw.record_type === "mushaf_word") {
-      const bucket = wordsByPage.get(page);
-      if (bucket) bucket.push(raw);
-      else wordsByPage.set(page, [raw]);
-    } else if (raw.record_type === "mushaf_page") {
-      mappingByPage.set(page, raw.verse_mapping ?? {});
-    }
-  }
-
-  // Pages with words but no page record still hold the layout; pages with a
-  // record but no words would store nothing useful, so only words create rows.
-  const rows: SyncRow[] = [];
-  for (const [page, words] of wordsByPage) {
-    const data: MushafPageData = {
-      pageNumber: page,
-      verseMapping: mappingByPage.get(page) ?? {},
-      words: orderWords(words).map(toVerseWord),
-    };
-    rows.push({
-      id: `mushafs:${resourceId}:mushaf_page:${page}`,
-      resourceGroup: "mushafs",
-      resourceId,
-      recordType: "mushaf_page",
-      recordKey: String(page),
-      data,
-      sequence,
-    });
-  }
-  return rows;
+  const acc = createMushafRowAccumulator(resourceId, sequence);
+  acc.add(records);
+  return acc.rows();
 }
 
 /**
@@ -139,5 +175,8 @@ export async function evictMushafLayout(_resourceId: number): Promise<void> {
 
 registerAdapter("mushafs", {
   toRows: mushafRowsFrom,
+  // Opts this group into the streamed bootstrap — the snapshot is far too
+  // large to parse in one piece on a low-memory device.
+  createAccumulator: createMushafRowAccumulator,
   onInvalidate: evictMushafLayout,
 });
