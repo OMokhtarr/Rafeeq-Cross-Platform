@@ -82,6 +82,20 @@ function markOffline(): void {
   offlineUntilOnline = true;
 }
 
+/**
+ * Best-guess connectivity, read-only.
+ *
+ * Same caveat as assertMaybeOnline(): only trustworthy in the negative. Used
+ * by the cache-refresh policy to decide whether a stale entry can be
+ * refreshed — never to decide whether cached content may be shown.
+ */
+export function isLikelyOffline(): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return true;
+  }
+  return offlineUntilOnline;
+}
+
 /** Cheap pre-flight: skip the request entirely when we know it cannot succeed. */
 function assertMaybeOnline(): void {
   // navigator.onLine is only trustworthy in the negative: false definitely

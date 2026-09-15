@@ -27,6 +27,8 @@ import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../api/mushaf.config";
 import { readPageLayout } from "./page-layout";
 import { mergeLayoutIntoVerses } from "./merge-layout";
 import { onDerivedPageCacheCleared } from "./page-cache";
+import { shouldRefetchPage } from "./page-refresh";
+import { isLikelyOffline } from "../api/quran-api.client";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   normalizeArabic,
@@ -118,6 +120,15 @@ onDerivedPageCacheCleared(() => pageCache.clear());
 const inflight = new Map<number, Promise<Verse[]>>();
 
 /**
+ * Re-fetch one page's word text without making the reader wait.
+ *
+ * Discharges the refresh duty QF attached to the data Content Sync does not
+ * carry (docs/licensing-decisions.md §1a). Failures are silent: the cached
+ * page is already on screen and is allowed to stay.
+ */
+const refreshing = new Set<number>();
+
+/**
  * Fetch one page and store it: API word text, plus the synced V4 layout when
  * one is held.
  *
@@ -144,9 +155,23 @@ async function fetchAndStorePage(page: number): Promise<Verse[]> {
 
   // Best-effort: a failed write (private mode / quota) must not cost the
   // reader the page they already have in hand.
-  await idb.put("pages", { page, verses }).catch(() => {});
+  await idb
+    .put("pages", { page, verses, fetchedAt: Date.now() })
+    .catch(() => {});
   memSet(page, verses);
   return verses;
+}
+
+function refreshPageInBackground(page: number): void {
+  if (refreshing.has(page)) return;
+  refreshing.add(page);
+  fetchAndStorePage(page)
+    .catch(() => {
+      // Offline or a failed request: the cached copy stands until next time.
+    })
+    .finally(() => {
+      refreshing.delete(page);
+    });
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -162,12 +187,26 @@ export async function getPage(page: number): Promise<Verse[]> {
   if (pending) return pending;
 
   const work = (async () => {
-    const idbHit = await idb.get<{ page: number; verses: Verse[] }>(
-      "pages",
-      page,
-    );
+    const idbHit = await idb.get<{
+      page: number;
+      verses: Verse[];
+      fetchedAt?: number;
+    }>("pages", page);
     if (idbHit?.verses?.length) {
       memSet(page, idbHit.verses);
+      // The word-level Uthmani text here is QF content that Content Sync does
+      // not carry, so it owes a re-fetch at least every 7 days
+      // (docs/licensing-decisions.md §1a). Refresh in the BACKGROUND: the
+      // reader still gets this page instantly, and a stale page while offline
+      // is explicitly allowed rather than withheld.
+      if (
+        shouldRefetchPage({
+          fetchedAt: idbHit.fetchedAt,
+          online: !isLikelyOffline(),
+        })
+      ) {
+        refreshPageInBackground(page);
+      }
       return idbHit.verses;
     }
 
