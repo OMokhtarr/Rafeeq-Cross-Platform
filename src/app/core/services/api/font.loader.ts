@@ -26,6 +26,7 @@
  */
 
 import { idb } from "../storage/idb.service";
+import { isStale } from "../sync/cache-freshness";
 
 const V4_CDN_BASE =
   "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2";
@@ -64,6 +65,16 @@ interface CachedFont {
   page: number;
   blob: Blob;
   cacheVersion?: string;
+  /**
+   * Epoch ms of the last successful fetch.
+   *
+   * QF confirmed on 2026-09-14 that the V4 fonts are not carried by Content
+   * Sync and stay cached under the express permission of 2026-08-21, on the
+   * condition that they are re-fetched at least every 7 days
+   * (docs/licensing-decisions.md §1a). Fonts cached before this shipped have
+   * no timestamp and are treated as due a refresh.
+   */
+  fetchedAt?: number;
 }
 
 /**
@@ -122,17 +133,44 @@ export async function ensureSurahNamesFont(): Promise<void> {
 }
 
 async function loadOrFetchBismillahFont(): Promise<Blob> {
-  // Use page-slot 0 in the fonts store (no real page uses slot 0).
-  const BSML_CACHE_KEY = 0;
   const cached = await idb.get<CachedFont>("fonts", BSML_CACHE_KEY);
   if (cached?.blob && cached.cacheVersion === FONT_CACHE_VERSION) {
+    // Same refresh duty as the page fonts — QF's answer covers this one too
+    // (docs/licensing-decisions.md §1a, point 3).
+    if (isStale(cached.fetchedAt)) refreshBismillahInBackground();
     return cached.blob;
   }
+  return fetchAndCacheBismillahFont();
+}
+
+/** Page-slot 0 in the fonts store (no real page uses slot 0). */
+const BSML_CACHE_KEY = 0;
+
+async function fetchAndCacheBismillahFont(): Promise<Blob> {
   const res = await fetch(BISMILLAH_CDN_URL);
   if (!res.ok) throw new Error(`bismillah font: HTTP ${res.status}`);
   const blob = await res.blob();
-  idb.put("fonts", { page: BSML_CACHE_KEY, blob, cacheVersion: FONT_CACHE_VERSION }).catch(() => {});
+  idb
+    .put("fonts", {
+      page: BSML_CACHE_KEY,
+      blob,
+      cacheVersion: FONT_CACHE_VERSION,
+      fetchedAt: Date.now(),
+    })
+    .catch(() => {});
   return blob;
+}
+
+let refreshingBismillah = false;
+
+function refreshBismillahInBackground(): void {
+  if (refreshingBismillah) return;
+  refreshingBismillah = true;
+  fetchAndCacheBismillahFont()
+    .catch(() => {})
+    .finally(() => {
+      refreshingBismillah = false;
+    });
 }
 
 // ─── Internals ────────────────────────────────────────────────────────────────
@@ -140,9 +178,18 @@ async function loadOrFetchBismillahFont(): Promise<Blob> {
 async function loadOrFetchFont(page: number): Promise<Blob> {
   const cached = await idb.get<CachedFont>("fonts", page);
   if (cached?.blob && cached.cacheVersion === FONT_CACHE_VERSION) {
+    // Serve the cached blob immediately — a font is either correct or it is
+    // not, and rendering must never wait on a refresh. The re-fetch that
+    // satisfies the 7-day obligation happens in the background.
+    if (isStale(cached.fetchedAt)) refreshFontInBackground(page);
     return cached.blob;
   }
 
+  const blob = await fetchAndCacheFont(page);
+  return blob;
+}
+
+async function fetchAndCacheFont(page: number): Promise<Blob> {
   const url = `${V4_CDN_BASE}/p${page}.woff2`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`page ${page} font: HTTP ${res.status}`);
@@ -151,9 +198,31 @@ async function loadOrFetchFont(page: number): Promise<Blob> {
   // Best-effort cache. Don't fail the render if IDB write fails (private
   // mode / quota).
   idb
-    .put("fonts", { page, blob, cacheVersion: FONT_CACHE_VERSION })
+    .put("fonts", {
+      page,
+      blob,
+      cacheVersion: FONT_CACHE_VERSION,
+      fetchedAt: Date.now(),
+    })
     .catch(() => {});
   return blob;
+}
+
+/**
+ * Re-download one page font to satisfy the refresh duty on data outside
+ * Content Sync (docs/licensing-decisions.md §1a).
+ *
+ * Silent on failure: the cached font is already rendering the page and is
+ * explicitly allowed to keep doing so while offline.
+ */
+const refreshingFonts = new Set<number>();
+
+function refreshFontInBackground(page: number): void {
+  if (refreshingFonts.has(page)) return;
+  refreshingFonts.add(page);
+  fetchAndCacheFont(page)
+    .catch(() => {})
+    .finally(() => refreshingFonts.delete(page));
 }
 
 async function injectFontFace(family: string, blob: Blob): Promise<void> {

@@ -12,12 +12,18 @@
 import { useEffect } from "react";
 import { App as CapApp } from "@capacitor/app";
 import { runSync } from "../services/sync/content-sync.service";
+import { ensureMushafLayoutTracked } from "../services/sync/mushaf-bootstrap";
 import "../services/sync/adapters/tafsirs.adapter";
 import "../services/sync/adapters/recitations.adapter";
+import "../services/sync/adapters/mushafs.adapter";
 
 export function useContentSync(): void {
   useEffect(() => {
     const attempt = () => {
+      // The mushaf layout has no user-facing "download" moment the way a
+      // tafsir does, so first-run bootstrap is driven from here. It resolves
+      // immediately once tracked and never rejects.
+      ensureMushafLayoutTracked();
       runSync().catch(() => {
         /* state records the failure; never surface it as a crash */
       });

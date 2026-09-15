@@ -8,6 +8,7 @@ if (typeof global.structuredClone === "undefined") {
 import {
   putRows,
   deleteRow,
+  readRow,
   readResourceRows,
   replaceResourceRows,
   purgeResource,
@@ -37,6 +38,20 @@ describe("sync store", () => {
     await putRows([row(169, "1:1", "a"), row(169, "1:2", "b")]);
     const rows = await readResourceRows("tafsirs", 169);
     expect(rows).toHaveLength(2);
+  });
+
+  it("reads a single row by its composite key", async () => {
+    // getPage() needs one page out of 604 on every page turn; reading the
+    // whole resource to find it is the mistake recorded in
+    // docs/superpowers/specs/2026-08-22-content-sync-followups.md §2.
+    await putRows([row(169, "1:1", "a"), row(169, "1:2", "b")]);
+
+    const hit = await readRow("tafsirs", 169, "tafsir", "1:2");
+    expect((hit?.data as { text: string }).text).toBe("b");
+  });
+
+  it("returns null for a row that is not stored", async () => {
+    expect(await readRow("tafsirs", 169, "tafsir", "9:9")).toBeNull();
   });
 
   it("isolates resources from each other", async () => {

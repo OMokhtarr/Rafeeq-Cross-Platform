@@ -34,6 +34,73 @@ permission is explicitly framed as lasting *until* that support exists.
 
 Docs: https://api-docs.quran.foundation/docs/tutorials/content-sync/getting-started/
 
+**Superseded in part — see §1a.** Mushaf support reached Content Sync on
+2026-09, triggering the migration obligation above for page-layout data only.
+The rest of §1 remains in force.
+
+---
+
+## 1a. QF clarification — what migrates, what stays cached
+
+**Status:** Confirmed by QF. §1 permission continues for the data that Content
+Sync does not carry.
+**Date:** 2026-09-14
+**Confirmed by:** Basit Minhas, Quran Foundation, by email (thread: "Content
+Sync scope"), replying to a test report from Rafeeq. Also addressed to QF
+`developers`.
+
+### Background
+
+QF sent three notices in quick succession: migrate to `mushafs:1`; disregard
+that; rollout live and `mushafs:19` applies to Rafeeq. **QF has confirmed all
+three came from them**, that the rollback notice is superseded, and that the
+third stands. Rafeeq took no action on any of them before this confirmation.
+
+Rafeeq tested `mushafs:19` against the live API and reported two gaps. This
+entry records QF's answers.
+
+### What Content Sync now carries
+
+**Page layout only.** `mushafs:19` ("QCF V4 Tajweed") serves `mushaf`,
+`mushaf_page` and `mushaf_word` records — 604 pages, positioned glyphs. Rafeeq
+must migrate this data onto Content Sync and sync at least every 7 days
+(Developer Terms §3.1(3)(b)). The app's existing 24 h cadence satisfies this.
+
+### What stays cached under the §1 permission
+
+QF confirmed **all three** of the following remain covered by the 2026-08-21
+permission, with no need to delay the migration on their account:
+
+1. **Per-page COLRv1 V4 font files** from
+   `verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/`.
+   `font_asset` records are **not populated** on `mushafs:19` or `mushafs:1` —
+   QF describes this as a gap on their side. Keep caching locally. QF will
+   notify Rafeeq if `font_asset` records land.
+2. **Word-level `text_uthmani`** from `/verses/by_page/`. There is **no Content
+   Sync resource carrying per-word Uthmani text today**. QF explicitly endorsed
+   continuing to source and cache it as now, noting that word-boundary
+   alignment is load-bearing for Rafeeq's recitation matching and quizzes.
+3. **Legacy V1 `QCF_BSML.TTF`** (bismillah strip, via jsDelivr). Not a Content
+   Sync resource; V4 ships no equivalent. Keep loading and caching it.
+
+**Condition, quoted in substance:** coverage holds "for as long as they're used
+inside Rafeeq's own offline reading experience rather than exposed or
+redistributed separately." The §1 scope limits (no modification, sale,
+sublicensing, export, redistribution) continue to apply.
+
+**Refresh cadence for the non-synced data:** QF asked that the font files and
+the `/verses/by_page/` word text be periodically re-fetched — at least every 7
+days, ideally on Rafeeq's existing 24 h schedule. This is a **new obligation
+attaching to data that is not part of Content Sync**, and it is easy to miss:
+the sync engine will not cover it automatically. See
+`docs/superpowers/specs/2026-08-25-mushafs-sync-scope.md`.
+
+### Net effect
+
+The migration is **partial by design, not by omission**. After it lands, Rafeeq
+still relies on the §1 permission for the fonts and the word-level Uthmani text.
+§1 is therefore **not discharged** and must not be treated as historical.
+
 ---
 
 ## 2. KFGQPC illuminated surah-header ornament — proceeding without a reply

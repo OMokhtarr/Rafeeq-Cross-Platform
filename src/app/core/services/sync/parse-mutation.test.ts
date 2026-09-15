@@ -61,6 +61,40 @@ describe("parseSyncPage", () => {
     });
     expect(page.mutations.map((m) => m.resourceGroup)).toEqual(["tafsirs"]);
   });
+
+  it("keeps mushafs mutations", () => {
+    // Shape copied from the live bootstrap response for mushafs:19
+    // (QCF V4 Tajweed) on 2026-09-11 — one RESOURCE_CREATE carrying the
+    // snapshot url. Before mushafs joined SYNC_GROUPS this was dropped as an
+    // unhandled group, leaving the resource tracked with zero rows.
+    const page = parseSyncPage({
+      sync: {
+        sync_until_sequence: 1399,
+        has_more: false,
+        next_page_url: null,
+        next_sync_token: "tok-mushaf",
+        mutations: [
+          {
+            sequence: 1399,
+            type: "RESOURCE_CREATE",
+            resource_group: "mushafs",
+            resource_id: 19,
+            record_type: null,
+            record_key: null,
+            data: null,
+            snapshot_url: "/api/v4/resources/snapshots/mushafs/19",
+          },
+        ],
+      },
+    });
+
+    expect(page.mutations).toHaveLength(1);
+    expect(page.mutations[0].resourceGroup).toBe("mushafs");
+    expect(page.mutations[0].resourceId).toBe(19);
+    expect(page.mutations[0].snapshotUrl).toBe(
+      "/api/v4/resources/snapshots/mushafs/19",
+    );
+  });
 });
 
 describe("resolveSnapshotUrl", () => {

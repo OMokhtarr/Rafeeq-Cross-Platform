@@ -25,6 +25,24 @@ export async function deleteRow(
   await idb.delete("content_sync", rowId(group, resourceId, recordType, recordKey));
 }
 
+/**
+ * One row by its composite key — an O(1) `idb.get`, not a resource scan.
+ *
+ * getPage() calls this on every page turn, so it must not walk the resource:
+ * mushafs:19 holds 604 rows and a tafsir 6,236.
+ */
+export async function readRow(
+  group: SyncGroup,
+  resourceId: number,
+  recordType: string,
+  recordKey: string,
+): Promise<SyncRow | null> {
+  return idb.get<SyncRow>(
+    "content_sync",
+    rowId(group, resourceId, recordType, recordKey),
+  );
+}
+
 export async function readResourceRows(
   group: SyncGroup,
   resourceId: number,
