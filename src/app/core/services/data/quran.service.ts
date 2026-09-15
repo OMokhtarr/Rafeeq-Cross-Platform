@@ -24,6 +24,9 @@ import {
   estimatePageForVerse,
 } from "./metadata.service";
 import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../api/mushaf.config";
+import { readPageLayout } from "./page-layout";
+import { mergeLayoutIntoVerses } from "./merge-layout";
+import { onDerivedPageCacheCleared } from "./page-cache";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   normalizeArabic,
@@ -105,8 +108,46 @@ function memSet(page: number, verses: Verse[]) {
   }
 }
 
+// Clearing the IDB `pages` store is not enough on its own — the LRU above
+// holds up to 20 already-merged pages that IDB knows nothing about, and
+// memGet() is consulted first. Dropping both keeps a replaced layout from
+// being masked by whatever the user happened to be reading.
+onDerivedPageCacheCleared(() => pageCache.clear());
+
 // ─── In‑flight dedup ────────────────────────────────────────────────────────
 const inflight = new Map<number, Promise<Verse[]>>();
+
+/**
+ * Fetch one page and store it: API word text, plus the synced V4 layout when
+ * one is held.
+ *
+ * The merge verifies the two sources describe the same page and returns null
+ * if not, so a disagreement costs slightly stale line breaks rather than words
+ * paired with the wrong glyphs. See merge-layout.ts.
+ */
+async function fetchAndStorePage(page: number): Promise<Verse[]> {
+  const mushaf = readSelectedMushaf();
+  const apiVerses: any[] = (await fetchVersesByPage(
+    page,
+    MUSHAFS[mushaf].wordFields,
+    mushafIdFor(mushaf),
+  )) as any[];
+  const apiPage: Verse[] = apiVerses.map(mapApiVerseToVerse);
+
+  // The layout only describes V4 glyph positions, so it is not applied to the
+  // other mushafs (mergeLayoutIntoVerses also refuses a page without codeV2).
+  let verses = apiPage;
+  if (mushaf === "qpc_v4_tajweed") {
+    const layout = await readPageLayout(page);
+    if (layout) verses = mergeLayoutIntoVerses(apiPage, layout) ?? apiPage;
+  }
+
+  // Best-effort: a failed write (private mode / quota) must not cost the
+  // reader the page they already have in hand.
+  await idb.put("pages", { page, verses }).catch(() => {});
+  memSet(page, verses);
+  return verses;
+}
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
@@ -130,17 +171,7 @@ export async function getPage(page: number): Promise<Verse[]> {
       return idbHit.verses;
     }
 
-    const mushaf = readSelectedMushaf();
-    const apiVerses: any[] = (await fetchVersesByPage(
-      page,
-      MUSHAFS[mushaf].wordFields,
-      mushafIdFor(mushaf),
-    )) as any[];
-    const verses: Verse[] = apiVerses.map(mapApiVerseToVerse);
-
-    await idb.put("pages", { page, verses }).catch(() => {});
-    memSet(page, verses);
-    return verses;
+    return fetchAndStorePage(page);
   })();
 
   inflight.set(page, work);

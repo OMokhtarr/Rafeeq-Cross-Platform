@@ -7,10 +7,17 @@
  */
 
 /** Resource groups Rafeeq syncs. The API also serves translations,
- *  word_by_word_translations and articles; none are used by this app. */
-export type SyncGroup = "tafsirs" | "recitations";
+ *  word_by_word_translations and articles; none are used by this app.
+ *
+ *  `mushafs` carries the QCF V4 page LAYOUT only (mushaf / mushaf_page /
+ *  mushaf_word records). It does NOT carry the per-page fonts or the
+ *  word-level Uthmani text — QF confirmed on 2026-09-14 that neither is
+ *  available through Content Sync today, so both stay cached from their
+ *  existing sources under the express permission recorded in
+ *  docs/licensing-decisions.md §1a. */
+export type SyncGroup = "tafsirs" | "recitations" | "mushafs";
 
-export const SYNC_GROUPS: SyncGroup[] = ["tafsirs", "recitations"];
+export const SYNC_GROUPS: SyncGroup[] = ["tafsirs", "recitations", "mushafs"];
 
 export type MutationType =
   | "RESOURCE_CREATE"
