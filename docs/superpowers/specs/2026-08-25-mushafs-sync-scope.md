@@ -1,19 +1,60 @@
 # Scope — migrating QCF V4 page data onto Content Sync (`mushafs:19`)
 
-Date: 2026-08-25
-Status: **Scope only. Not implemented, not approved.** Written against live API
-responses verified on 2026-08-25 (see "Verified facts").
+Date: 2026-09-11 (API verification), 2026-09-15 (QF answers + implementation)
+Status: **Implemented.** Written against live API responses (see "Verified
+facts") and QF's 2026-09-14 clarification (`docs/licensing-decisions.md` §1a).
+
+## As built
+
+| Piece | Where |
+|---|---|
+| `mushafs` sync group | `sync/content-sync.types.ts` |
+| Layout adapter + `onInvalidate` | `sync/adapters/mushafs.adapter.ts` |
+| Single-row read | `readRow()` in `sync/sync-store.service.ts` |
+| Two-source merge | `data/merge-layout.ts` |
+| Layout lookup | `data/page-layout.ts` |
+| Derived-cache eviction | `data/page-cache.ts` |
+| First-run bootstrap | `sync/mushaf-bootstrap.ts`, driven from `hooks/useContentSync.ts` |
+| §8 refresh policy | `sync/cache-freshness.ts`, `data/page-refresh.ts`, `api/font.loader.ts` |
+
+Tests live in `__tests__/` folders beside each module.
+
+## QF's answers — both blockers resolved
+
+Basit Minhas confirmed on 2026-09-14, in the original thread:
+
+| Question | Answer |
+|---|---|
+| Provenance of the three notices | All genuinely from QF; rollback superseded; `mushafs:19` stands |
+| `font_asset` missing | A gap on QF's side. Keep caching CDN fonts locally; QF will notify if records land |
+| Word-level `text_uthmani` | **No Content Sync resource carries it.** Keep using `/verses/by_page/` |
+| Retention of both | Covered by the 2026-08-21 permission, while used only inside Rafeeq |
+
+**Consequences for this spec:**
+
+- §4 option (2) — "sync a word-text resource" — is **ruled out**. Option (1) is
+  confirmed as the design, endorsed by QF rather than merely forced.
+- §5's two-source merge is therefore **permanent**, not a stopgap. The
+  `position_in_page` join key finding below is load-bearing.
+- A **new obligation** arrives with the answer: the font files and the
+  `/verses/by_page/` word text must be re-fetched at least every 7 days
+  (ideally on the existing 24 h cadence). Content Sync does not do this for
+  them — see §8.
 
 ## Why
 
 `docs/licensing-decisions.md` §1 records QF's express permission to cache Quran
 script and page-layout data beyond one week, framed as lasting *until* that
 content is available through Content Sync. It is now available: `mushafs:19`
-returns a live snapshot. Migrating discharges the obligation recorded there and
-moves the layout cache onto the Developer Terms §3.1(3)(b) footing the rest of
-the app already uses.
+returns a live snapshot. Migrating moves the **page-layout** cache onto the
+Developer Terms §3.1(3)(b) footing the rest of the app already uses.
 
-## Verified facts (live API, 2026-08-25)
+It does **not** discharge §1. The fonts and the word-level Uthmani text stay
+outside Content Sync by QF's own answer, and remain covered by the §1
+permission — with the §8 refresh duty attached. See `licensing-decisions.md`
+§1a.
+
+## Verified facts (live API, 2026-09-11)
 
 Base `https://apis.quran.foundation/content/api/v4`, using the app's own broker
 token and headers `authorization` / `x-auth-token` / `x-client-id`.
@@ -38,17 +79,21 @@ token and headers `authorization` / `x-auth-token` / `x-client-id`.
 - Delta with that token → 200, 0 mutations, token rotates.
 - No `sync_token` → **410 `resync_required`** (bootstrap required first).
 
-### The blocker
+### No `font_asset` records — confirmed expected
 
 **`font_asset` records: 0.** Neither `mushafs:19` nor `mushafs:1` returns any,
 despite the snapshot API documenting the type. The per-page COLRv1 woff2 files
 in `font.loader.ts` therefore stay on the `verses.quran.foundation` CDN, outside
 Content Sync — as does the jsDelivr bismillah `QCF_BSML.TTF`.
 
-**Consequence:** this migration moves layout/word data only. It does not put the
-font blobs under the Content Sync exception. QF has been asked whether fonts are
-pending or out of scope (see the reply draft). **Do not describe this work as
-"fully migrated to Content Sync" until that is answered.**
+**QF confirmed (2026-09-14)** this is a gap on their side, not a misuse of the
+API. Keep caching the fonts from the CDN; QF will notify Rafeeq if `font_asset`
+records land. Retention is covered by the §1 permission
+(`licensing-decisions.md` §1a).
+
+**Consequence:** this migration moves page layout only. **Do not describe the
+result as "fully migrated to Content Sync"** — the fonts and the word-level
+Uthmani text remain outside it, by QF's own design for now.
 
 ## Design
 
@@ -105,7 +150,7 @@ silently dropping it.
      it is filled by the merge in §5, not by the adapter. See §4.
 5. Attach `verse_mapping` from the page record.
 
-### 4. The `text_uthmani` gap — the second blocker
+### 4. The `text_uthmani` gap — resolved by QF: keep `/verses/by_page/`
 
 `mushaf_word` carries only the glyph `text`. It has no `text_uthmani`, and
 `verse_id` is a **global** verse index, not a `sura:aya` key.
@@ -132,34 +177,31 @@ Recite matching is tuned against this exact tokenization (see
 `2026-07-*` recite specs). Feeding it re-split words is a subtle regression, not
 a refactor.
 
-#### Consequence
+#### Decision
 
 The option of "join the snapshot layout to text we already have" **does not
-exist at word level**. What remains:
+exist at word level**. Options considered:
 
 1. **Keep `/verses/by_page/` for word-level Uthmani text; take layout from the
-   snapshot.** Two sources per page. The QF word text stays cached on the old
-   footing — i.e. still relying on the §1 permission.
-2. **Sync a second resource for word-level Uthmani text**, if QF exposes one.
-   **Unverified — no such resource has been checked.** Would need the same
-   bootstrap/delta treatment as `mushafs`.
+   snapshot.** Two sources per page, merged at read time.
+2. **Sync a second resource for word-level Uthmani text.** — **Ruled out. QF
+   confirmed on 2026-09-14 that no Content Sync resource carries per-word
+   Uthmani text.**
 3. **Drop word-level Uthmani entirely** and rebuild matching on glyph codepoints.
    Rejected: it rewrites tuned recite logic to work around a data gap.
 
-**Current position: (1) is forced** unless QF answers that (2) is available.
+**Decided: (1).** QF explicitly endorsed this, noting that word-boundary
+alignment being load-bearing for recite matching and quizzes makes it the right
+call. This is the permanent design, not a stopgap — so the §5 merge and its
+join key must be got right.
 
 #### What this does to the rationale
 
-Combined with the zero `font_asset` records, migrating to `mushafs:19` moves
-**page layout and glyph positions only**. Both the QF per-word Uthmani text and
-the QF font files would still be cached outside Content Sync. The §1 permission
-therefore continues to do real work after this migration — it is not discharged
-by it.
-
-This is the central question for QF, ahead of the implementation: is
-`text_uthmani` expected on `mushaf_word` records, or is per-word Uthmani text
-meant to arrive via another synced resource? If neither, `mushafs:19` cannot
-replace `/verses/by_page/` for this app.
+Migrating to `mushafs:19` moves **page layout and glyph positions only**. Both
+the QF per-word Uthmani text and the QF font files remain cached outside Content
+Sync, under the §1 permission. **§1 therefore continues to do real work after
+this migration and must not be treated as discharged** — see
+`licensing-decisions.md` §1a.
 
 ### 5. Read path
 
@@ -177,7 +219,7 @@ mem → idb "pages"
 Merge rule: take `codeV2`, `lineNumber`, `pageNumber` and ordering from the sync
 row; take `text_uthmani` from the API response.
 
-#### Join key — VERIFIED 2026-08-25
+#### Join key — VERIFIED 2026-09-11
 
 **Sort snapshot words by `position_in_page`. Do not sort by
 `(line_number, position_in_line)`.**
@@ -207,8 +249,26 @@ but add a glyph-level assertion in the merge (see test plan) — the snapshot's
 `text` must equal the API's `code_v2` at every index, and the merge must be
 refused if not.
 
-Remaining verification before shipping: run the same check on all 604 pages, not
-a 51-page sample.
+#### Join validation — ALL 604 PAGES, 2026-09-15
+
+Every page fetched from `/verses/by_page/?mushaf=19` and joined against the
+snapshot: **604/604 pages align exactly.** Word counts equal everywhere;
+glyphs equal at every index under the comparison described below.
+
+**One real finding, fixed:** a strict string comparison failed on **pages 156
+and 526**, one word each. Cause is a whitespace convention difference, not a
+data disagreement — **200 of the 83,665** snapshot words spell a two-glyph word
+as `"X Y"` where the API returns `"XY"`:
+
+```
+page 156 idx 59   snapshot FC81+0020+FC82   api FC81+FC82
+page 526 idx 145  snapshot FCD4+0020+FCD5   api FCD4+FCD5
+```
+
+`mergeLayoutIntoVerses` therefore compares glyphs ignoring whitespace
+(`sameGlyph`). Only spaces are ignored — a different glyph is still a mismatch,
+which is what actually guards the ordering. Without this, those two pages would
+silently fall back to the API layout forever.
 
 On `RESOURCE_INVALIDATE`, `onInvalidate` must clear the `pages` store and the
 in-memory cache, or stale layout survives the update.
@@ -216,7 +276,7 @@ in-memory cache, or stale layout survives the update.
 ### 6. Storage
 
 83,665 words ≈ 604 rows. **Measured snapshot size: 23.4 MB** of JSON over the
-wire (2026-08-25) — roughly 2× the largest tafsir (~11.8 MB), and the largest
+wire (2026-09-11) — roughly 2× the largest tafsir (~11.8 MB), and the largest
 single payload the app would fetch and parse. Stored rows will be smaller than
 the raw response (per-record `record_type`, `mushaf_id` and ids are dropped in
 the mapped shape), but budget for the 23 MB parse spike, not the stored size.
@@ -234,6 +294,36 @@ viewer: `getPage()` falls through to `fetchVersesByPage()` until the row exists,
 so the app stays functional mid-bootstrap.
 
 Existing 24 h `SYNC_INTERVAL_MS` covers the 7-day requirement unchanged.
+
+### 8. Refresh obligation for the NON-synced data — new, easy to miss
+
+QF's 2026-09-14 answer attaches a refresh duty to the two things Content Sync
+does **not** carry:
+
+> the font files and the `/verses/by_page/` word text should be periodically
+> re-fetched — at least every 7 days, ideally on the existing 24 h schedule.
+
+**The sync engine does not cover these.** `content-sync.service.ts` refreshes
+registered resources only; the CDN fonts and the by-page word text sit entirely
+outside it. Today both are cached indefinitely:
+
+- `font.loader.ts` — IDB `fonts` store, evicted only by a `FONT_CACHE_VERSION`
+  bump. **No age tracking at all.**
+- `quran.service.getPage()` — IDB `pages` store, no TTL; `repairPagesCache()`
+  exists but is manual.
+
+So this migration must **add** staleness handling that does not currently exist:
+
+- record a fetch timestamp per cached page and per cached font
+- on the existing 24 h sync tick, re-fetch anything older than the threshold
+  (7 days hard limit; refresh at 24 h to stay well inside it)
+- offline must not force eviction — a stale page still renders. The obligation
+  is to re-fetch when able, not to withhold content. §1 explicitly allows
+  cached script to remain readable without connectivity.
+
+Treat this as part of the migration, not a follow-up. Shipping the layout sync
+without it leaves Rafeeq **less** compliant than before, having accepted a
+refresh duty it does not perform.
 
 ## Test plan
 
@@ -260,43 +350,40 @@ Merge path (§5) — the part most likely to break silently:
 - `getPage` still returns a usable page when the sync row is absent
   (mid-bootstrap)
 
-## Recommendation on sequencing
+## What this migration does and does not move
 
-**Do not start implementation before QF answers.** Two of the three things this
-migration was meant to move are missing from the snapshot:
-
-| Data | In `mushafs:19`? | Still cached outside Content Sync? |
+| Data | In `mushafs:19`? | After migration |
 |---|---|---|
-| Page layout / glyph positions | **Yes** | No — this is what migrates |
-| Per-word Uthmani text | **No** | Yes, via `/verses/by_page/` |
-| V4 per-page fonts | **No** (`font_asset`: 0) | Yes, via CDN |
+| Page layout / glyph positions | **Yes** | On Content Sync |
+| Per-word Uthmani text | **No** | Cached from `/verses/by_page/`, §1 permission, §8 refresh |
+| V4 per-page fonts | **No** (`font_asset`: 0) | Cached from CDN, §1 permission, §8 refresh |
+| Bismillah `QCF_BSML.TTF` | **No** | Cached from jsDelivr, §1 permission |
 
-As it stands the work is real but partial, and its cost is concentrated in the
-riskiest part — the two-source join in §5, which touches the renderer and recite
-matching. If QF confirms a word-text resource, §4 and §5 both change shape and
-some of that work would be thrown away.
+All four positions are confirmed by QF (2026-09-14). The work is partial **by
+QF's design**, not by omission.
 
-## Order of work (once unblocked)
+## Order of work
 
-1. QF answer on `text_uthmani` and `font_asset`. **Blocks everything else.**
-2. Verify the §5 join across all 604 pages — word count and ordering agreement
-   between the snapshot and `/verses/by_page/?mushaf=19`. If this fails, stop and
-   re-scope.
-3. `SyncGroup` + tests green.
-4. Adapter + unit tests against real-snapshot fixtures.
-5. `getPage` merge path + `onInvalidate`.
-6. Bootstrap trigger.
-7. Device verification on low-end Android.
+1. ~~`SyncGroup` + tests green.~~ Done.
+2. ~~Adapter + unit tests against real-snapshot fixtures, including the
+   `position_in_page` ordering regression fixture.~~ Done.
+3. ~~`getPage` merge path + `onInvalidate`.~~ Done.
+4. ~~Bootstrap trigger.~~ Done.
+5. ~~§8 staleness tracking for fonts and by-page word text.~~ Done.
+6. ~~Verify the §5 join across all 604 pages.~~ Done — see "Join validation".
+7. **Device verification on low-end Android — 23.4 MB parse. STILL OPEN.**
+   Needs a device; cannot be done from here.
 
-## Open questions for QF
+## Answered by QF (2026-09-14)
 
-Tracked in the reply draft:
+Full record in `licensing-decisions.md` §1a.
 
-1. Are `font_asset` records expected in `mushafs:19` and not yet populated, or
-   are fonts out of scope for Content Sync?
-2. Is `text_uthmani` expected on `mushaf_word`, or is per-word Uthmani text meant
-   to come from another synced resource?
-3. If both stay outside Content Sync, what covers their local retention — does
-   the §1 permission continue for them?
-4. Should the bismillah `QCF_BSML.TTF` move onto Content Sync, and under which
-   resource?
+1. `font_asset` — a gap on QF's side; keep caching CDN fonts; QF will notify if
+   records land.
+2. Word-level `text_uthmani` — no Content Sync resource carries it; keep using
+   `/verses/by_page/`.
+3. Retention — both covered by the 2026-08-21 permission while used only inside
+   Rafeeq's own offline experience; re-fetch at least every 7 days.
+4. Bismillah TTF — keep loading via jsDelivr; not a Content Sync resource.
+5. Provenance — all three notices were genuinely from QF; the rollback is
+   superseded.
