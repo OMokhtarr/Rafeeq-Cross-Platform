@@ -837,6 +837,14 @@ ion-content::part(scroll) {
   to   { transform: translateY(0); }
 }
 
+/* The drag-to-dismiss grab zone is the top 48px of the sheet, which spans the
+   handle and the title. touch-action must be none across it or Android claims
+   the vertical gesture for scrolling and cancels the pointer mid-drag. */
+.hifz-sheet-handle,
+.hifz-sheet-title {
+  touch-action: none;
+}
+
 .hifz-sheet-handle {
   width: 40px;
   height: 4px;

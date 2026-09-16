@@ -89,11 +89,17 @@ const InlineSelect: React.FC<Props> = ({
       touchInsideList = !!listRef.current?.contains(e.target as Node);
     };
     const closeOnScroll = (e: Event) => {
-      // On mobile the scroll event target is often window/document, not the
-      // list element, so we use the touchstart tracking to guard against
-      // closing while the user is scrolling inside the dropdown.
+      // Scrolling *inside* the list must never close it. On mobile the scroll
+      // event target is often window/document rather than the list element, so
+      // the touchstart tracking covers what the target check misses.
       if (touchInsideList) return;
       if (listRef.current?.contains(e.target as Node)) return;
+      // With the background scroll containers frozen while the list is open,
+      // a stray window/document scroll event here is a side effect of the
+      // list's own scrolling (or of the lock being applied), not the user
+      // moving the page. Only close for a real, distinct scroll container.
+      const target = e.target as Node;
+      if (target === document || target === document.documentElement) return;
       closeExternally();
     };
     // Defer registration by one tick so the tap that opened the dropdown
@@ -118,6 +124,57 @@ const InlineSelect: React.FC<Props> = ({
     if (!open || !listRef.current) return;
     const active = listRef.current.querySelector<HTMLLIElement>("[data-selected='true']");
     active?.scrollIntoView({ block: "nearest" });
+  }, [open]);
+
+  // Freeze the scroll containers behind the list while it is open.
+  //
+  // The list is portaled to document.body as position:fixed, so it is not a
+  // descendant of the scroll container it visually covers (e.g. the surah grid
+  // behind the Hifz page pickers). `overscroll-behavior: contain` on the list
+  // only prevents chaining out of the list itself — it cannot stop a gesture
+  // the browser has already attributed to that unrelated container. So we walk
+  // up from the trigger and pin every scrollable ancestor in place, restoring
+  // them exactly as they were on close.
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+
+    const locked: { el: HTMLElement; overflow: string; touchAction: string }[] = [];
+    const lock = (el: HTMLElement) => {
+      locked.push({
+        el,
+        overflow: el.style.overflow,
+        touchAction: el.style.touchAction,
+      });
+      el.style.overflow = "hidden";
+      el.style.touchAction = "none";
+    };
+
+    for (
+      let el = triggerRef.current.parentElement;
+      el && el !== document.body;
+      el = el.parentElement
+    ) {
+      // ion-content scrolls in an inner shadow-DOM element, not on the host,
+      // so the computed-style check below would never match it.
+      if (el.tagName === "ION-CONTENT") {
+        const inner = el.shadowRoot?.querySelector<HTMLElement>(".inner-scroll");
+        if (inner) lock(inner);
+        continue;
+      }
+      const { overflowY } = getComputedStyle(el);
+      if (overflowY !== "auto" && overflowY !== "scroll") continue;
+      lock(el);
+    }
+
+    document.body.classList.add("isel-open");
+
+    return () => {
+      document.body.classList.remove("isel-open");
+      locked.forEach(({ el, overflow, touchAction }) => {
+        el.style.overflow = overflow;
+        el.style.touchAction = touchAction;
+      });
+    };
   }, [open]);
 
   const list = open
