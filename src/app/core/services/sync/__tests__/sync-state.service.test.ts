@@ -36,6 +36,61 @@ describe("sync state", () => {
     expect(s.lastSyncedAt).toBe(1234);
   });
 
+  it("clears the sync token when a new resource starts being tracked", async () => {
+    // Observed on a device after mushafs:19 shipped: the stored token was
+    // issued for "tafsirs;recitations", but the filter then became
+    // "tafsirs;recitations;mushafs:19". QF rejects that pairing with
+    //   422 token_filter_mismatch — "sync_token does not match the requested
+    //   resources"
+    // and every sync failed until the token was cleared. A token is only
+    // meaningful for the exact resource set it was issued against, so adding a
+    // resource must invalidate it.
+    await writeSyncState({
+      ...EMPTY_SYNC_STATE,
+      syncToken: "tok-for-two-resources",
+      trackedResources: [
+        { group: "tafsirs", resourceId: 169, bootstrappedAt: 1 },
+      ],
+    });
+
+    await trackResource("mushafs", 19);
+
+    expect((await readSyncState()).syncToken).toBeNull();
+  });
+
+  it("keeps the sync token when the resource is already tracked", async () => {
+    // Re-tracking is a no-op, so it must not throw away a valid checkpoint —
+    // that would force a full re-bootstrap on every launch.
+    await writeSyncState({
+      ...EMPTY_SYNC_STATE,
+      syncToken: "tok",
+      trackedResources: [
+        { group: "tafsirs", resourceId: 169, bootstrappedAt: 1 },
+      ],
+    });
+
+    await trackResource("tafsirs", 169);
+
+    expect((await readSyncState()).syncToken).toBe("tok");
+  });
+
+  it("clears the sync token when a resource stops being tracked", async () => {
+    // Same reasoning in reverse: a narrower filter no longer matches the
+    // token the wider set was issued against.
+    await writeSyncState({
+      ...EMPTY_SYNC_STATE,
+      syncToken: "tok",
+      trackedResources: [
+        { group: "tafsirs", resourceId: 169, bootstrappedAt: 1 },
+        { group: "mushafs", resourceId: 19, bootstrappedAt: 1 },
+      ],
+    });
+
+    await untrackResource("mushafs", 19);
+
+    expect((await readSyncState()).syncToken).toBeNull();
+  });
+
   it("tracks a resource once, not twice", async () => {
     await trackResource("tafsirs", 169);
     await trackResource("tafsirs", 169);

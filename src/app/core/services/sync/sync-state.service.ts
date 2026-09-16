@@ -66,6 +66,15 @@ export async function trackResource(
     }
     await writeSyncState({
       ...state,
+      // A sync_token is bound to the exact resource set it was issued for.
+      // Sending an old one alongside a widened `resources` filter is rejected:
+      //   422 token_filter_mismatch — "sync_token does not match the requested
+      //   resources"
+      // which wedges every later run until the token is cleared. Observed on a
+      // device when mushafs:19 joined an install that already held a token for
+      // tafsirs + recitations. Dropping it costs one bootstrap pass; keeping it
+      // costs a broken sync.
+      syncToken: null,
       trackedResources: [
         ...state.trackedResources,
         { group, resourceId, bootstrappedAt: null },
@@ -81,11 +90,17 @@ export async function untrackResource(
 ): Promise<void> {
   return enqueue(async () => {
     const state = await readSyncState();
+    const trackedResources = state.trackedResources.filter(
+      (r) => !(r.group === group && r.resourceId === resourceId),
+    );
+    // Narrowing the filter invalidates the token for the same reason widening
+    // it does — see trackResource(). Only clear it if something was actually
+    // removed, so an untrack of an untracked resource stays a no-op.
+    const removed = trackedResources.length !== state.trackedResources.length;
     await writeSyncState({
       ...state,
-      trackedResources: state.trackedResources.filter(
-        (r) => !(r.group === group && r.resourceId === resourceId),
-      ),
+      syncToken: removed ? null : state.syncToken,
+      trackedResources,
     });
   });
 }

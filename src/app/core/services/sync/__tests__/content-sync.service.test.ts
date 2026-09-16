@@ -390,6 +390,54 @@ describe("runSync", () => {
     const state = await readSyncState();
     expect(state.lastError).toBeTruthy();
   });
+
+  it("recovers from a stored token that no longer matches the resource filter", async () => {
+    // The device failure after mushafs:19 shipped: an install already holding
+    // a token for tafsirs+recitations widened its filter, and QF answered
+    //   422 token_filter_mismatch — "sync_token does not match the requested
+    //   resources"
+    // trackResource() now clears the token so this cannot arise again, but an
+    // install that already stored a bad one must still dig itself out: the
+    // 422 has to drop the token so the NEXT run bootstraps cleanly, rather
+    // than replaying the same rejection forever.
+    await writeSyncState({
+      ...EMPTY_SYNC_STATE,
+      syncToken: "tok-for-the-old-resource-set",
+      trackedResources: [
+        { group: "tafsirs", resourceId: 169, bootstrappedAt: 1 },
+      ],
+    });
+
+    mockSync.mockRejectedValueOnce(
+      new api.QuranApiError(
+        422,
+        '{"error":{"code":"token_filter_mismatch","message":"sync_token does not match the requested resources"}}',
+      ),
+    );
+
+    const failed = await runSync({ force: true });
+    expect(failed.ran).toBe(false);
+
+    const afterFailure = await readSyncState();
+    expect(afterFailure.syncToken).toBeNull();
+    expect(afterFailure.lastError).toContain("token_filter_mismatch");
+
+    // With the token gone the next run starts from bootstrap and succeeds.
+    mockSync.mockResolvedValueOnce(
+      page({ mutations: [], next_sync_token: "tok-fresh" }),
+    );
+
+    const recovered = await runSync({ force: true });
+
+    expect(recovered.ran).toBe(true);
+    const afterRecovery = await readSyncState();
+    expect(afterRecovery.syncToken).toBe("tok-fresh");
+    expect(afterRecovery.lastError).toBeNull();
+    // The retry must ask for a bootstrap rather than resend the dead token.
+    const lastCall = mockSync.mock.calls[mockSync.mock.calls.length - 1][0];
+    expect(lastCall.syncToken).toBeUndefined();
+    expect(lastCall.bootstrap).toBe(true);
+  });
 });
 
 describe("PER_PAGE", () => {
