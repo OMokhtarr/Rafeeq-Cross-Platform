@@ -320,6 +320,13 @@
   padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
   border-bottom: 1px solid rgba(212, 180, 140, 0.3);
   flex-shrink: 0;
+  /* Swipe area for moving between ayat. `pan-y` hands the horizontal axis to
+     the swipe handler — without it Android claims the drag and cancels the
+     pointer — while leaving the vertical axis free for the sheet's
+     drag-to-dismiss. */
+  touch-action: pan-y;
+  /* A horizontal drag across the verse shouldn't turn into a text selection. */
+  user-select: none;
 }
 
 .vas-verse-row--night {
