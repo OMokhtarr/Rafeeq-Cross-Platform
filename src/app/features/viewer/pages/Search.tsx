@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { IonPage, IonContent, useIonToast } from "@ionic/react";
+import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
 import { toHindiNumbers } from "../../../core/utils/arabic.util";
@@ -84,22 +84,15 @@ export function pushRecent(query: string, count: number): RecentSearch[] {
 const Search: React.FC = () => {
   const history = useHistory();
   const { t, lang, isRTL } = useLang();
-  const [presentToast] = useIonToast();
   const [recents, setRecents] = useState<RecentSearch[]>([]);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
-  // Keep the page pinned to the visual viewport so the soft keyboard
-  // does not push the layout upward.
-  useEffect(() => {
-    const vv = (window as any).visualViewport as VisualViewport | undefined;
-    if (!vv) return;
-    const update = () => setViewportHeight(vv.height);
-    vv.addEventListener("resize", update);
-    update();
-    return () => vv.removeEventListener("resize", update);
-  }, []);
+  // No `visualViewport` sizing here on purpose. The Android window defaults to
+  // adjustResize (no explicit windowSoftInputMode, and @capacitor/keyboard is
+  // not installed), so the WebView itself shrinks when the keyboard opens and
+  // ion-content follows. Pinning an extra pixel height on .search-page fought
+  // that correct layout and was what clipped the input behind the nav bar.
 
   // Live search state — populated as the user types.
   const [liveResults, setLiveResults] = useState<SearchResult[]>([]);
@@ -163,12 +156,15 @@ const Search: React.FC = () => {
 
   const handleRecentTap = (q: string) => submit(q);
 
-  // Tapping an inline live-result jumps straight to the verse in the
-  // viewer with the verse highlighted (same behavior as the in-drawer
-  // result list).
+  // Tapping an inline live-result opens the full results page focused on that
+  // verse, rather than jumping straight into the mushaf. That page is where
+  // "continue reading" lives, so the reader reaches the viewer deliberately —
+  // and backing out of it returns here, to the search they came from.
   const handleResultTap = (r: SearchResult) => {
     pushRecent(query, liveResults.length);
-    history.push(`/viewer?page=${r.page}&v=${encodeURIComponent(r.verseKey)}`);
+    history.push(
+      `/search/results?q=${encodeURIComponent(query.trim())}&focus=${encodeURIComponent(r.verseKey)}`,
+    );
   };
 
   const clearAll = () => {
@@ -189,11 +185,7 @@ const Search: React.FC = () => {
   return (
     <IonPage>
       <IonContent fullscreen scrollY={false}>
-        <div
-          className="search-page search-page-with-nav"
-          dir={isRTL ? "rtl" : "ltr"}
-          style={viewportHeight != null ? { height: viewportHeight } : undefined}
-        >
+        <div className="search-page" dir={isRTL ? "rtl" : "ltr"}>
           {/* ── Header ── */}
           <header className="search-page-header">
             <button
@@ -213,9 +205,14 @@ const Search: React.FC = () => {
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                {/* Always points "back" toward the start of the page in the
-                    current writing direction — the parent dir attr flips it. */}
-                <polyline points="15 18 9 12 15 6" />
+                {/* `dir` does not mirror SVG path geometry, so the chevron is
+                    flipped explicitly to point back toward the start of the
+                    line in the current writing direction. */}
+                {isRTL ? (
+                  <polyline points="9 18 15 12 9 6" />
+                ) : (
+                  <polyline points="15 18 9 12 15 6" />
+                )}
               </svg>
             </button>
             <h1 className="search-page-title">{t.mushaf.search}</h1>
@@ -351,49 +348,25 @@ const Search: React.FC = () => {
               ref={inputRef}
               type="text"
               className="search-bottom-input"
+              /* `searchQuran` scans the Arabic text of the ayat, so the example
+                 is a phrase from one. Surah names and page numbers are not
+                 resolved, and the old placeholder wrongly suggested they were.
+                 The example itself stays Arabic in both languages — it is the
+                 text being searched, so translating it would be misleading. */
               placeholder={
                 lang === "ar"
-                  ? "مثال: الفاتحة، 1:4، صفحة 62…"
-                  : "eg. Al-Fatihah, 1:4, pg 62, …"
+                  ? "مثال: وكان الله غفورا رحيما"
+                  : "Example: وكان الله غفورا رحيما"
               }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               dir="auto"
               autoFocus
             />
-            <button
-              type="button"
-              className="search-bottom-mic"
-              aria-label={lang === "ar" ? "بحث صوتي" : "Voice search"}
-              onClick={() =>
-                presentToast({
-                  message: t.tabs.comingSoon,
-                  duration: 2000,
-                  position: "bottom",
-                })
-              }
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="22"
-                height="22"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="9" y="3" width="6" height="12" rx="3" />
-                <path d="M5 11a7 7 0 0014 0" />
-                <line x1="12" y1="18" x2="12" y2="22" />
-                <line x1="9" y1="22" x2="15" y2="22" />
-              </svg>
-            </button>
           </form>
-          <BottomNavBar active="quran" />
         </div>
       </IonContent>
+      <BottomNavBar active="quran" fixed />
     </IonPage>
   );
 };

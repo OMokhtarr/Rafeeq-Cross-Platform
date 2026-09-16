@@ -38,6 +38,14 @@ const SearchResults: React.FC = () => {
     return (params.get("q") || "").trim();
   }, [location.search]);
 
+  // Verse key the reader tapped on the search page, if they arrived by picking
+  // one result rather than submitting the query. That result is expanded on
+  // arrival instead of the first.
+  const focusKey = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("focus") || "";
+  }, [location.search]);
+
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +69,12 @@ const SearchResults: React.FC = () => {
         if (cancelled) return;
         setResults(rows);
         setLoading(false);
+        // Expand the verse the reader tapped, falling back to the first result
+        // when they submitted the query instead of picking one.
+        if (focusKey) {
+          const i = rows.findIndex((r) => r.verseKey === focusKey);
+          if (i !== -1) setExpandedIdx(i);
+        }
         // Refresh the persisted "recent searches" entry with the real count.
         pushRecent(query, rows.length);
       })
@@ -74,11 +88,15 @@ const SearchResults: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [query, t.mushaf.searchError]);
+  }, [query, focusKey, t.mushaf.searchError]);
 
   const fmt = (n: number) => (lang === "ar" ? toHindiNumbers(n) : String(n));
 
   const goToVerse = (r: SearchResult) => {
+    // Push rather than replace. Either way the system back from /viewer runs
+    // the exit ladder — it is a root tab — so this does not resurrect the
+    // results page. Pushing only keeps the stack honest for the in-page back
+    // arrows, which call history.goBack() directly and bypass that ladder.
     history.push(`/viewer?page=${r.page}&v=${encodeURIComponent(r.verseKey)}`);
   };
 
@@ -140,7 +158,14 @@ const SearchResults: React.FC = () => {
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <polyline points="15 18 9 12 15 6" />
+                {/* `dir` does not mirror SVG path geometry, so the chevron is
+                    flipped explicitly to point back toward the start of the
+                    line in the current writing direction. */}
+                {isRTL ? (
+                  <polyline points="9 18 15 12 9 6" />
+                ) : (
+                  <polyline points="15 18 9 12 15 6" />
+                )}
               </svg>
             </button>
             <h1 className="results-title">
@@ -326,9 +351,9 @@ const SearchResults: React.FC = () => {
               </span>
             </div>
           )}
-          <BottomNavBar active="quran" />
         </div>
       </IonContent>
+      <BottomNavBar active="quran" fixed />
     </IonPage>
   );
 };
