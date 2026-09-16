@@ -1,4 +1,4 @@
-import { localDateStr, daysAgoStr, daysBetween, todayStr } from "./local-date.util";
+import { localDateStr, daysAgoStr, daysBetween, todayStr } from "../local-date.util";
 
 describe("localDateStr", () => {
   it("formats a date as YYYY-MM-DD with padding", () => {

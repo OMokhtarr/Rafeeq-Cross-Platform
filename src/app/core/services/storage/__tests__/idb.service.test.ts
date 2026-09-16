@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { idb } from "./idb.service";
+import { idb } from "../idb.service";
 
 // Polyfill for jsdom environment
 if (typeof structuredClone === "undefined") {

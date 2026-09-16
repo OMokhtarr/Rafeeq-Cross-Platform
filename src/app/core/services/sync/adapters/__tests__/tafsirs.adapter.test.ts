@@ -5,9 +5,9 @@ if (typeof global.structuredClone === "undefined") {
   global.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 }
 
-import { tafsirRowsFrom, readCachedTafsir, hasCachedTafsir } from "./tafsirs.adapter";
-import { putRows } from "../sync-store.service";
-import { idb } from "../../storage/idb.service";
+import { tafsirRowsFrom, readCachedTafsir, hasCachedTafsir } from "../tafsirs.adapter";
+import { putRows } from "../../sync-store.service";
+import { idb } from "../../../storage/idb.service";
 
 beforeEach(async () => {
   await idb.clear("content_sync");

@@ -8,7 +8,7 @@
  * different line on 9 of 16 sampled pages (page 350: 89 of 148 words), so the
  * id must actually reach the query string.
  */
-import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "./mushaf.config";
+import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../mushaf.config";
 
 describe("mushaf id selection", () => {
   it("maps the V4 tajweed renderer to the matching layout id", () => {

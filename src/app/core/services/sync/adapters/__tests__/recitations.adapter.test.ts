@@ -5,10 +5,10 @@ if (typeof global.structuredClone === "undefined") {
   global.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 }
 
-import { recitationRowsFrom, evictRecitation } from "./recitations.adapter";
-import { idb } from "../../storage/idb.service";
+import { recitationRowsFrom, evictRecitation } from "../recitations.adapter";
+import { idb } from "../../../storage/idb.service";
 
-jest.mock("../../audio/audio-file-cache.service", () => ({
+jest.mock("../../../audio/audio-file-cache.service", () => ({
   __esModule: true,
   usesFileCache: () => false,
 }));

@@ -11,13 +11,13 @@ import {
   computeStreakPersistent,
   streakRecoveryInfo,
   type PlanSession,
-} from "./hifz.service";
+} from "../hifz.service";
 import {
   MAX_FREEZES,
   freezeCount,
   wasFrozen,
-} from "../../core/services/storage/streak-freeze.service";
-import { todayStr, daysAgoStr } from "../../core/utils/local-date.util";
+} from "../../../core/services/storage/streak-freeze.service";
+import { todayStr, daysAgoStr } from "../../../core/utils/local-date.util";
 
 /** The plan is irrelevant to these paths; the persistent stores drive them. */
 const noSessions: PlanSession[] = [];

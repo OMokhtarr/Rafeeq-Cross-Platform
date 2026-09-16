@@ -1,4 +1,4 @@
-import { parseSyncPage, resolveSnapshotUrl, rowId } from "./parse-mutation";
+import { parseSyncPage, resolveSnapshotUrl, rowId } from "../parse-mutation";
 
 const BASE = "https://apis.quran.foundation/content/api/v4";
 

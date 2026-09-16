@@ -2,7 +2,7 @@ import {
   SYNC_OVERDUE_MS,
   isSyncOverdue,
   relativeDays,
-} from "./sync-status";
+} from "../sync-status";
 
 const DAY = 24 * 60 * 60 * 1000;
 

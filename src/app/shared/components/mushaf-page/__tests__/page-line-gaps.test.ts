@@ -5,7 +5,7 @@
  * content API for the V4 Tajweed layout (mushaf=19), so these lock the
  * behaviour to the printed Mushaf rather than to our own assumptions.
  */
-import { findLineGaps, gapBeforeLine, LINES_PER_PAGE } from "./page-line-gaps";
+import { findLineGaps, gapBeforeLine, LINES_PER_PAGE } from "../page-line-gaps";
 
 /** Lines carrying verse text on a page, as returned by the API. */
 const PAGE_586 = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];

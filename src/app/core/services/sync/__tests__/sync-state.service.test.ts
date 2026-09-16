@@ -7,9 +7,9 @@ import {
   markBootstrapped,
   isTracked,
   resourcesFilter,
-} from "./sync-state.service";
-import { EMPTY_SYNC_STATE } from "./content-sync.types";
-import { idb } from "../storage/idb.service";
+} from "../sync-state.service";
+import { EMPTY_SYNC_STATE } from "../content-sync.types";
+import { idb } from "../../storage/idb.service";
 
 // Polyfill structuredClone for Node.js < 17
 if (!global.structuredClone) {

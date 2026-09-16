@@ -13,9 +13,9 @@ import {
   replaceResourceRows,
   purgeResource,
   countResourceRows,
-} from "./sync-store.service";
-import { SyncRow } from "./content-sync.types";
-import { idb } from "../storage/idb.service";
+} from "../sync-store.service";
+import { SyncRow } from "../content-sync.types";
+import { idb } from "../../storage/idb.service";
 
 function row(resourceId: number, key: string, text: string): SyncRow {
   return {

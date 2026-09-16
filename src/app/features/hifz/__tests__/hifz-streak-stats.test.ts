@@ -12,8 +12,8 @@ import {
   computeLongestStreakPersistent,
   streakWindow,
   type PlanSession,
-} from "./hifz.service";
-import { todayStr, daysAgoStr } from "../../core/utils/local-date.util";
+} from "../hifz.service";
+import { todayStr, daysAgoStr } from "../../../core/utils/local-date.util";
 
 /** The plan is irrelevant to most paths; the persistent store drives them. */
 const noSessions: PlanSession[] = [];

@@ -1,5 +1,5 @@
-import { createBackup, parseBackup, restoreBackup } from "./backup.service";
-import { freezeCount, MAX_FREEZES } from "./streak-freeze.service";
+import { createBackup, parseBackup, restoreBackup } from "../backup.service";
+import { freezeCount, MAX_FREEZES } from "../streak-freeze.service";
 
 beforeEach(() => {
   localStorage.clear();

@@ -7,8 +7,8 @@ import {
   wasFrozen,
   lastFrozenDate,
   resetFreezePool,
-} from "./streak-freeze.service";
-import { todayStr, daysAgoStr } from "../../utils/local-date.util";
+} from "../streak-freeze.service";
+import { todayStr, daysAgoStr } from "../../../utils/local-date.util";
 
 beforeEach(() => {
   localStorage.clear();

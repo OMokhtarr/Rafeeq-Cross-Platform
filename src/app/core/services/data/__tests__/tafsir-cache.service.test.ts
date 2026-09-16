@@ -17,17 +17,17 @@
 import {
   downloadTafsir,
   getDownloadedTafsirIds,
-} from "./tafsir-cache.service";
-import { bootstrapResource } from "../sync/content-sync.service";
+} from "../tafsir-cache.service";
+import { bootstrapResource } from "../../sync/content-sync.service";
 
-jest.mock("../sync/content-sync.service", () => ({
+jest.mock("../../sync/content-sync.service", () => ({
   bootstrapResource: jest.fn(),
   // tafsirs.adapter.ts calls registerAdapter() at module load time (it is
   // imported transitively via tafsir-cache.service -> hasCachedTafsir).
   registerAdapter: jest.fn(),
 }));
 
-jest.mock("../sync/sync-store.service", () => ({
+jest.mock("../../sync/sync-store.service", () => ({
   readResourceRows: jest.fn().mockResolvedValue([]),
 }));
 

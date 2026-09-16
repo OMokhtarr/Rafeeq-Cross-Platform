@@ -11,14 +11,14 @@ import {
   registerAdapter,
   SYNC_INTERVAL_MS,
   PER_PAGE,
-} from "./content-sync.service";
-import { readSyncState, writeSyncState, trackResource } from "./sync-state.service";
-import { readResourceRows } from "./sync-store.service";
-import { EMPTY_SYNC_STATE, SyncRow } from "./content-sync.types";
-import { idb } from "../storage/idb.service";
-import * as api from "../api/quran-api.client";
+} from "../content-sync.service";
+import { readSyncState, writeSyncState, trackResource } from "../sync-state.service";
+import { readResourceRows } from "../sync-store.service";
+import { EMPTY_SYNC_STATE, SyncRow } from "../content-sync.types";
+import { idb } from "../../storage/idb.service";
+import * as api from "../../api/quran-api.client";
 
-jest.mock("../api/quran-api.client", () => {
+jest.mock("../../api/quran-api.client", () => {
   // Mirrors the production hierarchy in quran-api.client.ts: QuranApiOffline
   // EXTENDS QuranApiError. handleRunError checks `instanceof QuranApiOffline`
   // before the 4xx token-clearing branch, and that ordering only matters

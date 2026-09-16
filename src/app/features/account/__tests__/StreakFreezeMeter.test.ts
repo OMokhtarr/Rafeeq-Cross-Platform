@@ -7,8 +7,8 @@ import {
   freezeStateLine,
   shouldShowSpendNotice,
   weekdayName,
-} from "./StreakFreezeMeter";
-import { todayStr, daysAgoStr } from "../../core/utils/local-date.util";
+} from "../StreakFreezeMeter";
+import { todayStr, daysAgoStr } from "../../../core/utils/local-date.util";
 
 describe("state line", () => {
   it("says the streak is protected when full", () => {

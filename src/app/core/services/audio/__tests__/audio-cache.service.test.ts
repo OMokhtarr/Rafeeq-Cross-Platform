@@ -7,22 +7,22 @@
  * and that it can never make downloadAndCache reject or hang.
  */
 
-import { downloadAndCache } from "./audio-cache.service";
-import { isTracked } from "../sync/sync-state.service";
-import { bootstrapResource } from "../sync/content-sync.service";
-import { usesFileCache, ensureCachedFile } from "./audio-file-cache.service";
-import { idb } from "../storage/idb.service";
-import { fetchAudioForAyah } from "../data/quran.service";
+import { downloadAndCache } from "../audio-cache.service";
+import { isTracked } from "../../sync/sync-state.service";
+import { bootstrapResource } from "../../sync/content-sync.service";
+import { usesFileCache, ensureCachedFile } from "../audio-file-cache.service";
+import { idb } from "../../storage/idb.service";
+import { fetchAudioForAyah } from "../../data/quran.service";
 
-jest.mock("../sync/sync-state.service", () => ({
+jest.mock("../../sync/sync-state.service", () => ({
   isTracked: jest.fn(),
 }));
 
-jest.mock("../sync/content-sync.service", () => ({
+jest.mock("../../sync/content-sync.service", () => ({
   bootstrapResource: jest.fn(),
 }));
 
-jest.mock("./audio-file-cache.service", () => ({
+jest.mock("../audio-file-cache.service", () => ({
   usesFileCache: jest.fn(),
   ensureCachedFile: jest.fn(),
   getWebPlayableUri: jest.fn(),
@@ -30,7 +30,7 @@ jest.mock("./audio-file-cache.service", () => ({
   hasCachedFile: jest.fn(),
 }));
 
-jest.mock("../storage/idb.service", () => ({
+jest.mock("../../storage/idb.service", () => ({
   idb: {
     get: jest.fn(),
     put: jest.fn(),
@@ -41,7 +41,7 @@ jest.mock("../storage/idb.service", () => ({
   },
 }));
 
-jest.mock("../data/quran.service", () => ({
+jest.mock("../../data/quran.service", () => ({
   fetchAudioForAyah: jest.fn(),
 }));
 
