@@ -47,7 +47,21 @@ import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 
-setupIonicReact({ mode: "md" });
+// `hardwareBackButton: false` is load-bearing, not cosmetic.
+//
+// Capacitor's AppPlugin fires TWO things for a single back press: it notifies
+// the "backButton" listeners (the ladder below) AND dispatches a "backbutton"
+// DOM event. On a hybrid build Ionic listens for that DOM event and runs its
+// own handler, which calls history.goBack(). So one press produced both the
+// exit toast and a navigation — which is why backing out of a search-opened
+// verse showed "press again to exit" and simultaneously returned to the
+// results page.
+//
+// Turning it off leaves the ladder as the sole owner of back, which is what it
+// was always written to be. Nothing here depends on Ionic's handling: the app
+// uses no IonModal/IonAlert/IonActionSheet/IonMenu, and its own sheets close
+// through the overlay registry.
+setupIonicReact({ mode: "md", hardwareBackButton: false });
 
 // Main tab destinations that must never go back: disable the edge swipe-back
 // gesture while one of them is the active route, so an accidental edge swipe

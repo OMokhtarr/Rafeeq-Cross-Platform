@@ -156,11 +156,15 @@ const Bookmarks: React.FC = () => {
   // ── Resume recitation session ──
   const handleResume = useCallback(
     async (session: RecitationSession) => {
+      // Every branch below lands on the same verse — whether the session had a
+      // queue to resume, resumed cleanly, or failed to resume. Replace rather
+      // than push, for the same reason as `goToVerse`: this list is a way into
+      // the mushaf, not a place to return to.
+      const { page } = verseKeyToPageAndName(session.verseKey, lang);
+      const dest = `/viewer?page=${page}&v=${encodeURIComponent(session.verseKey)}`;
+
       if (!session.queue || session.queue.length === 0) {
-        const { page } = verseKeyToPageAndName(session.verseKey, lang);
-        history.push(
-          `/viewer?page=${page}&v=${encodeURIComponent(session.verseKey)}`,
-        );
+        history.replace(dest);
         return;
       }
       try {
@@ -170,23 +174,21 @@ const Bookmarks: React.FC = () => {
           elapsedSeconds: session.elapsedSeconds,
           reciter: session.reciter,
         });
-        const { page } = verseKeyToPageAndName(session.verseKey, lang);
-        history.push(
-          `/viewer?page=${page}&v=${encodeURIComponent(session.verseKey)}`,
-        );
       } catch {
-        const { page } = verseKeyToPageAndName(session.verseKey, lang);
-        history.push(
-          `/viewer?page=${page}&v=${encodeURIComponent(session.verseKey)}`,
-        );
+        /* resuming playback failed — still open the verse it points at */
       }
+      history.replace(dest);
     },
     [resumeSession, history, lang],
   );
 
   const goToVerse = (verseKey: string) => {
     const { page } = verseKeyToPageAndName(verseKey, lang);
-    history.push(`/viewer?page=${page}&v=${verseKey}`);
+    // Replace, don't push: this list is a way into the mushaf, not a place to
+    // return to. /viewer is a root tab, so back from it exits rather than
+    // popping — leaving this entry on the stack would only mean the first back
+    // is swallowed restoring a screen the reader cannot get to.
+    history.replace(`/viewer?page=${page}&v=${verseKey}`);
   };
 
   return (
