@@ -219,7 +219,23 @@ const MushafPage: React.FC<Props> = ({
       needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
       needsSurahNamesFont ? ensureSurahNamesFont() : Promise.resolve(),
     ])
-      .then(() => {
+      .then(async () => {
+        // `ensurePageFont` resolves once the face is registered via
+        // document.fonts.add(), which is NOT the same as the browser having it
+        // ready for layout. Rendering on that earlier signal measures the text
+        // in the fallback font, so the 15-line grid is laid out with the wrong
+        // widths — words spill onto the wrong lines and stray part-lines appear
+        // mid-page until some later event (a tap, a resize) re-runs the sizing.
+        // That is exactly the "reopen it and it looks right" symptom.
+        //
+        // document.fonts.load() forces the face to be loaded *and* usable, and
+        // .ready then waits for any in-flight layout work to settle.
+        try {
+          await document.fonts.load(`1em "${fontFamilyForPage(page)}"`);
+          await document.fonts.ready;
+        } catch {
+          /* fall through — better to render than to hang on a font probe */
+        }
         if (!cancelled) setFontReady(true);
       })
       .catch((err) => {
@@ -289,38 +305,85 @@ const MushafPage: React.FC<Props> = ({
       setHiddenSegments([]);
       return;
     }
-    const containerRect = container.getBoundingClientRect();
-    // Each hidden non-end-marker word gets data-hidden-seg="verseKey:lineNum"
-    const spans = container.querySelectorAll<HTMLElement>("[data-hidden-seg]");
-    // Group spans by their segment key (verseKey:lineNum)
-    const groups = new Map<string, HTMLElement[]>();
-    for (const span of spans) {
-      const segKey = span.dataset.hiddenSeg!;
-      const arr = groups.get(segKey) ?? [];
-      arr.push(span);
-      groups.set(segKey, arr);
-    }
-    const segments: HiddenSegment[] = [];
-    for (const spans of groups.values()) {
-      if (spans.length === 0) continue;
-      let minLeft = Infinity;
-      let maxRight = -Infinity;
-      let bottomY = 0;
+
+    // Returns false when the text has not been shaped with the page font yet,
+    // so the caller can retry instead of storing a half-measured result.
+    const measure = (force = false): boolean => {
+      const containerRect = container.getBoundingClientRect();
+      // Each hidden non-end-marker word gets data-hidden-seg="verseKey:lineNum"
+      const spans = container.querySelectorAll<HTMLElement>("[data-hidden-seg]");
+      // Group spans by their segment key (verseKey:lineNum)
+      const groups = new Map<string, HTMLElement[]>();
       for (const span of spans) {
-        const r = span.getBoundingClientRect();
-        if (r.width === 0) continue;
-        minLeft = Math.min(minLeft, r.left);
-        maxRight = Math.max(maxRight, r.right);
-        bottomY = r.bottom - r.height * 0.3;
+        const segKey = span.dataset.hiddenSeg!;
+        const arr = groups.get(segKey) ?? [];
+        arr.push(span);
+        groups.set(segKey, arr);
       }
-      if (minLeft === Infinity) continue;
-      segments.push({
-        left: minLeft - containerRect.left,
-        width: maxRight - minLeft,
-        top: bottomY - containerRect.top,
-      });
-    }
-    setHiddenSegments(segments);
+      const segments: HiddenSegment[] = [];
+      // A span that measures zero-width is one the browser has not shaped yet.
+      // Covering the rest while those stay bare is exactly the bug this guards
+      // against: the un-measured lines would render as readable text inside a
+      // region that is supposed to be masked.
+      let unmeasured = false;
+      for (const spans of groups.values()) {
+        if (spans.length === 0) continue;
+        let minLeft = Infinity;
+        let maxRight = -Infinity;
+        let bottomY = 0;
+        for (const span of spans) {
+          const r = span.getBoundingClientRect();
+          if (r.width === 0) {
+            unmeasured = true;
+            continue;
+          }
+          minLeft = Math.min(minLeft, r.left);
+          maxRight = Math.max(maxRight, r.right);
+          bottomY = r.bottom - r.height * 0.3;
+        }
+        if (minLeft === Infinity) continue;
+        segments.push({
+          left: minLeft - containerRect.left,
+          width: maxRight - minLeft,
+          top: bottomY - containerRect.top,
+        });
+      }
+      if (unmeasured && !force) return false;
+      setHiddenSegments(segments);
+      return true;
+    };
+
+    if (measure()) return;
+
+    // Fonts are registered but the browser has not re-shaped the text with
+    // them yet: `ensurePageFont` resolves after `document.fonts.add`, which is
+    // a frame or more ahead of the layout that actually applies the face. That
+    // gap is why the masked lines showed through on first open but not on
+    // reopen, when the font was already cached and applied.
+    let cancelled = false;
+    let raf = 0;
+    // Bounded so a span that is legitimately zero-width (a word the font does
+    // not render) cannot spin the loop forever. On the last attempt the result
+    // is kept regardless, which is no worse than the old unconditional store.
+    let attempts = 0;
+    const MAX_ATTEMPTS = 30;
+    const retry = () => {
+      if (cancelled) return;
+      attempts += 1;
+      if (measure()) return;
+      if (attempts >= MAX_ATTEMPTS) {
+        measure(true);
+        return;
+      }
+      raf = requestAnimationFrame(retry);
+    };
+    document.fonts.ready.then(() => {
+      if (!cancelled) raf = requestAnimationFrame(retry);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [hidden, partialTarget, fontReady, verses, bigTextMode]);
 
   if (!fontReady) {
