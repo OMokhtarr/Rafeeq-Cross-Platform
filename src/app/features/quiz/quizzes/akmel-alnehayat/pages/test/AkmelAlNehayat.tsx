@@ -364,9 +364,9 @@ const AkmelAlNehayat: React.FC = () => {
               <div className="an-spinner"></div>
               <p>{tt.loadingAkmel}</p>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -384,9 +384,9 @@ const AkmelAlNehayat: React.FC = () => {
                 </button>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -419,9 +419,9 @@ const AkmelAlNehayat: React.FC = () => {
                 </div>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
   }
@@ -437,19 +437,12 @@ const AkmelAlNehayat: React.FC = () => {
             {/* Header */}
             <div className={`an-header ${immersiveMode ? "an-header-minimal" : ""}`}>
               <div className="an-progress">
-                <span className="an-progress-text">
-                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
-                  {isRTL ? toHindi(questions.length) : questions.length}
-                </span>
                 <div className="an-bar">
                   <div
                     className="an-bar-fill"
                     style={{ width: `${((idx + 1) / questions.length) * 100}%` }}
                   />
                 </div>
-              </div>
-              <div className="an-score-pill">
-                {tt.score}: {score}
               </div>
               <div className="an-header-actions">
                 <button className="an-exit-btn" onClick={handleExit} aria-label={tt.exit}>
@@ -603,9 +596,9 @@ const AkmelAlNehayat: React.FC = () => {
             onCancel={() => setShowExitModal(false)}
             onConfirm={() => history.replace("/quiz-list")}
           />
-          <BottomNavBar active="quiz" />
         </div>
       </IonContent>
+      <BottomNavBar active="quiz" fixed />
     </IonPage>
   );
 };

@@ -36,7 +36,9 @@ ion-content::part(scroll) {
   max-width: var(--max-width-mobile, 600px);
   flex: 1;
   min-height: 0;
-  padding: 10px;
+  /* The fixed BottomNavBar overlays the bottom of IonContent, so reserve
+     its height here or the quiz card runs underneath it. */
+  padding: 10px 10px calc(var(--bottom-nav-height) + 10px);
   box-sizing: border-box;
   gap: 8px;
   overflow: hidden;
@@ -46,51 +48,47 @@ ion-content::part(scroll) {
 .aa-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 4px 10px;
+  /* Progress bar and exit button only — no question counter, no score. The
+     row hugs its content with a small even padding, so the quiz gets the
+     screen instead of the toolbar. */
+  gap: 10px;
+  background: transparent;
+  padding: 4px;
   margin-bottom: 4px;
-  border: 1.5px solid var(--color-border-card);
+  border: none;
   flex-shrink: 0;
-  min-height: 32px;
 }
 
 /* Progress container – fixed width across modes */
 .aa-progress {
-  flex: 0 0 auto;
-  width: 160px;
-  max-width: 100%;
+  flex: 1;
+  min-width: 0;
 }
-.aa-progress-text {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--color-text-primary);
-  font-family: var(--font-arabic);
-  font-size: var(--text-md);
-}
+/* Progress track: a chunky capsule. The fill is its own rounded pill rather
+   than a clipped rectangle, so early progress still reads as a shape instead
+   of a sliver. Direction comes from the document `dir` via logical properties,
+   so the fill grows from the right in Arabic and the left in English with no
+   JS branching. */
 .aa-bar {
-  height: 5px;
+  height: 12px;
   background: var(--color-progress-track);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-radius: var(--radius-full);
+  padding: 2px;
+  box-sizing: border-box;
+  /* Anchor the fill to the inline-start edge explicitly rather than relying on
+     default block-flow placement, so the growth direction follows the document
+     `dir` (right-to-left in Arabic, left-to-right in English). */
+  display: flex;
+  justify-content: flex-start;
 }
 .aa-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-quran), var(--color-gold));
+  min-width: 12px;
+  background: var(--color-quran);
+  border-radius: var(--radius-full);
   transition: width 0.35s ease;
 }
 
-.aa-score-pill {
-  flex: 1;
-  text-align: center;
-  font-size: inherit;
-  font-family: var(--font-arabic);
-  font-weight: bold;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-}
 
 .aa-header-actions {
   display: flex;
@@ -100,30 +98,27 @@ ion-content::part(scroll) {
 }
 
 /* Immersive header – keep identical sizing to normal mode */
-.aa-header-minimal .aa-progress-text,
-.aa-header-minimal .aa-score-pill {
-  font-size: inherit; /* preserve original font size */
-}
 
 /* Exit button remains circular */
 .aa-exit-btn {
   background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
+  border: none;
+  color: var(--color-text-muted);
+  width: 32px;
+  height: 32px;
   padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
   border-radius: 50%;
   cursor: pointer;
-  transition: background var(--transition-base), border-color var(--transition-base);
+  transition: color var(--transition-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 .aa-exit-btn:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
+  color: var(--color-gold);
 }
 
 /* Question card – normal full height */
