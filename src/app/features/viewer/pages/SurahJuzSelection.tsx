@@ -236,7 +236,12 @@ const SurahJuzSelection: React.FC = () => {
       const juz = juzs.find((j) => page >= j.start && page <= j.end);
       if (juz) setPendingJuzNum(juz.num);
     }
-    history.push(`/viewer?page=${page}`);
+    // Replace, don't push: this screen is a picker the reader passes through,
+    // not a place to come back to. Pushing would stack /viewer?page=N on top of
+    // /surah-juz, so backing out of the chosen surah would land on the picker
+    // again and need a second back to reach the viewer. /viewer is a root tab
+    // and must be one back away from exiting.
+    history.replace(`/viewer?page=${page}`);
   };
 
   const handleBack = () => {
@@ -522,9 +527,9 @@ const SurahJuzSelection: React.FC = () => {
             )}
           </div>
 
-          <BottomNavBar active="quran" />
         </div>
       </IonContent>
+      <BottomNavBar active="quran" fixed />
     </IonPage>
   );
 };

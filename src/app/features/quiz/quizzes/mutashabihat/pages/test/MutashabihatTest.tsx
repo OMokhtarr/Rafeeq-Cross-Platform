@@ -321,9 +321,9 @@ const MutashabihatTest: React.FC = () => {
               <div className="mst-spinner"></div>
               <p>{tt.loadingMutashabihat}</p>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -340,9 +340,9 @@ const MutashabihatTest: React.FC = () => {
                 </button>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -374,9 +374,9 @@ const MutashabihatTest: React.FC = () => {
                 </div>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
   }
@@ -422,10 +422,6 @@ const MutashabihatTest: React.FC = () => {
               }`}
             >
               <div className="mst-progress">
-                <span className="mst-progress-text">
-                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
-                  {isRTL ? toHindi(questions.length) : questions.length}
-                </span>
                 <div className="mst-bar">
                   <div
                     className="mst-bar-fill"
@@ -434,9 +430,6 @@ const MutashabihatTest: React.FC = () => {
                     }}
                   />
                 </div>
-              </div>
-              <div className="mst-score-pill">
-                {tt.score}: {score}
               </div>
               <div className="mst-header-actions">
                 <button
@@ -740,9 +733,9 @@ const MutashabihatTest: React.FC = () => {
             onCancel={() => setShowExitModal(false)}
             onConfirm={() => history.replace("/quiz-list")}
           />
-          <BottomNavBar active="quiz" />
         </div>
       </IonContent>
+      <BottomNavBar active="quiz" fixed />
     </IonPage>
   );
 };

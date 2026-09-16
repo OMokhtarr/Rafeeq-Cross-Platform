@@ -1433,8 +1433,6 @@ const PageViewer: React.FC = () => {
           <VerseActionSheet
             open={!!sheetVerseKey}
             verseKey={sheetVerseKey}
-            pageVerseKeys={verses.map((v) => `${v.sura}:${v.aya}`)}
-            page={currentPage}
             reciter={settings.reciter}
             onClose={closeSheet}
           />

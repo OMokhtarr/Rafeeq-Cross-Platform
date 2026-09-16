@@ -6,6 +6,7 @@ import { useTheme } from "../../core/context/ThemeContext";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import { registerOverlay } from "../../core/utils/overlay-registry";
+import { useSheetDrag } from "../../core/hooks/useSheetDrag";
 import AccountModal from "../account/AccountModal";
 import StreakPanel from "../account/StreakPanel";
 import {
@@ -108,8 +109,13 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
   night,
 }) => {
   const [mode, setMode] = useState<"juz" | "surah" | "pages">("juz");
-  const [dragStart, setDragStart] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
+
+  // Drag-to-dismiss, restricted to the grab area at the sheet's top edge. The
+  // hand-rolled version this replaces listened on the whole sheet, so scrolling
+  // the surah grid or an open page dropdown read as a dismiss drag.
+  const { ref: sheetRef, dragHandlers } = useSheetDrag<HTMLDivElement>({
+    onDismiss: onClose,
+  });
 
   // An edge swipe / system Back should close this sheet rather than navigate
   // away. Mounted only while open, so registering on mount is enough.
@@ -290,36 +296,14 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
     </div>
   );
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setDragStart(e.touches[0].clientY);
-    setDragOffset(0);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (dragStart === null) return;
-    const current = e.touches[0].clientY;
-    const offset = Math.max(0, current - dragStart);
-    setDragOffset(offset);
-  };
-
-  const handleTouchEnd = () => {
-    if (dragOffset > 80) {
-      onClose();
-    }
-    setDragStart(null);
-    setDragOffset(0);
-  };
-
   return (
     <div className="hifz-sheet-backdrop" onClick={onClose}>
       <div
         className="hifz-sheet"
+        ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
         dir={lang === "ar" ? "rtl" : "ltr"}
-        style={{ transform: `translateY(${dragOffset}px)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        {...dragHandlers}
       >
         <div className="hifz-sheet-handle" />
         <p className="hifz-sheet-title">{h.addMemorized}</p>

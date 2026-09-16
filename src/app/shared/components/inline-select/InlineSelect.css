@@ -120,3 +120,24 @@
   flex-shrink: 0;
   color: var(--color-gold, #d4b48c);
 }
+
+/* Backdrop — portaled sibling of the list, covers the whole viewport while the
+   dropdown is open. `touch-action: none` is the important part: without it the
+   backdrop only absorbs taps, and a scroll drag that lands on it (or spills
+   past the list's edges) passes through to whatever scroll container sits
+   behind — e.g. the surah grid under the Hifz page pickers, which would then
+   scroll along with the dropdown. */
+.isel__backdrop {
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+/* Applied to <body> while a dropdown is open. Freezes every scroll container
+   behind the list so the background cannot move under the open dropdown. */
+body.isel-open {
+  overflow: hidden;
+  touch-action: none;
+}
+body.isel-open .isel__list {
+  touch-action: pan-y;
+}

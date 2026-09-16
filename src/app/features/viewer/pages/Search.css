@@ -8,11 +8,14 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
   height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   font-family: var(--font-arabic);
   overflow: hidden;
+  box-sizing: border-box;
   transition:
     background var(--transition-theme),
     color var(--transition-theme);
@@ -210,7 +213,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px max(14px, var(--safe-inset-bottom));
+  /* Clear the fixed BottomNavBar, which overlays the bottom of the page.
+     --bottom-nav-height already includes the safe-area inset, so this covers
+     both the tabs and the gesture bar. (body's own safe-area padding does not
+     apply: Ionic positions ion-app/ion-page fixed, outside body's padding box.) */
+  padding: 10px 14px calc(var(--bottom-nav-height) + 10px);
   flex-shrink: 0;
   background: transparent;
 }
@@ -233,6 +240,9 @@
 
 .search-bottom-input {
   flex: 1;
+  /* A flex child defaults to min-width:auto and would refuse to shrink below
+     its placeholder, widening the row past the screen. */
+  min-width: 0;
   height: 44px;
   border-radius: 999px;
   border: 1px solid var(--color-input-border);
@@ -248,35 +258,14 @@
 .search-bottom-input::placeholder {
   color: var(--color-text-muted);
   opacity: 0.85;
+  /* Ellipsize rather than run under the search icon tucked into the input's
+     inline-start padding, so a long translation degrades instead of colliding. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .search-bottom-input:focus {
   border-color: var(--color-gold);
 }
 
-.search-bottom-mic {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-gold);
-  color: var(--color-bg-app);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 0 0 4px var(--color-gold-subtle);
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-base);
-}
-
-.search-bottom-mic:hover {
-  box-shadow: 0 0 0 6px var(--color-gold-subtle);
-}
-
-.search-bottom-mic:active {
-  transform: scale(0.94);
-}
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
 import {
   fetchTafsirForAyah,
@@ -10,6 +10,10 @@ import {
   getDownloadedTafsirIds,
 } from "../../../core/services/data/tafsir-cache.service";
 import { readCachedTafsir } from "../../../core/services/sync/adapters/tafsirs.adapter";
+import {
+  getChapters,
+  estimatePageForVerse,
+} from "../../../core/services/data/metadata.service";
 import { useLang } from "../../../core/context/LanguageContext";
 import { useTheme } from "../../../core/context/ThemeContext";
 import InlineSelect from "../inline-select/InlineSelect";
@@ -21,6 +25,7 @@ import {
 import { getPlayableUrl } from "../../../core/services/audio/audio-cache.service";
 import { useAudioPlayer } from "../../../core/hooks/useAudioPlayer";
 import { useSheetDrag } from "../../../core/hooks/useSheetDrag";
+import { useSwipeNav } from "../../../core/hooks/useSwipeNav";
 import { registerOverlay } from "../../../core/utils/overlay-registry";
 import NoteModal from "../note-modal/NoteModal";
 import "./VerseActionSheet.css";
@@ -29,9 +34,6 @@ interface Props {
   open: boolean;
   /** "sura:aya" of the initially long-pressed verse. */
   verseKey: string | null;
-  /** Ordered verse keys for the current page — used for prev/next in tafsir. */
-  pageVerseKeys?: string[];
-  page: number;
   tafsirId?: string;
   /** Reciter ID used for audio playback (numeric string, e.g. "4"). */
   reciter?: string;
@@ -45,8 +47,6 @@ const DEFAULT_RECITER = "4";
 const VerseActionSheet: React.FC<Props> = ({
   open,
   verseKey,
-  pageVerseKeys = [],
-  page,
   tafsirId,
   reciter = DEFAULT_RECITER,
   onClose,
@@ -69,45 +69,55 @@ const VerseActionSheet: React.FC<Props> = ({
     return registerOverlay(onClose);
   }, [open, onClose]);
 
+  // ── Tafsir navigation ──────────────────────────────────────────────────────
+  // currentKey tracks which verse is shown in the tafsir panel (can differ from
+  // the initially pressed verseKey via prev/next). Declared here because the
+  // header actions below all operate on the verse currently on screen, not on
+  // whichever verse happened to open the sheet.
+  const [currentKey, setCurrentKey] = useState<string | null>(verseKey);
+  // The verse every header action applies to. Falls back to the opening verse
+  // before the first navigation.
+  const activeKey = currentKey ?? verseKey;
+
   // ── Bookmark ───────────────────────────────────────────────────────────────
   const [bookmarked, setBookmarked] = useState(false);
 
   useEffect(() => {
-    if (open && verseKey) setBookmarked(isPageBookmarked(verseKey));
-  }, [open, verseKey]);
+    if (open && activeKey) setBookmarked(isPageBookmarked(activeKey));
+  }, [open, activeKey]);
 
   const handleBookmark = useCallback(() => {
-    if (!verseKey) return;
-    setBookmarked(toggleBookmark(verseKey));
-  }, [verseKey]);
+    if (!activeKey) return;
+    setBookmarked(toggleBookmark(activeKey));
+  }, [activeKey]);
 
   // ── Audio ─────────────────────────────────────────────────────────────────
   const audio = useAudioPlayer();
   const [audioLoading, setAudioLoading] = useState(false);
 
-  const isThisVersePlayingKey = verseKey;
+  const isThisVersePlayingKey = activeKey;
   const isPlaying =
     audio.isPlaying && audio.playingKey === isThisVersePlayingKey;
 
   const handlePlay = useCallback(async () => {
-    if (!verseKey) return;
+    if (!activeKey) return;
     if (isPlaying) {
       audio.stop();
       return;
     }
-    const [sStr, aStr] = verseKey.split(":");
+    const [sStr, aStr] = activeKey.split(":");
     const sura = parseInt(sStr, 10);
     const aya = parseInt(aStr, 10);
     setAudioLoading(true);
     try {
       const { url } = await getPlayableUrl(reciter, sura, aya);
-      await audio.play(verseKey, url);
+      await audio.play(activeKey, url);
     } catch {
       /* silently fail — network or decode error */
     } finally {
       setAudioLoading(false);
     }
-  }, [verseKey, isPlaying, reciter, audio]);
+  }, [activeKey, isPlaying, reciter, audio]);
 
   // Stop audio when sheet closes
   useEffect(() => {
@@ -128,11 +138,6 @@ const VerseActionSheet: React.FC<Props> = ({
     setNoteModalView("compose");
     setNoteModalOpen(true);
   }, []);
-
-  // ── Tafsir navigation ──────────────────────────────────────────────────────
-  // currentKey tracks which verse is shown in the tafsir panel (can differ from
-  // the initially pressed verseKey via prev/next).
-  const [currentKey, setCurrentKey] = useState<string | null>(verseKey);
 
   // ── Tafsir resources ──────────────────────────────────────────────────────
   const [resources, setResources] = useState<TafsirResource[]>([]);
@@ -197,14 +202,18 @@ const VerseActionSheet: React.FC<Props> = ({
   }, [open]); // intentionally omits `resources` and `tafsirId` — fetch once per open
 
   // ── Fetch verse text whenever currentKey changes ──────────────────────────
+  // Navigation now runs to the surah's edges, so the verse can sit on a
+  // different page than the one the sheet was opened from. Resolve the page
+  // from the verse itself rather than using the `page` prop, which would come
+  // back empty for anything past the original page's last ayah.
   useEffect(() => {
     if (!open || !currentKey) return;
     let cancelled = false;
     setVerseText("");
-    getPage(page)
+    const [s, a] = currentKey.split(":").map((n) => parseInt(n, 10));
+    getPage(estimatePageForVerse(s, a))
       .then((verses) => {
         if (cancelled) return;
-        const [s, a] = currentKey.split(":").map((n) => parseInt(n, 10));
         const hit = verses.find((v) => v.sura === s && v.aya === a);
         if (hit) setVerseText(hit.text);
       })
@@ -212,7 +221,7 @@ const VerseActionSheet: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [open, currentKey, page]);
+  }, [open, currentKey]);
 
   // ── Derived: filter resources to downloaded only ──────────────────────────
   const downloadedResources = resources.filter((r) =>
@@ -260,17 +269,45 @@ const VerseActionSheet: React.FC<Props> = ({
   }, [open, currentKey, effectiveResourceId, t]);
 
   // ── Prev / next helpers ───────────────────────────────────────────────────
-  const currentIdx = currentKey ? pageVerseKeys.indexOf(currentKey) : -1;
-  const hasPrev = currentIdx > 0;
-  const hasNext = currentIdx >= 0 && currentIdx < pageVerseKeys.length - 1;
+  // Navigation is bounded by the surah, not by the mushaf page: from any ayah
+  // the reader can walk to the first and last ayah of its surah, crossing page
+  // boundaries on the way. Ayah numbering is contiguous within a surah, so the
+  // bounds are simply 1..verses_count and no verse list is needed.
+  const [curSura, curAya] = (currentKey ?? verseKey ?? "1:1")
+    .split(":")
+    .map((n) => parseInt(n, 10));
+
+  // Ayah count of the current surah. `initMetadata()` runs at app start and the
+  // viewer cannot render a page without it, so by the time this sheet opens the
+  // cache is populated. If it somehow is not, 0 means "unknown" and forward
+  // navigation stays open rather than being wrongly disabled — walking past the
+  // last ayah then simply shows the tafsir-unavailable state.
+  const suraAyaCount = useMemo(() => {
+    const ch = getChapters().find((c: any) => c.id === curSura);
+    return (ch?.verses_count as number) ?? 0;
+  }, [curSura]);
+
+  const hasPrev = curAya > 1;
+  const hasNext = suraAyaCount === 0 || curAya < suraAyaCount;
 
   const goPrev = useCallback(() => {
-    if (hasPrev) setCurrentKey(pageVerseKeys[currentIdx - 1]);
-  }, [hasPrev, currentIdx, pageVerseKeys]);
+    if (curAya > 1) setCurrentKey(`${curSura}:${curAya - 1}`);
+  }, [curSura, curAya]);
 
   const goNext = useCallback(() => {
-    if (hasNext) setCurrentKey(pageVerseKeys[currentIdx + 1]);
-  }, [hasNext, currentIdx, pageVerseKeys]);
+    if (suraAyaCount === 0 || curAya < suraAyaCount) {
+      setCurrentKey(`${curSura}:${curAya + 1}`);
+    }
+  }, [curSura, curAya, suraAyaCount]);
+
+  // Swipe left/right across the verse row to move between ayat. Scoped to that
+  // row rather than the whole sheet so the tafsir body below keeps a plain
+  // vertical scroll with no gesture competing for it.
+  const swipeHandlers = useSwipeNav<HTMLDivElement>({
+    onForward: goNext,
+    onBack: goPrev,
+    rtl: isRTL,
+  });
 
   // ── Derived display values ────────────────────────────────────────────────
   const displayVerseKey = currentKey ?? verseKey;
@@ -306,7 +343,7 @@ const VerseActionSheet: React.FC<Props> = ({
             <button
               className={`vas-play-btn${isPlaying ? " vas-play-btn--active" : ""}${isNight ? " vas-play-btn--night" : ""}`}
               onClick={handlePlay}
-              disabled={!verseKey || audioLoading}
+              disabled={!activeKey || audioLoading}
               aria-label={
                 isPlaying
                   ? (lang === "ar" ? "إيقاف" : "Stop")
@@ -332,7 +369,7 @@ const VerseActionSheet: React.FC<Props> = ({
             <button
               className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
               onClick={openNoteCompose}
-              disabled={!verseKey}
+              disabled={!activeKey}
               aria-label={lang === "ar" ? "إضافة ملاحظة" : "Add note"}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -344,7 +381,7 @@ const VerseActionSheet: React.FC<Props> = ({
             <button
               className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
               onClick={openNoteList}
-              disabled={!verseKey}
+              disabled={!activeKey}
               aria-label={lang === "ar" ? "ملاحظات الآية" : "View notes"}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -358,7 +395,7 @@ const VerseActionSheet: React.FC<Props> = ({
             <button
               className={`vas-bookmark-btn${bookmarked ? " vas-bookmark-btn--active" : ""}${nightClass}`}
               onClick={handleBookmark}
-              disabled={!verseKey}
+              disabled={!activeKey}
               aria-label={bookmarked
                 ? (lang === "ar" ? "إزالة الإشارة" : "Remove bookmark")
                 : (lang === "ar" ? "إضافة إشارة" : "Bookmark verse")}
@@ -395,7 +432,7 @@ const VerseActionSheet: React.FC<Props> = ({
             /* No downloads yet — show a prompt to go to settings */
             <button
               className={`vas-tafsir-settings-link${nightClass}`}
-              onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+              onClick={() => history.push("/tafsir-settings", { returnVerseKey: activeKey })}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" />
@@ -420,7 +457,7 @@ const VerseActionSheet: React.FC<Props> = ({
               />
               <button
                 className={`vas-tafsir-gear${nightClass}`}
-                onClick={() => history.push("/tafsir-settings", { returnVerseKey: verseKey })}
+                onClick={() => history.push("/tafsir-settings", { returnVerseKey: activeKey })}
                 aria-label={lang === "ar" ? "إعدادات التفاسير" : "Tafsir settings"}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -433,18 +470,16 @@ const VerseActionSheet: React.FC<Props> = ({
         </div>
 
         {/* Verse + nav row */}
-        <div className={`vas-verse-row${nightClass}`}>
+        <div className={`vas-verse-row${nightClass}`} {...swipeHandlers}>
           <div className="vas-verse-center">
             <div className="vas-nav-inline">
               <button
                 className={`vas-nav-btn${nightClass}`}
                 onClick={goPrev}
                 disabled={!hasPrev}
-                aria-label={
-                  isRTL ? t.mushaf.contextNextPage : t.mushaf.contextPrevPage
-                }
+                aria-label={t.mushaf.contextPrevPage}
               >
-                {isRTL ? "›" : "‹"}
+                {isRTL ? "‹" : "›"}
               </button>
               <span className={`vas-nav-key${nightClass}`}>
                 {lang === "ar"
@@ -455,11 +490,9 @@ const VerseActionSheet: React.FC<Props> = ({
                 className={`vas-nav-btn${nightClass}`}
                 onClick={goNext}
                 disabled={!hasNext}
-                aria-label={
-                  isRTL ? t.mushaf.contextPrevPage : t.mushaf.contextNextPage
-                }
+                aria-label={t.mushaf.contextNextPage}
               >
-                {isRTL ? "‹" : "›"}
+                {isRTL ? "›" : "‹"}
               </button>
             </div>
             {verseText && (
@@ -508,7 +541,7 @@ const VerseActionSheet: React.FC<Props> = ({
       <NoteModal
         open={noteModalOpen}
         initialView={noteModalView}
-        verseKey={verseKey}
+        verseKey={activeKey}
         onClose={() => setNoteModalOpen(false)}
       />
     </>

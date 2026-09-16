@@ -357,9 +357,9 @@ const AkmelAlAyah: React.FC = () => {
               <div className="aa-spinner"></div>
               <p>{tt.loadingAkmel}</p>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -377,9 +377,9 @@ const AkmelAlAyah: React.FC = () => {
                 </button>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
 
@@ -412,9 +412,9 @@ const AkmelAlAyah: React.FC = () => {
                 </div>
               </div>
             </div>
-            <BottomNavBar active="quiz" />
           </div>
         </IonContent>
+        <BottomNavBar active="quiz" fixed />
       </IonPage>
     );
   }
@@ -438,10 +438,6 @@ const AkmelAlAyah: React.FC = () => {
               }`}
             >
               <div className="aa-progress">
-                <span className="aa-progress-text">
-                  {tt.questionOf} {isRTL ? toHindi(idx + 1) : idx + 1} /{" "}
-                  {isRTL ? toHindi(questions.length) : questions.length}
-                </span>
                 <div className="aa-bar">
                   <div
                     className="aa-bar-fill"
@@ -450,9 +446,6 @@ const AkmelAlAyah: React.FC = () => {
                     }}
                   />
                 </div>
-              </div>
-              <div className="aa-score-pill">
-                {tt.score}: {score}
               </div>
               <div className="aa-header-actions">
                 <button
@@ -719,9 +712,9 @@ const AkmelAlAyah: React.FC = () => {
             onCancel={() => setShowExitModal(false)}
             onConfirm={() => history.replace("/quiz-list")}
           />
-          <BottomNavBar active="quiz" />
         </div>
       </IonContent>
+      <BottomNavBar active="quiz" fixed />
     </IonPage>
   );
 };

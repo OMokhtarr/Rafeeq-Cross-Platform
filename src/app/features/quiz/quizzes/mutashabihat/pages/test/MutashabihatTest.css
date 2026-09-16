@@ -38,7 +38,9 @@ ion-content::part(scroll) {
   justify-content: flex-start;
   overflow: hidden;
   gap: 8px;
-  padding: 10px;
+  /* The fixed BottomNavBar overlays the bottom of IonContent, so reserve
+     its height here or the quiz card runs underneath it. */
+  padding: 10px 10px calc(var(--bottom-nav-height) + 10px);
 }
 .mst-container.with-sidebar {
   gap: 8px;
@@ -152,51 +154,46 @@ ion-content::part(scroll) {
 .mst-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 4px 10px;
+  /* Progress bar and exit button only — no question counter, no score. The
+     row hugs its content with a small even padding, so the quiz gets the
+     screen instead of the toolbar. */
+  gap: 10px;
+  background: transparent;
+  padding: 4px;
   margin-bottom: 4px;
-  border: 1.5px solid var(--color-border-card);
+  border: none;
   flex-shrink: 0;
-  min-height: 32px;
 }
 
 .mst-progress {
-  flex: 0 0 auto;
-  width: 160px;
-  max-width: 100%;
+  flex: 1;
+  min-width: 0;
 }
-.mst-progress-text {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--color-text-primary);
-  font-family: var(--font-arabic);
-  font-size: var(--text-md);
-}
+/* Progress track: a chunky capsule. The fill is its own rounded pill rather
+   than a clipped rectangle, so early progress still reads as a shape instead
+   of a sliver. Direction comes from the document `dir` via logical properties,
+   so the fill grows from the right in Arabic and the left in English with no
+   JS branching. */
 .mst-bar {
-  height: 5px;
+  height: 12px;
   background: var(--color-progress-track);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-radius: var(--radius-full);
+  padding: 2px;
+  box-sizing: border-box;
+  /* Anchor the fill to the inline-start edge explicitly rather than relying on
+     default block-flow placement, so the growth direction follows the document
+     `dir` (right-to-left in Arabic, left-to-right in English). */
+  display: flex;
+  justify-content: flex-start;
 }
 .mst-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-quran), var(--color-gold));
+  min-width: 12px;
+  background: var(--color-quran);
+  border-radius: var(--radius-full);
   transition: width 0.35s ease;
 }
 
-.mst-score-pill {
-  flex: 1;
-  text-align: center;
-  font-size: inherit;
-  font-family: var(--font-arabic);
-  font-weight: bold;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-}
 
 .mst-header-actions {
   display: flex;
@@ -206,30 +203,27 @@ ion-content::part(scroll) {
 }
 
 /* Immersive header */
-.mst-header-minimal .mst-progress-text,
-.mst-header-minimal .mst-score-pill {
-  font-size: inherit;
-}
 
 /* ── Exit button — matches aa-exit-btn (small circle) ─────────────────── */
 .mst-exit-btn {
   background: none;
-  border: 1.5px solid var(--color-gold-subtle);
-  color: var(--color-gold);
-  width: 44px;
-  height: 44px;
+  border: none;
+  color: var(--color-text-muted);
+  width: 32px;
+  height: 32px;
   padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
   border-radius: 50%;
   cursor: pointer;
-  transition: background var(--transition-base), border-color var(--transition-base);
+  transition: color var(--transition-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 .mst-exit-btn:hover {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
+  color: var(--color-gold);
 }
 
 /* Card shrinks to its content — context viewer fills the remaining height */
@@ -957,10 +951,6 @@ ion-content::part(scroll) {
 .mst-header-minimal {
   padding: 4px 12px;
   min-height: 44px;
-}
-.mst-header-minimal .mst-progress-text,
-.mst-header-minimal .mst-score-pill {
-  font-size: inherit;
 }
 
 /* Context viewer – takes remaining space */

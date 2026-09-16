@@ -16,6 +16,8 @@ ion-content::part(scroll) {
   flex-direction: column;
   width: 100%;
   min-width: var(--min-width-mobile, 320px);
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
   height: 100%;
   background: var(--color-bg-content);
   color: var(--color-text-primary);
@@ -144,7 +146,9 @@ ion-content::part(scroll) {
 .sjs-list-wrap {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1rem 1.5rem;
+  /* The fixed BottomNavBar overlays the bottom of this scroller, so clear its
+     height or the last rows can never be scrolled out from under it. */
+  padding: 1rem 1rem calc(var(--bottom-nav-height) + 1rem);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   -ms-overflow-style: none;

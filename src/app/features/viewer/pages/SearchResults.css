@@ -8,6 +8,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
   height: 100%;
   background: var(--color-bg-page);
   color: var(--color-text-primary);
@@ -96,9 +98,9 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  /* leaves room for the floating count pill — the BottomNavBar is a flex
-     sibling so it claims its own space without padding here. */
-  padding-bottom: 80px;
+  /* The fixed BottomNavBar overlays this scroller instead of claiming space in
+     the flow, so clear its height plus room for the floating count pill. */
+  padding-bottom: calc(var(--bottom-nav-height) + 60px);
   /* Hide the scrollbar — content still scrolls, just no chrome. */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/old Edge */
@@ -265,8 +267,8 @@
   position: absolute;
   left: 16px;
   right: 16px;
-  /* sit above the BottomNavBar (which is rendered as a flex sibling
-     inside .results-page, so we measure from its top edge) */
+  /* Sit above the fixed BottomNavBar, which overlays the bottom of the page
+     rather than taking part in this container's flow. */
   bottom: calc(var(--bottom-nav-height) + 12px);
   display: flex;
   justify-content: flex-start;
