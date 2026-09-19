@@ -276,7 +276,6 @@ import com.batoulapps.adhan.CalculationMethod
 import com.batoulapps.adhan.CalculationParameters
 import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.Madhab
-import com.batoulapps.adhan.Prayer
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
 import java.util.Calendar
@@ -313,19 +312,24 @@ object PrayerTimesEngine {
         PrayerName.ISHA,
     )
 
+    /**
+     * adhan-java exposes getParameters() as a method; the `.parameters`
+     * property form belongs to the separate adhan-kotlin library. Verified
+     * against the adhan-java README before this was written.
+     */
     fun parametersFor(method: String, madhab: String): CalculationParameters {
         val params = when (method) {
-            "umm_al_qura" -> CalculationMethod.UMM_AL_QURA.parameters
-            "muslim_world_league" -> CalculationMethod.MUSLIM_WORLD_LEAGUE.parameters
-            "karachi" -> CalculationMethod.KARACHI.parameters
-            "north_america" -> CalculationMethod.NORTH_AMERICA.parameters
-            "dubai" -> CalculationMethod.DUBAI.parameters
-            "qatar" -> CalculationMethod.QATAR.parameters
-            "kuwait" -> CalculationMethod.KUWAIT.parameters
-            "singapore" -> CalculationMethod.SINGAPORE.parameters
-            "turkey" -> CalculationMethod.TURKEY.parameters
-            "tehran" -> CalculationMethod.TEHRAN.parameters
-            else -> CalculationMethod.EGYPTIAN.parameters
+            "umm_al_qura" -> CalculationMethod.UMM_AL_QURA.getParameters()
+            "muslim_world_league" -> CalculationMethod.MUSLIM_WORLD_LEAGUE.getParameters()
+            "karachi" -> CalculationMethod.KARACHI.getParameters()
+            "north_america" -> CalculationMethod.NORTH_AMERICA.getParameters()
+            "dubai" -> CalculationMethod.DUBAI.getParameters()
+            "qatar" -> CalculationMethod.QATAR.getParameters()
+            "kuwait" -> CalculationMethod.KUWAIT.getParameters()
+            "singapore" -> CalculationMethod.SINGAPORE.getParameters()
+            "turkey" -> CalculationMethod.TURKEY.getParameters()
+            "tehran" -> CalculationMethod.TEHRAN.getParameters()
+            else -> CalculationMethod.EGYPTIAN.getParameters()
         }
         params.madhab = if (madhab == "hanafi") Madhab.HANAFI else Madhab.SHAFI
         return params
@@ -403,7 +407,7 @@ object PrayerTimesEngine {
 }
 ```
 
-Note on the unused import: remove `Prayer` from the imports if the compiler warns; it is listed only because some adhan versions require it for `PrayerTimes`. Verify against the actual compile.
+If the compiler reports an unresolved `CalculationParameters` import, check adhan-java's package layout — 1.2.1 places it in `com.batoulapps.adhan`, but the `data` subpackage holds `DateComponents`. Adjust imports to match what the jar actually exposes; do not change the API calls themselves.
 
 - [ ] **Step 6: Run the tests and watch them pass**
 
@@ -746,7 +750,7 @@ EOF
   - `type PrayerKey = "fajr" | "sunrise" | "dhuhr" | "asr" | "maghrib" | "isha"`
   - `interface PrayerDay { hasLocation: boolean; times: Record<PrayerKey, Date> | null; next: { name: PrayerKey; at: Date } | null }`
   - `type PrayerMethod` (the 11 method ids from Task 1) and `type PrayerMadhab = "shafi" | "hanafi"`
-  - `async function loadPrayerDay(): Promise<PrayerDay>`
+  - `async function loadPrayerDay(date?: string): Promise<PrayerDay>` — omit `date` for today; the format is `YYYY-MM-DD`
   - `async function requestLocation(): Promise<boolean>` — true if coordinates were obtained and stored
   - `async function getPrayerConfig(): Promise<{ method: PrayerMethod; madhab: PrayerMadhab; hasLocation: boolean }>`
   - `async function setPrayerConfig(patch: { method?: PrayerMethod; madhab?: PrayerMadhab }): Promise<void>`
