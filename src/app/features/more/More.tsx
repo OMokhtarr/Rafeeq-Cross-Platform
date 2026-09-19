@@ -52,7 +52,6 @@ const ENTRIES: MoreEntry[] = [
       </svg>
     ),
     route: "/prayer-times",
-    comingSoon: true,
   },
   {
     id: "account",

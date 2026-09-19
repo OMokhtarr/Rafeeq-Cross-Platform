@@ -42,6 +42,7 @@ import Bookmarks from "./app/features/bookmarks/Bookmarks";
 import TafsirSettings from "./app/features/tafsir/TafsirSettings";
 import Hifz from "./app/features/hifz/Hifz";
 import More from "./app/features/more/More";
+import PrayerTimes from "./app/features/prayer-times/PrayerTimes";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -186,6 +187,7 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/akmel-alnehayat" component={AkmelAlNehayat} />
       <Route exact path="/hifz" component={Hifz} />
       <Route exact path="/more" component={More} />
+      <Route exact path="/prayer-times" component={PrayerTimes} />
       <Route exact path="/account" component={Account} />
       <Route exact path="/bookmarks" component={Bookmarks} />
       <Route exact path="/settings" component={Settings} />
