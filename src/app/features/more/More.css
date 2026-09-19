@@ -1,0 +1,182 @@
+/* ═══════════════════════════════════════════════
+   MORE PAGE — hub of secondary destinations
+   Two large outlined cards per row, in the app's card idiom
+   (see .settings-card / .ql-card): card surface, gold hairline
+   border, xl radius. Outlined rather than filled discs.
+   ═══════════════════════════════════════════════ */
+
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.more-page-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+.more-container {
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  min-width: var(--min-width-mobile, 320px);
+  flex: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
+  /* The fixed nav bar overlays the bottom of IonContent at all times, so the
+     scroll region reserves its height rather than trailing a spacer element —
+     a spacer only clears the very end of the scroll, not the travel through it. */
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
+}
+
+/* ── Page title ──────────────────────────────── */
+/* No toolbar on this page, so the title clears the status bar itself. */
+.more-title {
+  font-family: var(--font-arabic);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: max(var(--space-5), var(--safe-inset-top)) 16px var(--space-4);
+  text-align: center;
+  /* Arabic descenders drop well below the baseline; give them room. */
+  line-height: 1.5;
+}
+
+/* ── Grid ────────────────────────────────────── */
+.more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* ── Card ────────────────────────────────────── */
+.more-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  /* Tall enough to read as a large card rather than a list row, while still
+     fitting two rows above the fold on a short phone. */
+  min-height: 130px;
+  padding: var(--space-5) var(--space-3);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.more-card:not(.more-card-disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-gold);
+}
+
+.more-card:not(.more-card-disabled):active {
+  transform: scale(0.98);
+}
+
+.more-card:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ── Icon disc — the one expressive element ──── */
+.more-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-gold-subtle);
+  background: var(--color-gold-faint);
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.more-card:not(.more-card-disabled):hover .more-card-icon {
+  border-color: var(--color-gold);
+}
+
+.more-card-icon svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* ── Label ───────────────────────────────────── */
+.more-card-label {
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.5;
+}
+
+[dir="ltr"] .more-card-label {
+  font-family: var(--font-latin);
+  font-size: var(--text-base);
+}
+
+/* ── Coming soon ─────────────────────────────── */
+.more-card-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.more-card-soon {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  font-family: var(--font-arabic);
+  font-size: var(--text-xs);
+  background: var(--color-gold-subtle);
+  color: var(--color-gold);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+
+[dir="ltr"] .more-card-soon {
+  font-family: var(--font-latin);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-card,
+  .more-card-icon {
+    transition: none;
+  }
+  .more-card:not(.more-card-disabled):hover,
+  .more-card:not(.more-card-disabled):active {
+    transform: none;
+  }
+}

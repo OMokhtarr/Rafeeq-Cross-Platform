@@ -13,17 +13,29 @@ export interface AppStrings {
   tagline: string;
 
   tabs: {
+    home: string;
     quran: string;
     quiz: string;
     azkar: string;
     ahadith: string;
     hifz: string;
+    account: string;
+    more: string;
     settings: string;
     comingSoon: string;
   };
 
   home: {
     bismillah: string;
+  };
+
+  /** The "More" hub: secondary destinations that don't earn their own tab. */
+  more: {
+    title: string;
+    account: string;
+    settings: string;
+    qibla: string;
+    prayerTimes: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -433,16 +445,26 @@ const ar: AppStrings = {
   dir: "rtl",
   tagline: "رفيقك القرآني",
   tabs: {
+    home: "الرئيسية",
     quran: "القرآن",
     quiz: "اختبارات",
     azkar: "أذكار",
     ahadith: "أحاديث",
     hifz: "الحفظ",
+    account: "حسابي",
+    more: "المزيد",
     settings: "إعدادات",
     comingSoon: "قريباً...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  more: {
+    title: "المزيد",
+    account: "حسابي",
+    settings: "الإعدادات",
+    qibla: "القبلة",
+    prayerTimes: "مواقيت الصلاة",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -865,16 +887,26 @@ const en: AppStrings = {
   dir: "ltr",
   tagline: "Your Quran Companion",
   tabs: {
+    home: "Home",
     quran: "Quran",
     quiz: "Quizzes",
     azkar: "Azkar",
     ahadith: "Ahadith",
     hifz: "Hifz",
+    account: "Account",
+    more: "More",
     settings: "Settings",
     comingSoon: "Coming soon...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  more: {
+    title: "More",
+    account: "Account",
+    settings: "Settings",
+    qibla: "Qibla",
+    prayerTimes: "Prayer Times",
   },
   exitConfirm: "Swipe again to exit",
   offline: {

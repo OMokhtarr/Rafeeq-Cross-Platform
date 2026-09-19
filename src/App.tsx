@@ -41,6 +41,7 @@ import Account from "./app/features/account/Account";
 import Bookmarks from "./app/features/bookmarks/Bookmarks";
 import TafsirSettings from "./app/features/tafsir/TafsirSettings";
 import Hifz from "./app/features/hifz/Hifz";
+import More from "./app/features/more/More";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -72,8 +73,7 @@ const ROOT_TAB_PATHS = new Set<string>([
   "/quiz-list",
   "/azkar",
   "/hifz",
-  "/settings",
-  "/account",
+  "/more",
 ]);
 
 const MainRouterOutlet: React.FC = () => {
@@ -185,6 +185,7 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/akmel-alnehayat-setup" component={AkmelAlNehayatSetup} />
       <Route exact path="/akmel-alnehayat" component={AkmelAlNehayat} />
       <Route exact path="/hifz" component={Hifz} />
+      <Route exact path="/more" component={More} />
       <Route exact path="/account" component={Account} />
       <Route exact path="/bookmarks" component={Bookmarks} />
       <Route exact path="/settings" component={Settings} />

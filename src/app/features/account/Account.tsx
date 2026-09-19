@@ -739,7 +739,7 @@ const Account: React.FC = () => {
         )}
 
       </IonContent>
-      <BottomNavBar active="account" fixed />
+      <BottomNavBar active="more" fixed />
     </IonPage>
   );
 };

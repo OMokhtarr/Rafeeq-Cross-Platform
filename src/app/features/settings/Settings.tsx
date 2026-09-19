@@ -934,7 +934,7 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </IonContent>
-      <BottomNavBar active="settings" fixed />
+      <BottomNavBar active="more" fixed />
       <TajweedInfoModal
         open={tajweedInfoOpen}
         onClose={() => setTajweedInfoOpen(false)}

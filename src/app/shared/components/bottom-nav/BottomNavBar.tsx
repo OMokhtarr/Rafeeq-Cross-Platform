@@ -4,7 +4,9 @@
  * Mirrors the design system's TabBar (filled rounded-square icon containers,
  * gold/category-tinted active state, Arabic label + small Latin sublabel).
  *
- * Tabs: Quran · Quiz · Azkar · Hifz · Settings
+ * Tabs: Home · Quran · Quiz · Azkar · Hifz · More
+ *
+ * Account and Settings live behind the More tab (/more), not here.
  *
  * The "active" prop highlights one tab. Pages without a matching tab can
  * pass `active={undefined}` (e.g. PageViewer is highlighted as 'quran').
@@ -21,8 +23,7 @@ export type NavTabKey =
   | "quiz"
   | "azkar"
   | "hifz"
-  | "account"
-  | "settings";
+  | "more";
 
 interface TabDef {
   id: NavTabKey;
@@ -110,34 +111,16 @@ const TABS: TabDef[] = [
     filled: false,
   },
   {
-    id: "account",
+    id: "more",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
+        <circle cx="5" cy="12" r="1.6" />
+        <circle cx="12" cy="12" r="1.6" />
+        <circle cx="19" cy="12" r="1.6" />
       </svg>
     ),
-    route: "/account",
-    color: "var(--color-steel-blue, #c8d6e5)",
-    filled: false,
-  },
-  {
-    id: "settings",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-      </svg>
-    ),
-    route: "/settings",
-    color: "var(--color-settings)",
+    route: "/more",
+    color: "var(--color-gold, #d4b48c)",
     filled: false,
   },
 ];
@@ -159,7 +142,7 @@ interface Props {
 
 const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   const history = useHistory();
-  const { t, lang } = useLang();
+  const { t } = useLang();
 
   // Navigate to a tab with replace (not push) so the current entry is swapped
   // out rather than stacked on top. Main tab pages must never go back (no
@@ -171,13 +154,12 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   const goToTab = (route: string) => history.replace(route);
 
   const labels: Record<NavTabKey, string> = {
-    home: lang === "ar" ? "الرئيسية" : "Home",
+    home: t.tabs.home,
     quran: t.tabs.quran,
     quiz: t.tabs.quiz,
     azkar: t.tabs.azkar,
     hifz: t.tabs.hifz,
-    account: lang === "ar" ? "حسابي" : "Account",
-    settings: t.tabs.settings,
+    more: t.tabs.more,
   };
 
   return (
