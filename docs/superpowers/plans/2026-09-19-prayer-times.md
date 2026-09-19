@@ -89,7 +89,8 @@
   - `object PrayerTimesEngine`
     - `fun timesFor(lat: Double, lng: Double, date: Date, method: String, madhab: String, tz: TimeZone): DayTimes`
     - `fun nextAfter(now: Date, lat: Double, lng: Double, method: String, madhab: String, tz: TimeZone): NextPrayer`
-  - `method` is one of `"egyptian"`, `"umm_al_qura"`, `"muslim_world_league"`, `"karachi"`, `"north_america"`, `"dubai"`, `"qatar"`, `"kuwait"`, `"singapore"`, `"turkey"`, `"tehran"`.
+  - `method` is one of `"egyptian"`, `"umm_al_qura"`, `"muslim_world_league"`, `"karachi"`, `"north_america"`, `"dubai"`, `"qatar"`, `"kuwait"`, `"singapore"`, `"moon_sighting_committee"`.
+  - **TURKEY and TEHRAN do not exist in adhan-java 1.2.1** — verified against the resolved jar. Do not add them; do not fall back silently.
   - `madhab` is `"shafi"` or `"hanafi"`.
 
 - [ ] **Step 1: Add the dependency version**
@@ -327,8 +328,9 @@ object PrayerTimesEngine {
             "qatar" -> CalculationMethod.QATAR.getParameters()
             "kuwait" -> CalculationMethod.KUWAIT.getParameters()
             "singapore" -> CalculationMethod.SINGAPORE.getParameters()
-            "turkey" -> CalculationMethod.TURKEY.getParameters()
-            "tehran" -> CalculationMethod.TEHRAN.getParameters()
+            "moon_sighting_committee" -> CalculationMethod.MOON_SIGHTING_COMMITTEE.getParameters()
+            // Egyptian is both the default and the fallback for a corrupt
+            // stored value: a widget must render something rather than throw.
             else -> CalculationMethod.EGYPTIAN.getParameters()
         }
         params.madhab = if (madhab == "hanafi") Madhab.HANAFI else Madhab.SHAFI
@@ -636,17 +638,21 @@ class RafeeqPrayerPlugin : Plugin() {
         val day = PrayerTimesEngine.timesFor(lat, lng, date, method, madhab, tz)
         val times = JSObject()
         day.times.forEach { (name, at) ->
-            times.put(name.name.lowercase(), iso(at))
+            if (at != null) times.put(name.name.lowercase(), iso(at))
         }
 
+        // Null where the sun never sets: adhan-java returns no times inside the
+        // midnight-sun window, so `next` is simply absent rather than invented.
         val next = PrayerTimesEngine.nextAfter(Date(), lat, lng, method, madhab, tz)
-        val nextObj = JSObject()
-        nextObj.put("name", next.name.name.lowercase())
-        nextObj.put("at", iso(next.at))
+        if (next != null) {
+            val nextObj = JSObject()
+            nextObj.put("name", next.name.name.lowercase())
+            nextObj.put("at", iso(next.at))
+            result.put("next", nextObj)
+        }
 
         result.put("hasLocation", true)
         result.put("times", times)
-        result.put("next", nextObj)
         call.resolve(result)
     }
 
@@ -749,7 +755,7 @@ EOF
 - Produces:
   - `type PrayerKey = "fajr" | "sunrise" | "dhuhr" | "asr" | "maghrib" | "isha"`
   - `interface PrayerDay { hasLocation: boolean; times: Record<PrayerKey, Date> | null; next: { name: PrayerKey; at: Date } | null }`
-  - `type PrayerMethod` (the 11 method ids from Task 1) and `type PrayerMadhab = "shafi" | "hanafi"`
+  - `type PrayerMethod` (the 10 method ids from Task 1) and `type PrayerMadhab = "shafi" | "hanafi"`
   - `async function loadPrayerDay(date?: string): Promise<PrayerDay>` — omit `date` for today; the format is `YYYY-MM-DD`
   - `async function requestLocation(): Promise<boolean>` — true if coordinates were obtained and stored
   - `async function getPrayerConfig(): Promise<{ method: PrayerMethod; madhab: PrayerMadhab; hasLocation: boolean }>`
@@ -815,8 +821,7 @@ export type PrayerMethod =
   | "qatar"
   | "kuwait"
   | "singapore"
-  | "turkey"
-  | "tehran";
+  | "moon_sighting_committee";
 
 export const PRAYER_METHODS: PrayerMethod[] = [
   "egyptian",
@@ -828,8 +833,7 @@ export const PRAYER_METHODS: PrayerMethod[] = [
   "qatar",
   "kuwait",
   "singapore",
-  "turkey",
-  "tehran",
+  "moon_sighting_committee",
 ];
 
 export type PrayerMadhab = "shafi" | "hanafi";
@@ -1164,8 +1168,7 @@ In `src/app/core/i18n/strings.ts`, add to the `AppStrings` interface, immediatel
     methodQatar: string;
     methodKuwait: string;
     methodSingapore: string;
-    methodTurkey: string;
-    methodTehran: string;
+    methodMoonSighting: string;
     locationNeeded: string;
     locationNeededDesc: string;
     grantLocation: string;
@@ -1201,8 +1204,7 @@ In the `ar` object, immediately after its `more: { ... },` block:
     methodQatar: "قطر",
     methodKuwait: "الكويت",
     methodSingapore: "سنغافورة",
-    methodTurkey: "تركيا",
-    methodTehran: "طهران",
+    methodMoonSighting: "هيئة رؤية الهلال",
     locationNeeded: "حدّد موقعك",
     locationNeededDesc: "نحتاج إلى موقعك لحساب مواقيت الصلاة. يبقى الموقع على جهازك ولا يُرسَل إلى أي جهة.",
     grantLocation: "تحديد الموقع",
@@ -1238,8 +1240,7 @@ In the `en` object, immediately after its `more: { ... },` block:
     methodQatar: "Qatar",
     methodKuwait: "Kuwait",
     methodSingapore: "Singapore",
-    methodTurkey: "Turkey",
-    methodTehran: "Tehran",
+    methodMoonSighting: "Moonsighting Committee",
     locationNeeded: "Set your location",
     locationNeededDesc: "Prayer times are calculated from your location. It stays on your device and is never sent anywhere.",
     grantLocation: "Use my location",
@@ -1295,6 +1296,7 @@ Create `src/app/features/prayer-times/PrayerTimes.tsx`. It must:
 - When `hasLocation` is false, render the permission prompt: `t.prayerTimes.locationNeeded` as a heading, `locationNeededDesc` as body, and a button reading `grantLocation` that calls `requestLocation()` then reloads the day. On a false return, show `locationDenied`. No spinner, no toast.
 - When `hasLocation` is true, render the six rows in `PRAYER_KEYS` order, each with its localized name and its time formatted via `toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", { hour: "2-digit", minute: "2-digit" })` — the locale pair `Bookmarks.tsx:47` already uses.
 - Mark the row matching `next.name` as active, and show `nextPrayer` plus a countdown built from `remaining` with `{time}` replaced.
+- **`next` can be null** even when times exist — adhan-java returns nothing inside the midnight-sun window at high latitude. Render the times without a countdown in that case; never show a fabricated time.
 - Tick the countdown with a `setInterval` of 1000ms, cleared on unmount. When the countdown reaches zero, reload the day so `next` advances.
 - Show the Hijri date from `new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date())`.
 - Render the method and madhab `InlineSelect`s, persisting through `setPrayerConfig` and reloading the day after a change.
