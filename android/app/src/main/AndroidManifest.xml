@@ -57,4 +57,9 @@
          Capacitor prompts for this at runtime the first time the mic is used. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Coarse, not fine: prayer times shift about four seconds per kilometre
+         of longitude, so city-level accuracy is already finer than the one
+         minute the app displays — and the prompt is gentler. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 </manifest>

@@ -11,11 +11,13 @@ import androidx.webkit.WebViewFeature
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.WebViewListener
 import com.rafeeq.quranquiz.auto.RafeeqAutoPlugin
+import com.rafeeq.quranquiz.prayer.RafeeqPrayerPlugin
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         registerPlugin(RafeeqAutoPlugin::class.java)
+        registerPlugin(RafeeqPrayerPlugin::class.java)
         // Allow MainActivity to show and run even when the phone is locked/screen-off.
         // Required for Android Auto cold-start: the service wakes this activity so the
         // WebView can initialise and start audio, but the phone screen may be locked.
