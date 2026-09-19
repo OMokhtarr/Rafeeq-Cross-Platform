@@ -14,7 +14,13 @@ jest.mock("@capacitor/core", () => {
     getConfig: jest.fn(),
     setConfig: jest.fn(),
   };
-  return { registerPlugin: () => plugin };
+  return {
+    registerPlugin: () => plugin,
+    // The service reads this once at module load to decide whether the native
+    // bridge exists. These tests exercise the native path, so it is true here;
+    // the web path is covered in its own file, which mocks it false.
+    Capacitor: { isNativePlatform: () => true },
+  };
 });
 
 jest.mock("@capacitor/geolocation", () => ({

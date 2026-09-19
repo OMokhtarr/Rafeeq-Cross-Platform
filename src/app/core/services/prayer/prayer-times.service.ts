@@ -8,7 +8,7 @@
  * Dates the page can render.
  */
 
-import { registerPlugin } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import type {
   PrayerDay,
@@ -35,8 +35,24 @@ interface RafeeqPrayerPlugin {
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
 
+/**
+ * The plugin is Kotlin-only — calculation lives natively so the home-screen
+ * widget can read it without a WebView. In a desktop browser (`npm start`)
+ * there is nothing behind the bridge, and every call throws
+ * `"RafeeqPrayer" plugin is not implemented on web`.
+ *
+ * Prayer times are the one feature that genuinely cannot degrade to a web
+ * fallback, so the service reports "no location" there instead. The page
+ * already renders that as its permission prompt, which is the honest thing
+ * to show: on web there is no way to get times, and a fabricated set would
+ * be worse than none.
+ */
+const isNative = Capacitor.isNativePlatform();
+
 /** Today's times, or a hasLocation:false day when none has been granted. */
 export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
+  if (!isNative) return { hasLocation: false, times: null, next: null };
+
   const raw = await RafeeqPrayer.getTimes(date ? { date } : undefined);
 
   if (!raw.hasLocation || !raw.times) {
@@ -68,6 +84,11 @@ export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
  * both are states the page renders as a prompt, not errors to surface.
  */
 export async function requestLocation(): Promise<boolean> {
+  // Nothing to store a fix into off-device; the catch below would swallow the
+  // bridge error anyway, but returning early keeps the browser from prompting
+  // for a location it cannot use.
+  if (!isNative) return false;
+
   try {
     let status = await Geolocation.checkPermissions();
     if (status.location !== "granted" && status.coarseLocation !== "granted") {
@@ -98,6 +119,9 @@ export async function getPrayerConfig(): Promise<{
   madhab: PrayerMadhab;
   hasLocation: boolean;
 }> {
+  if (!isNative) {
+    return { method: "egyptian", madhab: "shafi", hasLocation: false };
+  }
   return RafeeqPrayer.getConfig();
 }
 
@@ -105,5 +129,6 @@ export async function setPrayerConfig(patch: {
   method?: PrayerMethod;
   madhab?: PrayerMadhab;
 }): Promise<void> {
+  if (!isNative) return;
   await RafeeqPrayer.setConfig(patch);
 }
