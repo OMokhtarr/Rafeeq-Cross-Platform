@@ -21,4 +21,8 @@ ext {
     // compileSdk 36 lifts that constraint. Declared here so an Android Auto regression can be
     // stepped back (1.10.1, 1.9.4, …) without touching app/build.gradle.
     media3Version = '1.11.0'
+    // adhan-java — the Java port of the same prayer-time library, by the same
+    // authors, as the `adhan` npm package. Declared here so the calculation
+    // can be stepped back independently of app/build.gradle.
+    adhanVersion = '1.2.1'
 }
