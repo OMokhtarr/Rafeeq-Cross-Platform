@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
 
@@ -21,6 +22,18 @@ object PrayerAlarmScheduler {
 
     private const val REQUEST_CODE = 4200
     const val EXTRA_PRAYER_NAME = "prayer_name"
+
+    // Distinct from REQUEST_CODE above: both PendingIntents target the same
+    // receiver class, and a shared request code would let one silently
+    // replace the other instead of the two coexisting.
+    private const val MIDNIGHT_REQUEST_CODE = 4210
+    const val EXTRA_WIDGET_ROLL = "widget_roll"
+
+    /** One minute past midnight: late enough that the day has unambiguously
+     *  turned over (no clock-skew ambiguity at exactly 00:00), early enough
+     *  that the widget is never stale for long into the new day. */
+    private const val MIDNIGHT_ROLL_HOUR = 0
+    private const val MIDNIGHT_ROLL_MINUTE = 1
 
     // A day has five prayers, so walking past that many candidates already covers
     // every legitimate case (skip every disabled prayer across a day boundary)
@@ -110,5 +123,56 @@ object PrayerAlarmScheduler {
     fun cancelAll(ctx: Context) {
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.cancel(pendingIntent(ctx))
+    }
+
+    private fun midnightRollPendingIntent(ctx: Context): PendingIntent {
+        val intent = Intent(ctx, PrayerAlarmReceiver::class.java).apply {
+            putExtra(EXTRA_WIDGET_ROLL, true)
+        }
+        return PendingIntent.getBroadcast(
+            ctx,
+            MIDNIGHT_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * Arms a single exact alarm for the next 00:01 local time, so the widget
+     * can refresh into the new day on its own rather than showing yesterday's
+     * times until the next enabled prayer (which may be hours into the new
+     * day, or — with reminders off entirely — never).
+     *
+     * Independent of [scheduleNext] and of whether reminders are enabled at
+     * all: the widget reflects today's times whenever a location is stored,
+     * regardless of the reminder toggle, so its own refresh chain must not
+     * depend on that toggle either. No-ops without a stored location, same as
+     * [scheduleNext] — there is nothing to refresh a widget with otherwise.
+     */
+    fun scheduleMidnightRoll(ctx: Context) {
+        if (PrayerConfig.coords(ctx) == null) return
+
+        val next = Calendar.getInstance(TimeZone.getDefault()).apply {
+            set(Calendar.HOUR_OF_DAY, MIDNIGHT_ROLL_HOUR)
+            set(Calendar.MINUTE, MIDNIGHT_ROLL_MINUTE)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (!after(Calendar.getInstance(TimeZone.getDefault()))) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            next.timeInMillis,
+            midnightRollPendingIntent(ctx),
+        )
+    }
+
+    /** Cancels the pending midnight-roll alarm, if any. */
+    fun cancelMidnightRoll(ctx: Context) {
+        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(midnightRollPendingIntent(ctx))
     }
 }

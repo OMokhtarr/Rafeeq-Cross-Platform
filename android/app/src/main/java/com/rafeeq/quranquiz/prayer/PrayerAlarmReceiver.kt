@@ -34,6 +34,16 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.getBooleanExtra(PrayerAlarmScheduler.EXTRA_WIDGET_ROLL, false)) {
+            // The midnight roll: purely a "new day started" nudge for the
+            // widget, not a prayer. No notification, just a refresh and
+            // re-arming the next one — the day-boundary equivalent of
+            // scheduleNext's own self re-arming below.
+            PrayerWidgetProvider.refresh(context)
+            PrayerAlarmScheduler.scheduleMidnightRoll(context)
+            return
+        }
+
         val prayerName = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_PRAYER_NAME)
         try {
             postNotification(context, prayerName)
@@ -46,10 +56,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         // skipped call here would silently stop all future reminders.
         PrayerAlarmScheduler.scheduleNext(context)
 
-        // Stage 3 (Task 8) will add the home-screen widget; once it exists,
-        // this is where it gets nudged to refresh:
-        //   PrayerWidgetProvider.refresh(context)
-        // Omitted for now — the widget class does not exist yet.
+        PrayerWidgetProvider.refresh(context)
     }
 
     private fun postNotification(context: Context, prayerName: String?) {

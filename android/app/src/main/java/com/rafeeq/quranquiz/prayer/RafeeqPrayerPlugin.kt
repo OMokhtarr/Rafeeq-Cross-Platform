@@ -85,6 +85,8 @@ class RafeeqPrayerPlugin : Plugin() {
             return
         }
         PrayerConfig.setCoords(context, lat, lng)
+        PrayerAlarmScheduler.scheduleMidnightRoll(context)
+        PrayerWidgetProvider.refresh(context)
         call.resolve()
     }
 
@@ -102,6 +104,7 @@ class RafeeqPrayerPlugin : Plugin() {
     fun setConfig(call: PluginCall) {
         call.getString("method")?.let { PrayerConfig.setMethod(context, it) }
         call.getString("madhab")?.let { PrayerConfig.setMadhab(context, it) }
+        PrayerWidgetProvider.refresh(context)
         call.resolve()
     }
 

@@ -58,6 +58,22 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home-screen widget: reads PrayerTimesEngine directly, never a
+             cache written by the app, since the launcher process has no
+             WebView and the widget must be right even if the app was never
+             opened. updatePeriodMillis is 0 in widget_prayer_times_info.xml;
+             the prayer alarms and the midnight roll drive refreshes instead. -->
+        <receiver
+            android:name=".prayer.PrayerWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_times_info" />
+        </receiver>
+
     </application>
 
     <!-- Permissions -->

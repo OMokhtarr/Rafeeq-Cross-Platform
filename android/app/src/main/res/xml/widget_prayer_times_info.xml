@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  updatePeriodMillis is 0: Android's own widget-update period is capped at 30
+  minutes and would fire pointlessly. The prayer alarms drive refreshes
+  instead (PrayerWidgetProvider.refresh), which is exactly when the display
+  changes, plus a midnight roll for the new day.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_prayer_times"
+    android:previewImage="@mipmap/ic_launcher"
+    android:updatePeriodMillis="0" />
