@@ -1028,19 +1028,25 @@ const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
 export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
   const raw = await RafeeqPrayer.getTimes(date ? { date } : undefined);
 
-  if (!raw.hasLocation || !raw.times || !raw.next) {
+  // `next` is deliberately NOT part of this guard: adhan-java returns no
+  // times inside the midnight-sun window, so a day can legitimately have
+  // times with no next prayer. Requiring it here would blank the page.
+  if (!raw.hasLocation || !raw.times) {
     return { hasLocation: false, times: null, next: null };
   }
 
+  // Individual entries may be absent for the same reason; skip them rather
+  // than construct an Invalid Date for a key that was never returned.
   const times = {} as Record<PrayerKey, Date>;
   PRAYER_KEYS.forEach((key) => {
-    times[key] = new Date(raw.times![key]);
+    const iso = raw.times![key];
+    if (iso) times[key] = new Date(iso);
   });
 
   return {
     hasLocation: true,
     times,
-    next: { name: raw.next.name, at: new Date(raw.next.at) },
+    next: raw.next ? { name: raw.next.name, at: new Date(raw.next.at) } : null,
   };
 }
 
@@ -1296,6 +1302,7 @@ Create `src/app/features/prayer-times/PrayerTimes.tsx`. It must:
 - When `hasLocation` is false, render the permission prompt: `t.prayerTimes.locationNeeded` as a heading, `locationNeededDesc` as body, and a button reading `grantLocation` that calls `requestLocation()` then reloads the day. On a false return, show `locationDenied`. No spinner, no toast.
 - When `hasLocation` is true, render the six rows in `PRAYER_KEYS` order, each with its localized name and its time formatted via `toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", { hour: "2-digit", minute: "2-digit" })` — the locale pair `Bookmarks.tsx:47` already uses.
 - Mark the row matching `next.name` as active, and show `nextPrayer` plus a countdown built from `remaining` with `{time}` replaced.
+- **Not every `PRAYER_KEYS` entry is guaranteed present in `times`** — a missing one is `undefined`, not an Invalid Date. Skip absent rows rather than rendering them; never call `.toLocaleTimeString()` on a possibly-undefined entry.
 - **`next` can be null** even when times exist — adhan-java returns nothing inside the midnight-sun window at high latitude. Render the times without a countdown in that case; never show a fabricated time.
 - Tick the countdown with a `setInterval` of 1000ms, cleared on unmount. When the countdown reaches zero, reload the day so `next` advances.
 - Show the Hijri date from `new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date())`.
