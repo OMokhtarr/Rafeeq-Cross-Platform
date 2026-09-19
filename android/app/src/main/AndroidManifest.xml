@@ -45,6 +45,19 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
+        <receiver
+            android:name=".prayer.PrayerAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".prayer.PrayerBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
     <!-- Permissions -->
@@ -62,4 +75,13 @@
          of longitude, so city-level accuracy is already finer than the one
          minute the app displays — and the prompt is gentler. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- USE_EXACT_ALARM rather than SCHEDULE_EXACT_ALARM: Android's own docs
+         name prayer-time and alarm-clock apps as its acceptable use case. It is
+         granted at install and cannot be revoked, so there is no
+         canScheduleExactAlarms() check and no trip to system settings. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Alarms do not survive a reboot; the boot receiver re-arms them. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

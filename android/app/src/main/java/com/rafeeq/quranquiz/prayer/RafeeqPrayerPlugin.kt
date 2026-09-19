@@ -1,5 +1,6 @@
 package com.rafeeq.quranquiz.prayer
 
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -101,6 +102,30 @@ class RafeeqPrayerPlugin : Plugin() {
     fun setConfig(call: PluginCall) {
         call.getString("method")?.let { PrayerConfig.setMethod(context, it) }
         call.getString("madhab")?.let { PrayerConfig.setMadhab(context, it) }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun getReminders(call: PluginCall) {
+        val result = JSObject()
+        result.put("enabled", PrayerConfig.remindersEnabled(context))
+        result.put("prayers", JSArray.from(PrayerConfig.enabledPrayers(context).toTypedArray()))
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun setReminders(call: PluginCall) {
+        call.getBoolean("enabled")?.let {
+            PrayerConfig.setRemindersEnabled(context, it)
+        }
+        call.getArray("prayers")?.let { arr ->
+            PrayerConfig.setEnabledPrayers(context, arr.toList<String>().toSet())
+        }
+        if (PrayerConfig.remindersEnabled(context)) {
+            PrayerAlarmScheduler.scheduleNext(context)
+        } else {
+            PrayerAlarmScheduler.cancelAll(context)
+        }
         call.resolve()
     }
 }

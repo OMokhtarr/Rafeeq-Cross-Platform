@@ -20,6 +20,14 @@ object PrayerConfig {
     private const val KEY_METHOD = "method"
     private const val KEY_MADHAB = "madhab"
 
+    /** Sunrise is absent by design: it is displayed with the prayers but is
+     *  not one, and never carries a reminder. */
+    val DEFAULT_ENABLED_PRAYERS: Set<String> =
+        setOf("fajr", "dhuhr", "asr", "maghrib", "isha")
+
+    private const val KEY_REMINDERS = "reminders_enabled"
+    private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
+
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -52,5 +60,20 @@ object PrayerConfig {
 
     fun setMadhab(ctx: Context, madhab: String) {
         prefs(ctx).edit().putString(KEY_MADHAB, madhab).apply()
+    }
+
+    fun remindersEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_REMINDERS, false)
+
+    fun setRemindersEnabled(ctx: Context, enabled: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_REMINDERS, enabled).apply()
+    }
+
+    fun enabledPrayers(ctx: Context): Set<String> =
+        prefs(ctx).getStringSet(KEY_ENABLED_PRAYERS, DEFAULT_ENABLED_PRAYERS)
+            ?: DEFAULT_ENABLED_PRAYERS
+
+    fun setEnabledPrayers(ctx: Context, prayers: Set<String>) {
+        prefs(ctx).edit().putStringSet(KEY_ENABLED_PRAYERS, prayers).apply()
     }
 }
