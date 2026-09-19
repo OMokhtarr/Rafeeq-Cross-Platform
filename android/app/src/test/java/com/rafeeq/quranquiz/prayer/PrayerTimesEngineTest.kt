@@ -1,6 +1,7 @@
 package com.rafeeq.quranquiz.prayer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.text.SimpleDateFormat
@@ -143,6 +144,18 @@ class PrayerTimesEngineTest {
             )
         }
 
+        // nextAfter must also handle midnight sun gracefully without NPE
+        val midnightSunNow = Calendar.getInstance(tromsoTz)
+        midnightSunNow.clear()
+        midnightSunNow.set(2026, 5, 21, 12, 0, 0) // June 21, noon
+        val nextAtMidnightSun = PrayerTimesEngine.nextAfter(
+            midnightSunNow.time, 69.6496, 18.9560, "muslim_world_league", "shafi", tromsoTz,
+        )
+        assertNull(
+            "nextAfter at midnight sun must return null, not throw NPE when times cannot be computed",
+            nextAtMidnightSun,
+        )
+
         // Same coordinates on a normal date (spring equinox) should compute all times.
         val normalTimes = PrayerTimesEngine.timesFor(
             lat = 69.6496,
@@ -159,5 +172,21 @@ class PrayerTimesEngineTest {
                 normalTimes.times[name] != null,
             )
         }
+
+        // nextAfter must work on normal dates at high latitude
+        val normalNow = Calendar.getInstance(tromsoTz)
+        normalNow.clear()
+        normalNow.set(2026, 2, 15, 3, 0, 0) // March 15, 03:00 (before Fajr)
+        val nextAtNormal = PrayerTimesEngine.nextAfter(
+            normalNow.time, 69.6496, 18.9560, "muslim_world_league", "shafi", tromsoTz,
+        )
+        assertTrue(
+            "nextAfter at normal date/high latitude must return non-null prayer, proving null is specific to midnight sun",
+            nextAtNormal != null,
+        )
+        assertTrue(
+            "nextAfter result must be in the future",
+            nextAtNormal!!.at.after(normalNow.time),
+        )
     }
 }

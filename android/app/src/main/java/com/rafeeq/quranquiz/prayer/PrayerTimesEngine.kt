@@ -64,6 +64,8 @@ object PrayerTimesEngine {
             else -> CalculationMethod.EGYPTIAN.getParameters()
         }
         params.madhab = if (madhab == "hanafi") Madhab.HANAFI else Madhab.SHAFI
+        // Set explicitly for intent, even though this is adhan-java's default, to document
+        // that high-latitude situations are intentionally handled via the library's rule.
         params.highLatitudeRule = HighLatitudeRule.MIDDLE_OF_THE_NIGHT
         return params
     }
