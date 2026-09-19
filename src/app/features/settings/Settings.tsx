@@ -35,6 +35,7 @@ import {
 } from "./sync-status";
 import {
   enableReminders,
+  getReminders,
   setReminders,
 } from "../../core/services/prayer/prayer-times.service";
 import "./Settings.css";
@@ -657,6 +658,22 @@ const Settings: React.FC = () => {
   // app resume, so this surface is the only place that record is visible.
   useEffect(() => {
     getSyncStatus().then(setSyncState).catch(() => {});
+  }, []);
+
+  // Reconcile the toggle with native truth on mount. `s.prayerReminders` is
+  // seeded from localStorage, which can drift from the real native state
+  // (e.g. cleared storage while native still has remindersEnabled=true) —
+  // native wins, since it is what actually decides whether alarms fire.
+  useEffect(() => {
+    getReminders()
+      .then(({ enabled }) =>
+        setS((prev) =>
+          prev.prayerReminders === enabled
+            ? prev
+            : { ...prev, prayerReminders: enabled },
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   const handleSyncNow = async () => {
