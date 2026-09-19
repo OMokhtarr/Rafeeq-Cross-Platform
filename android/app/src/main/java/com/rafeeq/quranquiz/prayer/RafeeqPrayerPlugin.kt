@@ -1,11 +1,17 @@
 package com.rafeeq.quranquiz.prayer
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -15,14 +21,20 @@ import java.util.TimeZone
  * RafeeqPrayerPlugin — Capacitor bridge between JS and PrayerTimesEngine.
  *
  * JS → Native:
- *   getTimes({ date? })            — today's six times plus the next prayer
- *   setLocation({ lat, lng })      — store coordinates for every consumer
- *   getConfig() / setConfig({...}) — calculation method and madhab
+ *   getTimes({ date? })                  — today's six times plus the next prayer
+ *   setLocation({ lat, lng })            — store coordinates for every consumer
+ *   getConfig() / setConfig({...})       — calculation method and madhab
+ *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
  */
-@CapacitorPlugin(name = "RafeeqPrayer")
+@CapacitorPlugin(
+    name = "RafeeqPrayer",
+    permissions = [
+        Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = "notifications"),
+    ],
+)
 class RafeeqPrayerPlugin : Plugin() {
 
     private fun iso(date: Date): String {
@@ -130,5 +142,45 @@ class RafeeqPrayerPlugin : Plugin() {
             PrayerAlarmScheduler.cancelAll(context)
         }
         call.resolve()
+    }
+
+    /**
+     * Requests POST_NOTIFICATIONS at runtime (Android 13+). Without this, the
+     * manifest declaration alone leaves the permission DENIED by default on
+     * API 33+, and PrayerAlarmReceiver's notify() is silently discarded — the
+     * alarm fires, but the user never sees a reminder.
+     *
+     * Below API 33 the permission doesn't exist and is implicitly granted, so
+     * we resolve true immediately without touching the permission system.
+     */
+    @PluginMethod
+    fun requestNotificationPermission(call: PluginCall) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            val result = JSObject()
+            result.put("granted", true)
+            call.resolve(result)
+            return
+        }
+
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            val result = JSObject()
+            result.put("granted", true)
+            call.resolve(result)
+            return
+        }
+
+        requestPermissionForAlias("notifications", call, "notificationPermissionCallback")
+    }
+
+    @PermissionCallback
+    private fun notificationPermissionCallback(call: PluginCall) {
+        val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        val result = JSObject()
+        result.put("granted", granted)
+        call.resolve(result)
     }
 }

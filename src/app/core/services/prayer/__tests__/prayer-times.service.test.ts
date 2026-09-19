@@ -15,6 +15,7 @@ jest.mock("@capacitor/core", () => {
     setConfig: jest.fn(),
     getReminders: jest.fn(),
     setReminders: jest.fn(),
+    requestNotificationPermission: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -45,8 +46,16 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setConfig: jest.Mock;
   getReminders: jest.Mock;
   setReminders: jest.Mock;
+  requestNotificationPermission: jest.Mock;
 };
-const { getTimes, setLocation, getConfig, getReminders, setReminders } = plugin;
+const {
+  getTimes,
+  setLocation,
+  getConfig,
+  getReminders,
+  setReminders,
+  requestNotificationPermission,
+} = plugin;
 
 const geolocation = Geolocation as unknown as {
   getCurrentPosition: jest.Mock;
@@ -226,10 +235,64 @@ describe("reminders", () => {
       madhab: "shafi",
       hasLocation: true,
     });
+    requestNotificationPermission.mockResolvedValue({ granted: true });
 
     const ok = await service.enableReminders();
 
     expect(ok).toBe(true);
+    expect(requestNotificationPermission).toHaveBeenCalled();
     expect(setReminders).toHaveBeenCalledWith({ enabled: true });
+  });
+
+  it("returns false and does not call setReminders when the notification permission is refused", async () => {
+    getConfig.mockResolvedValue({
+      method: "egyptian",
+      madhab: "shafi",
+      hasLocation: true,
+    });
+    requestNotificationPermission.mockResolvedValue({ granted: false });
+
+    const ok = await service.enableReminders();
+
+    expect(ok).toBe(false);
+    expect(setReminders).not.toHaveBeenCalled();
+  });
+
+  it("requests the notification permission only after location succeeds", async () => {
+    getConfig.mockResolvedValue({
+      method: "egyptian",
+      madhab: "shafi",
+      hasLocation: false,
+    });
+    checkPermissions.mockResolvedValue({ location: "granted", coarseLocation: "granted" });
+    getCurrentPosition.mockResolvedValue({
+      coords: { latitude: 30.0444, longitude: 31.2357 },
+    });
+    requestNotificationPermission.mockResolvedValue({ granted: true });
+
+    const ok = await service.enableReminders();
+
+    expect(ok).toBe(true);
+    expect(setLocation).toHaveBeenCalled();
+    expect(requestNotificationPermission).toHaveBeenCalled();
+    expect(setReminders).toHaveBeenCalledWith({ enabled: true });
+  });
+});
+
+describe("requestNotificationPermission", () => {
+  it("returns the granted flag from the plugin", async () => {
+    requestNotificationPermission.mockResolvedValue({ granted: true });
+
+    const granted = await service.requestNotificationPermission();
+
+    expect(granted).toBe(true);
+  });
+
+  it("reports false rather than throwing when the plugin call fails", async () => {
+    requestNotificationPermission.mockRejectedValue(new Error("bridge error"));
+
+    const granted = await service.requestNotificationPermission();
+
+    expect(granted).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ jest.mock("@capacitor/core", () => {
     setConfig: jest.fn(),
     getReminders: jest.fn(),
     setReminders: jest.fn(),
+    requestNotificationPermission: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -46,6 +47,7 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setConfig: jest.Mock;
   getReminders: jest.Mock;
   setReminders: jest.Mock;
+  requestNotificationPermission: jest.Mock;
 };
 
 beforeEach(() => {
@@ -111,5 +113,12 @@ describe("on web, where the native plugin does not exist", () => {
 
     expect(ok).toBe(false);
     expect(plugin.setReminders).not.toHaveBeenCalled();
+  });
+
+  it("declines to request a notification permission that does not exist off-device", async () => {
+    const granted = await service.requestNotificationPermission();
+
+    expect(granted).toBe(false);
+    expect(plugin.requestNotificationPermission).not.toHaveBeenCalled();
   });
 });

@@ -36,6 +36,7 @@ interface RafeeqPrayerPlugin {
     enabled?: boolean;
     prayers?: PrayerKey[];
   }): Promise<void>;
+  requestNotificationPermission(): Promise<{ granted: boolean }>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -156,11 +157,31 @@ export async function setReminders(patch: {
 }
 
 /**
- * Turn reminders on, acquiring a location first if there isn't one.
+ * Request POST_NOTIFICATIONS at runtime (Android 13+ only; a no-op resolved
+ * true below that, and implicitly granted on older OSes). Off-device there is
+ * no notification system to grant anything from, so this reports false.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!isNative) return false;
+
+  try {
+    const { granted } = await RafeeqPrayer.requestNotificationPermission();
+    return granted;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Turn reminders on, acquiring a location first, then the notification
+ * permission.
  *
- * Returns false when no location could be obtained: there is nothing to
- * schedule without coordinates, and a toggle that can never fire is worse
- * than one that refuses to move.
+ * Returns false when either step is refused: without coordinates there is
+ * nothing to schedule, and without the notification permission the alarm
+ * still fires but NotificationManager.notify() is silently discarded on
+ * Android 13+ — a toggle whose notifications can never appear is exactly the
+ * bug this order exists to prevent, so reminders are not enabled in that case
+ * either.
  */
 export async function enableReminders(): Promise<boolean> {
   if (!isNative) return false;
@@ -170,6 +191,10 @@ export async function enableReminders(): Promise<boolean> {
     const granted = await requestLocation();
     if (!granted) return false;
   }
+
+  const notificationsGranted = await requestNotificationPermission();
+  if (!notificationsGranted) return false;
+
   await setReminders({ enabled: true });
   return true;
 }
