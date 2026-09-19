@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.rafeeq.quranquiz.MainActivity
 import com.rafeeq.quranquiz.R
@@ -16,26 +17,33 @@ import java.util.Locale
 /**
  * Fires at a single prayer's time and posts the reminder notification.
  *
- * The very first thing it does after posting is re-arm the next alarm via
- * [PrayerAlarmScheduler.scheduleNext] — prayer times move daily so nothing
- * recurs on its own, and this chain is the only thing that keeps future
- * reminders coming. That call must never be skipped, even if notification
- * posting somehow fails, so scheduling happens unconditionally.
+ * Re-arming the next alarm via [PrayerAlarmScheduler.scheduleNext] is the
+ * only thing that keeps future reminders coming — prayer times move daily,
+ * so nothing recurs on its own. [postNotification] is therefore wrapped in a
+ * try/catch: a failure there is logged and swallowed so it genuinely cannot
+ * stop the re-arm below from running. `scheduleNext` itself is deliberately
+ * left outside that catch — if scheduling fails, that is a real defect that
+ * should surface (e.g. crash-report), not one we mask.
  */
 class PrayerAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val CHANNEL_ID = "rafeeq_prayer"
         private const val NOTIFICATION_ID = 4201
+        private const val TAG = "RafeeqPrayer"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val prayerName = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_PRAYER_NAME)
-        postNotification(context, prayerName)
+        try {
+            postNotification(context, prayerName)
+        } catch (e: Exception) {
+            Log.e(TAG, "postNotification failed for prayer=$prayerName — reminder not shown, still re-arming next alarm", e)
+        }
 
-        // Re-arm the next reminder. This must run regardless of whether the
-        // notification above succeeded — it is the only thing standing
-        // between now and the next prayer's reminder ever firing.
+        // Re-arm the next reminder. Runs on both the success and failure path
+        // above, unconditionally: this is the only link in the chain, and a
+        // skipped call here would silently stop all future reminders.
         PrayerAlarmScheduler.scheduleNext(context)
 
         // Stage 3 (Task 8) will add the home-screen widget; once it exists,
