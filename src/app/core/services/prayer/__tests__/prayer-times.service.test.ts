@@ -13,6 +13,8 @@ jest.mock("@capacitor/core", () => {
     setLocation: jest.fn(),
     getConfig: jest.fn(),
     setConfig: jest.fn(),
+    getReminders: jest.fn(),
+    setReminders: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -41,8 +43,10 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setLocation: jest.Mock;
   getConfig: jest.Mock;
   setConfig: jest.Mock;
+  getReminders: jest.Mock;
+  setReminders: jest.Mock;
 };
-const { getTimes, setLocation } = plugin;
+const { getTimes, setLocation, getConfig, getReminders, setReminders } = plugin;
 
 const geolocation = Geolocation as unknown as {
   getCurrentPosition: jest.Mock;
@@ -183,5 +187,49 @@ describe("requestLocation", () => {
 
     expect(ok).toBe(false);
     expect(setLocation).not.toHaveBeenCalled();
+  });
+});
+
+describe("reminders", () => {
+  it("reads the enabled state and prayer list from the plugin", async () => {
+    getReminders.mockResolvedValue({
+      enabled: true,
+      prayers: ["fajr", "maghrib"],
+    });
+
+    const result = await service.getReminders();
+
+    expect(result.enabled).toBe(true);
+    expect(result.prayers).toEqual(["fajr", "maghrib"]);
+  });
+
+  it("refuses to enable reminders without a stored location", async () => {
+    getConfig.mockResolvedValue({
+      method: "egyptian",
+      madhab: "shafi",
+      hasLocation: false,
+    });
+    checkPermissions.mockResolvedValue({ location: "denied", coarseLocation: "denied" });
+    requestPermissions.mockResolvedValue({ location: "denied", coarseLocation: "denied" });
+
+    const ok = await service.enableReminders();
+
+    // Nothing to schedule without coordinates, so it reports failure rather
+    // than silently enabling a toggle that can never fire.
+    expect(ok).toBe(false);
+    expect(setReminders).not.toHaveBeenCalled();
+  });
+
+  it("enables reminders directly when a location is already stored", async () => {
+    getConfig.mockResolvedValue({
+      method: "egyptian",
+      madhab: "shafi",
+      hasLocation: true,
+    });
+
+    const ok = await service.enableReminders();
+
+    expect(ok).toBe(true);
+    expect(setReminders).toHaveBeenCalledWith({ enabled: true });
   });
 });

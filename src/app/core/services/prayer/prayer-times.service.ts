@@ -17,7 +17,7 @@ import type {
   PrayerMethod,
   RawPrayerDay,
 } from "./prayer-times.types";
-import { PRAYER_KEYS } from "./prayer-times.types";
+import { PRAYER_KEYS, PRAYERS_ONLY } from "./prayer-times.types";
 
 interface RafeeqPrayerPlugin {
   getTimes(options?: { date?: string }): Promise<RawPrayerDay>;
@@ -30,6 +30,11 @@ interface RafeeqPrayerPlugin {
   setConfig(options: {
     method?: PrayerMethod;
     madhab?: PrayerMadhab;
+  }): Promise<void>;
+  getReminders(): Promise<{ enabled: boolean; prayers: PrayerKey[] }>;
+  setReminders(options: {
+    enabled?: boolean;
+    prayers?: PrayerKey[];
   }): Promise<void>;
 }
 
@@ -131,4 +136,40 @@ export async function setPrayerConfig(patch: {
 }): Promise<void> {
   if (!isNative) return;
   await RafeeqPrayer.setConfig(patch);
+}
+
+/** Current reminder state, or a disabled default off-device. */
+export async function getReminders(): Promise<{
+  enabled: boolean;
+  prayers: PrayerKey[];
+}> {
+  if (!isNative) return { enabled: false, prayers: [...PRAYERS_ONLY] };
+  return RafeeqPrayer.getReminders();
+}
+
+export async function setReminders(patch: {
+  enabled?: boolean;
+  prayers?: PrayerKey[];
+}): Promise<void> {
+  if (!isNative) return;
+  await RafeeqPrayer.setReminders(patch);
+}
+
+/**
+ * Turn reminders on, acquiring a location first if there isn't one.
+ *
+ * Returns false when no location could be obtained: there is nothing to
+ * schedule without coordinates, and a toggle that can never fire is worse
+ * than one that refuses to move.
+ */
+export async function enableReminders(): Promise<boolean> {
+  if (!isNative) return false;
+
+  const config = await getPrayerConfig();
+  if (!config.hasLocation) {
+    const granted = await requestLocation();
+    if (!granted) return false;
+  }
+  await setReminders({ enabled: true });
+  return true;
 }

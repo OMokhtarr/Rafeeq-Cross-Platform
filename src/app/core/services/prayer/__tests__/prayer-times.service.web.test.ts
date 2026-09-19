@@ -18,6 +18,8 @@ jest.mock("@capacitor/core", () => {
     setLocation: jest.fn(),
     getConfig: jest.fn(),
     setConfig: jest.fn(),
+    getReminders: jest.fn(),
+    setReminders: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -42,6 +44,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setLocation: jest.Mock;
   getConfig: jest.Mock;
   setConfig: jest.Mock;
+  getReminders: jest.Mock;
+  setReminders: jest.Mock;
 };
 
 beforeEach(() => {
@@ -83,5 +87,29 @@ describe("on web, where the native plugin does not exist", () => {
     // No browser geolocation prompt for a fix that has nowhere to go.
     expect(Geolocation.checkPermissions).not.toHaveBeenCalled();
     expect(plugin.setLocation).not.toHaveBeenCalled();
+  });
+
+  it("returns a disabled reminders default rather than calling the absent plugin", async () => {
+    const result = await service.getReminders();
+
+    expect(result).toEqual({
+      enabled: false,
+      prayers: ["fajr", "dhuhr", "asr", "maghrib", "isha"],
+    });
+    expect(plugin.getReminders).not.toHaveBeenCalled();
+  });
+
+  it("makes setReminders a no-op rather than an unhandled rejection", async () => {
+    await expect(
+      service.setReminders({ enabled: true }),
+    ).resolves.toBeUndefined();
+    expect(plugin.setReminders).not.toHaveBeenCalled();
+  });
+
+  it("refuses to enable reminders since there is nothing to schedule", async () => {
+    const ok = await service.enableReminders();
+
+    expect(ok).toBe(false);
+    expect(plugin.setReminders).not.toHaveBeenCalled();
   });
 });
