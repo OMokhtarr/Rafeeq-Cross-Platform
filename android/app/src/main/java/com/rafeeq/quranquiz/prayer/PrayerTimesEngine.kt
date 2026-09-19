@@ -13,7 +13,7 @@ import java.util.TimeZone
 
 enum class PrayerName { FAJR, SUNRISE, DHUHR, ASR, MAGHRIB, ISHA }
 
-data class DayTimes(val times: Map<PrayerName, Date>)
+data class DayTimes(val times: Map<PrayerName, Date?>)
 
 data class NextPrayer(val name: PrayerName, val at: Date)
 
@@ -45,6 +45,10 @@ object PrayerTimesEngine {
      * adhan-java exposes getParameters() as a method; the `.parameters`
      * property form belongs to the separate adhan-kotlin library. Verified
      * against the adhan-java README before this was written.
+     *
+     * Valid method values: "egyptian", "umm_al_qura", "muslim_world_league",
+     * "karachi", "north_america", "dubai", "qatar", "kuwait", "singapore",
+     * "moon_sighting_committee". Unknown or corrupt values default to Egyptian.
      */
     fun parametersFor(method: String, madhab: String): CalculationParameters {
         val params = when (method) {
@@ -56,6 +60,7 @@ object PrayerTimesEngine {
             "qatar" -> CalculationMethod.QATAR.getParameters()
             "kuwait" -> CalculationMethod.KUWAIT.getParameters()
             "singapore" -> CalculationMethod.SINGAPORE.getParameters()
+            "moon_sighting_committee" -> CalculationMethod.MOON_SIGHTING_COMMITTEE.getParameters()
             else -> CalculationMethod.EGYPTIAN.getParameters()
         }
         params.madhab = if (madhab == "hanafi") Madhab.HANAFI else Madhab.SHAFI
@@ -111,6 +116,10 @@ object PrayerTimesEngine {
      *
      * Rolls to tomorrow's Fajr once today's Isha has passed, so the caller never
      * has to special-case the end of the day.
+     *
+     * Returns null if no next prayer can be determined (e.g., at high latitudes
+     * during midnight sun when adhan-java cannot compute valid times). For a
+     * religious obligation, unavailable is the correct answer, not a fabricated time.
      */
     fun nextAfter(
         now: Date,
@@ -119,7 +128,7 @@ object PrayerTimesEngine {
         method: String,
         madhab: String,
         tz: TimeZone,
-    ): NextPrayer {
+    ): NextPrayer? {
         val today = timesFor(lat, lng, now, method, madhab, tz)
         PRAYERS_ONLY.forEach { name ->
             val at = today.times[name]
@@ -130,6 +139,7 @@ object PrayerTimesEngine {
         cal.time = now
         cal.add(Calendar.DAY_OF_YEAR, 1)
         val tomorrow = timesFor(lat, lng, cal.time, method, madhab, tz)
-        return NextPrayer(PrayerName.FAJR, tomorrow.times[PrayerName.FAJR]!!)
+        val tomorrowFajr = tomorrow.times[PrayerName.FAJR]
+        return if (tomorrowFajr != null) NextPrayer(PrayerName.FAJR, tomorrowFajr) else null
     }
 }

@@ -89,7 +89,8 @@ class PrayerTimesEngineTest {
             cal.time, cairoLat, cairoLng, "egyptian", "shafi", cairoTz,
         )
 
-        assertEquals(PrayerName.FAJR, next.name)
+        assertTrue("next prayer must exist at normal latitude", next != null)
+        assertEquals(PrayerName.FAJR, next!!.name)
         assertWithinAMinute("05:15", hhmm(next.at, cairoTz), "next Fajr")
     }
 
@@ -102,7 +103,8 @@ class PrayerTimesEngineTest {
             cal.time, cairoLat, cairoLng, "egyptian", "shafi", cairoTz,
         )
 
-        assertEquals(PrayerName.FAJR, next.name)
+        assertTrue("next prayer must exist at normal latitude", next != null)
+        assertEquals(PrayerName.FAJR, next!!.name)
         assertTrue("Next Fajr must be in the future", next.at.after(cal.time))
     }
 
@@ -115,13 +117,17 @@ class PrayerTimesEngineTest {
             cal.time, cairoLat, cairoLng, "egyptian", "shafi", cairoTz,
         )
 
-        assertEquals(PrayerName.DHUHR, next.name)
+        assertTrue("next prayer must exist at normal latitude", next != null)
+        assertEquals(PrayerName.DHUHR, next!!.name)
     }
 
     @Test
-    fun `a high latitude location still produces all six times`() {
+    fun `high latitude midnight sun reports unavailable rather than crashing`() {
         val tromsoTz = TimeZone.getTimeZone("Europe/Oslo")
-        val times = PrayerTimesEngine.timesFor(
+
+        // During midnight sun (June 21 at Tromsø), adhan-java cannot compute valid times.
+        // The engine must report this cleanly without throwing.
+        val midnightSunTimes = PrayerTimesEngine.timesFor(
             lat = 69.6496,
             lng = 18.9560,
             date = dateOf(2026, 6, 21, tromsoTz),
@@ -129,9 +135,29 @@ class PrayerTimesEngineTest {
             madhab = "shafi",
             tz = tromsoTz,
         )
-
+        // Times are null at midnight sun; this is unavailable, not an error
         PrayerName.values().forEach { name ->
-            assertTrue("$name must be present at high latitude", times.times[name] != null)
+            assertTrue(
+                "High latitude midnight sun should allow null times without crashing",
+                midnightSunTimes.times[name] == null,
+            )
+        }
+
+        // Same coordinates on a normal date (spring equinox) should compute all times.
+        val normalTimes = PrayerTimesEngine.timesFor(
+            lat = 69.6496,
+            lng = 18.9560,
+            date = dateOf(2026, 3, 15, tromsoTz),
+            method = "muslim_world_league",
+            madhab = "shafi",
+            tz = tromsoTz,
+        )
+        // All times should be present on a normal date
+        PrayerName.values().forEach { name ->
+            assertTrue(
+                "$name must be present at high latitude on normal dates",
+                normalTimes.times[name] != null,
+            )
         }
     }
 }
