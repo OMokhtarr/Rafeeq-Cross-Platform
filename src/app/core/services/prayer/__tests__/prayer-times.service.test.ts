@@ -108,6 +108,29 @@ describe("loadPrayerDay", () => {
     expect(day.times!.fajr).toBeInstanceOf(Date);
     expect(day.next).toBeNull();
   });
+
+  it("skips an individual missing time entry rather than an Invalid Date", async () => {
+    // The same midnight-sun condition that can drop `next` can drop a single
+    // key inside `times`; the plugin never sends an Invalid Date sentinel.
+    const raw = {
+      hasLocation: true,
+      times: {
+        fajr: "2026-06-19T00:15:00.000Z",
+        sunrise: "2026-06-19T00:41:00.000Z",
+        dhuhr: "2026-06-19T10:50:00.000Z",
+        asr: "2026-06-19T14:18:00.000Z",
+        maghrib: "2026-06-19T23:57:00.000Z",
+        // isha intentionally absent
+      },
+      next: { name: "asr", at: "2026-06-19T14:18:00.000Z" },
+    } as unknown as RawPrayerDay;
+    getTimes.mockResolvedValue(raw);
+
+    const day = await service.loadPrayerDay();
+
+    expect(day.times!.fajr).toBeInstanceOf(Date);
+    expect(day.times!.isha).toBeUndefined();
+  });
 });
 
 describe("requestLocation", () => {
