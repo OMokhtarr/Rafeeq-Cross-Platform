@@ -37,6 +37,34 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { id -> render(context, appWidgetManager, id) }
     }
 
+    /**
+     * Fires once, when the very first instance of this widget is placed.
+     *
+     * scheduleMidnightRoll is otherwise armed only from setLocation, the boot
+     * receiver, and its own re-arm in PrayerAlarmReceiver. A long-time user
+     * (location stored weeks ago, so setLocation never fires again) who adds
+     * the widget for the first time with reminders off would never trigger
+     * any of those — nothing would ever arm the midnight roll, and the widget
+     * would show that day's times and highlight forever. Arming it here is
+     * exactly the staleness the native-calculation architecture (no WebView
+     * in the launcher process) exists to prevent, so it must not depend on
+     * any other entry point having already run.
+     */
+    override fun onEnabled(context: Context) {
+        PrayerAlarmScheduler.scheduleMidnightRoll(context)
+    }
+
+    /**
+     * Fires once, when the last instance of this widget is removed. Cancels
+     * the midnight-roll alarm that onEnabled armed — with no widget left to
+     * refresh, there is nothing for it to do, and leaving it pending would
+     * wake the device every night for no reason. Reminders (scheduleNext) are
+     * independent of the widget and are left alone.
+     */
+    override fun onDisabled(context: Context) {
+        PrayerAlarmScheduler.cancelMidnightRoll(context)
+    }
+
     companion object {
 
         /** Prayer name view id, time view id, for each of the six displayed
