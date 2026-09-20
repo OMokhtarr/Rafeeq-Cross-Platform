@@ -1,7 +1,11 @@
 package com.rafeeq.quranquiz.prayer
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.getcapacitor.JSArray
@@ -26,7 +30,11 @@ import java.util.TimeZone
  *   getConfig() / setConfig({...})       — calculation method and madhab
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
+ *   getPlace()                           — cached place name for the stored location, or null
+ *   locationServicesEnabled()            — whether device location services are on
  *   getVisibleTimes() / setVisibleTimes({...}) — which prayer times the user wants shown
+ *   getWidgetInfo()                      — whether the launcher can pin, and how many are placed
+ *   requestPinWidget()                   — asks the launcher to add the widget to the home screen
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -98,9 +106,21 @@ class RafeeqPrayerPlugin : Plugin() {
             call.reject("lat and lng are required")
             return
         }
+        // Coordinates first and synchronously: they drive the times, the
+        // compass and the widget. This also clears any previously cached name.
         PrayerConfig.setCoords(context, lat, lng)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
         PrayerWidgetProvider.refresh(context)
+
+        // The name is best-effort decoration, and Geocoder blocks on the
+        // network — so it never delays the call the page is awaiting.
+        val ctx = context
+        val locale = Locale.getDefault()
+        Thread {
+            val name = PlaceNameResolver.resolve(ctx, lat, lng, locale)
+            if (name != null) PrayerConfig.setPlaceName(ctx, name)
+        }.start()
+
         call.resolve()
     }
 
@@ -200,6 +220,36 @@ class RafeeqPrayerPlugin : Plugin() {
         call.resolve(result)
     }
 
+    /**
+     * The cached place name, or null. Never triggers a lookup: the name is
+     * resolved when a fix is stored, because Geocoder is a network call.
+     */
+    @PluginMethod
+    fun getPlace(call: PluginCall) {
+        val result = JSObject()
+        result.put("name", PrayerConfig.placeName(context))
+        call.resolve(result)
+    }
+
+    /**
+     * Whether the device's location services are switched on.
+     *
+     * This is a different question from whether the app holds the permission,
+     * and it has a different remedy: a user who has granted the permission but
+     * disabled GPS cannot fix anything by being asked to grant it again.
+     */
+    @PluginMethod
+    fun locationServicesEnabled(call: PluginCall) {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val enabled = lm != null && (
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            )
+        val result = JSObject()
+        result.put("enabled", enabled)
+        call.resolve(result)
+    }
+
     @PluginMethod
     fun getVisibleTimes(call: PluginCall) {
         val result = JSObject()
@@ -218,6 +268,69 @@ class RafeeqPrayerPlugin : Plugin() {
         // The widget renders the same set, so it must not lag the app.
         PrayerWidgetProvider.refresh(context)
         call.resolve()
+    }
+
+    /**
+     * Whether the home-screen widget can be offered from inside the app.
+     *
+     * Pinning is the launcher's decision, not ours: `requestPinAppWidget` is
+     * a request the launcher may simply not implement, and there is no way to
+     * force it. The page hides its button entirely when this is false rather
+     * than showing a control that cannot do anything — the user can still add
+     * the widget the ordinary way, by long-pressing the home screen.
+     *
+     * Also reports how many instances are already placed, so the page can say
+     * so; that is a label, never a reason to disable the button, because
+     * Android allows more than one copy of a widget.
+     */
+    @PluginMethod
+    fun getWidgetInfo(call: PluginCall) {
+        val result = JSObject()
+        val mgr = AppWidgetManager.getInstance(context)
+        // getInstance can return null on a device with no app-widget host at
+        // all (rare, but real on some TV and headless builds). Treating that
+        // as "unsupported" is exactly right.
+        if (mgr == null) {
+            result.put("supported", false)
+            result.put("placed", 0)
+            call.resolve(result)
+            return
+        }
+        result.put("supported", mgr.isRequestPinAppWidgetSupported)
+        result.put(
+            "placed",
+            mgr.getAppWidgetIds(
+                ComponentName(context, PrayerWidgetProvider::class.java),
+            ).size,
+        )
+        call.resolve(result)
+    }
+
+    /**
+     * Asks the launcher to pin the prayer widget to the home screen.
+     *
+     * Resolves `requested: true` once the launcher has been asked — not once
+     * the widget exists. The launcher owns the confirmation dialog and never
+     * reports the outcome back, so claiming placement here would be a lie the
+     * page would then have to display.
+     */
+    @PluginMethod
+    fun requestPinWidget(call: PluginCall) {
+        val result = JSObject()
+        val mgr = AppWidgetManager.getInstance(context)
+        if (mgr == null || !mgr.isRequestPinAppWidgetSupported) {
+            result.put("requested", false)
+            call.resolve(result)
+            return
+        }
+        val provider = ComponentName(context, PrayerWidgetProvider::class.java)
+        // No success callback is passed: the launcher's own dialog is the
+        // confirmation, and a PendingIntent here would only tell us what the
+        // user already saw happen.
+        val requested = runCatching { mgr.requestPinAppWidget(provider, null, null) }
+            .getOrDefault(false)
+        result.put("requested", requested)
+        call.resolve(result)
     }
 
     @PermissionCallback
