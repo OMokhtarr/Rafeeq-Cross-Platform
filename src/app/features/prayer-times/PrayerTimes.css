@@ -1,0 +1,268 @@
+/* ═══════════════════════════════════════════════
+   PRAYER TIMES PAGE
+   Same shell as More/Settings: IonPage > IonContent fullscreen > wrapper >
+   width-capped container. Rows use the app's card idiom (see .more-card /
+   .settings-card): card surface, gold hairline border, xl radius.
+   ═══════════════════════════════════════════════ */
+
+ion-content {
+  --background: var(--color-bg-content);
+}
+ion-content::part(scroll) {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.pt-page-wrapper {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-content);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+}
+
+.pt-container {
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  min-width: var(--min-width-mobile, 320px);
+  flex: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
+  /* The fixed nav bar overlays the bottom of IonContent at all times, so the
+     scroll region reserves its height rather than trailing a spacer element —
+     a spacer only clears the very end of the scroll, not the travel through it. */
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
+}
+
+/* ── Page title / Hijri date ─────────────────── */
+/* No toolbar on this page, so the title clears the status bar itself. */
+.pt-title {
+  font-family: var(--font-arabic);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: max(var(--space-5), var(--safe-inset-top)) var(--space-4) 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.pt-hijri {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-1) 0 0;
+  padding: 0 var(--space-4);
+  text-align: center;
+}
+
+/* ── Location permission prompt ──────────────── */
+.pt-permission {
+  margin: var(--space-6) var(--space-4) 0;
+  padding: var(--space-6) var(--space-5);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.pt-permission-title {
+  font-family: var(--font-arabic);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-3);
+}
+
+.pt-permission-desc {
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+  margin: 0 0 var(--space-5);
+}
+
+.pt-grant-btn {
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-bg-app);
+  background: var(--color-gold);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-6);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--transition-fast);
+}
+
+.pt-grant-btn:active {
+  opacity: 0.85;
+}
+
+.pt-denied {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-4) 0 0;
+}
+
+[dir="ltr"] .pt-permission-title,
+[dir="ltr"] .pt-permission-desc,
+[dir="ltr"] .pt-grant-btn,
+[dir="ltr"] .pt-denied {
+  font-family: var(--font-latin);
+}
+
+/* ── Rows ─────────────────────────────────────── */
+.pt-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-4) 0;
+}
+
+.pt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base);
+}
+
+.pt-row-label {
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.pt-row-time {
+  font-family: var(--font-arabic);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+[dir="ltr"] .pt-row-label,
+[dir="ltr"] .pt-row-time {
+  font-family: var(--font-latin);
+  font-size: var(--text-base);
+}
+
+/* The currently-active prayer — emphasized with the gold accent. */
+.pt-row--next {
+  border-color: var(--color-gold);
+  background: var(--color-gold-faint);
+}
+
+.pt-row--next .pt-row-label,
+.pt-row--next .pt-row-time {
+  color: var(--color-gold);
+}
+
+/* Sunrise is not a prayer — de-emphasized rather than highlighted. */
+.pt-row--sunrise {
+  box-shadow: none;
+  border-style: dashed;
+}
+
+.pt-row--sunrise .pt-row-label,
+.pt-row--sunrise .pt-row-time {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* ── Next-prayer countdown ───────────────────── */
+.pt-next {
+  margin: var(--space-5) var(--space-4) 0;
+  padding: var(--space-5);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  border-radius: var(--radius-xl);
+  text-align: center;
+}
+
+.pt-next-label {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-2);
+  opacity: 0.85;
+}
+
+.pt-next-name {
+  font-family: var(--font-arabic);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.pt-next-countdown {
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  margin: var(--space-2) 0 0;
+}
+
+[dir="ltr"] .pt-next-label,
+[dir="ltr"] .pt-next-name,
+[dir="ltr"] .pt-next-countdown {
+  font-family: var(--font-latin);
+}
+
+/* ── Method / madhab pickers ──────────────────── */
+.pt-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-4) 0;
+}
+
+.pt-setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+.pt-setting-label {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+[dir="ltr"] .pt-setting-label {
+  font-family: var(--font-latin);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-page-wrapper,
+  .pt-row,
+  .pt-grant-btn {
+    transition: none;
+  }
+}

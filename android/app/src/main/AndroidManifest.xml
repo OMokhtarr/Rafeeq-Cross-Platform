@@ -45,6 +45,35 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
+        <receiver
+            android:name=".prayer.PrayerAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".prayer.PrayerBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Home-screen widget: reads PrayerTimesEngine directly, never a
+             cache written by the app, since the launcher process has no
+             WebView and the widget must be right even if the app was never
+             opened. updatePeriodMillis is 0 in widget_prayer_times_info.xml;
+             the prayer alarms and the midnight roll drive refreshes instead. -->
+        <receiver
+            android:name=".prayer.PrayerWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_times_info" />
+        </receiver>
+
     </application>
 
     <!-- Permissions -->
@@ -57,4 +86,18 @@
          Capacitor prompts for this at runtime the first time the mic is used. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Coarse, not fine: prayer times shift about four seconds per kilometre
+         of longitude, so city-level accuracy is already finer than the one
+         minute the app displays — and the prompt is gentler. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- USE_EXACT_ALARM rather than SCHEDULE_EXACT_ALARM: Android's own docs
+         name prayer-time and alarm-clock apps as its acceptable use case. It is
+         granted at install and cannot be revoked, so there is no
+         canScheduleExactAlarms() check and no trip to system settings. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Alarms do not survive a reboot; the boot receiver re-arms them. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

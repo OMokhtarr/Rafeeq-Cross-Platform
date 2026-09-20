@@ -107,3 +107,8 @@ app/src/main/res/xml/config.xml
 keystore.properties
 *.jks
 *.keystore
+
+# Kotlin compiler session markers. Gradle writes and deletes these on every
+# build, so a tracked one shows up as a spurious working-tree change after
+# each run and sneaks into unrelated commits.
+.kotlin/

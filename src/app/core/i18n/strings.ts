@@ -13,17 +13,61 @@ export interface AppStrings {
   tagline: string;
 
   tabs: {
+    home: string;
     quran: string;
     quiz: string;
     azkar: string;
     ahadith: string;
     hifz: string;
+    account: string;
+    more: string;
     settings: string;
     comingSoon: string;
   };
 
   home: {
     bismillah: string;
+  };
+
+  /** The "More" hub: secondary destinations that don't earn their own tab. */
+  more: {
+    title: string;
+    account: string;
+    settings: string;
+    qibla: string;
+    prayerTimes: string;
+  };
+
+  prayerTimes: {
+    title: string;
+    /** The six rows, in display order. */
+    fajr: string;
+    sunrise: string;
+    dhuhr: string;
+    asr: string;
+    maghrib: string;
+    isha: string;
+    nextPrayer: string;
+    /** Countdown, e.g. "in 2h 14m" — {time} is substituted. */
+    remaining: string;
+    method: string;
+    madhab: string;
+    shafi: string;
+    hanafi: string;
+    methodEgyptian: string;
+    methodUmmAlQura: string;
+    methodMwl: string;
+    methodKarachi: string;
+    methodNorthAmerica: string;
+    methodDubai: string;
+    methodQatar: string;
+    methodKuwait: string;
+    methodSingapore: string;
+    methodMoonSighting: string;
+    locationNeeded: string;
+    locationNeededDesc: string;
+    grantLocation: string;
+    locationDenied: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -433,16 +477,55 @@ const ar: AppStrings = {
   dir: "rtl",
   tagline: "رفيقك القرآني",
   tabs: {
+    home: "الرئيسية",
     quran: "القرآن",
     quiz: "اختبارات",
     azkar: "أذكار",
     ahadith: "أحاديث",
     hifz: "الحفظ",
+    account: "حسابي",
+    more: "المزيد",
     settings: "إعدادات",
     comingSoon: "قريباً...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  more: {
+    title: "المزيد",
+    account: "حسابي",
+    settings: "الإعدادات",
+    qibla: "القبلة",
+    prayerTimes: "مواقيت الصلاة",
+  },
+  prayerTimes: {
+    title: "مواقيت الصلاة",
+    fajr: "الفجر",
+    sunrise: "الشروق",
+    dhuhr: "الظهر",
+    asr: "العصر",
+    maghrib: "المغرب",
+    isha: "العشاء",
+    nextPrayer: "الصلاة القادمة",
+    remaining: "بعد {time}",
+    method: "طريقة الحساب",
+    madhab: "المذهب",
+    shafi: "الشافعي",
+    hanafi: "الحنفي",
+    methodEgyptian: "الهيئة المصرية العامة للمساحة",
+    methodUmmAlQura: "أم القرى - مكة المكرمة",
+    methodMwl: "رابطة العالم الإسلامي",
+    methodKarachi: "جامعة العلوم الإسلامية - كراتشي",
+    methodNorthAmerica: "الجمعية الإسلامية لأمريكا الشمالية",
+    methodDubai: "دبي",
+    methodQatar: "قطر",
+    methodKuwait: "الكويت",
+    methodSingapore: "سنغافورة",
+    methodMoonSighting: "هيئة رؤية الهلال",
+    locationNeeded: "حدّد موقعك",
+    locationNeededDesc: "نحتاج إلى موقعك لحساب مواقيت الصلاة. يبقى الموقع على جهازك ولا يُرسَل إلى أي جهة.",
+    grantLocation: "تحديد الموقع",
+    locationDenied: "تعذّر تحديد الموقع. يمكنك السماح بذلك من إعدادات التطبيق.",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -724,7 +807,7 @@ const ar: AppStrings = {
     azkarCounterSound: "صوت العدّاد",
     azkarCounterSoundDesc: "صوت عند الوصول لعدد الذِّكر",
     prayerReminders: "تنبيهات مواقيت الصلاة",
-    prayerRemindersDesc: "قريباً — سيتطلب إذن الموقع",
+    prayerRemindersDesc: "تنبيه عند دخول وقت كل صلاة",
     azkarReminders: "تذكير الأذكار اليومية",
     azkarRemindersDesc: "تنبيه صباحي ومسائي للأذكار",
     comingSoon: "قريباً",
@@ -865,16 +948,55 @@ const en: AppStrings = {
   dir: "ltr",
   tagline: "Your Quran Companion",
   tabs: {
+    home: "Home",
     quran: "Quran",
     quiz: "Quizzes",
     azkar: "Azkar",
     ahadith: "Ahadith",
     hifz: "Hifz",
+    account: "Account",
+    more: "More",
     settings: "Settings",
     comingSoon: "Coming soon...",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  },
+  more: {
+    title: "More",
+    account: "Account",
+    settings: "Settings",
+    qibla: "Qibla",
+    prayerTimes: "Prayer Times",
+  },
+  prayerTimes: {
+    title: "Prayer Times",
+    fajr: "Fajr",
+    sunrise: "Sunrise",
+    dhuhr: "Dhuhr",
+    asr: "Asr",
+    maghrib: "Maghrib",
+    isha: "Isha",
+    nextPrayer: "Next prayer",
+    remaining: "in {time}",
+    method: "Calculation method",
+    madhab: "Madhab",
+    shafi: "Shafi",
+    hanafi: "Hanafi",
+    methodEgyptian: "Egyptian General Authority of Survey",
+    methodUmmAlQura: "Umm al-Qura, Makkah",
+    methodMwl: "Muslim World League",
+    methodKarachi: "University of Islamic Sciences, Karachi",
+    methodNorthAmerica: "Islamic Society of North America",
+    methodDubai: "Dubai",
+    methodQatar: "Qatar",
+    methodKuwait: "Kuwait",
+    methodSingapore: "Singapore",
+    methodMoonSighting: "Moonsighting Committee",
+    locationNeeded: "Set your location",
+    locationNeededDesc: "Prayer times are calculated from your location. It stays on your device and is never sent anywhere.",
+    grantLocation: "Use my location",
+    locationDenied: "Could not get your location. You can allow it in the app's settings.",
   },
   exitConfirm: "Swipe again to exit",
   offline: {
@@ -1157,7 +1279,7 @@ const en: AppStrings = {
     azkarCounterSound: "Counter Sound",
     azkarCounterSoundDesc: "Sound when a dhikr is completed",
     prayerReminders: "Prayer Time Reminders",
-    prayerRemindersDesc: "Coming soon — requires location permission",
+    prayerRemindersDesc: "A notification when each prayer time begins",
     azkarReminders: "Daily Azkar Reminders",
     azkarRemindersDesc: "Morning and evening notifications",
     comingSoon: "Coming soon",

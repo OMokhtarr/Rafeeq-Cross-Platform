@@ -4,4 +4,14 @@
     <string name="title_activity_main">Rafeeq</string>
     <string name="package_name">com.rafeeq.quranquiz</string>
     <string name="custom_url_scheme">com.rafeeq.quranquiz</string>
+
+    <!-- Prayer widget: names are shown in Arabic regardless of app language,
+         since the native layer has no access to the JS i18n strings. -->
+    <string name="prayer_widget_name_fajr">الفجر</string>
+    <string name="prayer_widget_name_sunrise">الشروق</string>
+    <string name="prayer_widget_name_dhuhr">الظهر</string>
+    <string name="prayer_widget_name_asr">العصر</string>
+    <string name="prayer_widget_name_maghrib">المغرب</string>
+    <string name="prayer_widget_name_isha">العشاء</string>
+    <string name="prayer_widget_prompt">افتح التطبيق لتحديد الموقع</string>
 </resources>

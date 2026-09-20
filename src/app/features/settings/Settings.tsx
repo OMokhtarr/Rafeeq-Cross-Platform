@@ -33,6 +33,11 @@ import {
   isSyncOverdue,
   relativeDays,
 } from "./sync-status";
+import {
+  enableReminders,
+  getReminders,
+  setReminders,
+} from "../../core/services/prayer/prayer-times.service";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -621,6 +626,7 @@ const Settings: React.FC = () => {
   const [syncState, setSyncState] = useState<SyncState | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [prayerReminderError, setPrayerReminderError] = useState(false);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -654,6 +660,22 @@ const Settings: React.FC = () => {
     getSyncStatus().then(setSyncState).catch(() => {});
   }, []);
 
+  // Reconcile the toggle with native truth on mount. `s.prayerReminders` is
+  // seeded from localStorage, which can drift from the real native state
+  // (e.g. cleared storage while native still has remindersEnabled=true) —
+  // native wins, since it is what actually decides whether alarms fire.
+  useEffect(() => {
+    getReminders()
+      .then(({ enabled }) =>
+        setS((prev) =>
+          prev.prayerReminders === enabled
+            ? prev
+            : { ...prev, prayerReminders: enabled },
+        ),
+      )
+      .catch(() => {});
+  }, []);
+
   const handleSyncNow = async () => {
     setSyncing(true);
     setSyncNote(null);
@@ -677,6 +699,22 @@ const Settings: React.FC = () => {
       setSyncNote(ts.syncFailed);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handlePrayerRemindersToggle = async (checked: boolean) => {
+    if (checked) {
+      const ok = await enableReminders();
+      if (!ok) {
+        setPrayerReminderError(true);
+        return;
+      }
+      setPrayerReminderError(false);
+      set("prayerReminders", true);
+    } else {
+      await setReminders({ enabled: false });
+      setPrayerReminderError(false);
+      set("prayerReminders", false);
     }
   };
 
@@ -872,23 +910,35 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Notifications (coming soon — controls disabled) ── */}
+            {/* ── Notifications ── */}
             <div className="settings-section">
               <p className="settings-section-title">
                 {ts.sectionNotifications}
               </p>
-              <div className="settings-card settings-card--coming-soon">
+              <div className="settings-card">
+                <ToggleRow
+                  icon={ICONS.mosque}
+                  label={ts.prayerReminders}
+                  desc={ts.prayerRemindersDesc}
+                  checked={s.prayerReminders}
+                  onChange={(v) => {
+                    void handlePrayerRemindersToggle(v);
+                  }}
+                />
+                {prayerReminderError && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note settings-sync-note--error">
+                      {t.prayerTimes.locationDenied}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {/* Azkar reminders — coming soon, controls disabled */}
+              <div className="settings-card settings-card--coming-soon settings-card--stacked">
                 <span className="settings-coming-soon-badge">
                   {ts.comingSoon}
                 </span>
                 <div className="settings-card-disabled" aria-hidden="true">
-                  <ToggleRow
-                    icon={ICONS.mosque}
-                    label={ts.prayerReminders}
-                    desc={ts.prayerRemindersDesc}
-                    checked={s.prayerReminders}
-                    onChange={() => {}}
-                  />
                   <ToggleRow
                     icon={ICONS.beads}
                     label={ts.azkarReminders}
@@ -934,7 +984,7 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </IonContent>
-      <BottomNavBar active="settings" fixed />
+      <BottomNavBar active="more" fixed />
       <TajweedInfoModal
         open={tajweedInfoOpen}
         onClose={() => setTajweedInfoOpen(false)}

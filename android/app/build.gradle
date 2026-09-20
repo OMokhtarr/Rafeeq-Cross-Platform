@@ -170,6 +170,9 @@ dependencies {
     // compileSdk is 36 — the old pin existed only because 1.4.x+ needs compileSdk 35+.
     implementation "androidx.media3:media3-exoplayer:$rootProject.ext.media3Version"
     implementation "androidx.media3:media3-session:$rootProject.ext.media3Version"
+    // Prayer-time calculation. Lives natively rather than in JS because the
+    // home-screen widget renders in the launcher process, with no WebView.
+    implementation "com.batoulapps.adhan:adhan:$rootProject.ext.adhanVersion"
     testImplementation "junit:junit:$rootProject.ext.junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.androidxEspressoCoreVersion"

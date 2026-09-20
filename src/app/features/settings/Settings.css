@@ -571,6 +571,11 @@ ion-content::part(scroll) {
   user-select: none;
 }
 
+/* A second card stacked below another one within the same section. */
+.settings-card--stacked {
+  margin-top: 10px;
+}
+
 .settings-coming-soon-badge {
   position: absolute;
   top: 50%;
