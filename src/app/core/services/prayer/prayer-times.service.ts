@@ -17,7 +17,7 @@ import type {
   PrayerMethod,
   RawPrayerDay,
 } from "./prayer-times.types";
-import { PRAYER_KEYS, PRAYERS_ONLY } from "./prayer-times.types";
+import { ADDITIONAL_KEYS, PRAYER_KEYS, PRAYERS_ONLY } from "./prayer-times.types";
 
 interface RafeeqPrayerPlugin {
   getTimes(options?: { date?: string }): Promise<RawPrayerDay>;
@@ -68,8 +68,10 @@ export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
   // Individual entries may be absent at high latitude during the
   // midnight-sun window (see PrayerTimesEngine); skip rather than construct
   // an Invalid Date for a key that was never returned.
+  // Both lists, so the supplementary times survive the boundary alongside the
+  // timetable — iterating PRAYER_KEYS alone would silently drop them.
   const times = {} as Record<PrayerKey, Date>;
-  PRAYER_KEYS.forEach((key) => {
+  [...PRAYER_KEYS, ...ADDITIONAL_KEYS].forEach((key) => {
     const iso = raw.times![key];
     if (iso) {
       times[key] = new Date(iso);

@@ -41,8 +41,9 @@ ion-content::part(scroll) {
   padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
 }
 
-/* ── Page title / Hijri date ─────────────────── */
-/* No toolbar on this page, so the title clears the status bar itself. */
+/* ── Page title ──────────────────────────────── */
+/* Only the no-location state shows this: with times present the hero carries
+   the page instead. No toolbar here, so it clears the status bar itself. */
 .pt-title {
   font-family: var(--font-arabic);
   font-size: var(--text-2xl);
@@ -54,13 +55,84 @@ ion-content::part(scroll) {
   line-height: 1.5;
 }
 
-.pt-hijri {
+/* ── Hero ────────────────────────────────────── */
+/* The page's one loud element: the next prayer, its time, and how long is
+   left. No toolbar here, so it clears the status bar itself. */
+.pt-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: max(var(--space-6), calc(var(--safe-inset-top) + var(--space-4)))
+    var(--space-4) var(--space-5);
+  text-align: center;
+}
+
+.pt-hero-label {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin: var(--space-1) 0 0;
-  padding: 0 var(--space-4);
+  color: var(--color-gold);
+  margin: 0;
+  letter-spacing: var(--tracking-normal);
+  opacity: 0.9;
+}
+
+.pt-hero-name {
+  font-family: var(--font-arabic);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  /* Arabic descenders drop well below the baseline at this size. */
+  line-height: 1.4;
+}
+
+.pt-hero-time {
+  font-family: var(--font-arabic);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--color-gold);
+  margin: 0;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The countdown reads as a status, so it is set apart as a pill rather than
+   another line of text. */
+.pt-hero-pill {
+  display: inline-block;
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-4);
+  margin-top: var(--space-1);
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Date band ───────────────────────────────── */
+.pt-dates {
   text-align: center;
+  padding: 0 var(--space-4) var(--space-5);
+}
+
+.pt-date-greg {
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pt-date-hijri {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* ── Location permission prompt ──────────────── */
@@ -165,8 +237,12 @@ ion-content::part(scroll) {
 
 /* The currently-active prayer — emphasized with the gold accent. */
 .pt-row--next {
+  /* A capsule, not just a tint: the shape alone marks the next prayer even
+     where the colour is hard to distinguish. */
+  border-radius: var(--radius-pill);
   border-color: var(--color-gold);
   background: var(--color-gold-faint);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .pt-row--next .pt-row-label,
@@ -187,46 +263,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Next-prayer countdown ───────────────────── */
-.pt-next {
-  margin: var(--space-5) var(--space-4) 0;
-  padding: var(--space-5);
-  background: var(--color-gold-faint);
-  border: 1.5px solid var(--color-gold-subtle);
-  border-radius: var(--radius-xl);
-  text-align: center;
-}
-
-.pt-next-label {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-gold);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 0 0 var(--space-2);
-  opacity: 0.85;
-}
-
-.pt-next-name {
-  font-family: var(--font-arabic);
-  font-size: var(--text-2xl);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-.pt-next-countdown {
-  font-family: var(--font-arabic);
-  font-size: var(--text-base);
-  color: var(--color-text-secondary);
-  margin: var(--space-2) 0 0;
-}
-
-[dir="ltr"] .pt-next-label,
-[dir="ltr"] .pt-next-name,
-[dir="ltr"] .pt-next-countdown {
-  font-family: var(--font-latin);
-}
-
 /* ── Method / madhab pickers ──────────────────── */
 .pt-settings {
   display: flex;
@@ -259,7 +295,66 @@ ion-content::part(scroll) {
   font-family: var(--font-latin);
 }
 
+/* ── Supplementary times ─────────────────────── */
+/* A rule-flanked disclosure, so the section reads as a divider rather than
+   another card competing with the timetable above it. */
+.pt-additional {
+  padding: var(--space-5) var(--space-4) 0;
+}
+
+.pt-additional-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pt-additional-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-subtle);
+}
+
+.pt-additional-label {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.pt-additional-chevron {
+  display: flex;
+  width: 18px;
+  height: 18px;
+  color: var(--color-gold);
+  transition: transform var(--transition-base);
+}
+
+.pt-additional-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pt-additional-chevron--open {
+  transform: rotate(180deg);
+}
+
+.pt-rows--additional {
+  margin-top: var(--space-4);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .pt-additional-chevron {
+    transition: none;
+  }
   .pt-page-wrapper,
   .pt-row,
   .pt-grant-btn {

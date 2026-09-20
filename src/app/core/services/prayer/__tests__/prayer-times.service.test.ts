@@ -152,6 +152,52 @@ describe("loadPrayerDay", () => {
   });
 });
 
+describe("supplementary times", () => {
+  it("carries duha, midnight and last third across the plugin boundary", async () => {
+    getTimes.mockResolvedValue({
+      hasLocation: true,
+      times: {
+        fajr: "2026-09-19T03:15:00.000Z",
+        sunrise: "2026-09-19T04:41:00.000Z",
+        duha: "2026-09-19T05:05:00.000Z",
+        dhuhr: "2026-09-19T10:50:00.000Z",
+        asr: "2026-09-19T14:18:00.000Z",
+        maghrib: "2026-09-19T16:57:00.000Z",
+        isha: "2026-09-19T18:14:00.000Z",
+        midnight: "2026-09-19T21:03:00.000Z",
+        last_third: "2026-09-19T22:46:00.000Z",
+      },
+      next: { name: "asr", at: "2026-09-19T14:18:00.000Z" },
+    });
+
+    const day = await service.loadPrayerDay();
+
+    // Iterating PRAYER_KEYS alone would silently drop these three.
+    expect(day.times!.duha).toBeInstanceOf(Date);
+    expect(day.times!.midnight).toBeInstanceOf(Date);
+    expect(day.times!.last_third).toBeInstanceOf(Date);
+    expect(day.times!.duha.toISOString()).toBe("2026-09-19T05:05:00.000Z");
+  });
+
+  it("leaves them undefined when the engine reports none", async () => {
+    getTimes.mockResolvedValue({
+      hasLocation: true,
+      times: {
+        fajr: "2026-09-19T03:15:00.000Z",
+        dhuhr: "2026-09-19T10:50:00.000Z",
+      },
+      next: { name: "dhuhr", at: "2026-09-19T10:50:00.000Z" },
+    });
+
+    const day = await service.loadPrayerDay();
+
+    // Absent, not an Invalid Date — the page skips rows it cannot render.
+    expect(day.times!.duha).toBeUndefined();
+    expect(day.times!.midnight).toBeUndefined();
+    expect(day.times!.fajr).toBeInstanceOf(Date);
+  });
+});
+
 describe("requestLocation", () => {
   it("stores the fix and reports success when permission is granted", async () => {
     checkPermissions.mockResolvedValue({ location: "granted", coarseLocation: "granted" });

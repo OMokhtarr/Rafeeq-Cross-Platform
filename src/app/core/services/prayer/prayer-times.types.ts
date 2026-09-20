@@ -8,12 +8,18 @@
 export type PrayerKey =
   | "fajr"
   | "sunrise"
+  | "duha"
   | "dhuhr"
   | "asr"
   | "maghrib"
-  | "isha";
+  | "isha"
+  | "midnight"
+  | "last_third";
 
-/** Display order. Sunrise sits between Fajr and Dhuhr but is not a prayer. */
+/**
+ * The daily timetable, in display order. Sunrise sits between Fajr and Dhuhr
+ * but is not a prayer.
+ */
 export const PRAYER_KEYS: PrayerKey[] = [
   "fajr",
   "sunrise",
@@ -22,6 +28,13 @@ export const PRAYER_KEYS: PrayerKey[] = [
   "maghrib",
   "isha",
 ];
+
+/**
+ * Supplementary times, shown in their own collapsible section below the
+ * timetable. Not prayers: none carries a reminder, and none is ever the
+ * "next prayer" in the countdown.
+ */
+export const ADDITIONAL_KEYS: PrayerKey[] = ["duha", "midnight", "last_third"];
 
 /** Sunrise never gets a reminder and is never the "next prayer". */
 export const PRAYERS_ONLY: PrayerKey[] = [

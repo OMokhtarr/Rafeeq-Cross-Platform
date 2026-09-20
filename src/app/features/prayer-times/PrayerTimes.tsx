@@ -26,6 +26,7 @@ import {
   setPrayerConfig,
 } from "../../core/services/prayer/prayer-times.service";
 import {
+  ADDITIONAL_KEYS,
   PRAYER_KEYS,
   PRAYER_METHODS,
   type PrayerKey,
@@ -85,6 +86,8 @@ const PrayerTimes: React.FC = () => {
     madhab: PrayerMadhab;
   } | null>(null);
   const [denied, setDenied] = useState(false);
+  // Collapsed by default: these are secondary to the timetable above them.
+  const [additionalOpen, setAdditionalOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
 
@@ -157,6 +160,11 @@ const PrayerTimes: React.FC = () => {
     year: "numeric",
   }).format(new Date());
 
+  const gregorianDate = new Intl.DateTimeFormat(
+    lang === "ar" ? "ar-EG" : "en-GB",
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" },
+  ).format(new Date());
+
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", {
       hour: "2-digit",
@@ -170,24 +178,52 @@ const PrayerTimes: React.FC = () => {
       <IonContent fullscreen>
         <div className="pt-page-wrapper">
           <div className="pt-container" dir={isRTL ? "rtl" : "ltr"}>
-            <h1 className="pt-title">{tp.title}</h1>
-            <p className="pt-hijri">{hijriDate}</p>
-
             {day === null ? null : !day.hasLocation ? (
-              <div className="pt-permission">
-                <h2 className="pt-permission-title">{tp.locationNeeded}</h2>
-                <p className="pt-permission-desc">{tp.locationNeededDesc}</p>
-                <button
-                  type="button"
-                  className="pt-grant-btn"
-                  onClick={handleGrantLocation}
-                >
-                  {tp.grantLocation}
-                </button>
-                {denied && <p className="pt-denied">{tp.locationDenied}</p>}
-              </div>
+              <>
+                <h1 className="pt-title">{tp.title}</h1>
+                <div className="pt-permission">
+                  <h2 className="pt-permission-title">{tp.locationNeeded}</h2>
+                  <p className="pt-permission-desc">{tp.locationNeededDesc}</p>
+                  <button
+                    type="button"
+                    className="pt-grant-btn"
+                    onClick={handleGrantLocation}
+                  >
+                    {tp.grantLocation}
+                  </button>
+                  {denied && <p className="pt-denied">{tp.locationDenied}</p>}
+                </div>
+              </>
             ) : (
               <>
+                {/* ── Hero: the next prayer, its time, and the countdown ── */}
+                <div className="pt-hero">
+                  {day.next && nextAt !== undefined ? (
+                    <>
+                      <p className="pt-hero-label">{tp.nextPrayer}</p>
+                      <h1 className="pt-hero-name">{rowLabel(day.next.name)}</h1>
+                      <p className="pt-hero-time">
+                        {formatTime(day.next.at)}
+                      </p>
+                      <span className="pt-hero-pill">
+                        {formatCountdown(nextAt - now, lang)}
+                      </span>
+                    </>
+                  ) : (
+                    // No next prayer: the midnight-sun window. The times below
+                    // still stand, so the hero shows the page's name rather
+                    // than an empty block or an invented countdown.
+                    <h1 className="pt-hero-name">{tp.title}</h1>
+                  )}
+                </div>
+
+                {/* ── Date band ── */}
+                <div className="pt-dates">
+                  <p className="pt-date-greg">{gregorianDate}</p>
+                  <p className="pt-date-hijri">{hijriDate}</p>
+                </div>
+
+                {/* ── Daily timetable ── */}
                 <div className="pt-rows">
                   {PRAYER_KEYS.filter((key) => day.times?.[key]).map((key) => {
                     const time = day.times![key];
@@ -209,16 +245,49 @@ const PrayerTimes: React.FC = () => {
                   })}
                 </div>
 
-                {day.next && nextAt !== undefined && (
-                  <div className="pt-next">
-                    <p className="pt-next-label">{tp.nextPrayer}</p>
-                    <p className="pt-next-name">{rowLabel(day.next.name)}</p>
-                    <p className="pt-next-countdown">
-                      {tp.remaining.replace(
-                        "{time}",
-                        formatCountdown(nextAt - now, lang),
-                      )}
-                    </p>
+                {/* ── Supplementary times ── */}
+                {ADDITIONAL_KEYS.some((key) => day.times?.[key]) && (
+                  <div className="pt-additional">
+                    <button
+                      type="button"
+                      className="pt-additional-toggle"
+                      onClick={() => setAdditionalOpen((open) => !open)}
+                      aria-expanded={additionalOpen}
+                    >
+                      <span className="pt-additional-rule" aria-hidden="true" />
+                      <span className="pt-additional-label">
+                        {tp.additionalTimes}
+                      </span>
+                      <span
+                        className={
+                          "pt-additional-chevron" +
+                          (additionalOpen ? " pt-additional-chevron--open" : "")
+                        }
+                        aria-hidden="true"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                      <span className="pt-additional-rule" aria-hidden="true" />
+                    </button>
+
+                    {additionalOpen && (
+                      <div className="pt-rows pt-rows--additional">
+                        {ADDITIONAL_KEYS.filter((key) => day.times?.[key]).map(
+                          (key) => (
+                            <div key={key} className="pt-row pt-row--sunrise">
+                              <span className="pt-row-label">
+                                {rowLabel(key)}
+                              </span>
+                              <span className="pt-row-time">
+                                {formatTime(day.times![key])}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

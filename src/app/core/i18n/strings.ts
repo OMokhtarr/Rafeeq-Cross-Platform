@@ -47,6 +47,11 @@ export interface AppStrings {
     asr: string;
     maghrib: string;
     isha: string;
+    /** Supplementary times, shown in their own collapsible section. */
+    duha: string;
+    midnight: string;
+    last_third: string;
+    additionalTimes: string;
     nextPrayer: string;
     /** Countdown, e.g. "in 2h 14m" — {time} is substituted. */
     remaining: string;
@@ -506,6 +511,10 @@ const ar: AppStrings = {
     asr: "العصر",
     maghrib: "المغرب",
     isha: "العشاء",
+    duha: "الضحى",
+    midnight: "منتصف الليل",
+    last_third: "الثلث الأخير",
+    additionalTimes: "أوقات إضافية",
     nextPrayer: "الصلاة القادمة",
     remaining: "بعد {time}",
     method: "طريقة الحساب",
@@ -977,6 +986,10 @@ const en: AppStrings = {
     asr: "Asr",
     maghrib: "Maghrib",
     isha: "Isha",
+    duha: "Duha",
+    midnight: "Midnight",
+    last_third: "Last third",
+    additionalTimes: "Additional times",
     nextPrayer: "Next prayer",
     remaining: "in {time}",
     method: "Calculation method",
