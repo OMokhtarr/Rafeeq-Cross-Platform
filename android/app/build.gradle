@@ -143,6 +143,15 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    testOptions {
+        unitTests {
+            // GeomagneticField is an Android framework class. Without this the
+            // JVM stub throws on call; with it, it returns 0 and QiblaEngine's
+            // arithmetic stays testable off-device.
+            returnDefaultValues = true
+        }
+    }
 }
 
 repositories {
