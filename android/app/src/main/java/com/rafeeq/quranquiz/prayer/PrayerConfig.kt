@@ -76,4 +76,38 @@ object PrayerConfig {
     fun setEnabledPrayers(ctx: Context, prayers: Set<String>) {
         prefs(ctx).edit().putStringSet(KEY_ENABLED_PRAYERS, prayers).apply()
     }
+
+    /**
+     * Times the user may never hide. A prayer-times app that can be configured
+     * to omit Fajr is not one, so this is enforced here rather than only in the
+     * UI — every read passes through sanitiseVisibleTimes.
+     */
+    val OBLIGATORY_TIMES: Set<String> =
+        setOf("fajr", "dhuhr", "asr", "maghrib", "isha")
+
+    /**
+     * Sunrise joins the obligatory five; the supplementary times start hidden,
+     * so the page looks exactly as it did before this preference existed.
+     */
+    val DEFAULT_VISIBLE_TIMES: Set<String> = OBLIGATORY_TIMES + "sunrise"
+
+    private const val KEY_VISIBLE_TIMES = "visible_times"
+
+    /** Forces the obligatory times in and drops anything that is not a real time. */
+    fun sanitiseVisibleTimes(times: Set<String>): Set<String> {
+        val known = PrayerName.values().map { it.name.lowercase() }.toSet()
+        return (times + OBLIGATORY_TIMES).filter { it in known }.toSet()
+    }
+
+    fun visibleTimes(ctx: Context): Set<String> {
+        val stored = prefs(ctx).getStringSet(KEY_VISIBLE_TIMES, null)
+            ?: return DEFAULT_VISIBLE_TIMES
+        return sanitiseVisibleTimes(stored)
+    }
+
+    fun setVisibleTimes(ctx: Context, times: Set<String>) {
+        prefs(ctx).edit()
+            .putStringSet(KEY_VISIBLE_TIMES, sanitiseVisibleTimes(times))
+            .apply()
+    }
 }
