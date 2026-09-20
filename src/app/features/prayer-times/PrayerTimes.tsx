@@ -15,15 +15,19 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
+import { useLocation } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
+import QiblaView from "./QiblaView";
+import ShowTimesSheet from "./ShowTimesSheet";
 import {
   loadPrayerDay,
   requestLocation,
   getPrayerConfig,
   setPrayerConfig,
+  getVisibleTimes,
 } from "../../core/services/prayer/prayer-times.service";
 import {
   ADDITIONAL_KEYS,
@@ -36,6 +40,8 @@ import {
 } from "../../core/services/prayer/prayer-times.types";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import "./PrayerTimes.css";
+
+const ALL_ROW_KEYS: PrayerKey[] = [...PRAYER_KEYS, ...ADDITIONAL_KEYS];
 
 // Maps each calculation method to its localized string key — no other
 // mapping exists between the plugin's enum and the i18n strings.
@@ -78,23 +84,34 @@ function formatCountdown(msRemaining: number, lang: string): string {
 const PrayerTimes: React.FC = () => {
   const { t, lang, isRTL } = useLang();
   const { isNight } = useTheme();
+  const location = useLocation();
   const tp = t.prayerTimes;
 
+  const [view, setView] = useState<"prayers" | "qibla">(() =>
+    new URLSearchParams(location.search).get("view") === "qibla"
+      ? "qibla"
+      : "prayers",
+  );
   const [day, setDay] = useState<PrayerDay | null>(null);
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
   } | null>(null);
+  const [visible, setVisible] = useState<PrayerKey[] | null>(null);
   const [denied, setDenied] = useState(false);
-  // Collapsed by default: these are secondary to the timetable above them.
-  const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [showSheetOpen, setShowSheetOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
 
   const load = useCallback(async () => {
-    const [cfg, d] = await Promise.all([getPrayerConfig(), loadPrayerDay()]);
+    const [cfg, d, v] = await Promise.all([
+      getPrayerConfig(),
+      loadPrayerDay(),
+      getVisibleTimes(),
+    ]);
     setConfig({ method: cfg.method, madhab: cfg.madhab });
     setDay(d);
+    setVisible(v);
   }, []);
 
   useEffect(() => {
@@ -173,12 +190,25 @@ const PrayerTimes: React.FC = () => {
 
   const rowLabel = (key: PrayerKey): string => tp[key];
 
+  // One ordered list, filtered to keys that are both user-visible and
+  // actually present in today's times — the visible-set preference no longer
+  // has a separate collapsible section to defer to.
+  const rowKeys =
+    day?.times && visible
+      ? ALL_ROW_KEYS.filter(
+          (key) => visible.includes(key) && Boolean(day.times?.[key]),
+        )
+      : [];
+  const firstAdditionalKey = rowKeys.find((key) =>
+    (ADDITIONAL_KEYS as PrayerKey[]).includes(key),
+  );
+
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="pt-page-wrapper">
           <div className="pt-container" dir={isRTL ? "rtl" : "ltr"}>
-            {day === null ? null : !day.hasLocation ? (
+            {day === null ? null : !day.hasLocation && view === "prayers" ? (
               <>
                 <h1 className="pt-title">{tp.title}</h1>
                 <div className="pt-permission">
@@ -196,131 +226,154 @@ const PrayerTimes: React.FC = () => {
               </>
             ) : (
               <>
-                {/* ── Hero: the next prayer, its time, and the countdown ── */}
-                <div className="pt-hero">
-                  {day.next && nextAt !== undefined ? (
-                    <>
-                      <p className="pt-hero-label">{tp.nextPrayer}</p>
-                      <h1 className="pt-hero-name">{rowLabel(day.next.name)}</h1>
-                      <p className="pt-hero-time">
-                        {formatTime(day.next.at)}
-                      </p>
-                      <span className="pt-hero-pill">
-                        {formatCountdown(nextAt - now, lang)}
-                      </span>
-                    </>
-                  ) : (
-                    // No next prayer: the midnight-sun window. The times below
-                    // still stand, so the hero shows the page's name rather
-                    // than an empty block or an invented countdown.
-                    <h1 className="pt-hero-name">{tp.title}</h1>
-                  )}
+                {/* ── Segmented control: prayers vs qibla ── */}
+                <div className="pt-segmented" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === "prayers"}
+                    className={
+                      "pt-segment" +
+                      (view === "prayers" ? " pt-segment--active" : "")
+                    }
+                    onClick={() => setView("prayers")}
+                  >
+                    {tp.prayersTab}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === "qibla"}
+                    className={
+                      "pt-segment" +
+                      (view === "qibla" ? " pt-segment--active" : "")
+                    }
+                    onClick={() => setView("qibla")}
+                  >
+                    {tp.qibla}
+                  </button>
                 </div>
 
-                {/* ── Date band ── */}
-                <div className="pt-dates">
-                  <p className="pt-date-greg">{gregorianDate}</p>
-                  <p className="pt-date-hijri">{hijriDate}</p>
-                </div>
+                {view === "qibla" ? (
+                  <QiblaView onNeedLocation={handleGrantLocation} />
+                ) : (
+                  <>
+                    {/* ── Hero: the next prayer, its time, and the countdown ── */}
+                    <div className="pt-hero">
+                      {day.next && nextAt !== undefined ? (
+                        <>
+                          <p className="pt-hero-label">{tp.nextPrayer}</p>
+                          <h1 className="pt-hero-name">
+                            {rowLabel(day.next.name)}
+                          </h1>
+                          <p className="pt-hero-time">
+                            {formatTime(day.next.at)}
+                          </p>
+                          <span className="pt-hero-pill">
+                            {formatCountdown(nextAt - now, lang)}
+                          </span>
+                        </>
+                      ) : (
+                        // No next prayer: the midnight-sun window. The times below
+                        // still stand, so the hero shows the page's name rather
+                        // than an empty block or an invented countdown.
+                        <h1 className="pt-hero-name">{tp.title}</h1>
+                      )}
+                    </div>
 
-                {/* ── Daily timetable ── */}
-                <div className="pt-rows">
-                  {PRAYER_KEYS.filter((key) => day.times?.[key]).map((key) => {
-                    const time = day.times![key];
-                    const isNext = day.next?.name === key;
-                    const isSunrise = key === "sunrise";
-                    return (
-                      <div
-                        key={key}
-                        className={
-                          "pt-row" +
-                          (isNext ? " pt-row--next" : "") +
-                          (isSunrise ? " pt-row--sunrise" : "")
-                        }
-                      >
-                        <span className="pt-row-label">{rowLabel(key)}</span>
-                        <span className="pt-row-time">{formatTime(time)}</span>
+                    <div className="pt-card">
+                      {/* ── Date band + three-dot menu ── */}
+                      <div className="pt-card-header">
+                        <div className="pt-dates">
+                          <p className="pt-date-greg">{gregorianDate}</p>
+                          <p className="pt-date-hijri">{hijriDate}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="pt-menu-btn"
+                          onClick={() => setShowSheetOpen(true)}
+                          aria-label={tp.show}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="5" r="1.8" />
+                            <circle cx="12" cy="12" r="1.8" />
+                            <circle cx="12" cy="19" r="1.8" />
+                          </svg>
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
 
-                {/* ── Supplementary times ── */}
-                {ADDITIONAL_KEYS.some((key) => day.times?.[key]) && (
-                  <div className="pt-additional">
-                    <button
-                      type="button"
-                      className="pt-additional-toggle"
-                      onClick={() => setAdditionalOpen((open) => !open)}
-                      aria-expanded={additionalOpen}
-                    >
-                      <span className="pt-additional-rule" aria-hidden="true" />
-                      <span className="pt-additional-label">
-                        {tp.additionalTimes}
-                      </span>
-                      <span
-                        className={
-                          "pt-additional-chevron" +
-                          (additionalOpen ? " pt-additional-chevron--open" : "")
-                        }
-                        aria-hidden="true"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </span>
-                      <span className="pt-additional-rule" aria-hidden="true" />
-                    </button>
-
-                    {additionalOpen && (
-                      <div className="pt-rows pt-rows--additional">
-                        {ADDITIONAL_KEYS.filter((key) => day.times?.[key]).map(
-                          (key) => (
-                            <div key={key} className="pt-row pt-row--sunrise">
-                              <span className="pt-row-label">
-                                {rowLabel(key)}
-                              </span>
-                              <span className="pt-row-time">
-                                {formatTime(day.times![key])}
-                              </span>
-                            </div>
-                          ),
-                        )}
+                      {/* ── Daily timetable ── */}
+                      <div className="pt-rows">
+                        {rowKeys.map((key) => {
+                          const time = day.times![key];
+                          const isNext = day.next?.name === key;
+                          const isSunrise = key === "sunrise";
+                          return (
+                            <React.Fragment key={key}>
+                              {key === firstAdditionalKey && (
+                                <div
+                                  className="pt-separator"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              <div
+                                className={
+                                  "pt-row" +
+                                  (isNext ? " pt-row--next" : "") +
+                                  (isSunrise ? " pt-row--sunrise" : "")
+                                }
+                              >
+                                <span className="pt-row-label">
+                                  {rowLabel(key)}
+                                </span>
+                                <span className="pt-row-time">
+                                  {formatTime(time)}
+                                </span>
+                              </div>
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+
+                    <div className="pt-settings">
+                      <div className="pt-setting-row">
+                        <span className="pt-setting-label">{tp.method}</span>
+                        <InlineSelect
+                          value={config?.method ?? PRAYER_METHODS[0]}
+                          options={PRAYER_METHODS.map((m) => ({
+                            value: m,
+                            label: tp[METHOD_LABEL_KEY[m] as keyof typeof tp],
+                          }))}
+                          onChange={handleMethodChange}
+                          night={isNight}
+                          fullWidth
+                          aria-label={tp.method}
+                        />
+                      </div>
+                      <div className="pt-setting-row">
+                        <span className="pt-setting-label">{tp.madhab}</span>
+                        <InlineSelect
+                          value={config?.madhab ?? MADHABS[0]}
+                          options={MADHABS.map((m) => ({
+                            value: m,
+                            label: tp[m],
+                          }))}
+                          onChange={handleMadhabChange}
+                          night={isNight}
+                          fullWidth
+                          aria-label={tp.madhab}
+                        />
+                      </div>
+                    </div>
+
+                    <ShowTimesSheet
+                      open={showSheetOpen}
+                      onClose={() => setShowSheetOpen(false)}
+                      onChanged={load}
+                    />
+                  </>
                 )}
-
-                <div className="pt-settings">
-                  <div className="pt-setting-row">
-                    <span className="pt-setting-label">{tp.method}</span>
-                    <InlineSelect
-                      value={config?.method ?? PRAYER_METHODS[0]}
-                      options={PRAYER_METHODS.map((m) => ({
-                        value: m,
-                        label: tp[METHOD_LABEL_KEY[m] as keyof typeof tp],
-                      }))}
-                      onChange={handleMethodChange}
-                      night={isNight}
-                      fullWidth
-                      aria-label={tp.method}
-                    />
-                  </div>
-                  <div className="pt-setting-row">
-                    <span className="pt-setting-label">{tp.madhab}</span>
-                    <InlineSelect
-                      value={config?.madhab ?? MADHABS[0]}
-                      options={MADHABS.map((m) => ({
-                        value: m,
-                        label: tp[m],
-                      }))}
-                      onChange={handleMadhabChange}
-                      night={isNight}
-                      fullWidth
-                      aria-label={tp.madhab}
-                    />
-                  </div>
-                </div>
               </>
             )}
           </div>

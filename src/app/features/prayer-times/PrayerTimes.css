@@ -55,17 +55,67 @@ ion-content::part(scroll) {
   line-height: 1.5;
 }
 
+/* ── Segmented control ───────────────────────── */
+.pt-segmented {
+  display: flex;
+  gap: var(--space-1);
+  margin: max(var(--space-5), var(--safe-inset-top)) var(--space-4) 0;
+  padding: var(--space-1);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-pill);
+}
+
+.pt-segment {
+  flex: 1;
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+[dir="ltr"] .pt-segment {
+  font-family: var(--font-latin);
+}
+
+.pt-segment--active {
+  color: var(--color-gold);
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+}
+
 /* ── Hero ────────────────────────────────────── */
 /* The page's one loud element: the next prayer, its time, and how long is
-   left. No toolbar here, so it clears the status bar itself. */
+   left. No toolbar here, so it clears the status bar itself. Start-aligned
+   rather than centred, with a card below it able to overlap the band. */
 .pt-hero {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  padding: max(var(--space-6), calc(var(--safe-inset-top) + var(--space-4)))
-    var(--space-4) var(--space-5);
-  text-align: center;
+  padding: var(--space-6) var(--space-4)
+    calc(var(--space-6) + var(--space-5));
+  text-align: start;
+  background: var(--color-bg-card-alt);
+}
+
+.pt-hero-name::before {
+  content: "» ";
+  color: var(--color-gold);
+}
+
+[dir="rtl"] .pt-hero-name::before {
+  content: "« ";
 }
 
 .pt-hero-label {
@@ -113,10 +163,54 @@ ion-content::part(scroll) {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Card: date band, menu button and the timetable ──────────────────────
+   Overlaps the hero band above it, so the page reads as one continuous
+   surface rather than two stacked blocks. */
+.pt-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  margin-top: calc(-1 * var(--space-5));
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-5);
+  position: relative;
+}
+
+.pt-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+}
+
+.pt-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-fast);
+}
+
+.pt-menu-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pt-menu-btn:active {
+  background: var(--color-gold-faint);
+}
+
 /* ── Date band ───────────────────────────────── */
 .pt-dates {
-  text-align: center;
-  padding: 0 var(--space-4) var(--space-5);
+  text-align: start;
 }
 
 .pt-date-greg {
@@ -295,69 +389,21 @@ ion-content::part(scroll) {
   font-family: var(--font-latin);
 }
 
-/* ── Supplementary times ─────────────────────── */
-/* A rule-flanked disclosure, so the section reads as a divider rather than
-   another card competing with the timetable above it. */
-.pt-additional {
-  padding: var(--space-5) var(--space-4) 0;
-}
-
-.pt-additional-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--color-text-secondary);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.pt-additional-rule {
-  flex: 1;
-  height: 1px;
-  background: var(--color-border-subtle);
-}
-
-.pt-additional-label {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-  white-space: nowrap;
-}
-
-.pt-additional-chevron {
-  display: flex;
-  width: 18px;
-  height: 18px;
-  color: var(--color-gold);
-  transition: transform var(--transition-base);
-}
-
-.pt-additional-chevron svg {
-  width: 100%;
-  height: 100%;
-}
-
-.pt-additional-chevron--open {
-  transform: rotate(180deg);
-}
-
-.pt-rows--additional {
-  margin-top: var(--space-4);
+/* ── Separator ────────────────────────────────── */
+/* Marks the boundary before the first supplementary (non-obligatory) row
+   that the visible-set preference lets through. */
+.pt-separator {
+  height: 0;
+  border-top: 1px dashed var(--color-border-subtle);
+  margin: var(--space-3) 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pt-additional-chevron {
-    transition: none;
-  }
   .pt-page-wrapper,
   .pt-row,
-  .pt-grant-btn {
+  .pt-grant-btn,
+  .pt-segment,
+  .pt-menu-btn {
     transition: none;
   }
 }
