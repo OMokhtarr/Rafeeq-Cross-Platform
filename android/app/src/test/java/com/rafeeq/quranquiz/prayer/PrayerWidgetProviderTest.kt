@@ -16,9 +16,12 @@ import org.junit.Test
 class PrayerWidgetProviderTest {
 
     @Test
-    fun `every prayer name (including sunrise) has exactly one entry`() {
+    fun `the widget shows the daily timetable, one entry each, in order`() {
         val names = PrayerWidgetProvider.VIEW_IDS.map { it.first }
-        assertEquals(PrayerName.values().toList(), names)
+        // Deliberately the six-entry timetable rather than PrayerName.values():
+        // the supplementary times (Duha, Midnight, Last third) are page-only,
+        // and a widget slot for them would not fit.
+        assertEquals(PrayerTimesEngine.DAILY_TIMETABLE, names)
     }
 
     @Test

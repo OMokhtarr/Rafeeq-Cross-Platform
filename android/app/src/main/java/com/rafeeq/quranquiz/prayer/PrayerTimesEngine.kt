@@ -6,12 +6,31 @@ import com.batoulapps.adhan.Coordinates
 import com.batoulapps.adhan.HighLatitudeRule
 import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.PrayerTimes
+import com.batoulapps.adhan.SunnahTimes
 import com.batoulapps.adhan.data.DateComponents
 import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
 
-enum class PrayerName { FAJR, SUNRISE, DHUHR, ASR, MAGHRIB, ISHA }
+/**
+ * Every time the engine can report.
+ *
+ * The first six are the daily timetable. DUHA, MIDNIGHT and LAST_THIRD are
+ * supplementary: they are displayed, but they are not prayers — like SUNRISE
+ * they never carry a reminder and are never the "next prayer" in a countdown.
+ * PRAYERS_ONLY is the list that draws that line.
+ */
+enum class PrayerName {
+    FAJR,
+    SUNRISE,
+    DUHA,
+    DHUHR,
+    ASR,
+    MAGHRIB,
+    ISHA,
+    MIDNIGHT,
+    LAST_THIRD,
+}
 
 data class DayTimes(val times: Map<PrayerName, Date?>)
 
@@ -33,6 +52,31 @@ object PrayerTimesEngine {
 
     /** Sunrise is displayed with the prayers but is not one; it never gets a
      *  reminder and is never the "next prayer" in the countdown. */
+    /**
+     * Minutes after sunrise at which Duha is reported.
+     *
+     * adhan-java does not compute Duha, and there is no single agreed value —
+     * 20 and 24 are both in common use. 24 matches the timetable this page was
+     * designed against, and lives here so the convention is stated once.
+     */
+    const val DUHA_AFTER_SUNRISE_MINUTES = 24
+
+    /**
+     * The daily timetable: the five prayers plus sunrise, in display order.
+     *
+     * This is what the widget's six slots show. The supplementary times (Duha,
+     * Midnight, Last third) are deliberately excluded — they are secondary by
+     * nature and there is no room for them on a home-screen widget.
+     */
+    val DAILY_TIMETABLE = listOf(
+        PrayerName.FAJR,
+        PrayerName.SUNRISE,
+        PrayerName.DHUHR,
+        PrayerName.ASR,
+        PrayerName.MAGHRIB,
+        PrayerName.ISHA,
+    )
+
     private val PRAYERS_ONLY = listOf(
         PrayerName.FAJR,
         PrayerName.DHUHR,
@@ -101,14 +145,30 @@ object PrayerTimesEngine {
         tz: TimeZone,
     ): DayTimes {
         val p = computeFor(lat, lng, date, method, madhab, tz)
+
+        // SunnahTimes divides the night between sunset and the next dawn, so it
+        // is only meaningful when the day actually produced times. Inside the
+        // midnight-sun window adhan-java returns nulls throughout, and deriving
+        // from those would invent a time rather than report absence.
+        val sunnah = if (p.maghrib != null && p.fajr != null) {
+            runCatching { SunnahTimes(p) }.getOrNull()
+        } else {
+            null
+        }
+
         return DayTimes(
             mapOf(
                 PrayerName.FAJR to p.fajr,
                 PrayerName.SUNRISE to p.sunrise,
+                PrayerName.DUHA to p.sunrise?.let {
+                    Date(it.time + DUHA_AFTER_SUNRISE_MINUTES * 60_000L)
+                },
                 PrayerName.DHUHR to p.dhuhr,
                 PrayerName.ASR to p.asr,
                 PrayerName.MAGHRIB to p.maghrib,
                 PrayerName.ISHA to p.isha,
+                PrayerName.MIDNIGHT to sunnah?.middleOfTheNight,
+                PrayerName.LAST_THIRD to sunnah?.lastThirdOfTheNight,
             ),
         )
     }

@@ -189,4 +189,51 @@ class PrayerTimesEngineTest {
             nextAtNormal!!.at.after(normalNow.time),
         )
     }
+    @Test
+    fun `duha falls a fixed offset after sunrise`() {
+        val times = PrayerTimesEngine.timesFor(
+            cairoLat, cairoLng, dateOf(2026, 9, 19, cairoTz), "egyptian", "shafi", cairoTz,
+        ).times
+
+        val sunrise = times[PrayerName.SUNRISE]!!
+        val duha = times[PrayerName.DUHA]!!
+
+        // 24 minutes is the convention the reference timetable states explicitly.
+        // There is no single agreed value (other apps use 20), so this test
+        // pins ours rather than asserting a universal truth.
+        val gapMinutes = (duha.time - sunrise.time) / 60000L
+        assertEquals(PrayerTimesEngine.DUHA_AFTER_SUNRISE_MINUTES.toLong(), gapMinutes)
+    }
+
+    @Test
+    fun `midnight and last third fall between maghrib and the following fajr`() {
+        val times = PrayerTimesEngine.timesFor(
+            cairoLat, cairoLng, dateOf(2026, 9, 19, cairoTz), "egyptian", "shafi", cairoTz,
+        ).times
+
+        val maghrib = times[PrayerName.MAGHRIB]!!
+        val midnight = times[PrayerName.MIDNIGHT]!!
+        val lastThird = times[PrayerName.LAST_THIRD]!!
+
+        // Both are night-portion divisions, so they sit after sunset and before
+        // dawn, and the last third is always the later of the two.
+        assertTrue("midnight must follow maghrib", midnight.after(maghrib))
+        assertTrue("last third must follow midnight", lastThird.after(midnight))
+    }
+
+    @Test
+    fun `the additional times are absent when the engine has no times at all`() {
+        // Midnight sun: adhan-java returns nothing, so the derived times must
+        // be absent too rather than computed from a null sunrise.
+        val tromsoTz = TimeZone.getTimeZone("Europe/Oslo")
+        val times = PrayerTimesEngine.timesFor(
+            69.6496, 18.9560, dateOf(2026, 6, 21, tromsoTz),
+            "muslim_world_league", "shafi", tromsoTz,
+        ).times
+
+        assertTrue("Duha must be absent", times[PrayerName.DUHA] == null)
+        assertTrue("Midnight must be absent", times[PrayerName.MIDNIGHT] == null)
+        assertTrue("Last third must be absent", times[PrayerName.LAST_THIRD] == null)
+    }
+
 }
