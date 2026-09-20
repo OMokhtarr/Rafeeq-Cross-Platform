@@ -73,6 +73,9 @@ export interface AppStrings {
     locationNeededDesc: string;
     grantLocation: string;
     locationDenied: string;
+    show: string;
+    showDesc: string;
+    alwaysShown: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -535,6 +538,9 @@ const ar: AppStrings = {
     locationNeededDesc: "نحتاج إلى موقعك لحساب مواقيت الصلاة. يبقى الموقع على جهازك ولا يُرسَل إلى أي جهة.",
     grantLocation: "تحديد الموقع",
     locationDenied: "تعذّر تحديد الموقع. يمكنك السماح بذلك من إعدادات التطبيق.",
+    show: "الأوقات المعروضة",
+    showDesc: "اختر ما يظهر في القائمة",
+    alwaysShown: "دائماً",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1010,6 +1016,9 @@ const en: AppStrings = {
     locationNeededDesc: "Prayer times are calculated from your location. It stays on your device and is never sent anywhere.",
     grantLocation: "Use my location",
     locationDenied: "Could not get your location. You can allow it in the app's settings.",
+    show: "Shown times",
+    showDesc: "Choose what appears in the list",
+    alwaysShown: "Always",
   },
   exitConfirm: "Swipe again to exit",
   offline: {

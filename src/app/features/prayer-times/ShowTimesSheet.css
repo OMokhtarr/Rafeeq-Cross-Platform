@@ -1,0 +1,224 @@
+/* Show-times sheet — slide-up bottom sheet for choosing visible prayer rows. */
+
+.sts-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1700;
+  animation: sts-fade 0.18s ease-out;
+}
+
+@keyframes sts-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Sheet ────────────────────────────────────────────────────────────────── */
+
+.sts-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1800;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text-primary, #111111);
+  border: 1.5px solid var(--color-border-card, rgba(184, 134, 11, 0.22));
+  border-bottom: none;
+  border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+  max-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  padding-bottom: var(--safe-inset-bottom);
+  animation: sts-slide-up 0.22s ease-out;
+}
+
+.sts-sheet--night {
+  background: var(--color-bg-card, #1c1c1c);
+  color: var(--color-text-primary, #e8e8e8);
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes sts-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
+/* ── Handle ───────────────────────────────────────────────────────────────── */
+
+.sts-handle {
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 0;
+  background: var(--color-gold, #d4b48c);
+  opacity: 0.45;
+  border-radius: var(--radius-full, 9999px);
+  flex-shrink: 0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+
+.sts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  flex-shrink: 0;
+}
+
+.sts-header-text {
+  min-width: 0;
+}
+
+.sts-title {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.sts-desc {
+  margin: var(--space-1, 0.25rem) 0 0;
+  font-size: var(--text-sm, 0.72rem);
+  color: var(--color-text-secondary, #3a3a3a);
+  opacity: 0.85;
+}
+
+.sts-close {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  color: var(--color-text-secondary, #3a3a3a);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition-fast, 0.15s);
+}
+
+.sts-close:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.sts-sheet--night .sts-close {
+  color: var(--color-text-secondary, #b0a898);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sts-sheet--night .sts-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Body / rows ──────────────────────────────────────────────────────────── */
+
+.sts-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem) var(--space-5, 1.25rem);
+}
+
+.sts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-3, 0.75rem) 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+}
+
+.sts-row:last-child {
+  border-bottom: none;
+}
+
+.sts-row-label {
+  font-size: var(--text-md, 1rem);
+  color: var(--color-text-primary);
+}
+
+/* ── "Always shown" note (obligatory prayers) ────────────────────────────── */
+
+.sts-always {
+  font-size: var(--text-sm, 0.72rem);
+  font-weight: 600;
+  color: var(--color-gold, #b8860b);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.sts-sheet--night .sts-always {
+  color: var(--color-gold, #d4b48c);
+}
+
+/* ── Toggle switch ────────────────────────────────────────────────────────── */
+
+.sts-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.sts-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sts-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  transition: background var(--transition-fast, 0.15s);
+}
+
+.sts-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform var(--transition-fast, 0.15s);
+}
+
+.sts-toggle input:checked + .sts-toggle-slider {
+  background: var(--color-gold, #b8860b);
+}
+
+.sts-toggle input:checked + .sts-toggle-slider::before {
+  transform: translateX(18px);
+}
+
+[dir="rtl"] .sts-toggle input:checked + .sts-toggle-slider::before {
+  transform: translateX(-18px);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .sts-backdrop,
+  .sts-sheet {
+    animation: none;
+  }
+
+  .sts-toggle-slider,
+  .sts-toggle-slider::before {
+    transition: none;
+  }
+}
