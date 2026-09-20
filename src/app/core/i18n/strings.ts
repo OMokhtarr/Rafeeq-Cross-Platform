@@ -76,6 +76,11 @@ export interface AppStrings {
     show: string;
     showDesc: string;
     alwaysShown: string;
+    qibla: string;
+    qiblaFromNorth: string;
+    qiblaNoSensor: string;
+    qiblaCalibrate: string;
+    prayersTab: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -541,6 +546,11 @@ const ar: AppStrings = {
     show: "الأوقات المعروضة",
     showDesc: "اختر ما يظهر في القائمة",
     alwaysShown: "دائماً",
+    qibla: "القبلة",
+    qiblaFromNorth: "{deg}° من الشمال",
+    qiblaNoSensor: "لا تتوفر بوصلة في هذا الجهاز. اتجاه القبلة من الشمال مذكور أعلاه.",
+    qiblaCalibrate: "حرّك الجهاز على شكل رقم ٨ لمعايرة البوصلة",
+    prayersTab: "الصلوات",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1019,6 +1029,11 @@ const en: AppStrings = {
     show: "Shown times",
     showDesc: "Choose what appears in the list",
     alwaysShown: "Always",
+    qibla: "Qibla",
+    qiblaFromNorth: "{deg}° from north",
+    qiblaNoSensor: "This device has no compass. The bearing from north is shown above.",
+    qiblaCalibrate: "Move the device in a figure eight to calibrate the compass",
+    prayersTab: "Prayers",
   },
   exitConfirm: "Swipe again to exit",
   offline: {
