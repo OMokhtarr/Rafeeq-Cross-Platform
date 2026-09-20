@@ -18,6 +18,8 @@ jest.mock("@capacitor/core", () => {
     requestNotificationPermission: jest.fn(),
     getVisibleTimes: jest.fn(),
     setVisibleTimes: jest.fn(),
+    getWidgetInfo: jest.fn(),
+    requestPinWidget: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -51,6 +53,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   requestNotificationPermission: jest.Mock;
   getVisibleTimes: jest.Mock;
   setVisibleTimes: jest.Mock;
+  getWidgetInfo: jest.Mock;
+  requestPinWidget: jest.Mock;
 };
 const {
   getTimes,
@@ -61,6 +65,8 @@ const {
   requestNotificationPermission,
   getVisibleTimes,
   setVisibleTimes,
+  getWidgetInfo,
+  requestPinWidget,
 } = plugin;
 
 const geolocation = Geolocation as unknown as {
@@ -364,5 +370,50 @@ describe("visible times", () => {
     expect(setVisibleTimes).toHaveBeenCalledWith({
       times: ["fajr", "dhuhr", "asr", "maghrib", "isha"],
     });
+  });
+});
+
+describe("the home-screen widget", () => {
+  it("reports what the launcher supports and how many are placed", async () => {
+    getWidgetInfo.mockResolvedValue({ supported: true, placed: 2 });
+
+    const info = await service.getWidgetInfo();
+
+    expect(info).toEqual({ supported: true, placed: 2 });
+  });
+
+  it("treats a bridge failure as unsupported rather than throwing", async () => {
+    // The page renders its button off `supported`, so a rejected call must
+    // resolve to "no button" — an unhandled rejection here would break the
+    // whole page load, which shares one Promise.all with the times.
+    getWidgetInfo.mockRejectedValue(new Error("bridge error"));
+
+    const info = await service.getWidgetInfo();
+
+    expect(info).toEqual({ supported: false, placed: 0 });
+  });
+
+  it("reports whether the launcher was asked, not whether it was added", async () => {
+    // The launcher owns the confirmation dialog and never reports the outcome
+    // back. `requested` means asked; treating it as placed would make the page
+    // claim something it cannot know.
+    requestPinWidget.mockResolvedValue({ requested: true });
+
+    const requested = await service.requestPinWidget();
+
+    expect(requested).toBe(true);
+    expect(requestPinWidget).toHaveBeenCalled();
+  });
+
+  it("reports false when the launcher refuses the request", async () => {
+    requestPinWidget.mockResolvedValue({ requested: false });
+
+    expect(await service.requestPinWidget()).toBe(false);
+  });
+
+  it("reports false rather than throwing when the plugin call fails", async () => {
+    requestPinWidget.mockRejectedValue(new Error("bridge error"));
+
+    expect(await service.requestPinWidget()).toBe(false);
   });
 });

@@ -81,6 +81,10 @@ export interface AppStrings {
     qiblaNoSensor: string;
     qiblaCalibrate: string;
     prayersTab: string;
+    /** Button that asks the launcher to pin the home-screen widget. */
+    addWidget: string;
+    /** Shown beneath it once at least one copy is already on the home screen. */
+    widgetAdded: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -551,6 +555,8 @@ const ar: AppStrings = {
     qiblaNoSensor: "لا تتوفر بوصلة في هذا الجهاز. اتجاه القبلة من الشمال مذكور أعلاه.",
     qiblaCalibrate: "حرّك الجهاز على شكل رقم ٨ لمعايرة البوصلة",
     prayersTab: "الصلوات",
+    addWidget: "إضافة الأداة إلى الشاشة الرئيسية",
+    widgetAdded: "الأداة مضافة بالفعل",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1034,6 +1040,8 @@ const en: AppStrings = {
     qiblaNoSensor: "This device has no compass. The bearing from north is shown above.",
     qiblaCalibrate: "Move the device in a figure eight to calibrate the compass",
     prayersTab: "Prayers",
+    addWidget: "Add widget to home screen",
+    widgetAdded: "Widget already added",
   },
   exitConfirm: "Swipe again to exit",
   offline: {

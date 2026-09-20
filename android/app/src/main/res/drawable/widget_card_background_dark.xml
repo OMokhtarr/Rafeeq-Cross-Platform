@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The deck card on a dark widget background: lifted a step off the strip
+  rather than tinted, so the accent countdown stays the brightest thing on it.
+  Used only by layout-night/widget_prayer_card.xml.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#33302A" />
+    <corners android:radius="12dp" />
+</shape>

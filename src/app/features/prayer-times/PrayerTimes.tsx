@@ -28,6 +28,8 @@ import {
   getPrayerConfig,
   setPrayerConfig,
   getVisibleTimes,
+  getWidgetInfo,
+  requestPinWidget,
 } from "../../core/services/prayer/prayer-times.service";
 import {
   ADDITIONAL_KEYS,
@@ -100,18 +102,27 @@ const PrayerTimes: React.FC = () => {
   const [visible, setVisible] = useState<PrayerKey[] | null>(null);
   const [denied, setDenied] = useState(false);
   const [showSheetOpen, setShowSheetOpen] = useState(false);
+  const [widget, setWidget] = useState<{
+    supported: boolean;
+    placed: number;
+  } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
 
   const load = useCallback(async () => {
-    const [cfg, d, v] = await Promise.all([
+    const [cfg, d, v, w] = await Promise.all([
       getPrayerConfig(),
       loadPrayerDay(),
       getVisibleTimes(),
+      // Re-read on every load, not once on mount: the widget is added and
+      // removed on the home screen, outside this page entirely, so the count
+      // is only ever right as of the moment the page is entered.
+      getWidgetInfo(),
     ]);
     setConfig({ method: cfg.method, madhab: cfg.madhab });
     setDay(d);
     setVisible(v);
+    setWidget(w);
   }, []);
 
   useEffect(() => {
@@ -170,6 +181,18 @@ const PrayerTimes: React.FC = () => {
     },
     [load],
   );
+
+  /**
+   * Hands off to the launcher's own pin dialog.
+   *
+   * Nothing is reloaded afterwards and no confirmation is shown: the launcher
+   * owns that dialog, never reports the outcome back, and the app is in the
+   * background while the user decides. The refreshed count on the next
+   * `useIonViewWillEnter` is the honest place for that to surface.
+   */
+  const handleAddWidget = useCallback(async () => {
+    await requestPinWidget();
+  }, []);
 
   const hijriDate = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
     day: "numeric",
@@ -365,6 +388,49 @@ const PrayerTimes: React.FC = () => {
                           aria-label={tp.madhab}
                         />
                       </div>
+
+                      {/* Absent when the launcher cannot pin — there is no
+                          way to force it, and a dead control would be worse
+                          than none. The widget can still be added by
+                          long-pressing the home screen. */}
+                      {widget?.supported && (
+                        <div>
+                          <button
+                            type="button"
+                            className="pt-widget-btn"
+                            onClick={handleAddWidget}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              aria-hidden="true"
+                            >
+                              <rect
+                                x="3"
+                                y="4"
+                                width="18"
+                                height="16"
+                                rx="2.5"
+                              />
+                              <rect
+                                x="6"
+                                y="9"
+                                width="12"
+                                height="6"
+                                rx="1.5"
+                                fill="currentColor"
+                                stroke="none"
+                              />
+                            </svg>
+                            {tp.addWidget}
+                          </button>
+                          {widget.placed > 0 && (
+                            <p className="pt-widget-note">{tp.widgetAdded}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <ShowTimesSheet

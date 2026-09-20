@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Night variant of one card in the widget's swipeable deck: light text on a dark
+  card. Every view id here must also exist in
+  layout/widget_prayer_card.xml — PrayerDeckFactory sets views by id and
+  a mismatch crashes whichever configuration is inflated.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/card_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_card_background_dark"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/card_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/card_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:maxLines="1" />
+
+    <!--
+      Ticked by the system inside the launcher process, so the seconds advance
+      with no app involvement. Countdown mode and the base timestamp are both
+      set from PrayerDeckFactory.
+    -->
+    <Chronometer
+        android:id="@+id/card_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:maxLines="1" />
+
+</LinearLayout>

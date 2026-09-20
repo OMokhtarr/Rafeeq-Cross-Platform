@@ -10,22 +10,28 @@ import android.widget.RemoteViews
 import com.rafeeq.quranquiz.MainActivity
 import com.rafeeq.quranquiz.R
 import java.text.SimpleDateFormat
+import java.time.ZoneId
+import java.time.chrono.HijrahDate
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Home-screen widget: `RemoteViews` inflated by the launcher process, which
- * has no WebView and cannot run JavaScript. It therefore reads
- * [PrayerTimesEngine] and [PrayerConfig] directly, never a cache written by
- * the app — the widget must be right on a launcher restart, after a reboot,
- * and on a day the app was never opened.
+ * Home-screen widget: a 4x1 strip with a date column and a swipeable deck of
+ * prayer cards, each counting down to its own time.
+ *
+ * `RemoteViews` are inflated by the launcher process, which has no WebView and
+ * cannot run JavaScript. The widget therefore reads [PrayerTimesEngine] and
+ * [PrayerConfig] directly, never a cache written by the app — it must be right
+ * on a launcher restart, after a reboot, and on a day the app was never opened.
  *
  * Refreshes are pushed, not pulled: `updatePeriodMillis` is 0 in the widget
  * info XML (the system's own cap of 30 minutes would fire pointlessly), and
- * instead [refresh] is called from the prayer alarm chain (each prayer
- * firing, and the midnight roll) and from the plugin whenever the user
- * changes location or calculation settings.
+ * instead [refresh] is called from the prayer alarm chain (each prayer firing,
+ * and the midnight roll) and from the plugin whenever the user changes
+ * location or calculation settings. The per-second countdown is not a refresh:
+ * it is a `Chronometer` ticked by the system in the launcher's own process.
  */
 class PrayerWidgetProvider : AppWidgetProvider() {
 
@@ -67,68 +73,47 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 
     companion object {
 
-        /** Name view id, time view id, for each of the six fixed slots in the
-         *  layout, in display order. These are generic positions, not
-         *  per-prayer ones — which prayer lands in slot *i* depends on the
-         *  user's visible-times preference, so no [PrayerName] is paired in
-         *  here. Kept as plain data so the id-pairing itself — the thing most
-         *  likely to drift between the two layout files — is easy to see and
-         *  to check for internal consistency. */
-        internal val VIEW_IDS: List<Pair<Int, Int>> = listOf(
-            Pair(R.id.name_fajr, R.id.time_fajr),
-            Pair(R.id.name_sunrise, R.id.time_sunrise),
-            Pair(R.id.name_dhuhr, R.id.time_dhuhr),
-            Pair(R.id.name_asr, R.id.time_asr),
-            Pair(R.id.name_maghrib, R.id.time_maghrib),
-            Pair(R.id.name_isha, R.id.time_isha),
-        )
-
-        private const val COLOR_ACCENT = 0xFFD4B48C.toInt()
+        internal const val COLOR_ACCENT = 0xFFD4B48C.toInt()
         private const val COLOR_LIGHT_TEXT = 0xFF000000.toInt()
         private const val COLOR_DARK_TEXT = 0xFFFFFFFF.toInt()
 
         /**
-         * Priority order for the widget's fixed slots, highest first:
-         * the five obligatory prayers plus sunrise (PrayerTimesEngine's
+         * Display order for the deck's cards, highest first: the five
+         * obligatory prayers plus sunrise (PrayerTimesEngine's
          * DAILY_TIMETABLE, already in that interleaved order), then the
          * supplementary times in enum declaration order.
          *
          * Built explicitly — rather than relying on PrayerName.values()'
          * declaration order, where DUHA sits ahead of four obligatory
-         * prayers — so an obligatory prayer can never be displaced by a
-         * supplementary one when both are visible but slots run out.
+         * prayers — so the deck reads as a timetable rather than as the enum.
          * DAILY_TIMETABLE by construction contains only the five obligatory
          * prayers and sunrise, so nothing in the supplementary tail can ever
-         * outrank an obligatory prayer: that guarantee is structural, not a
-         * coincidence of list order.
+         * sort ahead of an obligatory prayer: that guarantee is structural,
+         * not a coincidence of list order.
          */
         internal val SLOT_PRIORITY: List<PrayerName> =
             PrayerTimesEngine.DAILY_TIMETABLE +
                 PrayerName.values().filter { it !in PrayerTimesEngine.DAILY_TIMETABLE }
 
         /**
-         * Picks which names fill the widget's fixed slots, in the order they
-         * should be displayed.
+         * Picks which names become cards, in the order the user swipes
+         * through them.
          *
          * A name is eligible only if it is both in [visible] (lower-cased
-         * prayer names, as stored in PrayerConfig) and has a non-null time
-         * today ([withTime] — adhan-java returns null inside the midnight-sun
-         * window). Eligible names are then ranked by [SLOT_PRIORITY] before
-         * truncating to [slotCount], so a supplementary time (e.g. Duha) can
-         * only ever fill a slot none of the five obligatory prayers needs —
-         * never displace one of them. Pure and Context-free so it is directly
-         * unit-testable; the render path below supplies the two sets and does
-         * nothing else with the ranking.
+         * prayer names, as stored in PrayerConfig) and has a time
+         * ([withTime] — adhan-java returns null inside the midnight-sun
+         * window, and a card showing a name with no time must never exist).
+         * Eligible names are then ordered by [SLOT_PRIORITY].
+         *
+         * Nothing is truncated: a deck holds a card per visible time, unlike
+         * the fixed six slots this widget had before it became a strip. Pure
+         * and Context-free so it is directly unit-testable.
          */
         internal fun selectForDisplay(
             visible: Set<String>,
             withTime: Set<PrayerName>,
-            slotCount: Int = VIEW_IDS.size,
-        ): List<PrayerName> {
-            val eligible = SLOT_PRIORITY.filter { name ->
-                name.name.lowercase() in visible && name in withTime
-            }
-            return eligible.take(slotCount)
+        ): List<PrayerName> = SLOT_PRIORITY.filter { name ->
+            name.name.lowercase() in visible && name in withTime
         }
 
         /**
@@ -142,6 +127,15 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val mgr = AppWidgetManager.getInstance(ctx)
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, PrayerWidgetProvider::class.java))
             ids.forEach { id -> render(ctx, mgr, id) }
+            // Without this the launcher serves cached cards: yesterday's
+            // times, and countdowns whose targets have already passed.
+            // updateAppWidget alone does not re-ask the factory.
+            //
+            // Deprecated in favour of RemoteViews.setRemoteAdapter(int, RemoteCollectionItems),
+            // which needs API 31; minSdk here is 26, so this remains the only
+            // way to invalidate a collection on the versions this app supports.
+            @Suppress("DEPRECATION")
+            mgr.notifyAppWidgetViewDataChanged(ids, R.id.widget_deck)
         }
 
         private fun render(ctx: Context, mgr: AppWidgetManager, widgetId: Int) {
@@ -155,85 +149,92 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            views.setOnClickPendingIntent(R.id.widget_root, openApp)
+            // The StackView consumes horizontal swipes, so the deck cannot
+            // also be a plain click target — its cards fill in a template
+            // instead (see below), which is how a collection child must
+            // receive clicks. The date column keeps an ordinary intent.
+            views.setOnClickPendingIntent(R.id.widget_date_column, openApp)
+            views.setPendingIntentTemplate(R.id.widget_deck, openApp)
+
+            val tz = TimeZone.getDefault()
+            val now = Date()
+            val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
+            views.setTextViewText(R.id.widget_date, dateFmt.format(now))
+            views.setTextViewText(R.id.widget_hijri, hijriLabel(now, tz))
 
             val coords = PrayerConfig.coords(ctx)
             if (coords == null) {
                 // Never show times computed from a guessed location: prompt
                 // instead, and stop before touching the engine at all.
                 views.setViewVisibility(R.id.widget_prompt, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.widget_times_row, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_deck, android.view.View.GONE)
                 mgr.updateAppWidget(widgetId, views)
                 return
             }
 
             views.setViewVisibility(R.id.widget_prompt, android.view.View.GONE)
-            views.setViewVisibility(R.id.widget_times_row, android.view.View.VISIBLE)
+            views.setViewVisibility(R.id.widget_deck, android.view.View.VISIBLE)
 
-            val (lat, lng) = coords
-            val method = PrayerConfig.method(ctx)
-            val madhab = PrayerConfig.madhab(ctx)
-            val tz = TimeZone.getDefault()
-            val now = Date()
+            val color = baseTextColor(ctx)
+            views.setTextColor(R.id.widget_date, color)
+            views.setTextColor(R.id.widget_hijri, color)
 
-            val timeFmt = SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }
-            val dateFmt = SimpleDateFormat("d MMM", Locale.US).apply { timeZone = tz }
-            views.setTextViewText(R.id.widget_date, dateFmt.format(now))
-
-            val day = PrayerTimesEngine.timesFor(lat, lng, now, method, madhab, tz)
-            // Null if the engine cannot determine one at all (e.g. midnight
-            // sun at high latitude) — nothing is highlighted in that case,
-            // rather than guessing.
-            val next = PrayerTimesEngine.nextAfter(now, lat, lng, method, madhab, tz)
-
-            // The widget has six fixed slots, but which prayer lands in which
-            // slot is no longer fixed: it follows the user's visible-times
-            // preference. Hiding sunrise, for example, frees a slot for Duha.
-            // Only names that are both visible AND have a non-null time are
-            // eligible — adhan-java returns a null time inside the
-            // midnight-sun window, and a slot must never show a name with no
-            // time next to it. Eligible names are ranked by SLOT_PRIORITY
-            // before truncating to the number of physical slots the layout
-            // has, so a supplementary time can only fill a slot none of the
-            // five obligatory prayers needs.
-            val visible = PrayerConfig.visibleTimes(ctx)
-            val withTime = PrayerName.values().filter { name -> day.times[name] != null }.toSet()
-            val toShow = selectForDisplay(visible, withTime)
-
-            VIEW_IDS.forEachIndexed { index, (nameViewId, timeViewId) ->
-                val name = toShow.getOrNull(index)
-                if (name == null) {
-                    // Fewer visible entries than slots: hide the leftover
-                    // slot entirely rather than leaving stale text from a
-                    // previous render showing through.
-                    views.setViewVisibility(nameViewId, android.view.View.GONE)
-                    views.setViewVisibility(timeViewId, android.view.View.GONE)
-                    return@forEachIndexed
-                }
-
-                views.setViewVisibility(nameViewId, android.view.View.VISIBLE)
-                views.setViewVisibility(timeViewId, android.view.View.VISIBLE)
-                views.setTextViewText(nameViewId, nameLabel(ctx, name))
-
-                val at = day.times[name]
-                // Defensive: toShow already filtered out null times, but
-                // never trust a map lookup with `!!` in a render path whose
-                // crash can make the launcher drop the widget.
-                views.setTextViewText(timeViewId, if (at != null) timeFmt.format(at) else "")
-
-                val isHighlighted = next != null && next.name == name
-                val color = if (isHighlighted) COLOR_ACCENT else baseTextColor(ctx)
-                views.setTextColor(nameViewId, color)
-                views.setTextColor(timeViewId, color)
-            }
+            // The adapter intent must be distinguishable per widget id, or the
+            // launcher reuses one factory across instances: intents that differ
+            // only in extras are treated as equal, so the id goes in the data.
+            val deckIntent = Intent(ctx, PrayerDeckService::class.java)
+            deckIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            deckIntent.data =
+                android.net.Uri.parse(deckIntent.toUri(Intent.URI_INTENT_SCHEME))
+            // Deprecated in favour of the RemoteCollectionItems overload (API
+            // 31), which would inline the cards into the RemoteViews and drop
+            // the service entirely. minSdk here is 26, so the service-backed
+            // adapter stays until this app's floor rises.
+            @Suppress("DEPRECATION")
+            views.setRemoteAdapter(R.id.widget_deck, deckIntent)
+            views.setEmptyView(R.id.widget_deck, R.id.widget_prompt)
 
             mgr.updateAppWidget(widgetId, views)
+
+            // Open on the next prayer so the widget answers "how long until
+            // the next prayer?" before the user swipes at all.
+            val (lat, lng) = coords
+            val next = PrayerTimesEngine.nextAfter(
+                now,
+                lat,
+                lng,
+                PrayerConfig.method(ctx),
+                PrayerConfig.madhab(ctx),
+                tz,
+            )
+            val cards = PrayerDeck.build(ctx, now)
+            val initial = PrayerDeck.initialIndex(cards, next)
+            if (initial > 0) {
+                val scroll = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
+                scroll.setDisplayedChild(R.id.widget_deck, initial)
+                mgr.partiallyUpdateAppWidget(widgetId, scroll)
+            }
+        }
+
+        /**
+         * The Hijri date, e.g. "10 Rab. II 1448".
+         *
+         * java.time's HijrahDate is the tabular Umm al-Qura calendar, which can
+         * differ by a day from local sighting — it is a label beside the
+         * Gregorian date, never something a prayer time is computed from.
+         * Available since API 26, which is this app's minSdk.
+         */
+        private fun hijriLabel(now: Date, tz: TimeZone): String {
+            val zone = runCatching { tz.toZoneId() }.getOrDefault(ZoneId.systemDefault())
+            val local = now.toInstant().atZone(zone).toLocalDate()
+            val hijri = HijrahDate.from(local)
+            return DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US).format(hijri)
         }
 
         /** Arabic display label for a prayer name, shown in the widget
          *  regardless of the app's own language — the launcher process has
          *  no access to the JS i18n strings. */
-        private fun nameLabel(ctx: Context, name: PrayerName): String {
+        internal fun nameLabel(ctx: Context, name: PrayerName): String {
             val resId = when (name) {
                 PrayerName.FAJR -> R.string.prayer_widget_name_fajr
                 PrayerName.SUNRISE -> R.string.prayer_widget_name_sunrise
@@ -249,12 +250,12 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         }
 
         /**
-         * The non-highlighted text color, matching whichever layout variant
-         * the system actually inflated (day vs. night) rather than assuming
-         * one — the widget follows the *device's* configuration, since
-         * RemoteViews has no access to the app's own in-WebView theme.
+         * The base text color, matching whichever layout variant the system
+         * actually inflated (day vs. night) rather than assuming one — the
+         * widget follows the *device's* configuration, since RemoteViews has
+         * no access to the app's own in-WebView theme.
          */
-        private fun baseTextColor(ctx: Context): Int {
+        internal fun baseTextColor(ctx: Context): Int {
             val nightMode = ctx.resources.configuration.uiMode and
                 android.content.res.Configuration.UI_MODE_NIGHT_MASK
             return if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {

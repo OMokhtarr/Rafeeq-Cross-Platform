@@ -39,6 +39,8 @@ interface RafeeqPrayerPlugin {
   requestNotificationPermission(): Promise<{ granted: boolean }>;
   getVisibleTimes(): Promise<{ times: string[] }>;
   setVisibleTimes(options: { times: string[] }): Promise<void>;
+  getWidgetInfo(): Promise<{ supported: boolean; placed: number }>;
+  requestPinWidget(): Promise<{ requested: boolean }>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -212,4 +214,47 @@ export async function getVisibleTimes(): Promise<PrayerKey[]> {
 export async function setVisibleTimes(times: PrayerKey[]): Promise<void> {
   if (!isNative) return;
   await RafeeqPrayer.setVisibleTimes({ times });
+}
+
+/**
+ * Whether the home-screen widget can be offered from inside the app, and how
+ * many copies are already placed.
+ *
+ * Pinning is the launcher's decision: not every launcher implements it, and
+ * there is no way to force one that doesn't. `supported: false` is the honest
+ * answer off-device too — a browser has no home screen — and the page renders
+ * that by omitting its button rather than showing a dead control.
+ */
+export async function getWidgetInfo(): Promise<{
+  supported: boolean;
+  placed: number;
+}> {
+  if (!isNative) return { supported: false, placed: 0 };
+
+  try {
+    return await RafeeqPrayer.getWidgetInfo();
+  } catch {
+    // A bridge failure is indistinguishable from an unsupported launcher as
+    // far as the page is concerned: either way there is no button to show.
+    return { supported: false, placed: 0 };
+  }
+}
+
+/**
+ * Ask the launcher to add the prayer widget to the home screen.
+ *
+ * Resolves true once the launcher has been *asked*, not once the widget
+ * exists — the launcher owns the confirmation dialog and never reports the
+ * outcome back. Treating "requested" as "placed" would make the page claim
+ * something it cannot know.
+ */
+export async function requestPinWidget(): Promise<boolean> {
+  if (!isNative) return false;
+
+  try {
+    const { requested } = await RafeeqPrayer.requestPinWidget();
+    return requested;
+  } catch {
+    return false;
+  }
 }

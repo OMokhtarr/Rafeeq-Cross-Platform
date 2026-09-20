@@ -74,6 +74,15 @@
                 android:resource="@xml/widget_prayer_times_info" />
         </receiver>
 
+        <!-- Backs the widget's swipeable card deck. The launcher binds this
+             directly to pull each card, which is why it must be exported and
+             permission-guarded: BIND_REMOTEVIEWS is held by the system only,
+             so the export surface is the launcher and nothing else. -->
+        <service
+            android:name=".prayer.PrayerDeckService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
     </application>
 
     <!-- Permissions -->

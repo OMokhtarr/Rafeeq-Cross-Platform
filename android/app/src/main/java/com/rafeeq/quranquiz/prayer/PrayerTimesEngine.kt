@@ -64,16 +64,14 @@ object PrayerTimesEngine {
     /**
      * The daily timetable: the five prayers plus sunrise, in display order.
      *
-     * This is the display-priority prefix used wherever a limited number of
-     * slots must be filled from a larger, user-configurable set of visible
-     * times (see PrayerWidgetProvider.selectForDisplay): these six names
-     * always outrank the supplementary times (Duha, Midnight, Last third),
-     * so a supplementary time can only ever occupy a slot this list left
-     * spare — never one it needs. The five obligatory prayers must never be
-     * displaced; this list's order also happens to put SUNRISE at rank 2
-     * (interleaved between FAJR and DHUHR) rather than after the obligatory
-     * five, which is what makes "all nine visible" resolve to "the five
-     * prayers plus sunrise" rather than something else.
+     * This is the display-priority prefix used wherever the user's
+     * configurable set of visible times must be put in a sensible order (see
+     * PrayerWidgetProvider.selectForDisplay): these six names always sort
+     * ahead of the supplementary times (Duha, Midnight, Last third), so a
+     * timetable reads as a timetable rather than as PrayerName's declaration
+     * order, where DUHA sits ahead of four obligatory prayers. The order here
+     * also interleaves SUNRISE at rank 2 (between FAJR and DHUHR) rather than
+     * placing it after the obligatory five.
      */
     val DAILY_TIMETABLE = listOf(
         PrayerName.FAJR,

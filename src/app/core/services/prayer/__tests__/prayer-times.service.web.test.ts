@@ -23,6 +23,8 @@ jest.mock("@capacitor/core", () => {
     requestNotificationPermission: jest.fn(),
     getVisibleTimes: jest.fn(),
     setVisibleTimes: jest.fn(),
+    getWidgetInfo: jest.fn(),
+    requestPinWidget: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -52,6 +54,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   requestNotificationPermission: jest.Mock;
   getVisibleTimes: jest.Mock;
   setVisibleTimes: jest.Mock;
+  getWidgetInfo: jest.Mock;
+  requestPinWidget: jest.Mock;
 };
 
 beforeEach(() => {
@@ -138,5 +142,24 @@ describe("visible times on web", () => {
   it("makes setVisibleTimes a no-op", async () => {
     await expect(service.setVisibleTimes(["fajr"])).resolves.toBeUndefined();
     expect(plugin.setVisibleTimes).not.toHaveBeenCalled();
+  });
+});
+
+describe("the home-screen widget on web", () => {
+  it("reports the widget unsupported, so the page renders no button", async () => {
+    // A browser has no home screen to pin to. `supported: false` is what the
+    // page keys its button off, so this is the check that keeps a control
+    // that cannot work from ever appearing off-device.
+    const info = await service.getWidgetInfo();
+
+    expect(info).toEqual({ supported: false, placed: 0 });
+    expect(plugin.getWidgetInfo).not.toHaveBeenCalled();
+  });
+
+  it("declines to request a pin rather than throwing at the absent bridge", async () => {
+    const requested = await service.requestPinWidget();
+
+    expect(requested).toBe(false);
+    expect(plugin.requestPinWidget).not.toHaveBeenCalled();
   });
 });

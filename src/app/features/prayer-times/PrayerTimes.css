@@ -389,6 +389,64 @@ ion-content::part(scroll) {
   font-family: var(--font-latin);
 }
 
+/* ── Add-widget button ────────────────────────── */
+/* Deliberately not styled as .pt-grant-btn. That gold fill is the page's one
+   primary action: it resolves a blocking state, where nothing works until the
+   user taps it. Adding the widget is optional and additive, so it takes the
+   card surface of the settings rows it sits among — gold on the icon and
+   label, not behind them. Two gold fills would read as two primaries and
+   imply the page is incomplete without the widget. */
+.pt-widget-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-gold);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+[dir="ltr"] .pt-widget-btn {
+  font-family: var(--font-latin);
+}
+
+.pt-widget-btn:active {
+  opacity: 0.85;
+}
+
+/* The icon is the widget itself — a filled cell in an outlined frame — so the
+   control shows what it produces rather than relying on a generic plus. */
+.pt-widget-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Sits under the button once a copy is already placed. A note, not a warning:
+   Android allows more than one, so the button stays live. */
+.pt-widget-note {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: var(--space-2) 0 0;
+}
+
+[dir="ltr"] .pt-widget-note {
+  font-family: var(--font-latin);
+}
+
 /* ── Separator ────────────────────────────────── */
 /* Marks the boundary before the first supplementary (non-obligatory) row
    that the visible-set preference lets through. */
@@ -402,6 +460,7 @@ ion-content::part(scroll) {
   .pt-page-wrapper,
   .pt-row,
   .pt-grant-btn,
+  .pt-widget-btn,
   .pt-segment,
   .pt-menu-btn {
     transition: none;
