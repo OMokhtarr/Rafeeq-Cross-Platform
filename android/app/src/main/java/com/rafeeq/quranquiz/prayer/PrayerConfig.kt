@@ -19,6 +19,7 @@ object PrayerConfig {
     private const val KEY_LNG = "lng"
     private const val KEY_METHOD = "method"
     private const val KEY_MADHAB = "madhab"
+    private const val KEY_PLACE_NAME = "place_name"
 
     /** Sunrise is absent by design: it is displayed with the prayers but is
      *  not one, and never carries a reminder. */
@@ -45,7 +46,21 @@ object PrayerConfig {
         prefs(ctx).edit()
             .putLong(KEY_LAT, lat.toRawBits())
             .putLong(KEY_LNG, lng.toRawBits())
+            // A name belongs to the coordinates it was resolved for. Dropping
+            // it here means a user who travels and re-fixes can never be shown
+            // the city they left, even if the new lookup fails.
+            .remove(KEY_PLACE_NAME)
             .apply()
+    }
+
+    /** The cached human name for the stored coordinates, if one resolved. */
+    fun placeName(ctx: Context): String? =
+        prefs(ctx).getString(KEY_PLACE_NAME, null)
+
+    fun setPlaceName(ctx: Context, name: String?) {
+        val e = prefs(ctx).edit()
+        if (name.isNullOrBlank()) e.remove(KEY_PLACE_NAME) else e.putString(KEY_PLACE_NAME, name)
+        e.apply()
     }
 
     fun method(ctx: Context): String =
