@@ -67,17 +67,20 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 
     companion object {
 
-        /** Prayer name view id, time view id, for each of the six displayed
-         *  entries, in display order. Kept as plain data so the id-pairing
-         *  itself — the thing most likely to drift between the two layout
-         *  files — is easy to see and to check for internal consistency. */
-        internal val VIEW_IDS: List<Triple<PrayerName, Int, Int>> = listOf(
-            Triple(PrayerName.FAJR, R.id.name_fajr, R.id.time_fajr),
-            Triple(PrayerName.SUNRISE, R.id.name_sunrise, R.id.time_sunrise),
-            Triple(PrayerName.DHUHR, R.id.name_dhuhr, R.id.time_dhuhr),
-            Triple(PrayerName.ASR, R.id.name_asr, R.id.time_asr),
-            Triple(PrayerName.MAGHRIB, R.id.name_maghrib, R.id.time_maghrib),
-            Triple(PrayerName.ISHA, R.id.name_isha, R.id.time_isha),
+        /** Name view id, time view id, for each of the six fixed slots in the
+         *  layout, in display order. These are generic positions, not
+         *  per-prayer ones — which prayer lands in slot *i* depends on the
+         *  user's visible-times preference, so no [PrayerName] is paired in
+         *  here. Kept as plain data so the id-pairing itself — the thing most
+         *  likely to drift between the two layout files — is easy to see and
+         *  to check for internal consistency. */
+        internal val VIEW_IDS: List<Pair<Int, Int>> = listOf(
+            Pair(R.id.name_fajr, R.id.time_fajr),
+            Pair(R.id.name_sunrise, R.id.time_sunrise),
+            Pair(R.id.name_dhuhr, R.id.time_dhuhr),
+            Pair(R.id.name_asr, R.id.time_asr),
+            Pair(R.id.name_maghrib, R.id.time_maghrib),
+            Pair(R.id.name_isha, R.id.time_isha),
         )
 
         private const val COLOR_ACCENT = 0xFFD4B48C.toInt()
@@ -139,11 +142,38 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // rather than guessing.
             val next = PrayerTimesEngine.nextAfter(now, lat, lng, method, madhab, tz)
 
-            VIEW_IDS.forEach { (name, nameViewId, timeViewId) ->
+            // The widget has six fixed slots, but which prayer lands in which
+            // slot is no longer fixed: it follows the user's visible-times
+            // preference. Hiding sunrise, for example, frees a slot for Duha.
+            // Only names that are both visible AND have a non-null time are
+            // eligible — adhan-java returns a null time inside the
+            // midnight-sun window, and a slot must never show a name with no
+            // time next to it. The result is truncated to the number of
+            // physical slots the layout has.
+            val visible = PrayerConfig.visibleTimes(ctx)
+            val toShow = PrayerName.values()
+                .filter { name -> name.name.lowercase() in visible && day.times[name] != null }
+                .take(VIEW_IDS.size)
+
+            VIEW_IDS.forEachIndexed { index, (nameViewId, timeViewId) ->
+                val name = toShow.getOrNull(index)
+                if (name == null) {
+                    // Fewer visible entries than slots: hide the leftover
+                    // slot entirely rather than leaving stale text from a
+                    // previous render showing through.
+                    views.setViewVisibility(nameViewId, android.view.View.GONE)
+                    views.setViewVisibility(timeViewId, android.view.View.GONE)
+                    return@forEachIndexed
+                }
+
+                views.setViewVisibility(nameViewId, android.view.View.VISIBLE)
+                views.setViewVisibility(timeViewId, android.view.View.VISIBLE)
+                views.setTextViewText(nameViewId, nameLabel(ctx, name))
+
                 val at = day.times[name]
-                // A null individual time (same high-latitude edge case) is
-                // left blank rather than crashing the launcher or showing a
-                // fabricated value.
+                // Defensive: toShow already filtered out null times, but
+                // never trust a map lookup with `!!` in a render path whose
+                // crash can make the launcher drop the widget.
                 views.setTextViewText(timeViewId, if (at != null) timeFmt.format(at) else "")
 
                 val isHighlighted = next != null && next.name == name
@@ -153,6 +183,24 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             }
 
             mgr.updateAppWidget(widgetId, views)
+        }
+
+        /** Arabic display label for a prayer name, shown in the widget
+         *  regardless of the app's own language — the launcher process has
+         *  no access to the JS i18n strings. */
+        private fun nameLabel(ctx: Context, name: PrayerName): String {
+            val resId = when (name) {
+                PrayerName.FAJR -> R.string.prayer_widget_name_fajr
+                PrayerName.SUNRISE -> R.string.prayer_widget_name_sunrise
+                PrayerName.DUHA -> R.string.prayer_widget_name_duha
+                PrayerName.DHUHR -> R.string.prayer_widget_name_dhuhr
+                PrayerName.ASR -> R.string.prayer_widget_name_asr
+                PrayerName.MAGHRIB -> R.string.prayer_widget_name_maghrib
+                PrayerName.ISHA -> R.string.prayer_widget_name_isha
+                PrayerName.MIDNIGHT -> R.string.prayer_widget_name_midnight
+                PrayerName.LAST_THIRD -> R.string.prayer_widget_name_last_third
+            }
+            return ctx.getString(resId)
         }
 
         /**

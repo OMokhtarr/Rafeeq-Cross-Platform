@@ -25,6 +25,8 @@ import java.util.TimeZone
  *   setLocation({ lat, lng })            — store coordinates for every consumer
  *   getConfig() / setConfig({...})       — calculation method and madhab
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
+ *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
+ *   getVisibleTimes() / setVisibleTimes({...}) — which prayer times the user wants shown
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -172,6 +174,50 @@ class RafeeqPrayerPlugin : Plugin() {
         }
 
         requestPermissionForAlias("notifications", call, "notificationPermissionCallback")
+    }
+
+    /**
+     * The qibla direction for the stored location.
+     *
+     * Resolves hasLocation:false rather than rejecting when no coordinates are
+     * stored — the same designed state getTimes uses, which the page renders as
+     * its permission prompt.
+     */
+    @PluginMethod
+    fun getQibla(call: PluginCall) {
+        val result = JSObject()
+        val coords = PrayerConfig.coords(context)
+        if (coords == null) {
+            result.put("hasLocation", false)
+            call.resolve(result)
+            return
+        }
+        val (lat, lng) = coords
+        result.put("hasLocation", true)
+        result.put("bearing", QiblaEngine.bearing(lat, lng))
+        result.put("magneticBearing", QiblaEngine.magneticBearing(lat, lng))
+        result.put("declination", QiblaEngine.declination(lat, lng).toDouble())
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun getVisibleTimes(call: PluginCall) {
+        val result = JSObject()
+        result.put("times", JSArray.from(PrayerConfig.visibleTimes(context).toTypedArray()))
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun setVisibleTimes(call: PluginCall) {
+        val arr = call.getArray("times")
+        if (arr == null) {
+            call.reject("times is required")
+            return
+        }
+        PrayerConfig.setVisibleTimes(context, arr.toList<String>().toSet())
+        // The widget renders the same set, so it must not lag the app.
+        PrayerWidgetProvider.refresh(context)
+        call.resolve()
     }
 
     @PermissionCallback
