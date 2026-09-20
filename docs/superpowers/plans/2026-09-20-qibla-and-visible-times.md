@@ -517,12 +517,12 @@ The existing `PrayerWidgetProviderTest` asserts `VIEW_IDS` maps exactly onto `Pr
     fun `no view id is reused across slots`() {
         // A duplicated id would make two slots overwrite each other — the exact
         // copy-paste error this table invites.
-        val ids = PrayerWidgetProvider.VIEW_IDS.flatMap { listOf(it.second, it.third) }
+        val ids = PrayerWidgetProvider.VIEW_IDS.flatMap { listOf(it.first, it.second) }
         assertEquals(ids.size, ids.toSet().size)
     }
 ```
 
-If `VIEW_IDS` is still typed `List<Triple<PrayerName, Int, Int>>`, change it to `List<Pair<Int, Int>>` — the `PrayerName` element no longer means anything now that slots are generic — and adjust both the render zip and these tests to match (`it.first` / `it.second` for the two ids).
+**Convert `VIEW_IDS` from `List<Triple<PrayerName, Int, Int>>` to `List<Pair<Int, Int>>`** as part of this step. The `PrayerName` element no longer means anything once slots are generic positions, and leaving it would invite a future reader to believe slot *i* is bound to prayer *i* — the exact confusion this refactor removes. The test code above already assumes the `Pair` form (`it.first` / `it.second`); update the render zip to match.
 
 - [ ] **Step 4: Compile and run every native test**
 
