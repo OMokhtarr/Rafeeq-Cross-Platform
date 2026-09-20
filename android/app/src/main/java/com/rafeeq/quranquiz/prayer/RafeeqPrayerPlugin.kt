@@ -118,7 +118,13 @@ class RafeeqPrayerPlugin : Plugin() {
         val locale = Locale.getDefault()
         Thread {
             val name = PlaceNameResolver.resolve(ctx, lat, lng, locale)
-            if (name != null) PrayerConfig.setPlaceName(ctx, name)
+            // A newer fix may have landed while this lookup was on the
+            // network. Writing then would label the new coordinates with the
+            // old city, so the result is dropped unless it still belongs.
+            val current = PrayerConfig.coords(ctx)
+            if (name != null && current?.first == lat && current.second == lng) {
+                PrayerConfig.setPlaceName(ctx, name)
+            }
         }.start()
 
         call.resolve()
