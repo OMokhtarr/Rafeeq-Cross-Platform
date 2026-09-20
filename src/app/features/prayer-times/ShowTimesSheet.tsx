@@ -70,11 +70,19 @@ const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged }) => {
   const handleToggle = useCallback(
     (key: PrayerKey) => {
       if (isObligatory(key)) return;
+      const previous = visible;
       const next = visible.includes(key)
         ? visible.filter((k) => k !== key)
         : [...visible, key];
       setVisible(next);
-      setVisibleTimes(next).then(onChanged);
+      // Optimistic update: reflect the toggle immediately, but if the write
+      // never lands, snap back to the truth. An unpersisted change that
+      // still looks applied is worse than a toggle that visibly springs
+      // back — the same principle as the obligatory-prayer guard above,
+      // wearing the opposite mask.
+      setVisibleTimes(next)
+        .then(onChanged)
+        .catch(() => setVisible(previous));
     },
     [visible, onChanged],
   );
@@ -111,7 +119,7 @@ const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged }) => {
             const obligatory = isObligatory(key);
             const checked = obligatory || visible.includes(key);
             return (
-              <div className={`sts-row${nightClass}`} key={key}>
+              <div className="sts-row" key={key}>
                 <span className="sts-row-label">{t.prayerTimes[key]}</span>
                 {obligatory ? (
                   <span className="sts-always">{t.prayerTimes.alwaysShown}</span>
