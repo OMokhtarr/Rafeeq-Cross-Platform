@@ -37,6 +37,8 @@ interface RafeeqPrayerPlugin {
     prayers?: PrayerKey[];
   }): Promise<void>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
+  getVisibleTimes(): Promise<{ times: string[] }>;
+  setVisibleTimes(options: { times: string[] }): Promise<void>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -199,4 +201,15 @@ export async function enableReminders(): Promise<boolean> {
 
   await setReminders({ enabled: true });
   return true;
+}
+
+export async function getVisibleTimes(): Promise<PrayerKey[]> {
+  if (!isNative) return [...PRAYER_KEYS];
+  const { times } = await RafeeqPrayer.getVisibleTimes();
+  return times as PrayerKey[];
+}
+
+export async function setVisibleTimes(times: PrayerKey[]): Promise<void> {
+  if (!isNative) return;
+  await RafeeqPrayer.setVisibleTimes({ times });
 }

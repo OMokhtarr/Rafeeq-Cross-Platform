@@ -21,6 +21,8 @@ jest.mock("@capacitor/core", () => {
     getReminders: jest.fn(),
     setReminders: jest.fn(),
     requestNotificationPermission: jest.fn(),
+    getVisibleTimes: jest.fn(),
+    setVisibleTimes: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -48,6 +50,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   getReminders: jest.Mock;
   setReminders: jest.Mock;
   requestNotificationPermission: jest.Mock;
+  getVisibleTimes: jest.Mock;
+  setVisibleTimes: jest.Mock;
 };
 
 beforeEach(() => {
@@ -120,5 +124,19 @@ describe("on web, where the native plugin does not exist", () => {
 
     expect(granted).toBe(false);
     expect(plugin.requestNotificationPermission).not.toHaveBeenCalled();
+  });
+});
+
+describe("visible times on web", () => {
+  it("falls back to the full timetable without calling the plugin", async () => {
+    const times = await service.getVisibleTimes();
+
+    expect(times).toEqual(["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"]);
+    expect(plugin.getVisibleTimes).not.toHaveBeenCalled();
+  });
+
+  it("makes setVisibleTimes a no-op", async () => {
+    await expect(service.setVisibleTimes(["fajr"])).resolves.toBeUndefined();
+    expect(plugin.setVisibleTimes).not.toHaveBeenCalled();
   });
 });

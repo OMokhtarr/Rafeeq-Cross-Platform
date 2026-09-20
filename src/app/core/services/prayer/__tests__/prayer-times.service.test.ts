@@ -16,6 +16,8 @@ jest.mock("@capacitor/core", () => {
     getReminders: jest.fn(),
     setReminders: jest.fn(),
     requestNotificationPermission: jest.fn(),
+    getVisibleTimes: jest.fn(),
+    setVisibleTimes: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -47,6 +49,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   getReminders: jest.Mock;
   setReminders: jest.Mock;
   requestNotificationPermission: jest.Mock;
+  getVisibleTimes: jest.Mock;
+  setVisibleTimes: jest.Mock;
 };
 const {
   getTimes,
@@ -55,6 +59,8 @@ const {
   getReminders,
   setReminders,
   requestNotificationPermission,
+  getVisibleTimes,
+  setVisibleTimes,
 } = plugin;
 
 const geolocation = Geolocation as unknown as {
@@ -340,5 +346,23 @@ describe("requestNotificationPermission", () => {
     const granted = await service.requestNotificationPermission();
 
     expect(granted).toBe(false);
+  });
+});
+
+describe("visible times", () => {
+  it("returns the set the plugin reports", async () => {
+    getVisibleTimes.mockResolvedValue({ times: ["fajr", "dhuhr", "duha"] });
+
+    const times = await service.getVisibleTimes();
+
+    expect(times).toEqual(["fajr", "dhuhr", "duha"]);
+  });
+
+  it("passes a chosen set straight through to the plugin", async () => {
+    await service.setVisibleTimes(["fajr", "dhuhr", "asr", "maghrib", "isha"]);
+
+    expect(setVisibleTimes).toHaveBeenCalledWith({
+      times: ["fajr", "dhuhr", "asr", "maghrib", "isha"],
+    });
   });
 });
