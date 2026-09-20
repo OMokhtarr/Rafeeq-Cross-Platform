@@ -16,7 +16,7 @@
  * HEADING_TIMEOUT_MS rather than a spinner that never resolves.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
 import {
   loadQibla,
@@ -60,30 +60,16 @@ const QiblaView: React.FC<Props> = ({ onNeedLocation }) => {
     setNeedsCalibration(false);
 
     const stop = watchHeading(
-      (deg) => setHeading(deg),
+      (reading) => {
+        setHeading(reading.heading);
+        // A non-absolute reading is relative and unreliable for a compass,
+        // so the calibration hint tracks it directly off the service.
+        setNeedsCalibration(!reading.absolute);
+      },
       () => setSensorUnavailable(true),
     );
 
-    // `watchHeading` only reports the resolved heading, not whether the
-    // reading is absolute. A non-absolute reading is relative and unreliable
-    // for a compass, so it is watched for separately here to surface the
-    // calibration hint.
-    const handleAbsolute = (event: Event) => {
-      const e = event as DeviceOrientationEvent & { absolute?: boolean };
-      if (e.absolute === false) setNeedsCalibration(true);
-    };
-    window.addEventListener("deviceorientationabsolute", handleAbsolute, true);
-    window.addEventListener("deviceorientation", handleAbsolute, true);
-
-    return () => {
-      stop();
-      window.removeEventListener(
-        "deviceorientationabsolute",
-        handleAbsolute,
-        true,
-      );
-      window.removeEventListener("deviceorientation", handleAbsolute, true);
-    };
+    return stop;
   }, [hasBearing]);
 
   if (direction === null) return null;

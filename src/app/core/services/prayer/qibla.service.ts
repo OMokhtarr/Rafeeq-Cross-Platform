@@ -67,6 +67,13 @@ export async function loadQibla(): Promise<QiblaDirection> {
   };
 }
 
+/** A resolved compass heading and whether it was reported against absolute
+ * (true/magnetic) north rather than an arbitrary relative reference. */
+export interface HeadingReading {
+  heading: number;
+  absolute: boolean;
+}
+
 /**
  * Listen for the device's compass heading.
  *
@@ -75,7 +82,7 @@ export async function loadQibla(): Promise<QiblaDirection> {
  * teardown function; callers must call it.
  */
 export function watchHeading(
-  onHeading: (deg: number) => void,
+  onHeading: (reading: HeadingReading) => void,
   onUnavailable: () => void,
 ): () => void {
   let settled = false;
@@ -100,9 +107,14 @@ export function watchHeading(
 
     if (heading === null) return;
 
+    // Only an explicit `false` means the reading is relative; a missing flag
+    // on a `deviceorientationabsolute` event just means the browser didn't
+    // set it, not that the reading is unreliable.
+    const absolute = (event as DeviceOrientationEvent).absolute !== false;
+
     settled = true;
     window.clearTimeout(timer);
-    onHeading(heading);
+    onHeading({ heading, absolute });
   };
 
   window.addEventListener("deviceorientationabsolute", handle, true);

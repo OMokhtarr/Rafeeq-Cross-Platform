@@ -59,8 +59,28 @@ describe("watchHeading", () => {
     event.absolute = true;
     window.dispatchEvent(event);
 
-    expect(onHeading).toHaveBeenCalled();
+    expect(onHeading).toHaveBeenCalledWith(
+      expect.objectContaining({ absolute: true }),
+    );
     expect(onUnavailable).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it("surfaces absolute: false when the reading is relative, not magnetic", () => {
+    const onHeading = jest.fn();
+    const stop = service.watchHeading(onHeading, jest.fn());
+
+    const event = new Event("deviceorientation") as Event & {
+      alpha: number;
+      absolute: boolean;
+    };
+    event.alpha = 45;
+    event.absolute = false;
+    window.dispatchEvent(event);
+
+    expect(onHeading).toHaveBeenCalledWith(
+      expect.objectContaining({ absolute: false }),
+    );
     stop();
   });
 
