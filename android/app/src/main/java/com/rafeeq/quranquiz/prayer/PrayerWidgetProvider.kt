@@ -88,6 +88,50 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         private const val COLOR_DARK_TEXT = 0xFFFFFFFF.toInt()
 
         /**
+         * Priority order for the widget's fixed slots, highest first:
+         * the five obligatory prayers plus sunrise (PrayerTimesEngine's
+         * DAILY_TIMETABLE, already in that interleaved order), then the
+         * supplementary times in enum declaration order.
+         *
+         * Built explicitly — rather than relying on PrayerName.values()'
+         * declaration order, where DUHA sits ahead of four obligatory
+         * prayers — so an obligatory prayer can never be displaced by a
+         * supplementary one when both are visible but slots run out.
+         * DAILY_TIMETABLE by construction contains only the five obligatory
+         * prayers and sunrise, so nothing in the supplementary tail can ever
+         * outrank an obligatory prayer: that guarantee is structural, not a
+         * coincidence of list order.
+         */
+        internal val SLOT_PRIORITY: List<PrayerName> =
+            PrayerTimesEngine.DAILY_TIMETABLE +
+                PrayerName.values().filter { it !in PrayerTimesEngine.DAILY_TIMETABLE }
+
+        /**
+         * Picks which names fill the widget's fixed slots, in the order they
+         * should be displayed.
+         *
+         * A name is eligible only if it is both in [visible] (lower-cased
+         * prayer names, as stored in PrayerConfig) and has a non-null time
+         * today ([withTime] — adhan-java returns null inside the midnight-sun
+         * window). Eligible names are then ranked by [SLOT_PRIORITY] before
+         * truncating to [slotCount], so a supplementary time (e.g. Duha) can
+         * only ever fill a slot none of the five obligatory prayers needs —
+         * never displace one of them. Pure and Context-free so it is directly
+         * unit-testable; the render path below supplies the two sets and does
+         * nothing else with the ranking.
+         */
+        internal fun selectForDisplay(
+            visible: Set<String>,
+            withTime: Set<PrayerName>,
+            slotCount: Int = VIEW_IDS.size,
+        ): List<PrayerName> {
+            val eligible = SLOT_PRIORITY.filter { name ->
+                name.name.lowercase() in visible && name in withTime
+            }
+            return eligible.take(slotCount)
+        }
+
+        /**
          * Looks up every placed instance of this widget and re-renders each.
          * The single entry point every refresh trigger in the app calls —
          * the alarm chain, the midnight roll, and the plugin after a
@@ -148,12 +192,13 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // Only names that are both visible AND have a non-null time are
             // eligible — adhan-java returns a null time inside the
             // midnight-sun window, and a slot must never show a name with no
-            // time next to it. The result is truncated to the number of
-            // physical slots the layout has.
+            // time next to it. Eligible names are ranked by SLOT_PRIORITY
+            // before truncating to the number of physical slots the layout
+            // has, so a supplementary time can only fill a slot none of the
+            // five obligatory prayers needs.
             val visible = PrayerConfig.visibleTimes(ctx)
-            val toShow = PrayerName.values()
-                .filter { name -> name.name.lowercase() in visible && day.times[name] != null }
-                .take(VIEW_IDS.size)
+            val withTime = PrayerName.values().filter { name -> day.times[name] != null }.toSet()
+            val toShow = selectForDisplay(visible, withTime)
 
             VIEW_IDS.forEachIndexed { index, (nameViewId, timeViewId) ->
                 val name = toShow.getOrNull(index)

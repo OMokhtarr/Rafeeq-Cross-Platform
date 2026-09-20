@@ -64,9 +64,16 @@ object PrayerTimesEngine {
     /**
      * The daily timetable: the five prayers plus sunrise, in display order.
      *
-     * This is what the widget's six slots show. The supplementary times (Duha,
-     * Midnight, Last third) are deliberately excluded — they are secondary by
-     * nature and there is no room for them on a home-screen widget.
+     * This is the display-priority prefix used wherever a limited number of
+     * slots must be filled from a larger, user-configurable set of visible
+     * times (see PrayerWidgetProvider.selectForDisplay): these six names
+     * always outrank the supplementary times (Duha, Midnight, Last third),
+     * so a supplementary time can only ever occupy a slot this list left
+     * spare — never one it needs. The five obligatory prayers must never be
+     * displaced; this list's order also happens to put SUNRISE at rank 2
+     * (interleaved between FAJR and DHUHR) rather than after the obligatory
+     * five, which is what makes "all nine visible" resolve to "the five
+     * prayers plus sunrise" rather than something else.
      */
     val DAILY_TIMETABLE = listOf(
         PrayerName.FAJR,
