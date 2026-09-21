@@ -1,7 +1,9 @@
 /**
  * PRAYER TIMES PAGE
- * Reached from More. Renders the six daily times with the next prayer
- * highlighted and a live countdown, plus the method/madhab pickers.
+ * Reached from More by either the qibla card or the times card — one page
+ * holding both. The compass header sits on top, then the daily times with the
+ * next prayer highlighted and a live countdown, then the method/madhab
+ * pickers. There is no view switch: nothing is hidden behind a tab.
  *
  * A missing location is a designed state, not an error: `hasLocation: false`
  * is the normal first-run condition until the user grants a fix, so it gets
@@ -15,12 +17,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
-import { useLocation } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
-import QiblaView from "./QiblaView";
+import QiblaHeader from "./QiblaHeader";
 import ShowTimesSheet from "./ShowTimesSheet";
 import {
   loadPrayerDay,
@@ -28,8 +29,10 @@ import {
   getPrayerConfig,
   setPrayerConfig,
   getVisibleTimes,
+  getPlace,
   getWidgetInfo,
   requestPinWidget,
+  openAppSettings,
 } from "../../core/services/prayer/prayer-times.service";
 import {
   ADDITIONAL_KEYS,
@@ -86,34 +89,34 @@ function formatCountdown(msRemaining: number, lang: string): string {
 const PrayerTimes: React.FC = () => {
   const { t, lang, isRTL } = useLang();
   const { isNight } = useTheme();
-  const location = useLocation();
   const tp = t.prayerTimes;
 
-  const [view, setView] = useState<"prayers" | "qibla">(() =>
-    new URLSearchParams(location.search).get("view") === "qibla"
-      ? "qibla"
-      : "prayers",
-  );
   const [day, setDay] = useState<PrayerDay | null>(null);
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
   } | null>(null);
   const [visible, setVisible] = useState<PrayerKey[] | null>(null);
-  const [denied, setDenied] = useState(false);
+  const [place, setPlace] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<
+    "denied" | "services-off" | "failed" | null
+  >(null);
   const [showSheetOpen, setShowSheetOpen] = useState(false);
   const [widget, setWidget] = useState<{
     supported: boolean;
     placed: number;
   } | null>(null);
+  const [widgetBlocked, setWidgetBlocked] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
 
   const load = useCallback(async () => {
-    const [cfg, d, v, w] = await Promise.all([
+    const [cfg, d, v, p, w] = await Promise.all([
       getPrayerConfig(),
       loadPrayerDay(),
       getVisibleTimes(),
+      getPlace(),
       // Re-read on every load, not once on mount: the widget is added and
       // removed on the home screen, outside this page entirely, so the count
       // is only ever right as of the moment the page is entered.
@@ -122,7 +125,11 @@ const PrayerTimes: React.FC = () => {
     setConfig({ method: cfg.method, madhab: cfg.madhab });
     setDay(d);
     setVisible(v);
+    setPlace(p);
     setWidget(w);
+    // Returning to the page with a widget now placed settles the question:
+    // whatever was blocking it no longer is, so the warning must not linger.
+    if (w.placed > 0) setWidgetBlocked(false);
   }, []);
 
   useEffect(() => {
@@ -150,19 +157,21 @@ const PrayerTimes: React.FC = () => {
     return () => clearInterval(id);
   }, [nextAt, load]);
 
-  const handleGrantLocation = useCallback(async () => {
+  const handleUpdateLocation = useCallback(async () => {
     if (requestingRef.current) return;
     requestingRef.current = true;
-    setDenied(false);
+    setLocating(true);
+    setLocationError(null);
     try {
-      const ok = await requestLocation();
-      if (!ok) {
-        setDenied(true);
+      const outcome = await requestLocation();
+      if (outcome !== "granted") {
+        setLocationError(outcome);
         return;
       }
       await load();
     } finally {
       requestingRef.current = false;
+      setLocating(false);
     }
   }, [load]);
 
@@ -171,7 +180,7 @@ const PrayerTimes: React.FC = () => {
       await setPrayerConfig({ method: value as PrayerMethod });
       await load();
     },
-    [load],
+    [load]
   );
 
   const handleMadhabChange = useCallback(
@@ -179,31 +188,26 @@ const PrayerTimes: React.FC = () => {
       await setPrayerConfig({ madhab: value as PrayerMadhab });
       await load();
     },
-    [load],
+    [load]
   );
 
   /**
    * Hands off to the launcher's own pin dialog.
    *
-   * Nothing is reloaded afterwards and no confirmation is shown: the launcher
-   * owns that dialog, never reports the outcome back, and the app is in the
-   * background while the user decides. The refreshed count on the next
-   * `useIonViewWillEnter` is the honest place for that to surface.
+   * No success message is shown even when the request is accepted: the
+   * launcher owns that dialog and never reports the outcome back, so the
+   * refreshed count on the next `useIonViewWillEnter` is the honest place for
+   * success to surface.
+   *
+   * A refusal is different and must be said out loud. Some launchers (MIUI)
+   * reject the request without showing the user anything, which is the
+   * "nothing happens on tap" this branch exists to explain.
    */
   const handleAddWidget = useCallback(async () => {
-    await requestPinWidget();
+    setWidgetBlocked(false);
+    const { blocked } = await requestPinWidget();
+    if (blocked) setWidgetBlocked(true);
   }, []);
-
-  const hijriDate = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-
-  const gregorianDate = new Intl.DateTimeFormat(
-    lang === "ar" ? "ar-EG" : "en-GB",
-    { weekday: "long", day: "numeric", month: "long", year: "numeric" },
-  ).format(new Date());
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", {
@@ -219,11 +223,11 @@ const PrayerTimes: React.FC = () => {
   const rowKeys =
     day?.times && visible
       ? ALL_ROW_KEYS.filter(
-          (key) => visible.includes(key) && Boolean(day.times?.[key]),
+          (key) => visible.includes(key) && Boolean(day.times?.[key])
         )
       : [];
   const firstAdditionalKey = rowKeys.find((key) =>
-    (ADDITIONAL_KEYS as PrayerKey[]).includes(key),
+    (ADDITIONAL_KEYS as PrayerKey[]).includes(key)
   );
 
   return (
@@ -231,215 +235,207 @@ const PrayerTimes: React.FC = () => {
       <IonContent fullscreen>
         <div className="pt-page-wrapper">
           <div className="pt-container" dir={isRTL ? "rtl" : "ltr"}>
-            {day === null ? null : !day.hasLocation && view === "prayers" ? (
+            {day === null ? null : !day.hasLocation ? (
               <>
                 <h1 className="pt-title">{tp.title}</h1>
                 <div className="pt-permission">
-                  <h2 className="pt-permission-title">{tp.locationNeeded}</h2>
-                  <p className="pt-permission-desc">{tp.locationNeededDesc}</p>
+                  <h2 className="pt-permission-title">
+                    {locationError === "services-off"
+                      ? tp.locationServicesOff
+                      : tp.locationNeeded}
+                  </h2>
+                  <p className="pt-permission-desc">
+                    {locationError === "services-off"
+                      ? tp.locationServicesOffDesc
+                      : tp.locationNeededDesc}
+                  </p>
                   <button
                     type="button"
                     className="pt-grant-btn"
-                    onClick={handleGrantLocation}
+                    onClick={handleUpdateLocation}
+                    disabled={locating}
                   >
-                    {tp.grantLocation}
+                    {locating ? tp.locating : tp.grantLocation}
                   </button>
-                  {denied && <p className="pt-denied">{tp.locationDenied}</p>}
+                  {locationError === "denied" && (
+                    <p className="pt-denied">{tp.locationDenied}</p>
+                  )}
                 </div>
               </>
             ) : (
               <>
-                {/* ── Segmented control: prayers vs qibla ── */}
-                <div className="pt-segmented" role="tablist">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={view === "prayers"}
-                    className={
-                      "pt-segment" +
-                      (view === "prayers" ? " pt-segment--active" : "")
-                    }
-                    onClick={() => setView("prayers")}
-                  >
-                    {tp.prayersTab}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={view === "qibla"}
-                    className={
-                      "pt-segment" +
-                      (view === "qibla" ? " pt-segment--active" : "")
-                    }
-                    onClick={() => setView("qibla")}
-                  >
-                    {tp.qibla}
-                  </button>
+                <QiblaHeader
+                  placeName={place}
+                  onUpdateLocation={handleUpdateLocation}
+                  locating={locating}
+                />
+
+                <div className="pt-card">
+                  {day.next && nextAt !== undefined && (
+                    <div className="pt-next">
+                      <span className="pt-next-label">{tp.nextPrayer}</span>
+                      <span className="pt-next-name">
+                        {rowLabel(day.next.name)}
+                      </span>
+                      <span className="pt-next-countdown">
+                        {formatCountdown(nextAt - now, lang)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Only the three-dot menu now — the dates moved into the
+                      compass header above. */}
+                  <div className="pt-card-header">
+                    <button
+                      type="button"
+                      className="pt-menu-btn"
+                      onClick={() => setShowSheetOpen(true)}
+                      aria-label={tp.show}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="5" r="1.8" />
+                        <circle cx="12" cy="12" r="1.8" />
+                        <circle cx="12" cy="19" r="1.8" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* ── Daily timetable ── */}
+                  <div className="pt-rows">
+                    {rowKeys.map((key) => {
+                      const time = day.times![key];
+                      const isNext = day.next?.name === key;
+                      const isSunrise = key === "sunrise";
+                      return (
+                        <React.Fragment key={key}>
+                          {key === firstAdditionalKey && (
+                            <div className="pt-separator" aria-hidden="true">
+                              <span className="pt-separator-label">
+                                {tp.additionalTimes}
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            className={
+                              "pt-row" +
+                              (isNext ? " pt-row--next" : "") +
+                              (isSunrise ? " pt-row--sunrise" : "")
+                            }
+                          >
+                            <span className="pt-row-label">
+                              {rowLabel(key)}
+                            </span>
+                            <span className="pt-row-time">
+                              {formatTime(time)}
+                            </span>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {view === "qibla" ? (
-                  <QiblaView onNeedLocation={handleGrantLocation} />
-                ) : (
-                  <>
-                    {/* ── Hero: the next prayer, its time, and the countdown ── */}
-                    <div className="pt-hero">
-                      {day.next && nextAt !== undefined ? (
-                        <>
-                          <p className="pt-hero-label">{tp.nextPrayer}</p>
-                          <h1 className="pt-hero-name">
-                            {rowLabel(day.next.name)}
-                          </h1>
-                          <p className="pt-hero-time">
-                            {formatTime(day.next.at)}
-                          </p>
-                          <span className="pt-hero-pill">
-                            {formatCountdown(nextAt - now, lang)}
-                          </span>
-                        </>
-                      ) : (
-                        // No next prayer: the midnight-sun window. The times below
-                        // still stand, so the hero shows the page's name rather
-                        // than an empty block or an invented countdown.
-                        <h1 className="pt-hero-name">{tp.title}</h1>
-                      )}
-                    </div>
+                {/* The times on screen come from the last known fix, so a failure is
+                    a note beside them rather than a takeover of the page. */}
+                {locationError !== null && (
+                  <p className="pt-location-error">
+                    {locationError === "services-off"
+                      ? tp.locationServicesOffDesc
+                      : tp.locationDenied}
+                  </p>
+                )}
 
-                    <div className="pt-card">
-                      {/* ── Date band + three-dot menu ── */}
-                      <div className="pt-card-header">
-                        <div className="pt-dates">
-                          <p className="pt-date-greg">{gregorianDate}</p>
-                          <p className="pt-date-hijri">{hijriDate}</p>
-                        </div>
-                        <button
-                          type="button"
-                          className="pt-menu-btn"
-                          onClick={() => setShowSheetOpen(true)}
-                          aria-label={tp.show}
+                <div className="pt-settings">
+                  <div className="pt-setting-row">
+                    <span className="pt-setting-label">{tp.method}</span>
+                    <InlineSelect
+                      value={config?.method ?? PRAYER_METHODS[0]}
+                      options={PRAYER_METHODS.map((m) => ({
+                        value: m,
+                        label: tp[METHOD_LABEL_KEY[m] as keyof typeof tp],
+                      }))}
+                      onChange={handleMethodChange}
+                      night={isNight}
+                      fullWidth
+                      aria-label={tp.method}
+                    />
+                  </div>
+                  <div className="pt-setting-row">
+                    <span className="pt-setting-label">{tp.madhab}</span>
+                    <InlineSelect
+                      value={config?.madhab ?? MADHABS[0]}
+                      options={MADHABS.map((m) => ({
+                        value: m,
+                        label: tp[m],
+                      }))}
+                      onChange={handleMadhabChange}
+                      night={isNight}
+                      fullWidth
+                      aria-label={tp.madhab}
+                    />
+                  </div>
+
+                  {/* Absent when the launcher cannot pin — there is no
+                      way to force it, and a dead control would be worse
+                      than none. The widget can still be added by
+                      long-pressing the home screen. */}
+                  {widget?.supported && (
+                    <div>
+                      <button
+                        type="button"
+                        className="pt-widget-btn"
+                        onClick={handleAddWidget}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          aria-hidden="true"
                         >
-                          <svg viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="5" r="1.8" />
-                            <circle cx="12" cy="12" r="1.8" />
-                            <circle cx="12" cy="19" r="1.8" />
-                          </svg>
-                        </button>
-                      </div>
-
-                      {/* ── Daily timetable ── */}
-                      <div className="pt-rows">
-                        {rowKeys.map((key) => {
-                          const time = day.times![key];
-                          const isNext = day.next?.name === key;
-                          const isSunrise = key === "sunrise";
-                          return (
-                            <React.Fragment key={key}>
-                              {key === firstAdditionalKey && (
-                                <div
-                                  className="pt-separator"
-                                  aria-hidden="true"
-                                />
-                              )}
-                              <div
-                                className={
-                                  "pt-row" +
-                                  (isNext ? " pt-row--next" : "") +
-                                  (isSunrise ? " pt-row--sunrise" : "")
-                                }
-                              >
-                                <span className="pt-row-label">
-                                  {rowLabel(key)}
-                                </span>
-                                <span className="pt-row-time">
-                                  {formatTime(time)}
-                                </span>
-                              </div>
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="pt-settings">
-                      <div className="pt-setting-row">
-                        <span className="pt-setting-label">{tp.method}</span>
-                        <InlineSelect
-                          value={config?.method ?? PRAYER_METHODS[0]}
-                          options={PRAYER_METHODS.map((m) => ({
-                            value: m,
-                            label: tp[METHOD_LABEL_KEY[m] as keyof typeof tp],
-                          }))}
-                          onChange={handleMethodChange}
-                          night={isNight}
-                          fullWidth
-                          aria-label={tp.method}
-                        />
-                      </div>
-                      <div className="pt-setting-row">
-                        <span className="pt-setting-label">{tp.madhab}</span>
-                        <InlineSelect
-                          value={config?.madhab ?? MADHABS[0]}
-                          options={MADHABS.map((m) => ({
-                            value: m,
-                            label: tp[m],
-                          }))}
-                          onChange={handleMadhabChange}
-                          night={isNight}
-                          fullWidth
-                          aria-label={tp.madhab}
-                        />
-                      </div>
-
-                      {/* Absent when the launcher cannot pin — there is no
-                          way to force it, and a dead control would be worse
-                          than none. The widget can still be added by
-                          long-pressing the home screen. */}
-                      {widget?.supported && (
-                        <div>
+                          <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                          <rect
+                            x="6"
+                            y="9"
+                            width="12"
+                            height="6"
+                            rx="1.5"
+                            fill="currentColor"
+                            stroke="none"
+                          />
+                        </svg>
+                        {tp.addWidget}
+                      </button>
+                      {widgetBlocked ? (
+                        // The launcher refused without telling the user.
+                        // Explains why and offers both routes: the
+                        // permission, and adding it by hand.
+                        <div className="pt-widget-blocked" role="status">
+                          <p className="pt-widget-blocked-text">
+                            {tp.widgetBlocked}
+                          </p>
                           <button
                             type="button"
-                            className="pt-widget-btn"
-                            onClick={handleAddWidget}
+                            className="pt-widget-settings-btn"
+                            onClick={openAppSettings}
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              aria-hidden="true"
-                            >
-                              <rect
-                                x="3"
-                                y="4"
-                                width="18"
-                                height="16"
-                                rx="2.5"
-                              />
-                              <rect
-                                x="6"
-                                y="9"
-                                width="12"
-                                height="6"
-                                rx="1.5"
-                                fill="currentColor"
-                                stroke="none"
-                              />
-                            </svg>
-                            {tp.addWidget}
+                            {tp.widgetOpenSettings}
                           </button>
-                          {widget.placed > 0 && (
-                            <p className="pt-widget-note">{tp.widgetAdded}</p>
-                          )}
                         </div>
+                      ) : (
+                        widget.placed > 0 && (
+                          <p className="pt-widget-note">{tp.widgetAdded}</p>
+                        )
                       )}
                     </div>
+                  )}
+                </div>
 
-                    <ShowTimesSheet
-                      open={showSheetOpen}
-                      onClose={() => setShowSheetOpen(false)}
-                      onChanged={load}
-                    />
-                  </>
-                )}
+                <ShowTimesSheet
+                  open={showSheetOpen}
+                  onClose={() => setShowSheetOpen(false)}
+                  onChanged={load}
+                />
               </>
             )}
           </div>

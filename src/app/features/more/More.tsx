@@ -38,7 +38,7 @@ const ENTRIES: MoreEntry[] = [
         <path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z" />
       </svg>
     ),
-    route: "/prayer-times?view=qibla",
+    route: "/prayer-times",
   },
   {
     id: "prayerTimes",
