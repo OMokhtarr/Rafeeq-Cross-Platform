@@ -227,7 +227,21 @@ if (config.ranges?.length) {
 }
 ```
 
-Three pages, the same five-line edit. No existing path changes.
+Two pages — Akmel Al-Ayah and Akmel Al-Nehayat — take that same edit. No
+existing path changes.
+
+**Mutashabihat is different and does not use this helper.** It never builds a
+verse pool: it builds *groups* of similar verses and filters them by scope,
+keeping a group only when at least two of its verses match. Running the
+existing single-scope filters once per range and unioning the results would
+wrongly drop a group whose two matching verses fall in two different ranges —
+each filter would see one match and reject it.
+
+So Mutashabihat gets its own `filterGroupsByRanges(groups, ranges)` in
+`mutashabihat.service.ts`, which tests every verse against the **whole** range
+set once and then applies the group-size rule to what survives. Its test page
+branches on `config.ranges?.length` ahead of the existing three-way filter
+choice, exactly as the other two branch ahead of their pool builders.
 
 ## Error handling
 
@@ -252,6 +266,9 @@ setup:
   collision suffixing.
 - `buildRangeVerses` — union across kinds, dedupe of overlapping ranges, mushaf
   ordering independent of input order, and filtering of invalid entries.
+- `filterGroupsByRanges` — a group kept when its matching verses are split
+  across two ranges, a group dropped when only one verse matches the whole set,
+  narrowing to the matching verses, and overlap counted once.
 - `quiz-presets.service` — save, list ordering, rename, delete, and restore
   preserving `id` and `createdAt`, against a mocked `Preferences`.
 
