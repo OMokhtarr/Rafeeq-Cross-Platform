@@ -133,6 +133,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // in-app rate), and JS pushes its rate back via updateState so the button label follows an
     // in-app change too. The cycle mirrors the in-app speed options.
     private var currentSpeed: Float = 1.0f
+    // True once Android Auto has connected as a media browser (see onGetRoot). The speed button
+    // is a CAR-ONLY control: on Android 13+ the phone's media notification no longer renders the
+    // NotificationCompat actions we add in buildNotification() and instead derives its buttons
+    // from the session's PlaybackState, so a speed custom action in slot 0 pushed the
+    // prev-page / next-page buttons out of the phone's visible slots. Gating it on this flag
+    // keeps the speed control in the car while the phone notification shows page nav again.
+    private var carConnected = false
+
     // 1 → 1.25 → 1.5 → 1.75 → 2, then wraps back to 1 (the list starts at 1, so nextSpeedInCycle
     // returns to it after 2). Normal-and-faster only; no slow speeds.
     private val SPEED_CYCLE = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
@@ -1007,12 +1015,18 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         val actions = mutableListOf<PlaybackStateCompat.CustomAction>()
         // Speed button FIRST so it's guaranteed visible even where a head unit caps the custom-
         // action row (~3–4). Icon is a speedometer (ic_speed); the label shows the CURRENT speed
-        // ("1x".."2x") — the label renders on the phone notification and most AA units, though some
-        // cars hide custom-action labels and show only the icon. onCustomAction matches by action
-        // id, not position.
-        actions.add(
-            PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
-        )
+        // ("1x".."2x") — though some cars hide custom-action labels and show only the icon.
+        // onCustomAction matches by action id, not position.
+        //
+        // CAR ONLY. Android 13+ builds the phone's media notification from these custom actions
+        // rather than from buildNotification()'s NotificationCompat actions, so a speed button in
+        // slot 0 evicted the prev-page / next-page buttons from the phone's visible slots. Speed
+        // stays settable in-app on the phone; here it appears only once Auto has connected.
+        if (carConnected) {
+            actions.add(
+                PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
+            )
+        }
         if (pageMarkers.size > 1) {
             val currentIdx = pageMarkers.indexOfFirst { it.page == currentPage }
                 .let { if (it < 0) pageMarkers.indexOfFirst { it.page >= currentPage }.let { i -> if (i < 0) pageMarkers.lastIndex else i } else it }
@@ -1186,6 +1200,20 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // Non-Auto playback is unaffected: the card appears the moment audio actually starts,
         // via promoteToForeground() from onPlayingChanged / updateState.
         if (clientPackageName == ANDROID_AUTO_PKG) {
+            // Latch the car connection so buildPageCustomActions() re-adds the speed button.
+            // Republish the state right away, otherwise the car shows the phone's speed-less
+            // action row until the next position tick.
+            if (!carConnected) {
+                carConnected = true
+                currentCustomActions = buildPageCustomActions()
+                session.controller.playbackState?.let { st ->
+                    val sb = PlaybackStateCompat.Builder()
+                        .setActions(TRANSPORT_ACTIONS)
+                        .setState(st.state, st.position, st.playbackSpeed)
+                    currentCustomActions.forEach { sb.addCustomAction(it) }
+                    session.setPlaybackState(sb.build())
+                }
+            }
             promoteToForeground(
                 session.controller.metadata
                     ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق",
