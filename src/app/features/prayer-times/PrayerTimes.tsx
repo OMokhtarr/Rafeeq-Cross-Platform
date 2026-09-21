@@ -341,7 +341,9 @@ const PrayerTimes: React.FC = () => {
                   <p className="pt-location-error">
                     {locationError === "services-off"
                       ? tp.locationServicesOffDesc
-                      : tp.locationDenied}
+                      : locationError === "denied"
+                      ? tp.locationDenied
+                      : tp.locationFailed}
                   </p>
                 )}
 

@@ -73,6 +73,8 @@ export interface AppStrings {
     locationNeededDesc: string;
     grantLocation: string;
     locationDenied: string;
+    /** The fix itself did not arrive, though the permission is held. */
+    locationFailed: string;
     show: string;
     showDesc: string;
     alwaysShown: string;
@@ -565,6 +567,7 @@ const ar: AppStrings = {
     locationNeededDesc: "نحتاج إلى موقعك لحساب مواقيت الصلاة. يبقى الموقع على جهازك ولا يُرسَل إلى أي جهة.",
     grantLocation: "تحديد الموقع",
     locationDenied: "تعذّر تحديد الموقع. يمكنك السماح بذلك من إعدادات التطبيق.",
+    locationFailed: "تعذّر الحصول على الموقع. حاول مرة أخرى في مكان مكشوف.",
     show: "الأوقات المعروضة",
     showDesc: "اختر ما يظهر في القائمة",
     alwaysShown: "دائماً",
@@ -1060,6 +1063,7 @@ const en: AppStrings = {
     locationNeededDesc: "Prayer times are calculated from your location. It stays on your device and is never sent anywhere.",
     grantLocation: "Use my location",
     locationDenied: "Could not get your location. You can allow it in the app's settings.",
+    locationFailed: "Could not get a location fix. Try again somewhere with a clearer view of the sky.",
     show: "Shown times",
     showDesc: "Choose what appears in the list",
     alwaysShown: "Always",

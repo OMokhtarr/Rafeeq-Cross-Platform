@@ -56,6 +56,10 @@ ion-content::part(scroll) {
   line-height: 1.5;
 }
 
+[dir="ltr"] .pt-title {
+  font-family: var(--font-latin);
+}
+
 /* ── Card: next prayer, menu button and the timetable ────────────────────
    Overlaps the compass header above it, so the page reads as one continuous
    surface rather than two stacked blocks. */
