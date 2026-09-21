@@ -2,19 +2,14 @@ import type { QuizRange } from "../../../../shared/models/verse.model";
 
 // In-memory stand-in for @capacitor/preferences. Declared before the import
 // of the service under test so the mock is in place when it loads.
-const store: Record<string, string> = {};
+const mockStore: Record<string, string> = {};
 
 jest.mock("@capacitor/preferences", () => ({
-  Preferences: {
-    get: jest.fn(async ({ key }: { key: string }) => ({
-      value: key in store ? store[key] : null,
-    })),
-    set: jest.fn(async ({ key, value }: { key: string; value: string }) => {
-      store[key] = value;
-    }),
-  },
+  __esModule: true,
+  Preferences: { get: jest.fn(), set: jest.fn() },
 }));
 
+import { Preferences } from "@capacitor/preferences";
 import {
   PRESETS_KEY,
   listPresets,
@@ -28,8 +23,22 @@ import {
 const juz30: QuizRange[] = [{ kind: "juz", juz: 30 }];
 const baqarah: QuizRange[] = [{ kind: "surah", surah: 2 }];
 
+let mockNow = 1000000;
+
 beforeEach(() => {
-  for (const k of Object.keys(store)) delete store[k];
+  for (const k of Object.keys(mockStore)) delete mockStore[k];
+  mockNow = 1000000;
+  jest.spyOn(Date, 'now').mockImplementation(() => mockNow++);
+  (Preferences.get as jest.Mock).mockImplementation(async ({ key }: { key: string }) => ({
+    value: key in mockStore ? mockStore[key] : null,
+  }));
+  (Preferences.set as jest.Mock).mockImplementation(async ({ key, value }: { key: string; value: string }) => {
+    mockStore[key] = value;
+  });
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe("listPresets", () => {
@@ -40,12 +49,12 @@ describe("listPresets", () => {
   // A corrupt entry must never white-screen a setup page: losing a saved set
   // is a far smaller failure than losing the screen.
   it("returns an empty list rather than throwing on malformed JSON", async () => {
-    store[PRESETS_KEY] = "{not json";
+    mockStore[PRESETS_KEY] = "{not json";
     expect(await listPresets()).toEqual([]);
   });
 
   it("drops entries that are not shaped like a preset", async () => {
-    store[PRESETS_KEY] = JSON.stringify([
+    mockStore[PRESETS_KEY] = JSON.stringify([
       { id: "a", name: "ok", ranges: [], createdAt: 1, updatedAt: 1 },
       { nonsense: true },
       null,
