@@ -93,6 +93,27 @@ export interface MutashabihatQuestion {
 
 export type QuizScopeType = "surah" | "page" | "juz";
 
+/**
+ * One entry in an advanced multi-range quiz selection.
+ *
+ * A range is exactly ONE juz, ONE surah, or ONE page span — never a list.
+ * Selecting five juz in the advanced picker appends five separate entries, so
+ * that every row rendered in the list is one thing the user can remove alone.
+ */
+export type QuizRange =
+  | { kind: "surah"; surah: number }
+  | { kind: "juz"; juz: number }
+  | { kind: "pages"; from: number; to: number };
+
+/** A named, reusable set of ranges, shared across all three quiz types. */
+export interface QuizRangePreset {
+  id: string;
+  name: string;
+  ranges: QuizRange[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Passed via navigation state from QuizSetup → QuizTest */
 export interface QuizConfig {
   type: QuizScopeType;
@@ -102,6 +123,12 @@ export interface QuizConfig {
   juzs: number[];
   questionCount: number;
   difficulty: "easy" | "medium" | "hard";
+  /**
+   * Advanced multi-range scope. When present and non-empty this REPLACES the
+   * legacy single-scope fields above, which are then ignored. Optional so that
+   * configs already stored on device keep working with no migration.
+   */
+  ranges?: QuizRange[] | null;
 }
 
 /** Passed via navigation state from MutashabihatSetup → MutashabihatTest */
@@ -113,4 +140,10 @@ export interface MutashabihatConfig {
   pageTo: number | null;
   selectedJuzs: number[];
   questionCount: number;
+  /**
+   * Advanced multi-range scope. When present and non-empty this REPLACES the
+   * legacy single-scope fields above, which are then ignored. Optional so that
+   * configs already stored on device keep working with no migration.
+   */
+  ranges?: QuizRange[] | null;
 }
