@@ -20,6 +20,9 @@ jest.mock("@capacitor/core", () => {
     setVisibleTimes: jest.fn(),
     getWidgetInfo: jest.fn(),
     requestPinWidget: jest.fn(),
+    openAppSettings: jest.fn(),
+    getPlace: jest.fn(),
+    locationServicesEnabled: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -55,6 +58,9 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setVisibleTimes: jest.Mock;
   getWidgetInfo: jest.Mock;
   requestPinWidget: jest.Mock;
+  openAppSettings: jest.Mock;
+  getPlace: jest.Mock;
+  locationServicesEnabled: jest.Mock;
 };
 const {
   getTimes,
@@ -67,6 +73,7 @@ const {
   setVisibleTimes,
   getWidgetInfo,
   requestPinWidget,
+  openAppSettings,
 } = plugin;
 
 const geolocation = Geolocation as unknown as {
@@ -219,7 +226,7 @@ describe("requestLocation", () => {
 
     const ok = await service.requestLocation();
 
-    expect(ok).toBe(true);
+    expect(ok).toBe("granted");
     expect(setLocation).toHaveBeenCalledWith({ lat: 30.0444, lng: 31.2357 });
   });
 
@@ -233,7 +240,7 @@ describe("requestLocation", () => {
     const ok = await service.requestLocation();
 
     expect(requestPermissions).toHaveBeenCalled();
-    expect(ok).toBe(true);
+    expect(ok).toBe("granted");
   });
 
   it("reports failure without storing anything when permission is denied", async () => {
@@ -242,17 +249,17 @@ describe("requestLocation", () => {
 
     const ok = await service.requestLocation();
 
-    expect(ok).toBe(false);
+    expect(ok).toBe("denied");
     expect(setLocation).not.toHaveBeenCalled();
   });
 
-  it("reports failure when the fix itself fails, leaving any stored fix alone", async () => {
+  it("reports services-off when the fix fails and location services are off", async () => {
     checkPermissions.mockResolvedValue({ location: "granted", coarseLocation: "granted" });
     getCurrentPosition.mockRejectedValue(new Error("position unavailable"));
 
     const ok = await service.requestLocation();
 
-    expect(ok).toBe(false);
+    expect(ok).toBe("services-off");
     expect(setLocation).not.toHaveBeenCalled();
   });
 });
@@ -393,27 +400,112 @@ describe("the home-screen widget", () => {
     expect(info).toEqual({ supported: false, placed: 0 });
   });
 
-  it("reports whether the launcher was asked, not whether it was added", async () => {
-    // The launcher owns the confirmation dialog and never reports the outcome
-    // back. `requested` means asked; treating it as placed would make the page
-    // claim something it cannot know.
+  it("does not claim blocked while the launcher's dialog is still open", async () => {
+    // Regression test: an earlier version compared the placed count across
+    // the call and reported "blocked" whenever it had not moved. The pin
+    // dialog is asynchronous — the request returns at once and the user
+    // answers seconds later — so the count is ALWAYS unchanged at that
+    // instant, and every successful pin was warned about. The count must not
+    // be consulted here at all.
+    getWidgetInfo.mockResolvedValue({ supported: true, placed: 0 });
     requestPinWidget.mockResolvedValue({ requested: true });
 
-    const requested = await service.requestPinWidget();
-
-    expect(requested).toBe(true);
-    expect(requestPinWidget).toHaveBeenCalled();
+    expect(await service.requestPinWidget()).toEqual({
+      requested: true,
+      blocked: false,
+    });
+    expect(getWidgetInfo).not.toHaveBeenCalled();
   });
 
-  it("reports false when the launcher refuses the request", async () => {
+  it("reports blocked only when the system itself refuses", async () => {
+    // The one failure actually visible from here.
+    getWidgetInfo.mockResolvedValue({ supported: true, placed: 0 });
     requestPinWidget.mockResolvedValue({ requested: false });
 
-    expect(await service.requestPinWidget()).toBe(false);
+    expect(await service.requestPinWidget()).toEqual({
+      requested: false,
+      blocked: true,
+    });
   });
 
-  it("reports false rather than throwing when the plugin call fails", async () => {
+  it("reports blocked rather than throwing when the plugin call fails", async () => {
+    getWidgetInfo.mockResolvedValue({ supported: true, placed: 0 });
     requestPinWidget.mockRejectedValue(new Error("bridge error"));
 
-    expect(await service.requestPinWidget()).toBe(false);
+    expect(await service.requestPinWidget()).toEqual({
+      requested: false,
+      blocked: true,
+    });
+  });
+
+  it("opens app settings so a launcher-gated permission can be granted", async () => {
+    openAppSettings.mockResolvedValue({ opened: true });
+
+    expect(await service.openAppSettings()).toBe(true);
+    expect(openAppSettings).toHaveBeenCalled();
+  });
+
+  it("reports false rather than throwing when settings cannot be opened", async () => {
+    openAppSettings.mockRejectedValue(new Error("no activity"));
+
+    expect(await service.openAppSettings()).toBe(false);
+  });
+});
+
+describe("requestLocation outcomes", () => {
+  it("reports denied when the user refuses the permission", async () => {
+    checkPermissions.mockResolvedValue({ location: "prompt" });
+    requestPermissions.mockResolvedValue({ location: "denied" });
+
+    await expect(service.requestLocation()).resolves.toBe("denied");
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it("reports services-off when the fix fails and location is switched off", async () => {
+    // The distinction that matters: the permission is held, so telling the
+    // user to grant it would be a dead end.
+    checkPermissions.mockResolvedValue({ location: "granted" });
+    getCurrentPosition.mockRejectedValue(new Error("location unavailable"));
+    plugin.locationServicesEnabled.mockResolvedValue({ enabled: false });
+
+    await expect(service.requestLocation()).resolves.toBe("services-off");
+  });
+
+  it("reports failed when the fix fails but location is on", async () => {
+    checkPermissions.mockResolvedValue({ location: "granted" });
+    getCurrentPosition.mockRejectedValue(new Error("timeout"));
+    plugin.locationServicesEnabled.mockResolvedValue({ enabled: true });
+
+    await expect(service.requestLocation()).resolves.toBe("failed");
+  });
+
+  it("reports granted and stores the fix", async () => {
+    checkPermissions.mockResolvedValue({ location: "granted" });
+    getCurrentPosition.mockResolvedValue({
+      coords: { latitude: 30.0444, longitude: 31.2357 },
+    });
+
+    await expect(service.requestLocation()).resolves.toBe("granted");
+    expect(setLocation).toHaveBeenCalledWith({
+      lat: 30.0444,
+      lng: 31.2357,
+    });
+  });
+});
+
+describe("getPlace", () => {
+  it("returns the cached name", async () => {
+    plugin.getPlace.mockResolvedValue({ name: "Cairo" });
+    await expect(service.getPlace()).resolves.toBe("Cairo");
+  });
+
+  it("returns null when none has resolved, so the page can use its title", async () => {
+    plugin.getPlace.mockResolvedValue({ name: null });
+    await expect(service.getPlace()).resolves.toBeNull();
+  });
+
+  it("returns null rather than propagating a bridge failure", async () => {
+    plugin.getPlace.mockRejectedValue(new Error("bridge"));
+    await expect(service.getPlace()).resolves.toBeNull();
   });
 });

@@ -25,6 +25,9 @@ jest.mock("@capacitor/core", () => {
     setVisibleTimes: jest.fn(),
     getWidgetInfo: jest.fn(),
     requestPinWidget: jest.fn(),
+    openAppSettings: jest.fn(),
+    getPlace: jest.fn(),
+    locationServicesEnabled: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -56,6 +59,9 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   setVisibleTimes: jest.Mock;
   getWidgetInfo: jest.Mock;
   requestPinWidget: jest.Mock;
+  openAppSettings: jest.Mock;
+  getPlace: jest.Mock;
+  locationServicesEnabled: jest.Mock;
 };
 
 beforeEach(() => {
@@ -93,7 +99,7 @@ describe("on web, where the native plugin does not exist", () => {
   it("declines to request a location it could not store anywhere", async () => {
     const ok = await service.requestLocation();
 
-    expect(ok).toBe(false);
+    expect(ok).toBe("failed");
     // No browser geolocation prompt for a fix that has nowhere to go.
     expect(Geolocation.checkPermissions).not.toHaveBeenCalled();
     expect(plugin.setLocation).not.toHaveBeenCalled();
@@ -157,9 +163,33 @@ describe("the home-screen widget on web", () => {
   });
 
   it("declines to request a pin rather than throwing at the absent bridge", async () => {
-    const requested = await service.requestPinWidget();
+    const outcome = await service.requestPinWidget();
 
-    expect(requested).toBe(false);
+    // Not "blocked": nothing refused it, there is simply no home screen. The
+    // page never reaches this anyway, since the button is not rendered.
+    expect(outcome).toEqual({ requested: false, blocked: false });
     expect(plugin.requestPinWidget).not.toHaveBeenCalled();
+  });
+
+  it("makes openAppSettings a no-op rather than an unhandled rejection", async () => {
+    expect(await service.openAppSettings()).toBe(false);
+    expect(plugin.openAppSettings).not.toHaveBeenCalled();
+  });
+});
+
+describe("place and location services on web", () => {
+  it("has no place name without a plugin to cache one", async () => {
+    await expect(service.getPlace()).resolves.toBeNull();
+    expect(plugin.getPlace).not.toHaveBeenCalled();
+  });
+
+  it("reports location services as off rather than guessing", async () => {
+    await expect(service.locationServicesEnabled()).resolves.toBe(false);
+    expect(plugin.locationServicesEnabled).not.toHaveBeenCalled();
+  });
+
+  it("reports requestLocation as failed, since there is nowhere to store a fix", async () => {
+    await expect(service.requestLocation()).resolves.toBe("failed");
+    expect(Geolocation.checkPermissions).not.toHaveBeenCalled();
   });
 });

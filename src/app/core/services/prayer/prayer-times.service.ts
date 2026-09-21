@@ -41,6 +41,9 @@ interface RafeeqPrayerPlugin {
   setVisibleTimes(options: { times: string[] }): Promise<void>;
   getWidgetInfo(): Promise<{ supported: boolean; placed: number }>;
   requestPinWidget(): Promise<{ requested: boolean }>;
+  openAppSettings(): Promise<{ opened: boolean }>;
+  getPlace(): Promise<{ name: string | null }>;
+  locationServicesEnabled(): Promise<{ enabled: boolean }>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -89,17 +92,34 @@ export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
   };
 }
 
+/** Whether the device's location services are switched on. */
+export async function locationServicesEnabled(): Promise<boolean> {
+  if (!isNative) return false;
+  try {
+    const { enabled } = await RafeeqPrayer.locationServicesEnabled();
+    return enabled;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Why a location attempt ended. A bare boolean could not distinguish a
+ * refused permission from switched-off location services, and those have
+ * different remedies — asking a user to grant a permission they already hold
+ * is a dead end.
+ */
+export type LocationOutcome = "granted" | "denied" | "services-off" | "failed";
+
 /**
  * Acquire a coarse fix and hand it to the native side.
  *
- * Returns false rather than throwing when the user declines or the fix fails:
- * both are states the page renders as a prompt, not errors to surface.
+ * Never throws: every failure is a state the page renders as a message.
  */
-export async function requestLocation(): Promise<boolean> {
-  // Nothing to store a fix into off-device; the catch below would swallow the
-  // bridge error anyway, but returning early keeps the browser from prompting
-  // for a location it cannot use.
-  if (!isNative) return false;
+export async function requestLocation(): Promise<LocationOutcome> {
+  // Nothing to store a fix into off-device, and no way to tell why — so this
+  // is "failed" rather than a more specific claim it cannot support.
+  if (!isNative) return "failed";
 
   try {
     let status = await Geolocation.checkPermissions();
@@ -109,7 +129,7 @@ export async function requestLocation(): Promise<boolean> {
       });
     }
     if (status.location !== "granted" && status.coarseLocation !== "granted") {
-      return false;
+      return "denied";
     }
 
     const pos = await Geolocation.getCurrentPosition({
@@ -120,9 +140,12 @@ export async function requestLocation(): Promise<boolean> {
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
     });
-    return true;
+    return "granted";
   } catch {
-    return false;
+    // The permission is held by this point, so a failure here is either the
+    // device's location services being off or a fix that did not arrive.
+    const on = await locationServicesEnabled();
+    return on ? "failed" : "services-off";
   }
 }
 
@@ -241,20 +264,85 @@ export async function getWidgetInfo(): Promise<{
 }
 
 /**
+ * The outcome of asking the launcher to pin the widget.
+ *
+ * `requested` means the system accepted the request — it says nothing about
+ * whether a widget appeared, which only the launcher knows.
+ *
+ * `blocked` means the system itself refused, which is the one failure the app
+ * can actually see. Some launchers (MIUI) additionally gate pinning behind a
+ * per-app permission and drop the request in their own process, logging
+ *
+ *   E AddItemActivity-PinShortcutRequestUtils:
+ *     add widget failed, <package> has no permission
+ *
+ * That variety is invisible from here and is deliberately not guessed at: a
+ * silent refusal and a pin the user has not answered yet look identical, and
+ * claiming the former would put a false warning under a working button.
+ */
+export interface PinWidgetOutcome {
+  requested: boolean;
+  blocked: boolean;
+}
+
+/**
  * Ask the launcher to add the prayer widget to the home screen.
  *
- * Resolves true once the launcher has been *asked*, not once the widget
- * exists — the launcher owns the confirmation dialog and never reports the
- * outcome back. Treating "requested" as "placed" would make the page claim
- * something it cannot know.
+ * The outcome cannot be observed from here, and it is important not to
+ * pretend otherwise. The launcher's confirmation dialog is asynchronous: the
+ * request returns immediately, the dialog goes up, and the user answers it
+ * seconds later with this app in the background. Comparing the placed count
+ * across the call therefore proves nothing — it is always unchanged at that
+ * instant, including on a pin that is about to succeed.
+ *
+ * So only a refusal the *system* reports is treated as blocked:
+ * `requested: false` from requestPinAppWidget, or a bridge error. Everything
+ * else is left alone, and the refreshed count on the next
+ * `useIonViewWillEnter` is what actually confirms placement.
  */
-export async function requestPinWidget(): Promise<boolean> {
-  if (!isNative) return false;
+export async function requestPinWidget(): Promise<PinWidgetOutcome> {
+  if (!isNative) return { requested: false, blocked: false };
 
   try {
     const { requested } = await RafeeqPrayer.requestPinWidget();
-    return requested;
+    return { requested, blocked: !requested };
+  } catch {
+    return { requested: false, blocked: true };
+  }
+}
+
+/**
+ * Open this app's system settings page.
+ *
+ * The only move available for a launcher-gated permission: it cannot be
+ * requested through any API, so the app can do no more than take the user to
+ * the screen that holds it.
+ */
+export async function openAppSettings(): Promise<boolean> {
+  if (!isNative) return false;
+
+  try {
+    const { opened } = await RafeeqPrayer.openAppSettings();
+    return opened;
   } catch {
     return false;
+  }
+}
+
+/**
+ * The cached name for the stored location, or null.
+ *
+ * Resolved natively when a fix is taken, because Android's Geocoder is a
+ * network call — so this is a read from storage, not a lookup, and works
+ * offline. Null is a normal outcome (offline fix, no geocoder backend, or
+ * coordinates with no named place), which the page renders as its own title.
+ */
+export async function getPlace(): Promise<string | null> {
+  if (!isNative) return null;
+  try {
+    const { name } = await RafeeqPrayer.getPlace();
+    return name ?? null;
+  } catch {
+    return null;
   }
 }
