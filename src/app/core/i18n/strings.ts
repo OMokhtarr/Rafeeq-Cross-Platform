@@ -81,10 +81,28 @@ export interface AppStrings {
     qiblaNoSensor: string;
     qiblaCalibrate: string;
     prayersTab: string;
+    /** Compass turn guidance — shown only when a heading is available. */
+    turnLeft: string;
+    turnRight: string;
+    facingQibla: string;
+    /** The location button and its failure states. */
+    updateLocation: string;
+    locating: string;
+    locationServicesOff: string;
+    locationServicesOffDesc: string;
     /** Button that asks the launcher to pin the home-screen widget. */
     addWidget: string;
     /** Shown beneath it once at least one copy is already on the home screen. */
     widgetAdded: string;
+    /**
+     * Shown when the launcher refused the request without prompting — MIUI
+     * and some other skins gate widget pinning behind a per-app permission
+     * the app cannot request, so the user has to grant it or place the
+     * widget by hand.
+     */
+    widgetBlocked: string;
+    /** Opens the app's system settings page, where that permission lives. */
+    widgetOpenSettings: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -555,8 +573,18 @@ const ar: AppStrings = {
     qiblaNoSensor: "لا تتوفر بوصلة في هذا الجهاز. اتجاه القبلة من الشمال مذكور أعلاه.",
     qiblaCalibrate: "حرّك الجهاز على شكل رقم ٨ لمعايرة البوصلة",
     prayersTab: "الصلوات",
+    turnLeft: "استدر يساراً",
+    turnRight: "استدر يميناً",
+    facingQibla: "أنت تواجه القبلة",
+    updateLocation: "تحديث الموقع",
+    locating: "جارٍ تحديد الموقع…",
+    locationServicesOff: "خدمات الموقع متوقفة",
+    locationServicesOffDesc: "شغّل خدمات الموقع في إعدادات الجهاز ثم حاول مرة أخرى.",
     addWidget: "إضافة الأداة إلى الشاشة الرئيسية",
     widgetAdded: "الأداة مضافة بالفعل",
+    widgetBlocked:
+      "تعذّرت إضافة الأداة عبر المشغّل. تأكد من السماح بـ«اختصارات الشاشة الرئيسية» في إعدادات التطبيق، أو أضف الأداة بالضغط المطوّل على الشاشة الرئيسية.",
+    widgetOpenSettings: "فتح إعدادات التطبيق",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1040,8 +1068,18 @@ const en: AppStrings = {
     qiblaNoSensor: "This device has no compass. The bearing from north is shown above.",
     qiblaCalibrate: "Move the device in a figure eight to calibrate the compass",
     prayersTab: "Prayers",
+    turnLeft: "Turn left",
+    turnRight: "Turn right",
+    facingQibla: "Facing the qibla",
+    updateLocation: "Update location",
+    locating: "Finding your location…",
+    locationServicesOff: "Location services are off",
+    locationServicesOffDesc: "Turn on location in your device settings, then try again.",
     addWidget: "Add widget to home screen",
     widgetAdded: "Widget already added",
+    widgetBlocked:
+      "Your launcher would not add the widget. Check that “Home screen shortcuts” is allowed in app settings, or add the widget by long-pressing the home screen.",
+    widgetOpenSettings: "Open app settings",
   },
   exitConfirm: "Swipe again to exit",
   offline: {
