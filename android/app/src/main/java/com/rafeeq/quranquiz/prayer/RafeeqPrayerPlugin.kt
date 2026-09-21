@@ -4,9 +4,12 @@ import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -35,6 +38,7 @@ import java.util.TimeZone
  *   getVisibleTimes() / setVisibleTimes({...}) — which prayer times the user wants shown
  *   getWidgetInfo()                      — whether the launcher can pin, and how many are placed
  *   requestPinWidget()                   — asks the launcher to add the widget to the home screen
+ *   openAppSettings()                    — this app's settings page, for launcher-gated permissions
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -336,6 +340,27 @@ class RafeeqPrayerPlugin : Plugin() {
         val requested = runCatching { mgr.requestPinAppWidget(provider, null, null) }
             .getOrDefault(false)
         result.put("requested", requested)
+        call.resolve(result)
+    }
+
+    /**
+     * Opens this app's system settings page.
+     *
+     * The escape hatch for launchers that gate widget pinning behind a
+     * per-app permission the app cannot declare or request — MIUI's "Home
+     * screen shortcuts" is the case this exists for. There is no API to
+     * request it, so the only thing the app can do is take the user to the
+     * screen where it lives.
+     */
+    @PluginMethod
+    fun openAppSettings(call: PluginCall) {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null),
+        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        val opened = runCatching { context.startActivity(intent) }.isSuccess
+        val result = JSObject()
+        result.put("opened", opened)
         call.resolve(result)
     }
 
