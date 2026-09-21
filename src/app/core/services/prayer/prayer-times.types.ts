@@ -75,13 +75,19 @@ export type PrayerMadhab = "shafi" | "hanafi";
 export interface PrayerDay {
   /** False until a location has been granted and stored at least once. */
   hasLocation: boolean;
-  times: Record<PrayerKey, Date> | null;
+  /**
+   * Partial, because keys really do go missing: the supplementary times are
+   * only computed when the user has asked for them, and adhan-java returns
+   * nothing at all inside the midnight-sun window at high latitude. Callers
+   * must check each key rather than assume all nine.
+   */
+  times: Partial<Record<PrayerKey, Date>> | null;
   next: { name: PrayerKey; at: Date } | null;
 }
 
 /** The raw plugin shape, before ISO strings are parsed into Dates. */
 export interface RawPrayerDay {
   hasLocation: boolean;
-  times?: Record<PrayerKey, string>;
+  times?: Partial<Record<PrayerKey, string>>;
   next?: { name: PrayerKey; at: string };
 }

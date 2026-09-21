@@ -72,5 +72,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "@types/node": "18.19.130"
   }
 }

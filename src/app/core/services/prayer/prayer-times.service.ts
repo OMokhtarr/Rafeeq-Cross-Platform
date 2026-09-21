@@ -77,7 +77,7 @@ export async function loadPrayerDay(date?: string): Promise<PrayerDay> {
   // an Invalid Date for a key that was never returned.
   // Both lists, so the supplementary times survive the boundary alongside the
   // timetable — iterating PRAYER_KEYS alone would silently drop them.
-  const times = {} as Record<PrayerKey, Date>;
+  const times: Partial<Record<PrayerKey, Date>> = {};
   [...PRAYER_KEYS, ...ADDITIONAL_KEYS].forEach((key) => {
     const iso = raw.times![key];
     if (iso) {
