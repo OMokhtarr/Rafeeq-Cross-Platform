@@ -1,9 +1,16 @@
 import type { QuizRange, Verse } from "../../../../shared/models/verse.model";
 
+// The factory forwards to these module-scope mocks rather than carrying
+// implementations itself: CRA's jest preset sets resetMocks, which would strip
+// an implementation passed straight to jest.fn() inside the factory.
+const mockGetSurahVersesList = jest.fn();
+const mockGetJuzVerses = jest.fn();
+const mockGetPageRangeVerses = jest.fn();
+
 jest.mock("../../../../core/services/data/quran.service", () => ({
-  getSurahVersesList: jest.fn(),
-  getJuzVerses: jest.fn(),
-  getPageRangeVerses: jest.fn(),
+  getSurahVersesList: (...a: unknown[]) => mockGetSurahVersesList(...a),
+  getJuzVerses: (...a: unknown[]) => mockGetJuzVerses(...a),
+  getPageRangeVerses: (...a: unknown[]) => mockGetPageRangeVerses(...a),
 }));
 
 import {
@@ -11,15 +18,6 @@ import {
   normalizeRanges,
   buildRangeVerses,
 } from "../quiz-ranges.service";
-import {
-  getSurahVersesList,
-  getJuzVerses,
-  getPageRangeVerses,
-} from "../../../../core/services/data/quran.service";
-
-const mockGetSurahVersesList = getSurahVersesList as jest.Mock;
-const mockGetJuzVerses = getJuzVerses as jest.Mock;
-const mockGetPageRangeVerses = getPageRangeVerses as jest.Mock;
 
 const verse = (sura: number, aya: number, page = 1): Verse => ({
   sura,
