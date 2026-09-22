@@ -15,6 +15,8 @@ import {
   getChapters,
   getSurahNameArabic,
   getSurahNameEnglish,
+  getSurahStartPage,
+  getSurahEndPage,
 } from "../../../../core/services/data/metadata.service";
 import { toHindiNumbers as toHindi } from "../../../../core/utils/arabic.util";
 import { useLang } from "../../../../core/context/LanguageContext";
@@ -29,7 +31,10 @@ import {
   deriveName,
   type RangeLabels,
 } from "../../services/quiz-range-format";
-import { normalizeRanges } from "../../services/quiz-ranges.service";
+import {
+  normalizeRanges,
+  totalPageCount,
+} from "../../services/quiz-ranges.service";
 import {
   listPresets,
   deletePreset,
@@ -48,6 +53,14 @@ interface Props {
   onRangesChange: (ranges: QuizRange[]) => void;
   saveIntent: SaveIntent;
   onSaveIntentChange: (intent: SaveIntent) => void;
+  /**
+   * Questions per page, or null when the count is a plain total.
+   *
+   * The setup page owns this because it owns the question count the footer
+   * shows and Start uses; the picker only knows how many pages are selected.
+   */
+  perPage: number | null;
+  onPerPageChange: (perPage: number | null) => void;
 }
 
 type AddKind = "juz" | "surah" | "pages";
@@ -59,6 +72,8 @@ const AdvancedRangePicker: React.FC<Props> = ({
   onRangesChange,
   saveIntent,
   onSaveIntentChange,
+  perPage,
+  onPerPageChange,
 }) => {
   const { t, isRTL } = useLang();
   const tq = t.quizSetup;
@@ -67,6 +82,8 @@ const AdvancedRangePicker: React.FC<Props> = ({
   const [addKind, setAddKind] = useState<AddKind>("juz");
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
+  // Narrows the From/To dropdowns to one surah's pages, as the Simple tab does.
+  const [pageFilterSurah, setPageFilterSurah] = useState<number | null>(null);
   const [presets, setPresets] = useState<QuizRangePreset[]>([]);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [shakeKey, setShakeKey] = useState<string | null>(null);
@@ -110,7 +127,7 @@ const AdvancedRangePicker: React.FC<Props> = ({
     }));
   }, []);
 
-  const pageOptions = useMemo(
+  const allPageOptions = useMemo(
     () =>
       Array.from({ length: 604 }, (_, i) => ({
         value: String(i + 1),
@@ -118,6 +135,29 @@ const AdvancedRangePicker: React.FC<Props> = ({
       })),
     [toNum],
   );
+
+  // Picking a surah narrows the dropdowns to its own pages, so you choose from
+  // that surah's pages rather than hunting through all 604.
+  const pageOptions = useMemo(() => {
+    if (pageFilterSurah === null) return allPageOptions;
+    const start = getSurahStartPage(pageFilterSurah);
+    const end = getSurahEndPage(pageFilterSurah);
+    return allPageOptions.filter((o) => {
+      const n = Number(o.value);
+      return n >= start && n <= end;
+    });
+  }, [allPageOptions, pageFilterSurah]);
+
+  const handlePageFilterSurahChange = (surahNum: number | null) => {
+    setPageFilterSurah(surahNum);
+    if (surahNum !== null) {
+      setPageFrom(getSurahStartPage(surahNum));
+      setPageTo(getSurahEndPage(surahNum));
+    } else {
+      setPageFrom(1);
+      setPageTo(10);
+    }
+  };
 
   /** Append a range, or shake the existing row when it is already there. */
   const addRange = (range: QuizRange) => {
@@ -197,14 +237,69 @@ const AdvancedRangePicker: React.FC<Props> = ({
     );
   };
 
-  const pageCount = ranges.reduce(
-    (sum, r) => (r.kind === "pages" ? sum + (r.to - r.from + 1) : sum),
-    0,
-  );
+  // Every page the selection covers, counted once — a surah and a juz that
+  // overlap must not inflate "questions per page".
+  const pageCount = useMemo(() => totalPageCount(ranges), [ranges]);
 
   return (
     <div className="arp-root" dir={isRTL ? "rtl" : "ltr"}>
-      {/* ── Zone 1: the list being built ── */}
+      {/* ── Saved sets, first: always in the same place, so a long surah
+             grid can never bury them below the fold. ── */}
+      {presets.length > 0 && (
+        <div className="arp-section">
+          <div className="arp-label">{tq.savedSets}</div>
+          <div className="arp-preset-row">
+            {presets.map((p) => {
+              const isLoaded = p.id === loadedId;
+              return (
+                <div
+                  key={p.id}
+                  className={`arp-preset-chip${isLoaded ? " loaded" : ""}`}
+                >
+                  {isLoaded && renaming ? (
+                    <input
+                      className="arp-preset-rename"
+                      value={renameText}
+                      autoFocus
+                      onChange={(e) => setRenameText(e.target.value)}
+                      onBlur={() => commitRename(p.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename(p.id);
+                      }}
+                      aria-label={tq.renameSet}
+                    />
+                  ) : (
+                    <button
+                      className="arp-preset-name"
+                      onClick={() => {
+                        // First tap loads; only the loaded chip opens rename,
+                        // so a plain tap never means two things at once.
+                        if (isLoaded) {
+                          setRenameText(p.name);
+                          setRenaming(true);
+                        } else {
+                          loadPreset(p);
+                        }
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  )}
+                  <button
+                    className="arp-preset-delete"
+                    onClick={() => handleDelete(p)}
+                    aria-label={tq.deleteSet}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── The list being built ── */}
       <div className="arp-section">
         <div className="arp-label">
           {tq.yourRanges}
@@ -242,8 +337,44 @@ const AdvancedRangePicker: React.FC<Props> = ({
         {ranges.length > 0 && (
           <p className="arp-totals">
             {tq.rangeTotals}: {toNum(ranges.length)}
-            {pageCount > 0 && ` · ${toNum(pageCount)} ${tq.pagePlural}`}
+            {pageCount > 0 && ` · ${toNum(pageCount)} ${tq.pagesWord}`}
           </p>
+        )}
+
+        {/* Questions per page. Checked, the footer's count stops being a
+            total and becomes a multiplier over the pages selected. */}
+        {ranges.length > 0 && pageCount > 0 && (
+          <div className="arp-perpage">
+            <label className="arp-save-check">
+              <input
+                type="checkbox"
+                checked={perPage !== null}
+                onChange={(e) => onPerPageChange(e.target.checked ? 2 : null)}
+              />
+              <span>{tq.perPageMode}</span>
+            </label>
+
+            {perPage !== null && (
+              <>
+                <div className="arp-perpage-row">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      className={`arp-perpage-btn${perPage === n ? " active" : ""}`}
+                      onClick={() => onPerPageChange(n)}
+                    >
+                      {toNum(n)}
+                    </button>
+                  ))}
+                </div>
+                <p className="arp-perpage-total">
+                  {tq.perPageTotal}: {toNum(perPage * pageCount)}
+                  {" — "}
+                  {toNum(perPage)} × {toNum(pageCount)} {tq.pagesWord}
+                </p>
+              </>
+            )}
+          </div>
         )}
 
         {/* Save is a checkbox, applied on Start — not a button. */}
@@ -377,6 +508,53 @@ const AdvancedRangePicker: React.FC<Props> = ({
 
         {addKind === "pages" && (
           <div className="arp-page-bar">
+            {/* Pick a surah to choose from its pages only, as the Simple tab
+                does; "All pages" restores the full mushaf. */}
+            <div className="arp-filter-row">
+              <button
+                className={`arp-filter-all${pageFilterSurah === null ? " active" : ""}`}
+                onClick={() => handlePageFilterSurahChange(null)}
+              >
+                {tq.allPages}
+              </button>
+              {pageFilterSurah !== null && (
+                <span className="arp-filter-current">
+                  {isRTL
+                    ? getSurahNameArabic(pageFilterSurah)
+                    : getSurahNameEnglish(pageFilterSurah)}
+                </span>
+              )}
+            </div>
+
+            <div className="arp-surah-grid arp-surah-grid-compact">
+              {surahNames.map((s) => (
+                <button
+                  key={s.num}
+                  className={`arp-surah-chip${pageFilterSurah === s.num ? " active" : ""}`}
+                  onClick={() => handlePageFilterSurahChange(s.num)}
+                >
+                  <span className="arp-chip-text">
+                    {isRTL ? (
+                      <>
+                        <span className="arp-chip-name" lang="ar" dir="rtl">
+                          {s.arabic}
+                        </span>
+                        <span className="arp-chip-en">{s.english}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="arp-chip-en">{s.english}</span>
+                        <span className="arp-chip-name" lang="ar" dir="rtl">
+                          {s.arabic}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="arp-chip-num">{toNum(s.num)}</span>
+                </button>
+              ))}
+            </div>
+
             <div className="arp-page-row">
               <div className="arp-page-input">
                 <span>{tq.from}</span>
@@ -415,60 +593,6 @@ const AdvancedRangePicker: React.FC<Props> = ({
         )}
       </div>
 
-      {/* ── Zone 3: saved sets ── */}
-      {presets.length > 0 && (
-        <div className="arp-section">
-          <div className="arp-label">{tq.savedSets}</div>
-          <div className="arp-preset-row">
-            {presets.map((p) => {
-              const isLoaded = p.id === loadedId;
-              return (
-                <div
-                  key={p.id}
-                  className={`arp-preset-chip${isLoaded ? " loaded" : ""}`}
-                >
-                  {isLoaded && renaming ? (
-                    <input
-                      className="arp-preset-rename"
-                      value={renameText}
-                      autoFocus
-                      onChange={(e) => setRenameText(e.target.value)}
-                      onBlur={() => commitRename(p.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitRename(p.id);
-                      }}
-                      aria-label={tq.renameSet}
-                    />
-                  ) : (
-                    <button
-                      className="arp-preset-name"
-                      onClick={() => {
-                        // First tap loads; only the loaded chip opens rename,
-                        // so a plain tap never means two things at once.
-                        if (isLoaded) {
-                          setRenameText(p.name);
-                          setRenaming(true);
-                        } else {
-                          loadPreset(p);
-                        }
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  )}
-                  <button
-                    className="arp-preset-delete"
-                    onClick={() => handleDelete(p)}
-                    aria-label={tq.deleteSet}
-                  >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

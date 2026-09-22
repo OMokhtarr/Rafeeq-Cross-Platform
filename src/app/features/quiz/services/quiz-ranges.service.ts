@@ -12,6 +12,13 @@ import {
   getJuzVerses,
   getPageRangeVerses,
 } from "../../../core/services/data/quran.service";
+import {
+  getSurahStartPage,
+  getSurahEndPage,
+  getJuzStart,
+  getJuzEnd,
+  estimatePageForVerse,
+} from "../../../core/services/data/metadata.service";
 import { rangeKey } from "./quiz-range-format";
 
 const MAX_PAGE = 604;
@@ -56,6 +63,60 @@ export function normalizeRanges(ranges: QuizRange[]): QuizRange[] {
     out.push(range);
   }
   return out;
+}
+
+/**
+ * How many mushaf pages one range spans.
+ *
+ * Juz boundaries are stored as verses, not pages, so a juz is measured by
+ * locating its first and last verse on the page grid. There is no constant to
+ * use instead: the 604 pages are not divided evenly across the 30 juz.
+ */
+export function rangePageCount(range: QuizRange): number {
+  if (!isValidRange(range)) return 0;
+  switch (range.kind) {
+    case "pages":
+      return range.to - range.from + 1;
+    case "surah": {
+      const start = getSurahStartPage(range.surah);
+      const end = getSurahEndPage(range.surah);
+      return Math.max(1, end - start + 1);
+    }
+    case "juz": {
+      const s = getJuzStart(range.juz);
+      const e = getJuzEnd(range.juz);
+      const start = estimatePageForVerse(s.sura, s.aya);
+      const end = estimatePageForVerse(e.sura, e.aya);
+      return Math.max(1, end - start + 1);
+    }
+  }
+}
+
+/**
+ * Pages covered by a whole selection, counting a page once however many
+ * ranges include it — so "3 questions per page" cannot be inflated by
+ * overlapping ranges.
+ */
+export function totalPageCount(ranges: QuizRange[]): number {
+  const pages = new Set<number>();
+  for (const range of normalizeRanges(ranges)) {
+    let start: number;
+    let end: number;
+    if (range.kind === "pages") {
+      start = range.from;
+      end = range.to;
+    } else if (range.kind === "surah") {
+      start = getSurahStartPage(range.surah);
+      end = getSurahEndPage(range.surah);
+    } else {
+      const s = getJuzStart(range.juz);
+      const e = getJuzEnd(range.juz);
+      start = estimatePageForVerse(s.sura, s.aya);
+      end = estimatePageForVerse(e.sura, e.aya);
+    }
+    for (let p = start; p <= end; p++) pages.add(p);
+  }
+  return pages.size;
 }
 
 async function versesFor(range: QuizRange): Promise<Verse[]> {

@@ -13,10 +13,21 @@ jest.mock("../../../../core/services/data/quran.service", () => ({
   getPageRangeVerses: (...a: unknown[]) => mockGetPageRangeVerses(...a),
 }));
 
+// Al-Fatiha is page 1; Al-Baqarah 2–49; juz 1 runs to Al-Baqarah 141, page 21.
+jest.mock("../../../../core/services/data/metadata.service", () => ({
+  getSurahStartPage: (s: number) => (s === 1 ? 1 : s === 2 ? 2 : 100),
+  getSurahEndPage: (s: number) => (s === 1 ? 1 : s === 2 ? 49 : 110),
+  getJuzStart: () => ({ sura: 1, aya: 1 }),
+  getJuzEnd: () => ({ sura: 2, aya: 141 }),
+  estimatePageForVerse: (sura: number) => (sura === 1 ? 1 : 21),
+}));
+
 import {
   isValidRange,
   normalizeRanges,
   buildRangeVerses,
+  rangePageCount,
+  totalPageCount,
 } from "../quiz-ranges.service";
 
 const verse = (sura: number, aya: number, page = 1): Verse => ({
@@ -144,5 +155,76 @@ describe("buildRangeVerses", () => {
     ]);
     expect(mockGetPageRangeVerses).not.toHaveBeenCalled();
     expect(out).toHaveLength(1);
+  });
+});
+
+describe("rangePageCount", () => {
+  it("counts a page span inclusively", () => {
+    expect(rangePageCount({ kind: "pages", from: 10, to: 12 })).toBe(3);
+    expect(rangePageCount({ kind: "pages", from: 7, to: 7 })).toBe(1);
+  });
+
+  it("measures a surah from its own start and end pages", () => {
+    expect(rangePageCount({ kind: "surah", surah: 2 })).toBe(48);
+  });
+
+  it("gives a single-page surah a count of one", () => {
+    expect(rangePageCount({ kind: "surah", surah: 1 })).toBe(1);
+  });
+
+  // Juz boundaries are stored as verses, so the count comes from locating
+  // them on the page grid rather than from a per-juz constant.
+  it("measures a juz through its first and last verse", () => {
+    expect(rangePageCount({ kind: "juz", juz: 1 })).toBe(21);
+  });
+
+  it("counts an invalid range as nothing rather than throwing", () => {
+    expect(rangePageCount({ kind: "juz", juz: 99 })).toBe(0);
+    expect(rangePageCount({ kind: "pages", from: 50, to: 40 })).toBe(0);
+  });
+});
+
+describe("totalPageCount", () => {
+  it("is zero for an empty selection", () => {
+    expect(totalPageCount([])).toBe(0);
+  });
+
+  it("adds up ranges that do not overlap", () => {
+    expect(
+      totalPageCount([
+        { kind: "pages", from: 100, to: 104 },
+        { kind: "pages", from: 200, to: 201 },
+      ]),
+    ).toBe(7);
+  });
+
+  // The whole point of counting pages rather than summing ranges: three
+  // questions per page must not be inflated by ranges that overlap.
+  it("counts a shared page once", () => {
+    expect(
+      totalPageCount([
+        { kind: "pages", from: 10, to: 20 },
+        { kind: "pages", from: 15, to: 25 },
+      ]),
+    ).toBe(16);
+  });
+
+  it("counts across kinds without double-counting", () => {
+    // Al-Fatiha is page 1, and juz 1 spans pages 1–21, so the union is 21.
+    expect(
+      totalPageCount([
+        { kind: "surah", surah: 1 },
+        { kind: "juz", juz: 1 },
+      ]),
+    ).toBe(21);
+  });
+
+  it("ignores invalid entries", () => {
+    expect(
+      totalPageCount([
+        { kind: "pages", from: 700, to: 800 },
+        { kind: "pages", from: 1, to: 3 },
+      ]),
+    ).toBe(3);
   });
 });

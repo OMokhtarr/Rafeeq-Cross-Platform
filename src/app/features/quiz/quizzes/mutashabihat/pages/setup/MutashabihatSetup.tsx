@@ -24,6 +24,7 @@ import {
   savePreset,
   updatePreset,
 } from "../../../../services/quiz-presets.service";
+import { totalPageCount } from "../../../../services/quiz-ranges.service";
 import "./MutashabihatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -51,6 +52,8 @@ const MutashabihatSetup: React.FC = () => {
   const [tab, setTab] = useState<"simple" | "advanced">("simple");
   const [ranges, setRanges] = useState<QuizRange[]>([]);
   const [saveIntent, setSaveIntent] = useState<SaveIntent>({ mode: "none" });
+  // Questions per page, or null for a plain total. Drives questionCount when set.
+  const [perPage, setPerPage] = useState<number | null>(null);
 
   const allPageOptions = useMemo(
     () =>
@@ -114,6 +117,18 @@ const MutashabihatSetup: React.FC = () => {
     }
   };
 
+  // In per-page mode the count is derived, so the footer's picker is hidden
+  // and this is what Start uses.
+  const effectiveQuestionCount =
+    tab === "advanced" && perPage !== null
+      ? Math.max(1, perPage * totalPageCount(ranges))
+      : questionCount;
+
+  const perPageDerived =
+    tab === "advanced" && perPage !== null
+      ? Math.max(1, perPage * totalPageCount(ranges))
+      : null;
+
   const handleStart = async () => {
     const advanced = tab === "advanced";
 
@@ -134,7 +149,7 @@ const MutashabihatSetup: React.FC = () => {
       pageFrom: !advanced && scopeType === "page" ? pageFrom : null,
       pageTo: !advanced && scopeType === "page" ? pageTo : null,
       selectedJuzs: !advanced && scopeType === "juz" ? selectedJuzs : [],
-      questionCount,
+      questionCount: effectiveQuestionCount,
       ranges: advanced ? ranges : null,
     };
 
@@ -231,6 +246,8 @@ const MutashabihatSetup: React.FC = () => {
                   onRangesChange={setRanges}
                   saveIntent={saveIntent}
                   onSaveIntentChange={setSaveIntent}
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
                 />
               </div>
             ) : (
@@ -395,26 +412,34 @@ const MutashabihatSetup: React.FC = () => {
 
           {/* ── Footer: always visible ── */}
           <div className="ms-footer">
-            <div className="ms-footer-label">{tq.questionCount}</div>
-            <div className="ms-count-row">
-              {[5, 10, 15, 20].map((n) => (
-                <button
-                  key={n}
-                  className={`ms-count-btn ${questionCount === n ? "active" : ""}`}
-                  onClick={() => setQuestionCount(n)}
-                >
-                  {isRTL ? toHindi(n) : String(n)}
-                </button>
-              ))}
-              <div className={`ms-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
-                <InlineSelect
-                  value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
-                  options={countOptions}
-                  onChange={(v) => setQuestionCount(Number(v))}
-                  fullWidth
-                />
+            {perPageDerived === null ? (
+              <>
+              <div className="ms-footer-label">{tq.questionCount}</div>
+              <div className="ms-count-row">
+                {[5, 10, 15, 20].map((n) => (
+                  <button
+                    key={n}
+                    className={`ms-count-btn ${questionCount === n ? "active" : ""}`}
+                    onClick={() => setQuestionCount(n)}
+                  >
+                    {isRTL ? toHindi(n) : String(n)}
+                  </button>
+                ))}
+                <div className={`ms-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
+                  <InlineSelect
+                    value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
+                    options={countOptions}
+                    onChange={(v) => setQuestionCount(Number(v))}
+                    fullWidth
+                  />
+                </div>
               </div>
-            </div>
+              </>
+            ) : (
+              <div className="ms-footer-label">
+                {tq.perPageTotal}: {isRTL ? toHindi(perPageDerived) : String(perPageDerived)}
+              </div>
+            )}
             <button
               className="ms-start-btn"
               onClick={handleStart}
