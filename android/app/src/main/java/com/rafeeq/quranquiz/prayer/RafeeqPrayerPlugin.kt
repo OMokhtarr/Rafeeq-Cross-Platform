@@ -157,8 +157,11 @@ class RafeeqPrayerPlugin : Plugin() {
         if (call.data.has("use24Hour")) {
             call.getBoolean("use24Hour")?.let { PrayerConfig.setUse24Hour(context, it) }
         }
-        // Mirrored so the native appearance screen can match the app's theme;
-        // it cannot read localStorage, where the real value lives.
+        // Mirrored so the home-screen widgets and the appearance screen can
+        // match the app's theme. Neither has a WebView to read localStorage,
+        // where the real value lives, and without this they fall back to the
+        // device's dark mode — a different preference entirely. The refresh
+        // below repaints every placed widget as soon as it changes.
         if (call.data.has("appNight")) {
             call.getBoolean("appNight")?.let { PrayerConfig.setAppNight(context, it) }
         }
