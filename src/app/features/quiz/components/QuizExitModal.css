@@ -15,20 +15,19 @@
 }
 
 .qem-sheet {
-  width: 100%;
-  max-width: 480px;
-  max-height: calc(100% - var(--space-6, 24px));
+  width: calc(100% - var(--space-8, 32px));
+  max-width: 420px;
+  max-height: calc(100% - var(--bottom-nav-height) - var(--space-8, 32px));
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--color-bg-card);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  border-top: 3px solid var(--color-gold);
-  border-left: 3px solid var(--color-gold);
-  border-right: 3px solid var(--color-gold);
-  /* The sheet sits at the bottom edge, where the fixed BottomNavBar overlays
-     the page, so its own bottom padding must clear the nav height or the
-     buttons land underneath it. */
-  padding: 28px 24px calc(var(--bottom-nav-height) + var(--space-4, 16px));
+  border: 3px solid var(--color-gold);
+  /* The sheet stops above the nav bar rather than padding itself out to the
+     screen edge: the nav stays visible below it, and the sheet is only as
+     tall as its own content. */
+  margin-bottom: var(--bottom-nav-height);
+  padding: 24px;
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -87,16 +86,27 @@
 }
 
 @keyframes qemSlideUp {
-  from { transform: translateY(60px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { transform: translateY(24px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qem-backdrop,
+  .qem-sheet {
+    animation: none;
+  }
+  .qem-btn:hover {
+    transform: none;
+  }
 }
 
 /* ── Stacking above the fixed BottomNavBar ─────────────────────────────────
    The nav bar (.rfq-tab-bar-fixed, z-index 10) is a sibling of IonContent
    inside IonPage, so it paints above anything inside IonContent no matter
    what z-index the sheet uses. While the exit modal is open, the page gets
-   .qem-open, which lifts IonContent above the nav so the sheet — and only
-   the sheet — sits on top. The class is removed when the modal closes, so
+   .qem-open, which lifts IonContent above the nav so the backdrop can dim the
+   nav along with the rest of the screen. The sheet itself stops above the nav
+   rather than covering it. The class is removed when the modal closes, so
    normal pages keep the nav above the content. */
 .qem-open ion-content {
   /* ion-content is already position:relative, so z-index takes effect here. */
