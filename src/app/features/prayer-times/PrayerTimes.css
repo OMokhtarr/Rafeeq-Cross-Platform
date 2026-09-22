@@ -114,37 +114,57 @@ ion-content::part(scroll) {
   font-family: var(--font-latin);
 }
 
-/* Only the three-dot button now — the dates moved into the compass header. */
+/* The options control. The dates moved into the compass header, so this row
+   holds only the one button. */
 .pt-card-header {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-4) var(--space-3);
 }
 
+/* A labelled pill, not a bare glyph. It is the page's only route to the
+   settings now that the pickers have moved off it, so three dots alone would
+   hide the whole of them behind a guess. Kept quiet — a hairline and muted
+   text — because the timetable below is what the page is for. */
 .pt-menu-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: var(--space-2);
   flex-shrink: 0;
-  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   background: none;
-  border: none;
-  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+[dir="ltr"] .pt-menu-btn {
+  font-family: var(--font-latin);
 }
 
 .pt-menu-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-gold);
 }
 
 .pt-menu-btn:active {
   background: var(--color-gold-faint);
+  border-color: var(--color-gold-subtle);
+}
+
+.pt-menu-btn:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 /* ── Location permission prompt ──────────────── */
@@ -289,133 +309,6 @@ ion-content::part(scroll) {
 }
 
 /* ── Method / madhab pickers ──────────────────── */
-.pt-settings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-5) var(--space-4) 0;
-}
-
-.pt-setting-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  background: var(--color-bg-card);
-  border: 1.5px solid var(--color-border-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-}
-
-.pt-setting-label {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-gold);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.85;
-}
-
-[dir="ltr"] .pt-setting-label {
-  font-family: var(--font-latin);
-}
-
-/* ── Add-widget button ────────────────────────── */
-/* Deliberately not styled as .pt-grant-btn. That gold fill is the page's one
-   primary action: it resolves a blocking state, where nothing works until the
-   user taps it. Adding the widget is optional and additive, so it takes the
-   card surface of the settings rows it sits among — gold on the icon and
-   label, not behind them. Two gold fills would read as two primaries and
-   imply the page is incomplete without the widget. */
-.pt-widget-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  width: 100%;
-  font-family: var(--font-arabic);
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-gold);
-  background: var(--color-gold-faint);
-  border: 1.5px solid var(--color-gold-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-4) var(--space-5);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background var(--transition-fast),
-    opacity var(--transition-fast);
-}
-
-[dir="ltr"] .pt-widget-btn {
-  font-family: var(--font-latin);
-}
-
-.pt-widget-btn:active {
-  opacity: 0.85;
-}
-
-/* The icon is the widget itself — a filled cell in an outlined frame — so the
-   control shows what it produces rather than relying on a generic plus. */
-.pt-widget-btn svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-/* Sits under the button once a copy is already placed. A note, not a warning:
-   Android allows more than one, so the button stays live. */
-.pt-widget-note {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-align: center;
-  margin: var(--space-2) 0 0;
-}
-
-[dir="ltr"] .pt-widget-note {
-  font-family: var(--font-latin);
-}
-
-/* Shown when the launcher refused the pin request without surfacing anything
-   itself. Not an error card: the widget can still be added by hand, so this
-   is guidance, kept in muted text rather than an alarm color. */
-.pt-widget-blocked {
-  margin: var(--space-3) 0 0;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-gold-faint);
-  border-radius: var(--radius-lg);
-}
-
-.pt-widget-blocked-text {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-[dir="ltr"] .pt-widget-blocked-text {
-  font-family: var(--font-latin);
-}
-
-.pt-widget-settings-btn {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-gold);
-  background: none;
-  border: none;
-  padding: var(--space-2) 0 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-[dir="ltr"] .pt-widget-settings-btn {
-  font-family: var(--font-latin);
-}
-
 /* ── Separator ────────────────────────────────── */
 /* Marks the boundary before the first supplementary (non-obligatory) row,
    carrying the section's name on the rule itself. */
@@ -447,7 +340,7 @@ ion-content::part(scroll) {
   .pt-page-wrapper,
   .pt-row,
   .pt-grant-btn,
-  .pt-widget-btn {
+  .pt-menu-btn {
     transition: none;
   }
 }

@@ -1,23 +1,27 @@
 package com.rafeeq.quranquiz.prayer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
- * Covers the deck's arithmetic: how long each card counts down for, and which
- * card the deck opens on.
+ * Covers the deck's arithmetic: what each card's timer shows, and which card
+ * the deck opens on.
  *
  * Both are pure functions over their arguments, deliberately split out of
  * PrayerDeckFactory (which needs a bound service and a launcher) so the part
  * that can actually be wrong is reachable from a JVM test.
  *
- * The countdown target is the thing most worth pinning: a Chronometer given a
- * base in the past does not stop at zero, it counts upward, so a card for a
- * prayer that already passed today must target tomorrow's occurrence rather
- * than today's.
+ * The timer is the thing most worth pinning. A Chronometer cannot render a
+ * negative delta — handed one it climbs from a meaningless number — so
+ * `timerFor` must always return a positive value plus the direction to read
+ * it in, never a signed difference.
  */
 class PrayerDeckTest {
 
@@ -31,72 +35,181 @@ class PrayerDeckTest {
 
     private fun day(vararg entries: Pair<PrayerName, Date?>) = DayTimes(entries.toMap())
 
+    // ── counting down ──────────────────────────────────────────────────
+
     @Test
-    fun `a time still ahead today counts to today`() {
+    fun `a time still ahead today counts down to today`() {
         val today = day(PrayerName.ASR to at(3 * hour))
         val tomorrow = day(PrayerName.ASR to at(27 * hour))
 
-        val result = PrayerDeck.millisUntilNext(PrayerName.ASR, now, today, tomorrow)
+        val timer = PrayerDeck.timerFor(PrayerName.ASR, now, today, tomorrow)
 
-        assertEquals(3 * hour, result)
+        assertEquals(3 * hour, timer!!.millis)
+        assertFalse(timer.countingUp)
     }
 
     @Test
-    fun `a time already passed today counts to tomorrow`() {
-        // The case that makes the countdown meaningful on every card rather
-        // than only on the next prayer's.
+    fun `a time past its window counts down to tomorrow`() {
+        // Five hours after Fajr is well outside its 25-minute window, so the
+        // card has rolled over to tomorrow's occurrence.
         val today = day(PrayerName.FAJR to at(-5 * hour))
         val tomorrow = day(PrayerName.FAJR to at(19 * hour))
 
-        val result = PrayerDeck.millisUntilNext(PrayerName.FAJR, now, today, tomorrow)
+        val timer = PrayerDeck.timerFor(PrayerName.FAJR, now, today, tomorrow)
 
-        assertEquals(19 * hour, result)
+        assertEquals(19 * hour, timer!!.millis)
+        assertFalse(timer.countingUp)
     }
 
     @Test
     fun `a countdown is never negative`() {
-        // The invariant behind the previous test, stated directly: whichever
-        // branch is taken, a Chronometer must never be handed a past target.
-        val today = day(PrayerName.MAGHRIB to at(-minute))
-        val tomorrow = day(PrayerName.MAGHRIB to at(23 * hour))
+        val today = day(PrayerName.MAGHRIB to at(-3 * hour))
+        val tomorrow = day(PrayerName.MAGHRIB to at(21 * hour))
 
-        val result = PrayerDeck.millisUntilNext(PrayerName.MAGHRIB, now, today, tomorrow)
+        val timer = PrayerDeck.timerFor(PrayerName.MAGHRIB, now, today, tomorrow)
 
-        assertTrue("countdown must be in the future", result != null && result > 0)
+        assertTrue("timer must be positive", timer!!.millis > 0)
+    }
+
+    // ── counting up, inside the window ─────────────────────────────────
+
+    @Test
+    fun `a prayer just called counts up from its time`() {
+        // The window's whole purpose: right after the adhan the widget answers
+        // "how long since?", rather than skipping to the next prayer.
+        val today = day(PrayerName.DHUHR to at(-8 * minute))
+        val tomorrow = day(PrayerName.DHUHR to at(16 * hour))
+
+        val timer = PrayerDeck.timerFor(PrayerName.DHUHR, now, today, tomorrow)
+
+        assertEquals(8 * minute, timer!!.millis)
+        assertTrue(timer.countingUp)
     }
 
     @Test
-    fun `a time exactly now counts to tomorrow`() {
-        // Boundary: `after(now)` is strict, so a time equal to now has passed.
-        // Counting to zero-and-then-upward would be the bug.
-        val today = day(PrayerName.DHUHR to now)
-        val tomorrow = day(PrayerName.DHUHR to at(24 * hour))
+    fun `a time exactly now counts up from zero`() {
+        // Boundary at the open end of the window: at the adhan itself the
+        // prayer is current, not still pending.
+        val today = day(PrayerName.ASR to now)
+        val tomorrow = day(PrayerName.ASR to at(24 * hour))
 
-        val result = PrayerDeck.millisUntilNext(PrayerName.DHUHR, now, today, tomorrow)
+        val timer = PrayerDeck.timerFor(PrayerName.ASR, now, today, tomorrow)
 
-        assertEquals(24 * hour, result)
+        assertEquals(0L, timer!!.millis)
+        assertTrue(timer.countingUp)
     }
 
     @Test
-    fun `a name with no time on either day has no countdown`() {
-        // Midnight-sun window: there is nothing to count to, and the caller
-        // drops the card rather than inventing a target.
+    fun `maghrib's window is ten minutes`() {
+        assertEquals(10 * minute, PrayerDeck.elapsedWindowMillis(PrayerName.MAGHRIB))
+    }
+
+    @Test
+    fun `fajr and duha get twenty-five minutes`() {
+        assertEquals(25 * minute, PrayerDeck.elapsedWindowMillis(PrayerName.FAJR))
+        assertEquals(25 * minute, PrayerDeck.elapsedWindowMillis(PrayerName.DUHA))
+    }
+
+    @Test
+    fun `every other time gets twenty minutes`() {
+        listOf(
+            PrayerName.SUNRISE,
+            PrayerName.DHUHR,
+            PrayerName.ASR,
+            PrayerName.ISHA,
+            PrayerName.MIDNIGHT,
+            PrayerName.LAST_THIRD,
+        ).forEach { name ->
+            assertEquals("window for $name", 20 * minute, PrayerDeck.elapsedWindowMillis(name))
+        }
+    }
+
+    @Test
+    fun `maghrib stops counting up after ten minutes`() {
+        // Just inside, then just outside: the closed end of the window is
+        // where an off-by-one would hide.
+        val inside = day(PrayerName.MAGHRIB to at(-9 * minute))
+        val outside = day(PrayerName.MAGHRIB to at(-11 * minute))
+        val tomorrow = day(PrayerName.MAGHRIB to at(21 * hour))
+
+        assertTrue(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, inside, tomorrow)!!.countingUp)
+        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, outside, tomorrow)!!.countingUp)
+    }
+
+    @Test
+    fun `fajr is still counting up where maghrib would have stopped`() {
+        // The windows genuinely differ: 15 minutes past is inside Fajr's 25
+        // but outside Maghrib's 10.
+        val today = day(
+            PrayerName.FAJR to at(-15 * minute),
+            PrayerName.MAGHRIB to at(-15 * minute),
+        )
+        val tomorrow = day(
+            PrayerName.FAJR to at(9 * hour),
+            PrayerName.MAGHRIB to at(21 * hour),
+        )
+
+        assertTrue(PrayerDeck.timerFor(PrayerName.FAJR, now, today, tomorrow)!!.countingUp)
+        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, today, tomorrow)!!.countingUp)
+    }
+
+    // ── absent times ───────────────────────────────────────────────────
+
+    @Test
+    fun `a name with no time on either day has no timer`() {
+        // Midnight-sun window: there is nothing to count to or from, and the
+        // caller drops the card rather than inventing a target.
         val today = day(PrayerName.ISHA to null)
         val tomorrow = day(PrayerName.ISHA to null)
 
-        assertNull(PrayerDeck.millisUntilNext(PrayerName.ISHA, now, today, tomorrow))
+        assertNull(PrayerDeck.timerFor(PrayerName.ISHA, now, today, tomorrow))
     }
 
     @Test
-    fun `a name missing today but present tomorrow still counts`() {
+    fun `a name missing today but present tomorrow still counts down`() {
         val today = day()
         val tomorrow = day(PrayerName.ISHA to at(20 * hour))
 
-        assertEquals(20 * hour, PrayerDeck.millisUntilNext(PrayerName.ISHA, now, today, tomorrow))
+        val timer = PrayerDeck.timerFor(PrayerName.ISHA, now, today, tomorrow)
+
+        assertEquals(20 * hour, timer!!.millis)
+        assertFalse(timer.countingUp)
     }
 
-    private fun card(name: PrayerName) =
-        PrayerDeck.Card(name = name, label = name.name, clock = "00:00", millisUntil = hour)
+    // ── clock format ───────────────────────────────────────────────────
+
+    @Test
+    fun `the 12-hour pattern carries a day-period marker`() {
+        val fmt = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour = false), Locale.US)
+        fmt.timeZone = TimeZone.getTimeZone("UTC")
+        // 16:45 UTC — unambiguous in either clock, so the assertion is about
+        // the format rather than the hour.
+        assertEquals("4:45 PM", fmt.format(Date(1_758_386_700_000L)))
+    }
+
+    @Test
+    fun `the 24-hour pattern is zero-padded and has no marker`() {
+        val fmt = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour = true), Locale.US)
+        fmt.timeZone = TimeZone.getTimeZone("UTC")
+        assertEquals("16:45", fmt.format(Date(1_758_386_700_000L)))
+    }
+
+    /** The default is the product decision most likely to be undone by
+     *  accident, so it is pinned rather than left to the config object. */
+    @Test
+    fun `the widget clock defaults to 12-hour`() {
+        assertFalse(PrayerConfig.DEFAULT_USE_24_HOUR)
+    }
+
+    // ── which card opens ───────────────────────────────────────────────
+
+    private fun card(name: PrayerName, countingUp: Boolean = false) = PrayerDeck.Card(
+        name = name,
+        label = name.name,
+        clock = "00:00",
+        millisUntil = hour,
+        countingUp = countingUp,
+    )
 
     @Test
     fun `the deck opens on the next prayer`() {
@@ -109,6 +222,21 @@ class PrayerDeckTest {
         val next = NextPrayer(PrayerName.ASR, at(hour))
 
         assertEquals(3, PrayerDeck.initialIndex(cards, next))
+    }
+
+    @Test
+    fun `a prayer inside its window outranks the next prayer`() {
+        // Maghrib was called two minutes ago and Isha is next. The widget
+        // should stay on Maghrib: skipping to Isha would hide the elapsed
+        // count the window exists to show.
+        val cards = listOf(
+            card(PrayerName.FAJR),
+            card(PrayerName.MAGHRIB, countingUp = true),
+            card(PrayerName.ISHA),
+        )
+        val next = NextPrayer(PrayerName.ISHA, at(hour))
+
+        assertEquals(1, PrayerDeck.initialIndex(cards, next))
     }
 
     @Test

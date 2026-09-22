@@ -21,6 +21,8 @@ jest.mock("@capacitor/core", () => {
     getWidgetInfo: jest.fn(),
     requestPinWidget: jest.fn(),
     openAppSettings: jest.fn(),
+    openHomeScreen: jest.fn(),
+    openWidgetSettings: jest.fn(),
     getPlace: jest.fn(),
     locationServicesEnabled: jest.fn(),
   };
@@ -59,6 +61,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   getWidgetInfo: jest.Mock;
   requestPinWidget: jest.Mock;
   openAppSettings: jest.Mock;
+  openHomeScreen: jest.Mock;
+  openWidgetSettings: jest.Mock;
   getPlace: jest.Mock;
   locationServicesEnabled: jest.Mock;
 };
@@ -74,6 +78,8 @@ const {
   getWidgetInfo,
   requestPinWidget,
   openAppSettings,
+  openHomeScreen,
+  openWidgetSettings,
 } = plugin;
 
 const geolocation = Geolocation as unknown as {
@@ -408,11 +414,12 @@ describe("the home-screen widget", () => {
     // instant, and every successful pin was warned about. The count must not
     // be consulted here at all.
     getWidgetInfo.mockResolvedValue({ supported: true, placed: 0 });
-    requestPinWidget.mockResolvedValue({ requested: true });
+    requestPinWidget.mockResolvedValue({ requested: true, alreadyPlaced: false });
 
     expect(await service.requestPinWidget()).toEqual({
       requested: true,
       blocked: false,
+      alreadyPlaced: false,
     });
     expect(getWidgetInfo).not.toHaveBeenCalled();
   });
@@ -420,11 +427,12 @@ describe("the home-screen widget", () => {
   it("reports blocked only when the system itself refuses", async () => {
     // The one failure actually visible from here.
     getWidgetInfo.mockResolvedValue({ supported: true, placed: 0 });
-    requestPinWidget.mockResolvedValue({ requested: false });
+    requestPinWidget.mockResolvedValue({ requested: false, alreadyPlaced: false });
 
     expect(await service.requestPinWidget()).toEqual({
       requested: false,
       blocked: true,
+      alreadyPlaced: false,
     });
   });
 
@@ -435,6 +443,7 @@ describe("the home-screen widget", () => {
     expect(await service.requestPinWidget()).toEqual({
       requested: false,
       blocked: true,
+      alreadyPlaced: false,
     });
   });
 
@@ -449,6 +458,44 @@ describe("the home-screen widget", () => {
     openAppSettings.mockRejectedValue(new Error("no activity"));
 
     expect(await service.openAppSettings()).toBe(false);
+  });
+
+  it("reports alreadyPlaced without treating it as a failure", async () => {
+    // One widget is the limit. The native side refuses a second, and that
+    // refusal must not surface as the "your launcher refused" warning — the
+    // page takes the user to the existing widget instead.
+    requestPinWidget.mockResolvedValue({ requested: false, alreadyPlaced: true });
+
+    expect(await service.requestPinWidget()).toEqual({
+      requested: false,
+      blocked: false,
+      alreadyPlaced: true,
+    });
+  });
+
+  it("opens the home screen so the placed widget is visible", async () => {
+    openHomeScreen.mockResolvedValue({ opened: true });
+
+    expect(await service.openHomeScreen()).toBe(true);
+    expect(openHomeScreen).toHaveBeenCalled();
+  });
+
+  it("reports false rather than throwing when home cannot be opened", async () => {
+    openHomeScreen.mockRejectedValue(new Error("no launcher"));
+
+    expect(await service.openHomeScreen()).toBe(false);
+  });
+
+  it("opens the placed widget's appearance settings", async () => {
+    openWidgetSettings.mockResolvedValue({ opened: true });
+
+    expect(await service.openWidgetSettings()).toBe(true);
+  });
+
+  it("reports false when no widget is placed to configure", async () => {
+    openWidgetSettings.mockResolvedValue({ opened: false });
+
+    expect(await service.openWidgetSettings()).toBe(false);
   });
 });
 

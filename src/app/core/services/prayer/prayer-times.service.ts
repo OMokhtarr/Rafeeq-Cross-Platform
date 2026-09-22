@@ -25,11 +25,14 @@ interface RafeeqPrayerPlugin {
   getConfig(): Promise<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
+    use24Hour: boolean;
     hasLocation: boolean;
   }>;
   setConfig(options: {
     method?: PrayerMethod;
     madhab?: PrayerMadhab;
+    use24Hour?: boolean;
+    appNight?: boolean;
   }): Promise<void>;
   getReminders(): Promise<{ enabled: boolean; prayers: PrayerKey[] }>;
   setReminders(options: {
@@ -40,8 +43,10 @@ interface RafeeqPrayerPlugin {
   getVisibleTimes(): Promise<{ times: string[] }>;
   setVisibleTimes(options: { times: string[] }): Promise<void>;
   getWidgetInfo(): Promise<{ supported: boolean; placed: number }>;
-  requestPinWidget(): Promise<{ requested: boolean }>;
+  requestPinWidget(): Promise<{ requested: boolean; alreadyPlaced: boolean }>;
   openAppSettings(): Promise<{ opened: boolean }>;
+  openHomeScreen(): Promise<{ opened: boolean }>;
+  openWidgetSettings(): Promise<{ opened: boolean }>;
   getPlace(): Promise<{ name: string | null }>;
   locationServicesEnabled(): Promise<{ enabled: boolean }>;
 }
@@ -152,10 +157,17 @@ export async function requestLocation(): Promise<LocationOutcome> {
 export async function getPrayerConfig(): Promise<{
   method: PrayerMethod;
   madhab: PrayerMadhab;
+  /** Clock the home-screen widget renders its times in. 12-hour by default. */
+  use24Hour: boolean;
   hasLocation: boolean;
 }> {
   if (!isNative) {
-    return { method: "egyptian", madhab: "shafi", hasLocation: false };
+    return {
+      method: "egyptian",
+      madhab: "shafi",
+      use24Hour: false,
+      hasLocation: false,
+    };
   }
   return RafeeqPrayer.getConfig();
 }
@@ -163,9 +175,27 @@ export async function getPrayerConfig(): Promise<{
 export async function setPrayerConfig(patch: {
   method?: PrayerMethod;
   madhab?: PrayerMadhab;
+  use24Hour?: boolean;
+  appNight?: boolean;
 }): Promise<void> {
   if (!isNative) return;
   await RafeeqPrayer.setConfig(patch);
+}
+
+/**
+ * Mirrors the app's theme into native storage.
+ *
+ * The widget's appearance screen is a real Activity and cannot read the
+ * theme from localStorage, where it lives. Without this it would follow the
+ * device instead of the app and render white inside a dark Rafeeq.
+ *
+ * Called before opening that screen rather than on every theme change: it is
+ * the only native surface that needs the value, so one write at the point of
+ * use beats a listener that fires on every toggle.
+ */
+export async function syncAppTheme(isNight: boolean): Promise<void> {
+  if (!isNative) return;
+  await RafeeqPrayer.setConfig({ appNight: isNight });
 }
 
 /** Current reminder state, or a disabled default off-device. */
@@ -283,6 +313,12 @@ export async function getWidgetInfo(): Promise<{
 export interface PinWidgetOutcome {
   requested: boolean;
   blocked: boolean;
+  /**
+   * A widget is already on the home screen, so nothing was requested. Not a
+   * failure: the page takes the user to it instead of adding a second copy
+   * of a widget showing the same timetable.
+   */
+  alreadyPlaced: boolean;
 }
 
 /**
@@ -301,13 +337,48 @@ export interface PinWidgetOutcome {
  * `useIonViewWillEnter` is what actually confirms placement.
  */
 export async function requestPinWidget(): Promise<PinWidgetOutcome> {
-  if (!isNative) return { requested: false, blocked: false };
+  if (!isNative) return { requested: false, blocked: false, alreadyPlaced: false };
 
   try {
-    const { requested } = await RafeeqPrayer.requestPinWidget();
-    return { requested, blocked: !requested };
+    const { requested, alreadyPlaced } = await RafeeqPrayer.requestPinWidget();
+    // Already placed is neither a request nor a refusal — the page shows the
+    // widget rather than warning about something that did not go wrong.
+    if (alreadyPlaced) {
+      return { requested: false, blocked: false, alreadyPlaced: true };
+    }
+    return { requested, blocked: !requested, alreadyPlaced: false };
   } catch {
-    return { requested: false, blocked: true };
+    return { requested: false, blocked: true, alreadyPlaced: false };
+  }
+}
+
+/**
+ * Leave the app for the home screen, so the widget is visible.
+ *
+ * No Android API can scroll a launcher to a particular widget or highlight
+ * one — the launcher owns its pages and exposes nothing for pointing at a
+ * placed item. Going home is the whole of what is possible.
+ */
+export async function openHomeScreen(): Promise<boolean> {
+  if (!isNative) return false;
+
+  try {
+    const { opened } = await RafeeqPrayer.openHomeScreen();
+    return opened;
+  } catch {
+    return false;
+  }
+}
+
+/** Open the placed widget's appearance settings. False when none is placed. */
+export async function openWidgetSettings(): Promise<boolean> {
+  if (!isNative) return false;
+
+  try {
+    const { opened } = await RafeeqPrayer.openWidgetSettings();
+    return opened;
+  } catch {
+    return false;
   }
 }
 

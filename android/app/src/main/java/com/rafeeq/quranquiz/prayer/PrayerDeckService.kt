@@ -1,8 +1,10 @@
 package com.rafeeq.quranquiz.prayer
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
+import android.content.res.ColorStateList
+import android.os.Build
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.rafeeq.quranquiz.R
@@ -13,22 +15,32 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Backs the widget's swipeable card deck.
+ * Backs the widget's prayer cards.
  *
- * A `StackView` is the only swipeable primitive `RemoteViews` offers — the
- * launcher drives the gesture in its own process and asks this factory for
- * each card. That indirection is why the deck exists as a bound service at
- * all rather than as views the provider sets directly.
+ * The widget shows one card at a time in an `AdapterViewFlipper`, stepped by
+ * the arrows either side of it. A flipper is still a collection view, so its
+ * children come from a bound `RemoteViewsFactory` rather than from views the
+ * provider sets directly — which is why this service exists.
+ *
+ * The widget id rides in on the binding intent so each widget's cards can be
+ * styled from its own stored appearance; two widgets on the same home screen
+ * are independent.
  *
  * Like [PrayerWidgetProvider] this reads [PrayerTimesEngine] and
  * [PrayerConfig] directly and never a cache written by the app: the launcher
- * has no WebView, and the deck must be right after a reboot and on a day the
+ * has no WebView, and the cards must be right after a reboot and on a day the
  * app was never opened.
  */
 class PrayerDeckService : RemoteViewsService() {
 
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
-        PrayerDeckFactory(applicationContext)
+        PrayerDeckFactory(
+            applicationContext,
+            intent.getIntExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID,
+            ),
+        )
 }
 
 /**
@@ -39,8 +51,10 @@ class PrayerDeckService : RemoteViewsService() {
  * called by the launcher on a binder thread and must not recompute prayer
  * times per card.
  */
-internal class PrayerDeckFactory(private val ctx: Context) :
-    RemoteViewsService.RemoteViewsFactory {
+internal class PrayerDeckFactory(
+    private val ctx: Context,
+    private val widgetId: Int,
+) : RemoteViewsService.RemoteViewsFactory {
 
     private var cards: List<PrayerDeck.Card> = emptyList()
 
@@ -66,26 +80,62 @@ internal class PrayerDeckFactory(private val ctx: Context) :
         views.setTextViewText(R.id.card_name, card.label)
         views.setTextViewText(R.id.card_time, card.clock)
 
-        // Chronometer in countdown mode is ticked by the system inside the
-        // launcher process, so the seconds advance with no app process
-        // involvement at all. `base` is on the elapsed-realtime clock, which
-        // is why the card carries a wall-clock delta rather than a Date.
-        views.setChronometer(
-            R.id.card_countdown,
-            SystemClock.elapsedRealtime() + card.millisUntil,
-            null,
-            true,
+        // The timer is not on the card: it lives on the strip, set by
+        // PrayerWidgetProvider from whichever card is showing. A card is just
+        // the prayer's name and its time.
+        //
+        // Per widget, so two widgets can be styled differently. The card sits
+        // on the accent block, so its text takes the accent's own contrast
+        // colour rather than the strip's.
+        val look = PrayerWidgetConfig.appearance(ctx, widgetId)
+
+        // Tint the card's shape drawable rather than replacing it.
+        // `setBackgroundColor` was called here unconditionally, which swapped
+        // the 12dp-rounded drawable for a flat fill — so every card rendered
+        // with square corners, not only a configured one.
+        //
+        // Below API 31 there is no per-widget drawable tint, so the card
+        // keeps the layout's rounded drawable and forgoes the accent. The
+        // rounded block is what the card *is*, and the accent is a
+        // preference; losing the shape to honour it is the wrong trade.
+        //
+        // The text colour follows the same branch. The day and night card
+        // drawables are near-opposite (#F2E7D5 against #33302A) and this
+        // factory cannot tell which variant the launcher inflated, so where
+        // the tint did not land it leaves the layouts' own declared colours
+        // alone rather than guessing a contrast.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorStateList(
+                R.id.card_root,
+                "setBackgroundTintList",
+                ColorStateList.valueOf(look.accentColor),
+            )
+            val onAccent = PrayerWidgetConfig.contrastOn(look.accentColor)
+            views.setTextColor(R.id.card_name, onAccent)
+            views.setTextColor(R.id.card_time, onAccent)
+        }
+
+        // The card's text is the same size as the strip's around it: the two
+        // sit side by side on one row, and a card set smaller reads as a
+        // different, lesser element rather than as part of the same widget.
+        // The card is made compact by its padding, not by its type.
+        //
+        // Each line is still shrunk against its own text, so a long name
+        // comes down without dragging the time with it.
+        views.setTextViewTextSize(
+            R.id.card_name,
+            android.util.TypedValue.COMPLEX_UNIT_SP,
+            PrayerWidgetConfig.fitFontSp(look.fontSp, card.label).toFloat(),
         )
-        views.setChronometerCountDown(R.id.card_countdown, true)
+        views.setTextViewTextSize(
+            R.id.card_time,
+            android.util.TypedValue.COMPLEX_UNIT_SP,
+            PrayerWidgetConfig.fitFontSp(look.fontSp, card.clock).toFloat(),
+        )
 
-        val color = PrayerWidgetProvider.baseTextColor(ctx)
-        views.setTextColor(R.id.card_name, color)
-        views.setTextColor(R.id.card_time, color)
-        views.setTextColor(R.id.card_countdown, PrayerWidgetProvider.COLOR_ACCENT)
-
-        // A child of a collection cannot carry its own PendingIntent; it fills
-        // in the template the provider set on the StackView instead.
-        views.setOnClickFillInIntent(R.id.card_root, Intent())
+        // No fill-in intent: the card is deliberately inert. With the arrows
+        // beside it, a card that also opened the app would make a mis-aimed
+        // press costly — see PrayerWidgetProvider's render().
 
         return views
     }
@@ -97,6 +147,7 @@ internal class PrayerDeckFactory(private val ctx: Context) :
     override fun getItemId(position: Int): Long = position.toLong()
 
     override fun hasStableIds(): Boolean = true
+
 }
 
 /**
@@ -115,35 +166,75 @@ internal object PrayerDeck {
         val label: String,
         val clock: String,
         val millisUntil: Long,
+        /** True while the prayer is inside its elapsed window, so the timer
+         *  counts up from its time rather than down to it. */
+        val countingUp: Boolean,
     )
 
     /**
-     * How long until [name] next occurs, given today's and tomorrow's times.
+     * How long a prayer stays "current" after its time, counting up instead of
+     * counting down to the next one.
      *
-     * Every card counts down, including cards for times that already passed
-     * today — those count to tomorrow's occurrence. A countdown that has gone
-     * negative is not a countdown, and `Chronometer` would render it as a
-     * meaningless climbing number.
+     * The window is the period in which the prayer is still being performed,
+     * so the widget answers "how long since the adhan?" rather than jumping
+     * straight to the next prayer. Maghrib's window is shortest because its
+     * time is itself short; Fajr and Duha are given longer.
+     */
+    fun elapsedWindowMillis(name: PrayerName): Long = when (name) {
+        PrayerName.MAGHRIB -> 10L * 60_000L
+        PrayerName.FAJR, PrayerName.DUHA -> 25L * 60_000L
+        else -> 20L * 60_000L
+    }
+
+    /**
+     * What a card's timer should show: time remaining until the prayer, or
+     * time elapsed since it if it started within its window.
+     *
+     * [millis] is always positive and [countingUp] says which way to read it,
+     * because `Chronometer` cannot render a negative and would otherwise climb
+     * from a meaningless number.
+     */
+    data class Timer(val millis: Long, val countingUp: Boolean)
+
+    /**
+     * The timer for [name] given today's and tomorrow's times.
+     *
+     * Three cases, in order: inside the window just after the prayer, count
+     * *up* from it; still ahead today, count down to it; otherwise count down
+     * to tomorrow's occurrence. The elapsed case is checked first because a
+     * prayer that has just passed is still the one the user cares about.
      *
      * Returns null when neither day has a time for the name (the midnight-sun
      * window), so the caller can drop the card rather than invent a target.
      */
-    fun millisUntilNext(name: PrayerName, now: Date, today: DayTimes, tomorrow: DayTimes): Long? {
+    fun timerFor(name: PrayerName, now: Date, today: DayTimes, tomorrow: DayTimes): Timer? {
         val todayAt = today.times[name]
-        if (todayAt != null && todayAt.after(now)) return todayAt.time - now.time
+        if (todayAt != null) {
+            val since = now.time - todayAt.time
+            if (since in 0 until elapsedWindowMillis(name)) {
+                return Timer(since, countingUp = true)
+            }
+            if (todayAt.after(now)) return Timer(todayAt.time - now.time, countingUp = false)
+        }
         val tomorrowAt = tomorrow.times[name] ?: return null
-        return tomorrowAt.time - now.time
+        return Timer(tomorrowAt.time - now.time, countingUp = false)
     }
 
     /**
-     * Which card the deck should open on: the next prayer, so the widget
-     * answers "how long until the next prayer?" before any swipe.
+     * Which card the deck should open on.
+     *
+     * A prayer inside its elapsed window wins: it has just been called, so it
+     * is the one the user is thinking about, and skipping straight to the next
+     * prayer would hide the "how long since the adhan?" the window exists to
+     * answer. Only when no card is counting up does this fall back to [next].
      *
      * Falls back to the first card when the next prayer is not itself a card —
      * the user can hide nothing obligatory, but [next] is null during
      * midnight sun, and a deck must still open somewhere.
      */
     fun initialIndex(cards: List<Card>, next: NextPrayer?): Int {
+        val elapsed = cards.indexOfFirst { it.countingUp }
+        if (elapsed >= 0) return elapsed
         if (next == null) return 0
         val index = cards.indexOfFirst { it.name == next.name }
         return if (index >= 0) index else 0
@@ -154,6 +245,24 @@ internal object PrayerDeck {
      * no location is stored — the provider shows its prompt in that case and
      * the deck is hidden, so there is nothing to build.
      */
+    /**
+     * The clock format the widget renders times in, honouring the user's
+     * 12/24-hour choice.
+     *
+     * Locale-aware rather than [Locale.US]: at 12 hours the pattern carries a
+     * day-period marker, and a hard-coded US locale would print "AM"/"PM" on
+     * an Arabic widget where every other glyph is Arabic. 24-hour has no marker,
+     * so the locale makes no difference there.
+     */
+    fun clockFormat(ctx: Context, tz: TimeZone): SimpleDateFormat =
+        SimpleDateFormat(clockPattern(PrayerConfig.use24Hour(ctx)), Locale.getDefault())
+            .apply { timeZone = tz }
+
+    /** Split from [clockFormat] so the pattern itself is reachable from a
+     *  JVM test — the format object needs a Context, the choice does not. */
+    fun clockPattern(use24Hour: Boolean): String =
+        if (use24Hour) "HH:mm" else "h:mm a"
+
     fun build(ctx: Context, now: Date): List<Card> {
         val coords = PrayerConfig.coords(ctx) ?: return emptyList()
         val (lat, lng) = coords
@@ -167,7 +276,7 @@ internal object PrayerDeck {
         cal.add(Calendar.DAY_OF_YEAR, 1)
         val tomorrow = PrayerTimesEngine.timesFor(lat, lng, cal.time, method, madhab, tz)
 
-        val timeFmt = SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }
+        val timeFmt = clockFormat(ctx, tz)
         val visible = PrayerConfig.visibleTimes(ctx)
         val withTime = PrayerName.values()
             .filter { today.times[it] != null || tomorrow.times[it] != null }
@@ -177,17 +286,19 @@ internal object PrayerDeck {
         // unlike the old fixed-slot layout nothing has to be cut. The ordering
         // still matters — it is the order the user swipes through.
         return PrayerWidgetProvider.selectForDisplay(visible, withTime).mapNotNull { name ->
-            val millis = millisUntilNext(name, now, today, tomorrow) ?: return@mapNotNull null
-            // Prefer today's clock time when it is still ahead, so the card
-            // reads as today's timetable entry rather than tomorrow's.
-            val at = today.times[name]?.takeIf { it.after(now) }
-                ?: tomorrow.times[name]
-                ?: return@mapNotNull null
+            val timer = timerFor(name, now, today, tomorrow) ?: return@mapNotNull null
+            // Today's clock time while it is still ahead OR inside its elapsed
+            // window — in both cases the card is about today's entry, not
+            // tomorrow's. Only once the window has closed does it roll over.
+            val at = today.times[name]?.takeIf {
+                it.after(now) || now.time - it.time < elapsedWindowMillis(name)
+            } ?: tomorrow.times[name] ?: return@mapNotNull null
             Card(
                 name = name,
                 label = PrayerWidgetProvider.nameLabel(ctx, name),
                 clock = timeFmt.format(at),
-                millisUntil = millis,
+                millisUntil = timer.millis,
+                countingUp = timer.countingUp,
             )
         }
     }

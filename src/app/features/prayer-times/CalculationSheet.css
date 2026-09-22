@@ -1,0 +1,30 @@
+/* Calculation sheet — method and madhab. Shell from PrayerSheet.css.
+   Theme tokens only, no literal fallbacks: a fallback bakes a day colour
+   into a night app on the one occasion it fires. */
+
+.cs-field {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.cs-field:last-of-type {
+  border-bottom: none;
+}
+
+.cs-field-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+/* Says what the setting actually changes, in the reader's terms rather than
+   the engine's — these two pickers are the only place on the page where a
+   choice silently moves every time on the timetable. */
+.cs-field-hint {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}

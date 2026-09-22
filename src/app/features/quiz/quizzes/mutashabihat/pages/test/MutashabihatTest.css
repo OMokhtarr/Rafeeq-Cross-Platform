@@ -226,9 +226,14 @@ ion-content::part(scroll) {
   color: var(--color-gold);
 }
 
-/* Card shrinks to its content — context viewer fills the remaining height */
+/* Card shrinks to its content — context viewer fills the remaining height.
+   It may also shrink BELOW its content (flex-shrink 1 + min-height 0) and
+   scroll internally, so a long question can never push the Next button off
+   the bottom of the screen with no way to reach it. The immersive override
+   below pins it back to content height so the page viewer keeps the rest. */
 .mst-card {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
   width: 100%;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
@@ -240,6 +245,8 @@ ion-content::part(scroll) {
   gap: 4px;
   height: auto;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   transition: all 0.2s ease;
 }
 

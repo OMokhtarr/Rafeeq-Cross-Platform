@@ -1,0 +1,183 @@
+/* Widget settings sheet — add or find the home-screen widget, choose its
+   time format, and restyle it. Shell comes from PrayerSheet.css.
+
+   This is the sheet that rendered white in night mode: it resolved
+   `var(--color-bg-card, #ffffff)` and the literal fallback won. Every colour
+   here is now a bare token, so there is no day value to fall back to. */
+
+/* ── Section ──────────────────────────────────────────────────────────────── */
+
+.wss-section {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.wss-section:last-child {
+  border-bottom: none;
+}
+
+.wss-section-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.wss-section-hint {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+/* Deliberately not the page's gold-filled primary. That fill is reserved for
+   the action that unblocks the page (granting location); the widget is
+   optional and additive, so it takes gold on the icon and label rather than
+   behind them. */
+.wss-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-gold);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.wss-btn:active {
+  opacity: 0.85;
+}
+
+.wss-btn:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Restyling a widget is secondary to having one, so it is quieter than the
+   button above it. */
+.wss-btn--secondary {
+  margin-top: var(--space-2);
+  background: none;
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* The icon is the widget itself — a filled cell in an outlined frame — so the
+   control shows what it produces rather than relying on a generic plus. */
+.wss-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Time format ──────────────────────────────────────────────────────────── */
+
+/* A two-way segmented control rather than a dropdown: there are exactly two
+   choices and both fit side by side, so the alternative is worth showing
+   rather than hiding behind a tap. Each segment carries a live example, so
+   the choice is legible without having to parse the words "12-hour". */
+.wss-segmented {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.wss-segment {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: inherit;
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  color: var(--color-text-secondary);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.wss-segment:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.wss-segment[aria-pressed="true"] {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.wss-segment-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* The example time. Tabular figures so the two segments do not jitter
+   against each other as the clock advances. */
+.wss-segment-sample {
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.wss-segment[aria-pressed="true"] .wss-segment-sample {
+  color: var(--color-gold);
+}
+
+/* ── Launcher refusal ─────────────────────────────────────────────────────── */
+
+/* Shown when the launcher refused the pin request without surfacing anything
+   itself. Guidance, not an error: the widget can still be added by hand, so
+   it stays in muted text rather than an alarm color. */
+.wss-blocked {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-gold-faint);
+  border-radius: var(--radius-lg);
+}
+
+.wss-blocked-text {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.wss-settings-btn {
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-gold);
+  background: none;
+  border: none;
+  padding: var(--space-2) 0 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wss-btn,
+  .wss-segment {
+    transition: none;
+  }
+}

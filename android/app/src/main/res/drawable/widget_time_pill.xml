@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The rounded pill behind the next prayer's time on the timetable widgets.
+
+  Transparent by default and tinted at runtime, so the same drawable serves
+  both the lit row and the quiet ones: a tint list can recolour it, but
+  nothing in RemoteViews can add a shape to a view that has none.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#00000000" />
+    <corners android:radius="999dp" />
+</shape>

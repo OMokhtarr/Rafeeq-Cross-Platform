@@ -1,7 +1,11 @@
 /**
  * MORE PAGE
  * Hub for secondary destinations that don't earn a tab of their own:
- * Account, Settings, and (once built) Qibla and Prayer Times.
+ * Prayer Times & Qibla, Account and Settings.
+ *
+ * Prayer times and the qibla share one entry because they share one page —
+ * /prayer-times renders the compass in its header above the times, so two
+ * cards pointing at the same route only made the grid look busier.
  *
  * Entries navigate with `push`, not the nav bar's `replace`, so hardware back
  * returns here rather than exiting — these are sub-pages of More, and /account
@@ -22,7 +26,7 @@ import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import "./More.css";
 
 interface MoreEntry {
-  id: "account" | "settings" | "qibla" | "prayerTimes";
+  id: "account" | "settings" | "prayerTimes";
   icon: React.ReactNode;
   route: string;
   comingSoon?: boolean;
@@ -30,24 +34,13 @@ interface MoreEntry {
 
 const ENTRIES: MoreEntry[] = [
   {
-    id: "qibla",
-    // Compass: the needle points to the Kaaba rather than north.
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9.5" />
-        <path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z" />
-      </svg>
-    ),
-    route: "/prayer-times",
-  },
-  {
     id: "prayerTimes",
-    // Crescent over a clock face — the two ideas the feature joins.
+    // Compass rose with a crescent: the qibla needle and the times in one mark.
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="13.5" r="7.5" />
-        <path d="M12 9.5v4.2l2.7 1.6" />
-        <path d="M19.5 2.2a3 3 0 1 0 2.3 3.6 2.4 2.4 0 0 1-2.3-3.6z" />
+        <circle cx="11" cy="13" r="8.5" />
+        <path d="M14.4 9.6l-2 4.8-4.8 2 2-4.8z" />
+        <path d="M19.6 2.2a2.8 2.8 0 1 0 2.2 3.4 2.2 2.2 0 0 1-2.2-3.4z" />
       </svg>
     ),
     route: "/prayer-times",
@@ -83,7 +76,6 @@ const More: React.FC = () => {
   const labels: Record<MoreEntry["id"], string> = {
     account: tm.account,
     settings: tm.settings,
-    qibla: tm.qibla,
     prayerTimes: tm.prayerTimes,
   };
 

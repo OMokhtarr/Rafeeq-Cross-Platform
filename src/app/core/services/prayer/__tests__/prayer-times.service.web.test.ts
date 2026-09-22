@@ -26,6 +26,8 @@ jest.mock("@capacitor/core", () => {
     getWidgetInfo: jest.fn(),
     requestPinWidget: jest.fn(),
     openAppSettings: jest.fn(),
+    openHomeScreen: jest.fn(),
+    openWidgetSettings: jest.fn(),
     getPlace: jest.fn(),
     locationServicesEnabled: jest.fn(),
   };
@@ -60,6 +62,8 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   getWidgetInfo: jest.Mock;
   requestPinWidget: jest.Mock;
   openAppSettings: jest.Mock;
+  openHomeScreen: jest.Mock;
+  openWidgetSettings: jest.Mock;
   getPlace: jest.Mock;
   locationServicesEnabled: jest.Mock;
 };
@@ -85,6 +89,7 @@ describe("on web, where the native plugin does not exist", () => {
       method: "egyptian",
       madhab: "shafi",
       hasLocation: false,
+      use24Hour: false,
     });
     expect(plugin.getConfig).not.toHaveBeenCalled();
   });
@@ -167,13 +172,27 @@ describe("the home-screen widget on web", () => {
 
     // Not "blocked": nothing refused it, there is simply no home screen. The
     // page never reaches this anyway, since the button is not rendered.
-    expect(outcome).toEqual({ requested: false, blocked: false });
+    expect(outcome).toEqual({
+      requested: false,
+      blocked: false,
+      alreadyPlaced: false,
+    });
     expect(plugin.requestPinWidget).not.toHaveBeenCalled();
   });
 
   it("makes openAppSettings a no-op rather than an unhandled rejection", async () => {
     expect(await service.openAppSettings()).toBe(false);
     expect(plugin.openAppSettings).not.toHaveBeenCalled();
+  });
+
+  it("does not try to leave a browser for a home screen it has no concept of", async () => {
+    expect(await service.openHomeScreen()).toBe(false);
+    expect(plugin.openHomeScreen).not.toHaveBeenCalled();
+  });
+
+  it("makes openWidgetSettings a no-op off-device", async () => {
+    expect(await service.openWidgetSettings()).toBe(false);
+    expect(plugin.openWidgetSettings).not.toHaveBeenCalled();
   });
 });
 

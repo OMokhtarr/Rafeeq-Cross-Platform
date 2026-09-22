@@ -16,6 +16,11 @@
     -->
     <color name="windowBackground">#000000</color>
 
+    <!-- Night background for the widget's appearance screen. Matches the
+         web token color-bg-content (#111111), so the native screen and the
+         page that launches it read as one app. -->
+    <color name="widgetConfigNightBg">#111111</color>
+
     <!-- Brand colours, replacing Capacitor's default indigo placeholders. -->
     <color name="colorPrimary">#0F7A5A</color>
     <color name="colorPrimaryDark">#000000</color>

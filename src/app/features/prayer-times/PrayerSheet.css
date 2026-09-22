@@ -1,0 +1,195 @@
+/* ═══════════════════════════════════════════════
+   PRAYER SHEET SHELL
+   The chrome every prayer-times bottom sheet shares: backdrop, panel,
+   handle, header and the row idiom. Four sheets hang off the page's ⋮ menu
+   and each one used to be a near-copy of this; they import this file and add
+   only what is genuinely their own.
+
+   Colour comes from the theme tokens alone — no `var(..., #fff)` fallbacks
+   and no night-mode class. A fallback only ever fires when the token fails
+   to resolve, and then it hard-codes the *day* colour into a night app,
+   which is exactly the white-sheet-in-dark-mode bug this file used to have.
+   The tokens hang off `:root[data-theme]`, so they resolve everywhere,
+   including inside portals.
+
+   `sts-` is kept as the prefix rather than renamed: ShowTimesSheet's markup
+   already uses it, and a rename would touch every sheet for no visual gain.
+   ═══════════════════════════════════════════════ */
+
+.sts-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1700;
+  animation: sts-fade 0.18s ease-out;
+}
+
+@keyframes sts-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Sheet ────────────────────────────────────────────────────────────────── */
+
+.sts-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1800;
+  max-width: var(--max-width-mobile);
+  margin: 0 auto;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1.5px solid var(--color-border-card);
+  border-bottom: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-arabic);
+  animation: sts-slide-up 0.22s ease-out;
+  transition:
+    background var(--transition-theme),
+    color var(--transition-theme);
+
+  /* The sheet is `position: fixed` but the nav bar is `position: absolute`
+     inside IonPage, so the two are measured against different boxes and the
+     sheet cannot simply sit above it — the nav overlays the sheet's own
+     last rows. Reserving the nav's height here keeps the final control clear
+     of it, and the safe-area inset is already inside that token. */
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-2));
+
+  /* Leaves the header of whatever is behind it visible, so the sheet reads
+     as sitting on the page rather than replacing it. */
+  max-height: calc(100dvh - var(--space-10));
+}
+
+[dir="ltr"] .sts-sheet {
+  font-family: var(--font-latin);
+}
+
+@keyframes sts-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
+/* ── Handle ───────────────────────────────────────────────────────────────── */
+
+.sts-handle {
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 0;
+  background: var(--color-gold);
+  opacity: 0.45;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+
+.sts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.sts-header-text {
+  min-width: 0;
+}
+
+.sts-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.sts-desc {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Trailing control in the header. Holds the close ✕ on a top-level sheet and
+   the back arrow on one opened from the menu, so the two never shift the
+   title's position between steps. */
+.sts-close {
+  background: transparent;
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.sts-close:active {
+  background: var(--color-gold-faint);
+  border-color: var(--color-gold-subtle);
+}
+
+.sts-close:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.sts-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The back arrow points the way the reader came from, so it flips with the
+   writing direction rather than always pointing at the physical left. */
+[dir="rtl"] .sts-back svg {
+  transform: scaleX(-1);
+}
+
+/* ── Body / rows ──────────────────────────────────────────────────────────── */
+
+.sts-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-2) var(--space-4) var(--space-5);
+}
+
+.sts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sts-row:last-child {
+  border-bottom: none;
+}
+
+.sts-row-label {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .sts-backdrop,
+  .sts-sheet {
+    animation: none;
+  }
+}

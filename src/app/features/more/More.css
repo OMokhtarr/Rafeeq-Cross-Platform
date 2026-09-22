@@ -64,6 +64,15 @@ ion-content::part(scroll) {
   box-sizing: border-box;
 }
 
+/*
+ * The lead entry spans both columns: with three cards, a half-width first card
+ * would leave a hole beside it. Full width also matches its standing — it is
+ * the daily-use destination, Account and Settings are utilities below it.
+ */
+.more-grid > .more-card:first-child {
+  grid-column: 1 / -1;
+}
+
 /* ── Card ────────────────────────────────────── */
 .more-card {
   position: relative;

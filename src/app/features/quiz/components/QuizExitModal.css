@@ -1,7 +1,12 @@
+/* The modal renders inside IonContent, while the fixed BottomNavBar is a
+   later sibling of IonContent inside IonPage. A z-index here only competes
+   within IonContent's own stacking context, so the nav painted over the
+   sheet. Lifting IonContent above the nav (see the ion-page rule below)
+   lets this z-index take effect. */
 .qem-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 1900;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: flex-end;
@@ -12,12 +17,18 @@
 .qem-sheet {
   width: 100%;
   max-width: 480px;
+  max-height: calc(100% - var(--space-6, 24px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   border-top: 3px solid var(--color-gold);
   border-left: 3px solid var(--color-gold);
   border-right: 3px solid var(--color-gold);
-  padding: 28px 24px 36px;
+  /* The sheet sits at the bottom edge, where the fixed BottomNavBar overlays
+     the page, so its own bottom padding must clear the nav height or the
+     buttons land underneath it. */
+  padding: 28px 24px calc(var(--bottom-nav-height) + var(--space-4, 16px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -78,4 +89,16 @@
 @keyframes qemSlideUp {
   from { transform: translateY(60px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Stacking above the fixed BottomNavBar ─────────────────────────────────
+   The nav bar (.rfq-tab-bar-fixed, z-index 10) is a sibling of IonContent
+   inside IonPage, so it paints above anything inside IonContent no matter
+   what z-index the sheet uses. While the exit modal is open, the page gets
+   .qem-open, which lifts IonContent above the nav so the sheet — and only
+   the sheet — sits on top. The class is removed when the modal closes, so
+   normal pages keep the nav above the content. */
+.qem-open ion-content {
+  /* ion-content is already position:relative, so z-index takes effect here. */
+  z-index: 20;
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  4x2 landscape timetable: the same times laid out as columns. See
+  widget_timetable_vertical_info.xml for why updatePeriodMillis is 0 and why
+  no configure activity is declared.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_timetable_wide"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_timetable_wide"
+    android:description="@string/prayer_widget_desc_wide"
+    android:updatePeriodMillis="0" />

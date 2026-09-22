@@ -34,7 +34,7 @@ export interface AppStrings {
     title: string;
     account: string;
     settings: string;
-    qibla: string;
+    /** One entry covers both: the page shows the qibla above the times. */
     prayerTimes: string;
   };
 
@@ -105,6 +105,30 @@ export interface AppStrings {
     widgetBlocked: string;
     /** Opens the app's system settings page, where that permission lives. */
     widgetOpenSettings: string;
+    /** Button shown in place of "add" once the widget is on the home screen. */
+    widgetShowOnHome: string;
+    /** Opens the placed widget's appearance settings. */
+    widgetAppearance: string;
+    /** The ⋮ menu that gathers the page's settings destinations. */
+    menuTitle: string;
+    menuLabel: string;
+    /** Widget destination: its menu row, and the sheet it opens. */
+    widgetSettings: string;
+    widgetSettingsDesc: string;
+    /** Summary under the widget menu row, standing in for a value. */
+    widgetPlacedStatus: string;
+    widgetNotPlacedStatus: string;
+    /** Calculation destination: method and madhab together. */
+    calculationTitle: string;
+    calculationDesc: string;
+    /** What each picker actually changes, said in the reader's terms. */
+    methodHint: string;
+    madhabHint: string;
+    /** Clock the home-screen widget renders its times in. */
+    timeFormat: string;
+    timeFormatHint: string;
+    timeFormat12: string;
+    timeFormat24: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -554,8 +578,7 @@ const ar: AppStrings = {
     title: "المزيد",
     account: "حسابي",
     settings: "الإعدادات",
-    qibla: "القبلة",
-    prayerTimes: "مواقيت الصلاة",
+    prayerTimes: "المواقيت والقبلة",
   },
   prayerTimes: {
     title: "مواقيت الصلاة",
@@ -610,6 +633,23 @@ const ar: AppStrings = {
     widgetBlocked:
       "تعذّرت إضافة الأداة عبر المشغّل. تأكد من السماح بـ«اختصارات الشاشة الرئيسية» في إعدادات التطبيق، أو أضف الأداة بالضغط المطوّل على الشاشة الرئيسية.",
     widgetOpenSettings: "فتح إعدادات التطبيق",
+    widgetShowOnHome: "عرض الأداة على الشاشة الرئيسية",
+    widgetAppearance: "مظهر الأداة",
+    menuTitle: "الخيارات",
+    menuLabel: "خيارات مواقيت الصلاة",
+    widgetSettings: "إعدادات الأداة",
+    widgetSettingsDesc: "أداة المواقيت على الشاشة الرئيسية",
+    widgetPlacedStatus: "مضافة إلى الشاشة الرئيسية",
+    widgetNotPlacedStatus: "غير مضافة بعد",
+    calculationTitle: "طريقة الحساب والمذهب",
+    calculationDesc: "تؤثر على المواقيت المعروضة",
+    methodHint:
+      "تختلف الهيئات في زاويتي الفجر والعشاء. اختر الهيئة المعتمدة في بلدك.",
+    madhabHint: "يؤخّر المذهب الحنفي وقت العصر عن الشافعي.",
+    timeFormat: "صيغة الوقت",
+    timeFormatHint: "كيف تظهر المواقيت في الأداة.",
+    timeFormat12: "١٢ ساعة",
+    timeFormat24: "٢٤ ساعة",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1072,8 +1112,7 @@ const en: AppStrings = {
     title: "More",
     account: "Account",
     settings: "Settings",
-    qibla: "Qibla",
-    prayerTimes: "Prayer Times",
+    prayerTimes: "Prayer Times & Qibla",
   },
   prayerTimes: {
     title: "Prayer Times",
@@ -1128,6 +1167,23 @@ const en: AppStrings = {
     widgetBlocked:
       "Your launcher would not add the widget. Check that “Home screen shortcuts” is allowed in app settings, or add the widget by long-pressing the home screen.",
     widgetOpenSettings: "Open app settings",
+    widgetShowOnHome: "Show widget on home screen",
+    widgetAppearance: "Widget appearance",
+    menuTitle: "Options",
+    menuLabel: "Prayer times options",
+    widgetSettings: "Widget settings",
+    widgetSettingsDesc: "The prayer times widget on your home screen",
+    widgetPlacedStatus: "On your home screen",
+    widgetNotPlacedStatus: "Not added yet",
+    calculationTitle: "Calculation and madhab",
+    calculationDesc: "Changes the times shown",
+    methodHint:
+      "Authorities differ on the sun angles for Fajr and Isha. Pick the one used where you are.",
+    madhabHint: "The Hanafi madhab sets Asr later than the Shafi'i.",
+    timeFormat: "Time format",
+    timeFormatHint: "How times are shown on the widget.",
+    timeFormat12: "12-hour",
+    timeFormat24: "24-hour",
   },
   exitConfirm: "Swipe again to exit",
   offline: {

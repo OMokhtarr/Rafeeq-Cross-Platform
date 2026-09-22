@@ -30,7 +30,7 @@ import java.util.TimeZone
  * JS → Native:
  *   getTimes({ date? })                  — today's six times plus the next prayer
  *   setLocation({ lat, lng })            — store coordinates for every consumer
- *   getConfig() / setConfig({...})       — calculation method and madhab
+ *   getConfig() / setConfig({...})       — method, madhab and clock format
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
  *   getPlace()                           — cached place name for the stored location, or null
@@ -39,6 +39,8 @@ import java.util.TimeZone
  *   getWidgetInfo()                      — whether the launcher can pin, and how many are placed
  *   requestPinWidget()                   — asks the launcher to add the widget to the home screen
  *   openAppSettings()                    — this app's settings page, for launcher-gated permissions
+ *   openHomeScreen()                     — leaves the app so the placed widget is visible
+ *   openWidgetSettings()                 — the placed widget's appearance screen
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -139,6 +141,7 @@ class RafeeqPrayerPlugin : Plugin() {
         val result = JSObject()
         result.put("method", PrayerConfig.method(context))
         result.put("madhab", PrayerConfig.madhab(context))
+        result.put("use24Hour", PrayerConfig.use24Hour(context))
         val coords = PrayerConfig.coords(context)
         result.put("hasLocation", coords != null)
         call.resolve(result)
@@ -148,6 +151,17 @@ class RafeeqPrayerPlugin : Plugin() {
     fun setConfig(call: PluginCall) {
         call.getString("method")?.let { PrayerConfig.setMethod(context, it) }
         call.getString("madhab")?.let { PrayerConfig.setMadhab(context, it) }
+        // `has` before `getBoolean`: a plain getBoolean cannot tell "absent"
+        // from "false", so a call that only changes the method would quietly
+        // reset the clock to 12-hour.
+        if (call.data.has("use24Hour")) {
+            call.getBoolean("use24Hour")?.let { PrayerConfig.setUse24Hour(context, it) }
+        }
+        // Mirrored so the native appearance screen can match the app's theme;
+        // it cannot read localStorage, where the real value lives.
+        if (call.data.has("appNight")) {
+            call.getBoolean("appNight")?.let { PrayerConfig.setAppNight(context, it) }
+        }
         PrayerWidgetProvider.refresh(context)
         call.resolve()
     }
@@ -319,10 +333,15 @@ class RafeeqPrayerPlugin : Plugin() {
     /**
      * Asks the launcher to pin the prayer widget to the home screen.
      *
-     * Resolves `requested: true` once the launcher has been asked — not once
-     * the widget exists. The launcher owns the confirmation dialog and never
-     * reports the outcome back, so claiming placement here would be a lie the
-     * page would then have to display.
+     * Refuses when one is already placed: a second copy of a widget that
+     * shows the same timetable is almost never wanted, and Android would
+     * happily add one. `alreadyPlaced: true` tells the page to show the
+     * widget rather than silently doing nothing.
+     *
+     * Otherwise resolves `requested: true` once the launcher has been asked —
+     * not once the widget exists. The launcher owns the confirmation dialog
+     * and never reports the outcome back, so claiming placement here would be
+     * a lie the page would then have to display.
      */
     @PluginMethod
     fun requestPinWidget(call: PluginCall) {
@@ -330,16 +349,80 @@ class RafeeqPrayerPlugin : Plugin() {
         val mgr = AppWidgetManager.getInstance(context)
         if (mgr == null || !mgr.isRequestPinAppWidgetSupported) {
             result.put("requested", false)
+            result.put("alreadyPlaced", false)
             call.resolve(result)
             return
         }
+
         val provider = ComponentName(context, PrayerWidgetProvider::class.java)
+        if (mgr.getAppWidgetIds(provider).isNotEmpty()) {
+            result.put("requested", false)
+            result.put("alreadyPlaced", true)
+            call.resolve(result)
+            return
+        }
+
         // No success callback is passed: the launcher's own dialog is the
         // confirmation, and a PendingIntent here would only tell us what the
         // user already saw happen.
         val requested = runCatching { mgr.requestPinAppWidget(provider, null, null) }
             .getOrDefault(false)
         result.put("requested", requested)
+        result.put("alreadyPlaced", false)
+        call.resolve(result)
+    }
+
+    /**
+     * Leaves the app for the home screen, so the user lands where the widget
+     * is rather than having to dismiss Rafeeq themselves.
+     *
+     * This is a *home* intent, not navigation to the widget itself: no
+     * Android API can scroll a launcher to a particular widget or highlight
+     * one, because the launcher owns its own pages and exposes nothing for
+     * pointing at a placed item. Going home is the whole of what is possible,
+     * and it is honest — the widget is visible from there.
+     */
+    @PluginMethod
+    fun openHomeScreen(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val opened = runCatching { context.startActivity(intent) }.isSuccess
+        val result = JSObject()
+        result.put("opened", opened)
+        call.resolve(result)
+    }
+
+    /**
+     * Opens the appearance settings for the placed widget.
+     *
+     * Configures the first placed instance: the pin path allows only one, so
+     * "the widget" is unambiguous in practice, and a user who added extras by
+     * hand still gets a screen that works rather than an error.
+     */
+    @PluginMethod
+    fun openWidgetSettings(call: PluginCall) {
+        val result = JSObject()
+        val mgr = AppWidgetManager.getInstance(context)
+        val ids = mgr?.getAppWidgetIds(
+            ComponentName(context, PrayerWidgetProvider::class.java),
+        )
+        val widgetId = ids?.firstOrNull()
+        if (widgetId == null) {
+            // Nothing placed: there is no widget whose colours this would
+            // change, so the page keeps its "add" button instead.
+            result.put("opened", false)
+            call.resolve(result)
+            return
+        }
+
+        val intent = Intent(context, PrayerWidgetConfigActivity::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val opened = runCatching { context.startActivity(intent) }.isSuccess
+        result.put("opened", opened)
         call.resolve(result)
     }
 

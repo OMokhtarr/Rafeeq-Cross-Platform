@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Night layout for the prayer-times widget: a 4x1 strip, light text on a dark
-  background. A date column on the left, and on the right a StackView deck of
-  one card per visible time (see widget_prayer_card.xml).
+  background.
+
+  Two stacked lines on the left — a moon beside the combined Gregorian/Hijri
+  date, then a pin beside the place name with the timer at the end of the same
+  line — and on the right one prayer card flanked by step buttons.
+
+  AdapterViewFlipper rather than StackView: a flipper shows exactly one child
+  with nothing stacked behind it. StackView's peeking card deck is not
+  configurable, and a single clean card is what this widget wants. The flipper
+  is not swipeable, which is why the arrows exist — and it means the card
+  carries no PendingIntent, so a press meant for an arrow can never open the
+  app.
 
   Every view id here must also exist in layout/widget_prayer_times.xml —
   the provider sets views by id and a mismatch crashes whichever configuration
-  is inflated.
+  is inflated. WidgetLayoutParityTest enforces that.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -15,8 +25,15 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:background="@drawable/widget_prayer_background_dark"
-    android:padding="10dp">
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
 
+    <!--
+      The only region that opens the app. The arrows carry their own broadcast
+      intents and the card carries none.
+    -->
     <LinearLayout
         android:id="@+id/widget_date_column"
         android:layout_width="0dp"
@@ -24,31 +41,79 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:paddingStart="4dp"
-        android:paddingEnd="8dp">
+        android:paddingEnd="4dp">
 
-        <TextView
-            android:id="@+id/widget_date"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/widget_hijri"
-            android:layout_width="wrap_content"
+            <ImageView
+                android:id="@+id/widget_icon_date"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/widget_ic_moon"
+                android:contentDescription="@null" />
+
+            <!-- Gregorian and Hijri joined into one line by the provider, so
+                 the strip keeps its second line free for the place. -->
+            <TextView
+                android:id="@+id/widget_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/widget_icon_place"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/widget_ic_pin"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:id="@+id/widget_place"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!--
+              Counts down to the prayer, or up from it while it is inside its
+              elapsed window. Ticked by the system in the launcher's process;
+              direction and base are set by the provider.
+            -->
+            <Chronometer
+                android:id="@+id/widget_timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:maxLines="1" />
+        </LinearLayout>
 
         <!--
-          Shown instead of the deck until a location has been stored. It lives
+          Shown instead of the card until a location has been stored. It lives
           in the date column rather than across the strip so that hiding the
-          deck leaves no empty gap.
+          card leaves no empty gap.
         -->
         <TextView
             android:id="@+id/widget_prompt"
@@ -63,15 +128,45 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!--
-      The only swipeable primitive RemoteViews offers. The launcher drives the
-      gesture itself and pulls each card from PrayerDeckService.
-    -->
-    <StackView
+    <!-- Step back one prayer; wraps to the last card at the first. -->
+    <ImageButton
+        android:id="@+id/widget_prev"
+        android:layout_width="24dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="-2dp"
+        android:src="@drawable/widget_chevron_start"
+        android:scaleType="centerInside"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/prayer_widget_prev" />
+
+    <AdapterViewFlipper
         android:id="@+id/widget_deck"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:loopViews="true" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:autoStart="false"
+        android:flipInterval="0" />
+
+    <!--
+      Empty on the home screen, where the flipper above holds the card. The
+      configuration screen's preview hides the flipper — a collection view
+      needs a bound RemoteViewsService, which a plain Activity does not get —
+      and inflates a real card in here instead.
+    -->
+    <LinearLayout
+        android:id="@+id/config_preview_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <!-- Step forward one prayer; wraps to the first card at the last. -->
+    <ImageButton
+        android:id="@+id/widget_next"
+        android:layout_width="24dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="-2dp"
+        android:src="@drawable/widget_chevron_end"
+        android:scaleType="centerInside"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/prayer_widget_next" />
 
 </LinearLayout>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  3x3 portrait timetable. updatePeriodMillis is 0 for the same reason as the
+  strip: Android's own period is capped at 30 minutes and would fire
+  pointlessly, while the prayer alarms and the midnight roll refresh exactly
+  when the display changes.
+
+  Resizable both ways: unlike the strip, this form does reflow usefully — the
+  rows are weighted, so a taller widget simply gives each one more room.
+
+  configure is deliberately unset. The launcher would otherwise open the
+  appearance screen the moment the widget is dropped, and a first-run colour
+  picker in front of someone who just wanted the times is the wrong order.
+  The screen is still reachable from the app and from a long-press.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="180dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="3"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_timetable_vertical"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_timetable_vertical"
+    android:description="@string/prayer_widget_desc_vertical"
+    android:updatePeriodMillis="0" />

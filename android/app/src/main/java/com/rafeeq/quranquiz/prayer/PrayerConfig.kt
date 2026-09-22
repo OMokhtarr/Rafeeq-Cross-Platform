@@ -15,6 +15,16 @@ object PrayerConfig {
     const val DEFAULT_METHOD = "egyptian"
     const val DEFAULT_MADHAB = "shafi"
 
+    /**
+     * 12-hour clock by default.
+     *
+     * Not `DateFormat.is24HourFormat(ctx)`: the widget shows prayer times,
+     * which are spoken and written as "5:15 in the morning" across the app's
+     * audience, and the device setting is as often an untouched ROM default
+     * as a real preference. The user can still choose 24-hour explicitly.
+     */
+    const val DEFAULT_USE_24_HOUR = false
+
     private const val KEY_LAT = "lat"
     private const val KEY_LNG = "lng"
     private const val KEY_METHOD = "method"
@@ -28,6 +38,8 @@ object PrayerConfig {
 
     private const val KEY_REMINDERS = "reminders_enabled"
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
+    private const val KEY_USE_24_HOUR = "use_24_hour"
+    private const val KEY_APP_NIGHT = "app_night"
 
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -75,6 +87,35 @@ object PrayerConfig {
 
     fun setMadhab(ctx: Context, madhab: String) {
         prefs(ctx).edit().putString(KEY_MADHAB, madhab).apply()
+    }
+
+    /** Clock the widget renders its times in. Global, not per-widget: two
+     *  widgets showing the same timetable in different clocks would read as
+     *  a bug rather than a choice. */
+    fun use24Hour(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_USE_24_HOUR, DEFAULT_USE_24_HOUR)
+
+    fun setUse24Hour(ctx: Context, use24: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_USE_24_HOUR, use24).apply()
+    }
+
+    /**
+     * Whether the app itself is in night mode.
+     *
+     * Rafeeq's theme is a stored preference of its own, not the device's, and
+     * it lives in localStorage where no Activity can reach it. The web layer
+     * mirrors it here on every change so native screens opened from the app —
+     * the widget's appearance settings — can match it instead of following
+     * the device and rendering white inside a dark app.
+     *
+     * Defaults to true because the app's own default theme is night
+     * (ThemeContext DEFAULT_THEME).
+     */
+    fun appNight(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_APP_NIGHT, true)
+
+    fun setAppNight(ctx: Context, night: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_APP_NIGHT, night).apply()
     }
 
     fun remindersEnabled(ctx: Context): Boolean =

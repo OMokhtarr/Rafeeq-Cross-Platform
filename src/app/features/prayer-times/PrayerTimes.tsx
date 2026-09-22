@@ -2,8 +2,13 @@
  * PRAYER TIMES PAGE
  * Reached from More by either the qibla card or the times card — one page
  * holding both. The compass header sits on top, then the daily times with the
- * next prayer highlighted and a live countdown, then the method/madhab
- * pickers. There is no view switch: nothing is hidden behind a tab.
+ * next prayer highlighted and a live countdown. There is no view switch:
+ * nothing is hidden behind a tab.
+ *
+ * Settings do not live on the page. The ⋮ opens a menu sheet, and each of its
+ * rows opens a sheet of its own — shown times, widget, calculation. They are
+ * set once and rarely revisited, so a permanent place here cost more
+ * attention than they earned, and the timetable is what the page is for.
  *
  * A missing location is a designed state, not an error: `hasLocation: false`
  * is the normal first-run condition until the user grants a fix, so it gets
@@ -18,11 +23,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
-import { useTheme } from "../../core/context/ThemeContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
-import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import QiblaHeader from "./QiblaHeader";
 import ShowTimesSheet from "./ShowTimesSheet";
+import PrayerMenuSheet, { type PrayerMenuTarget } from "./PrayerMenuSheet";
+import WidgetSettingsSheet from "./WidgetSettingsSheet";
+import CalculationSheet, { METHOD_LABEL_KEY, MADHABS } from "./CalculationSheet";
 import {
   loadPrayerDay,
   requestLocation,
@@ -31,8 +37,6 @@ import {
   getVisibleTimes,
   getPlace,
   getWidgetInfo,
-  requestPinWidget,
-  openAppSettings,
 } from "../../core/services/prayer/prayer-times.service";
 import {
   ADDITIONAL_KEYS,
@@ -47,23 +51,6 @@ import { toHindiNumbers } from "../../core/utils/arabic.util";
 import "./PrayerTimes.css";
 
 const ALL_ROW_KEYS: PrayerKey[] = [...PRAYER_KEYS, ...ADDITIONAL_KEYS];
-
-// Maps each calculation method to its localized string key — no other
-// mapping exists between the plugin's enum and the i18n strings.
-const METHOD_LABEL_KEY: Record<PrayerMethod, string> = {
-  egyptian: "methodEgyptian",
-  umm_al_qura: "methodUmmAlQura",
-  muslim_world_league: "methodMwl",
-  karachi: "methodKarachi",
-  north_america: "methodNorthAmerica",
-  dubai: "methodDubai",
-  qatar: "methodQatar",
-  kuwait: "methodKuwait",
-  singapore: "methodSingapore",
-  moon_sighting_committee: "methodMoonSighting",
-};
-
-const MADHABS: PrayerMadhab[] = ["shafi", "hanafi"];
 
 function formatCountdown(msRemaining: number, lang: string): string {
   const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
@@ -88,13 +75,13 @@ function formatCountdown(msRemaining: number, lang: string): string {
 
 const PrayerTimes: React.FC = () => {
   const { t, lang, isRTL } = useLang();
-  const { isNight } = useTheme();
   const tp = t.prayerTimes;
 
   const [day, setDay] = useState<PrayerDay | null>(null);
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
+    use24Hour: boolean;
   } | null>(null);
   const [visible, setVisible] = useState<PrayerKey[] | null>(null);
   const [place, setPlace] = useState<string | null>(null);
@@ -102,12 +89,14 @@ const PrayerTimes: React.FC = () => {
   const [locationError, setLocationError] = useState<
     "denied" | "services-off" | "failed" | null
   >(null);
-  const [showSheetOpen, setShowSheetOpen] = useState(false);
+  // Which sheet is on screen, if any. One value rather than a flag per
+  // sheet: they are steps in a single stack, never open at once, and a flag
+  // each would let two of them be true.
+  const [sheet, setSheet] = useState<"menu" | PrayerMenuTarget | null>(null);
   const [widget, setWidget] = useState<{
     supported: boolean;
     placed: number;
   } | null>(null);
-  const [widgetBlocked, setWidgetBlocked] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
 
@@ -122,14 +111,15 @@ const PrayerTimes: React.FC = () => {
       // is only ever right as of the moment the page is entered.
       getWidgetInfo(),
     ]);
-    setConfig({ method: cfg.method, madhab: cfg.madhab });
+    setConfig({
+      method: cfg.method,
+      madhab: cfg.madhab,
+      use24Hour: cfg.use24Hour,
+    });
     setDay(d);
     setVisible(v);
     setPlace(p);
     setWidget(w);
-    // Returning to the page with a widget now placed settles the question:
-    // whatever was blocking it no longer is, so the warning must not linger.
-    if (w.placed > 0) setWidgetBlocked(false);
   }, []);
 
   useEffect(() => {
@@ -191,23 +181,22 @@ const PrayerTimes: React.FC = () => {
     [load]
   );
 
-  /**
-   * Hands off to the launcher's own pin dialog.
-   *
-   * No success message is shown even when the request is accepted: the
-   * launcher owns that dialog and never reports the outcome back, so the
-   * refreshed count on the next `useIonViewWillEnter` is the honest place for
-   * success to surface.
-   *
-   * A refusal is different and must be said out loud. Some launchers (MIUI)
-   * reject the request without showing the user anything, which is the
-   * "nothing happens on tap" this branch exists to explain.
-   */
-  const handleAddWidget = useCallback(async () => {
-    setWidgetBlocked(false);
-    const { blocked } = await requestPinWidget();
-    if (blocked) setWidgetBlocked(true);
-  }, []);
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const backToMenu = useCallback(() => setSheet("menu"), []);
+
+  // The menu shows each destination's current value under its label, so the
+  // common question is answered without opening anything.
+  const methodLabel = config
+    ? (tp[METHOD_LABEL_KEY[config.method] as keyof typeof tp] as string)
+    : "";
+
+  // Null where the platform has no widget — that keeps the row out of the
+  // menu entirely rather than showing one that leads nowhere.
+  const widgetStatus = !widget?.supported
+    ? null
+    : widget.placed > 0
+    ? tp.widgetPlacedStatus
+    : tp.widgetNotPlacedStatus;
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", {
@@ -283,20 +272,23 @@ const PrayerTimes: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Only the three-dot menu now — the dates moved into the
-                      compass header above. */}
+                  {/* Opens the options menu. Carries its own word rather
+                      than standing as a bare glyph: this is now the only way
+                      into the page's settings, so what it opens has to be
+                      readable without tapping it first. */}
                   <div className="pt-card-header">
                     <button
                       type="button"
                       className="pt-menu-btn"
-                      onClick={() => setShowSheetOpen(true)}
-                      aria-label={tp.show}
+                      onClick={() => setSheet("menu")}
+                      aria-haspopup="dialog"
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <circle cx="12" cy="5" r="1.8" />
                         <circle cx="12" cy="12" r="1.8" />
                         <circle cx="12" cy="19" r="1.8" />
                       </svg>
+                      {tp.menuTitle}
                     </button>
                   </div>
 
@@ -347,96 +339,42 @@ const PrayerTimes: React.FC = () => {
                   </p>
                 )}
 
-                <div className="pt-settings">
-                  <div className="pt-setting-row">
-                    <span className="pt-setting-label">{tp.method}</span>
-                    <InlineSelect
-                      value={config?.method ?? PRAYER_METHODS[0]}
-                      options={PRAYER_METHODS.map((m) => ({
-                        value: m,
-                        label: tp[METHOD_LABEL_KEY[m] as keyof typeof tp],
-                      }))}
-                      onChange={handleMethodChange}
-                      night={isNight}
-                      fullWidth
-                      aria-label={tp.method}
-                    />
-                  </div>
-                  <div className="pt-setting-row">
-                    <span className="pt-setting-label">{tp.madhab}</span>
-                    <InlineSelect
-                      value={config?.madhab ?? MADHABS[0]}
-                      options={MADHABS.map((m) => ({
-                        value: m,
-                        label: tp[m],
-                      }))}
-                      onChange={handleMadhabChange}
-                      night={isNight}
-                      fullWidth
-                      aria-label={tp.madhab}
-                    />
-                  </div>
-
-                  {/* Absent when the launcher cannot pin — there is no
-                      way to force it, and a dead control would be worse
-                      than none. The widget can still be added by
-                      long-pressing the home screen. */}
-                  {widget?.supported && (
-                    <div>
-                      <button
-                        type="button"
-                        className="pt-widget-btn"
-                        onClick={handleAddWidget}
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          aria-hidden="true"
-                        >
-                          <rect x="3" y="4" width="18" height="16" rx="2.5" />
-                          <rect
-                            x="6"
-                            y="9"
-                            width="12"
-                            height="6"
-                            rx="1.5"
-                            fill="currentColor"
-                            stroke="none"
-                          />
-                        </svg>
-                        {tp.addWidget}
-                      </button>
-                      {widgetBlocked ? (
-                        // The launcher refused without telling the user.
-                        // Explains why and offers both routes: the
-                        // permission, and adding it by hand.
-                        <div className="pt-widget-blocked" role="status">
-                          <p className="pt-widget-blocked-text">
-                            {tp.widgetBlocked}
-                          </p>
-                          <button
-                            type="button"
-                            className="pt-widget-settings-btn"
-                            onClick={openAppSettings}
-                          >
-                            {tp.widgetOpenSettings}
-                          </button>
-                        </div>
-                      ) : (
-                        widget.placed > 0 && (
-                          <p className="pt-widget-note">{tp.widgetAdded}</p>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
+                <PrayerMenuSheet
+                  open={sheet === "menu"}
+                  onClose={closeSheet}
+                  onSelect={setSheet}
+                  methodLabel={methodLabel}
+                  widgetStatus={widgetStatus}
+                />
 
                 <ShowTimesSheet
-                  open={showSheetOpen}
-                  onClose={() => setShowSheetOpen(false)}
+                  open={sheet === "shown"}
+                  onClose={closeSheet}
+                  onBack={backToMenu}
                   onChanged={load}
+                />
+
+                {/* Mounted only where the platform has a widget at all, which
+                    is the same condition that puts its row in the menu. */}
+                {widget?.supported && (
+                  <WidgetSettingsSheet
+                    open={sheet === "widget"}
+                    onClose={closeSheet}
+                    onBack={backToMenu}
+                    placed={widget.placed}
+                    use24Hour={config?.use24Hour ?? false}
+                    onChanged={load}
+                  />
+                )}
+
+                <CalculationSheet
+                  open={sheet === "calculation"}
+                  onClose={closeSheet}
+                  onBack={backToMenu}
+                  method={config?.method ?? PRAYER_METHODS[0]}
+                  madhab={config?.madhab ?? MADHABS[0]}
+                  onMethodChange={handleMethodChange}
+                  onMadhabChange={handleMadhabChange}
                 />
               </>
             )}

@@ -30,4 +30,60 @@
     </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar" />
+
+    <!-- The widget's appearance screen.
+
+         Two explicit variants rather than a DayNight parent: Rafeeq's theme
+         is its own stored preference, not the device's, so the Activity picks
+         between these at runtime from the value the web layer mirrors into
+         PrayerConfig. A DayNight parent would follow the device and leave a
+         white screen inside a dark app. -->
+    <style name="WidgetConfigTheme.Day" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="WidgetConfigTheme.Night" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/widgetConfigNightBg</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- One tappable setting row in the widget configuration screen: a label
+         on one side, its current value or colour dot on the other. -->
+    <style name="WidgetConfigRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+    </style>
+
+    <style name="WidgetConfigRowLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <style name="WidgetConfigRowValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:alpha">0.6</item>
+    </style>
+
+    <!-- The colour circle at the end of a colour row; its fill is set at
+         runtime from the stored value. -->
+    <style name="WidgetConfigDot">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+    </style>
 </resources>

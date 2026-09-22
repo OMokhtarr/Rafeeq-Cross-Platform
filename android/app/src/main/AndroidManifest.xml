@@ -58,20 +58,85 @@
             </intent-filter>
         </receiver>
 
+        <!-- The widget's appearance settings. Opened by the launcher on
+             placement (ACTION_APPWIDGET_CONFIGURE) and again from the prayer
+             times page. Exported because the launcher starts it; it takes no
+             input but a widget id, and writes only that widget's own colours. -->
+        <activity
+            android:name=".prayer.PrayerWidgetConfigActivity"
+            android:theme="@style/WidgetConfigTheme.Night"
+            android:excludeFromRecents="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Home-screen widget: reads PrayerTimesEngine directly, never a
              cache written by the app, since the launcher process has no
              WebView and the widget must be right even if the app was never
              opened. updatePeriodMillis is 0 in widget_prayer_times_info.xml;
              the prayer alarms and the midnight roll drive refreshes instead. -->
+        <!-- Exported so the system can reach it. An app-widget receiver that
+             is not exported never appears in the launcher's widget picker —
+             the widget could then only be added from inside the app, via the
+             pin request. The filter below is the only surface: APPWIDGET_UPDATE
+             is the system's own, and the two step actions carry nothing but a
+             widget id and a delta. -->
         <receiver
             android:name=".prayer.PrayerWidgetProvider"
-            android:exported="false">
+            android:label="@string/prayer_widget_label_strip"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+
+                <!-- The arrows and the revert timer. A manifest-declared
+                     receiver is only woken for actions it declares, so
+                     without these two the PendingIntents reached the
+                     provider only while some other component already had the
+                     process alive — which is why the arrows appeared to work
+                     with the app open and do nothing once it was closed.
+                     Both are internal to this package and the receiver is
+                     not exported, so nothing else can send them. -->
+                <action android:name="com.rafeeq.quranquiz.prayer.WIDGET_STEP" />
+                <action android:name="com.rafeeq.quranquiz.prayer.WIDGET_REVERT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_times_info" />
+        </receiver>
+
+        <!-- The two timetable widgets: every visible prayer at once, with no
+             arrows to step through. Separate receivers rather than one
+             resizable provider because the launcher's picker lists providers,
+             so this is what gives each form its own entry and default size.
+
+             Exported for the same reason as the strip: a widget provider the
+             system cannot reach never appears in the picker. They declare
+             only APPWIDGET_UPDATE — the step and revert actions belong to the
+             strip alone, since a timetable has nothing to step through. -->
+        <receiver
+            android:name=".prayer.PrayerTimetableVerticalWidget"
+            android:label="@string/prayer_widget_label_vertical"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_prayer_times_info" />
+                android:resource="@xml/widget_timetable_vertical_info" />
+        </receiver>
+
+        <receiver
+            android:name=".prayer.PrayerTimetableWideWidget"
+            android:label="@string/prayer_widget_label_wide"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_timetable_wide_info" />
         </receiver>
 
         <!-- Backs the widget's swipeable card deck. The launcher binds this

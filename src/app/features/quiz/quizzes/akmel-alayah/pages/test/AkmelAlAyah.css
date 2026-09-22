@@ -123,7 +123,14 @@ ion-content::part(scroll) {
 
 /* Question card – normal full height */
 .aa-card {
-  flex: 0 0 auto;
+  /* Normal mode: the card owns the scroll. It may shrink below its content
+     height (flex-shrink 1 + min-height 0) and scrolls internally, so a long
+     answer can never push the Next button past the bottom of the screen
+     without a way to reach it. In immersive mode the override below pins it
+     back to its content height so the Mushaf viewer keeps the leftover
+     space. */
+  flex: 0 1 auto;
+  min-height: 0;
   width: 100%;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
@@ -135,6 +142,8 @@ ion-content::part(scroll) {
   gap: 4px;
   height: auto;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   transition: all 0.2s ease;
 }
 

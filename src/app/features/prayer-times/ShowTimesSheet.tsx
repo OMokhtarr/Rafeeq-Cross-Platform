@@ -16,7 +16,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
-import { useTheme } from "../../core/context/ThemeContext";
 import { registerOverlay } from "../../core/utils/overlay-registry";
 import {
   getVisibleTimes,
@@ -28,32 +27,39 @@ import {
   PRAYERS_ONLY,
   type PrayerKey,
 } from "../../core/services/prayer/prayer-times.types";
+import "./PrayerSheet.css";
 import "./ShowTimesSheet.css";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onChanged: () => void;
+  /**
+   * Present when the sheet was opened from the ⋮ menu rather than directly.
+   * Turns the header's leading control into a back arrow so the menu is one
+   * tap away, instead of dumping the user back on the page.
+   */
+  onBack?: () => void;
 }
 
 const ALL_KEYS: PrayerKey[] = [...PRAYER_KEYS, ...ADDITIONAL_KEYS];
 
 const isObligatory = (key: PrayerKey) => (PRAYERS_ONLY as PrayerKey[]).includes(key);
 
-const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged }) => {
+const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged, onBack }) => {
   const { t, isRTL } = useLang();
-  const { isNight } = useTheme();
-
-  const nightClass = isNight ? " sts-sheet--night" : "";
 
   const [visible, setVisible] = useState<PrayerKey[]>([]);
 
-  // Register with the overlay registry so the hardware back button closes
-  // this sheet instead of leaving the page.
+  // Register with the overlay registry so the hardware back button acts on
+  // this sheet instead of leaving the page. When the sheet was opened from
+  // the ⋮ menu it steps back to it, landing where the header's back arrow
+  // does — the same gesture must not mean "up one level" in one place and
+  // "dismiss everything" in the other.
   useEffect(() => {
     if (!open) return;
-    return registerOverlay(onClose);
-  }, [open, onClose]);
+    return registerOverlay(onBack ?? onClose);
+  }, [open, onBack, onClose]);
 
   // Load the current set whenever the sheet opens.
   useEffect(() => {
@@ -93,7 +99,7 @@ const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged }) => {
     <>
       <div className="sts-backdrop" onClick={onClose} aria-hidden="true" />
       <aside
-        className={`sts-sheet${nightClass}`}
+        className="sts-sheet"
         role="dialog"
         aria-label={t.prayerTimes.show}
         dir={isRTL ? "rtl" : "ltr"}
@@ -105,13 +111,25 @@ const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged }) => {
             <h3 className="sts-title">{t.prayerTimes.show}</h3>
             <p className="sts-desc">{t.prayerTimes.showDesc}</p>
           </div>
-          <button
-            className="sts-close"
-            onClick={onClose}
-            aria-label={t.mushaf.closeLabel}
-          >
-            ✕
-          </button>
+          {onBack ? (
+            <button
+              className="sts-close sts-back"
+              onClick={onBack}
+              aria-label={t.prayerTimes.menuTitle}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M15 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              className="sts-close"
+              onClick={onClose}
+              aria-label={t.mushaf.closeLabel}
+            >
+              ✕
+            </button>
+          )}
         </header>
 
         <div className="sts-body">

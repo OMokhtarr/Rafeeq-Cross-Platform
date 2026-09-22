@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "Previous" chevron. autoMirrored so it flips in an RTL locale — the widget
+  is Arabic-first, where "back" points the other way.
+
+  Tinted at render time from PrayerWidgetConfig's text colour, so a widget on
+  a transparent background over a dark wallpaper keeps visible arrows.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:autoMirrored="true"
+    android:tint="#000000">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M15.41,7.41 L14,6 8,12 14,18 15.41,16.59 10.83,12z" />
+</vector>

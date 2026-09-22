@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Crescent beside the date line, mirroring the reference layout. Tinted at
+     render time from the widget's text colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#000000">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12.3,2.1a9.9,9.9 0,1 0,9.6 12.4A7.7,7.7 0,0 1,12.3 2.1z" />
+</vector>

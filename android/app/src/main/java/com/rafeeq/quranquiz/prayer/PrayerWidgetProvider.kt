@@ -1,11 +1,15 @@
 package com.rafeeq.quranquiz.prayer
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.os.Build
+import android.os.SystemClock
 import android.widget.RemoteViews
 import com.rafeeq.quranquiz.MainActivity
 import com.rafeeq.quranquiz.R
@@ -18,8 +22,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Home-screen widget: a 4x1 strip with a date column and a swipeable deck of
- * prayer cards, each counting down to its own time.
+ * Home-screen widget: a 4x1 strip with a date column and one prayer card,
+ * stepped through with a button either side of it, counting down to its time.
  *
  * `RemoteViews` are inflated by the launcher process, which has no WebView and
  * cannot run JavaScript. The widget therefore reads [PrayerTimesEngine] and
@@ -32,6 +36,10 @@ import java.util.TimeZone
  * and the midnight roll) and from the plugin whenever the user changes
  * location or calculation settings. The per-second countdown is not a refresh:
  * it is a `Chronometer` ticked by the system in the launcher's own process.
+ *
+ * Only the date column opens the app. The arrows carry their own broadcasts
+ * back to this receiver and the card carries no intent at all, so a press
+ * meant for "next" can never launch Rafeeq.
  */
 class PrayerWidgetProvider : AppWidgetProvider() {
 
@@ -41,6 +49,60 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray,
     ) {
         appWidgetIds.forEach { id -> render(context, appWidgetManager, id) }
+    }
+
+    /**
+     * Handles the arrow presses alongside the system's own widget broadcasts.
+     *
+     * A collection view cannot be stepped from the launcher without code, so
+     * each arrow is a PendingIntent back here; this moves the stored index and
+     * re-renders that one widget. Everything else is delegated to
+     * AppWidgetProvider, which dispatches onUpdate/onDeleted/onEnabled.
+     */
+    override fun onReceive(context: Context, intent: Intent) {
+        val widgetId = intent.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID,
+        )
+
+        if (intent.action == ACTION_STEP) {
+            val delta = intent.getIntExtra(EXTRA_DELTA, 0)
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID && delta != 0) {
+                val count = PrayerDeck.build(context, Date()).size
+                PrayerWidgetConfig.step(context, widgetId, delta, count)
+                render(context, AppWidgetManager.getInstance(context), widgetId)
+                // Pushed out by every press, so the 30s runs from the last one
+                // and holding the arrow through several prayers does not fire
+                // a revert mid-browse.
+                armRevert(context, widgetId)
+            }
+            return
+        }
+
+        if (intent.action == ACTION_REVERT) {
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                // -1 is the "no stored card" sentinel render() already honours:
+                // it falls back to the next prayer and stores that index.
+                PrayerWidgetConfig.setIndex(context, widgetId, -1)
+                render(context, AppWidgetManager.getInstance(context), widgetId)
+            }
+            return
+        }
+
+        super.onReceive(context, intent)
+    }
+
+    /**
+     * Fires when specific widgets are removed. Their stored index and colours
+     * go with them: the launcher recycles widget ids, so leaving keys behind
+     * would hand a newly placed widget the previous one's appearance — and a
+     * pending revert would fire against an id that is no longer this widget.
+     */
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { id ->
+            cancelRevert(context, id)
+            PrayerWidgetConfig.clear(context, id)
+        }
     }
 
     /**
@@ -117,30 +179,142 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         }
 
         /**
-         * Looks up every placed instance of this widget and re-renders each.
-         * The single entry point every refresh trigger in the app calls —
-         * the alarm chain, the midnight roll, and the plugin after a
-         * location/config change — so a widget on the home screen is never
-         * more than one of those events stale.
+         * Re-renders every placed widget of every type — the strip here and
+         * both timetable forms, which are separate components.
+         *
+         * The single entry point every refresh trigger in the app calls: the
+         * alarm chain, the boot receiver, the midnight roll, and the plugin
+         * after a location or config change. So a widget on the home screen
+         * is never more than one of those events stale, whichever type it is.
          */
+        /**
+         * Re-renders one widget, leaving every other instance alone.
+         *
+         * Used by the configuration screen, where only the widget being
+         * configured has changed — and where [refresh]'s index reset would be
+         * wrong, since the user has not moved to a new day, they have just
+         * picked a colour.
+         */
+        fun refreshOne(ctx: Context, widgetId: Int) {
+            render(ctx, AppWidgetManager.getInstance(ctx), widgetId)
+        }
+
         fun refresh(ctx: Context) {
             val mgr = AppWidgetManager.getInstance(ctx)
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, PrayerWidgetProvider::class.java))
+            // Every refresh means the day or the timetable moved, so a widget
+            // parked on "Asr" by the arrows must not still be there: it would
+            // be yesterday's Asr. Clearing the index sends render() back to
+            // the next prayer, which is where the widget is most useful.
+            ids.forEach { id -> PrayerWidgetConfig.setIndex(ctx, id, -1) }
             ids.forEach { id -> render(ctx, mgr, id) }
-            // Without this the launcher serves cached cards: yesterday's
-            // times, and countdowns whose targets have already passed.
-            // updateAppWidget alone does not re-ask the factory.
-            //
-            // Deprecated in favour of RemoteViews.setRemoteAdapter(int, RemoteCollectionItems),
-            // which needs API 31; minSdk here is 26, so this remains the only
-            // way to invalidate a collection on the versions this app supports.
+            // render() already invalidates each widget's collection, but it
+            // does so per id; this catches any the loop above did not reach.
             @Suppress("DEPRECATION")
             mgr.notifyAppWidgetViewDataChanged(ids, R.id.widget_deck)
+
+            // The timetable widgets are separate components, so their ids do
+            // not come back from the query above. Fanning out from here keeps
+            // this the one entry point every refresh trigger calls — the
+            // alarm chain, the boot receiver, the midnight roll and the
+            // plugin all already do, and a new trigger gets all three widget
+            // types without having to know they exist.
+            PrayerTimetableWidgetProvider.refresh(ctx)
+        }
+
+        /** The broadcast an arrow sends back to this receiver. */
+        internal const val ACTION_STEP = "com.rafeeq.quranquiz.prayer.WIDGET_STEP"
+
+        /** +1 for the next prayer, -1 for the previous one. */
+        internal const val EXTRA_DELTA = "delta"
+
+        /** The broadcast that puts a browsed widget back on the next prayer. */
+        internal const val ACTION_REVERT = "com.rafeeq.quranquiz.prayer.WIDGET_REVERT"
+
+        /**
+         * How long a widget stays where the arrows left it.
+         *
+         * Browsing the timetable is a momentary thing; the widget's job the
+         * rest of the time is to show the next prayer. Without this, a single
+         * stray press would leave a home-screen widget stuck on Duha until the
+         * next refresh hours later.
+         */
+        internal const val REVERT_AFTER_MS = 30_000L
+
+        private fun revertIntent(ctx: Context, widgetId: Int): PendingIntent {
+            val intent = Intent(ctx, PrayerWidgetProvider::class.java).apply {
+                action = ACTION_REVERT
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
+            // Request code keyed on the widget so two widgets can each have
+            // their own revert pending without overwriting one another. The
+            // +1 offset keeps it clear of stepIntent's codes, which use
+            // widgetId * 2 and widgetId * 2 + 1.
+            return PendingIntent.getBroadcast(
+                ctx,
+                widgetId * 2 + 2,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        /**
+         * (Re)arms the revert for [widgetId], [REVERT_AFTER_MS] from now.
+         *
+         * Re-arming replaces the pending alarm rather than adding one, so
+         * holding the arrow through several prayers keeps pushing the deadline
+         * out and the revert lands 30s after the *last* press.
+         *
+         * Inexact and non-wakeup on purpose: this is cosmetic, and a widget
+         * nobody is looking at does not justify waking the device. The system
+         * may delay it, which only means the widget stays browsable slightly
+         * longer.
+         */
+        private fun armRevert(ctx: Context, widgetId: Int) {
+            val mgr = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            mgr.set(
+                AlarmManager.ELAPSED_REALTIME,
+                SystemClock.elapsedRealtime() + REVERT_AFTER_MS,
+                revertIntent(ctx, widgetId),
+            )
+        }
+
+        /** Drops any pending revert for [widgetId] — used when the widget is
+         *  removed, so nothing fires against an id the launcher has recycled. */
+        private fun cancelRevert(ctx: Context, widgetId: Int) {
+            val mgr = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            mgr.cancel(revertIntent(ctx, widgetId))
+        }
+
+        /**
+         * A PendingIntent that moves [widgetId] by [delta] cards.
+         *
+         * The request code folds in both the widget id and the direction:
+         * PendingIntents that differ only in extras are considered equal and
+         * the system hands back the first one, which would make every arrow on
+         * every widget step the same way.
+         */
+        private fun stepIntent(ctx: Context, widgetId: Int, delta: Int): PendingIntent {
+            val intent = Intent(ctx, PrayerWidgetProvider::class.java).apply {
+                action = ACTION_STEP
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                putExtra(EXTRA_DELTA, delta)
+            }
+            return PendingIntent.getBroadcast(
+                ctx,
+                widgetId * 2 + if (delta > 0) 1 else 0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
 
         private fun render(ctx: Context, mgr: AppWidgetManager, widgetId: Int) {
             val views = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
+            val look = PrayerWidgetConfig.appearance(ctx, widgetId)
 
+            // Only the date column opens the app. The card deliberately has no
+            // PendingIntent of any kind — with the arrows beside it, a card
+            // that also launched the app would make a mis-aimed press costly.
             val openApp = PendingIntent.getActivity(
                 ctx,
                 0,
@@ -149,18 +323,34 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            // The StackView consumes horizontal swipes, so the deck cannot
-            // also be a plain click target — its cards fill in a template
-            // instead (see below), which is how a collection child must
-            // receive clicks. The date column keeps an ordinary intent.
             views.setOnClickPendingIntent(R.id.widget_date_column, openApp)
-            views.setPendingIntentTemplate(R.id.widget_deck, openApp)
+            views.setOnClickPendingIntent(R.id.widget_prev, stepIntent(ctx, widgetId, -1))
+            views.setOnClickPendingIntent(R.id.widget_next, stepIntent(ctx, widgetId, +1))
+
+            applyAppearance(ctx, views, look)
 
             val tz = TimeZone.getDefault()
             val now = Date()
+            // Both calendars on one line: the strip has two lines and the
+            // second belongs to the place and the timer.
             val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
-            views.setTextViewText(R.id.widget_date, dateFmt.format(now))
-            views.setTextViewText(R.id.widget_hijri, hijriLabel(now, tz))
+            views.setTextViewText(
+                R.id.widget_date,
+                "${dateFmt.format(now)} • ${hijriLabel(now, tz)}",
+            )
+
+            // Decoration on the coordinates: shown when a name has resolved,
+            // hidden rather than faked when it has not. The pin goes with it,
+            // since an icon labelling nothing is worse than no icon.
+            val place = PrayerConfig.placeName(ctx)
+            val placeVisibility = if (place.isNullOrBlank()) {
+                android.view.View.GONE
+            } else {
+                views.setTextViewText(R.id.widget_place, place)
+                android.view.View.VISIBLE
+            }
+            views.setViewVisibility(R.id.widget_place, placeVisibility)
+            views.setViewVisibility(R.id.widget_icon_place, placeVisibility)
 
             val coords = PrayerConfig.coords(ctx)
             if (coords == null) {
@@ -168,16 +358,14 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 // instead, and stop before touching the engine at all.
                 views.setViewVisibility(R.id.widget_prompt, android.view.View.VISIBLE)
                 views.setViewVisibility(R.id.widget_deck, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_prev, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_next, android.view.View.GONE)
                 mgr.updateAppWidget(widgetId, views)
                 return
             }
 
             views.setViewVisibility(R.id.widget_prompt, android.view.View.GONE)
             views.setViewVisibility(R.id.widget_deck, android.view.View.VISIBLE)
-
-            val color = baseTextColor(ctx)
-            views.setTextColor(R.id.widget_date, color)
-            views.setTextColor(R.id.widget_hijri, color)
 
             // The adapter intent must be distinguishable per widget id, or the
             // launcher reuses one factory across instances: intents that differ
@@ -192,12 +380,12 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // adapter stays until this app's floor rises.
             @Suppress("DEPRECATION")
             views.setRemoteAdapter(R.id.widget_deck, deckIntent)
-            views.setEmptyView(R.id.widget_deck, R.id.widget_prompt)
 
-            mgr.updateAppWidget(widgetId, views)
-
-            // Open on the next prayer so the widget answers "how long until
-            // the next prayer?" before the user swipes at all.
+            // Which card to show. A stored index survives only while it still
+            // addresses a card: the visible-times preference can shrink the
+            // deck, and a day change moves which prayer is next, so an index
+            // left over from yesterday would point at the wrong prayer.
+            val cards = PrayerDeck.build(ctx, now)
             val (lat, lng) = coords
             val next = PrayerTimesEngine.nextAfter(
                 now,
@@ -207,12 +395,153 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 PrayerConfig.madhab(ctx),
                 tz,
             )
-            val cards = PrayerDeck.build(ctx, now)
-            val initial = PrayerDeck.initialIndex(cards, next)
-            if (initial > 0) {
-                val scroll = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
-                scroll.setDisplayedChild(R.id.widget_deck, initial)
-                mgr.partiallyUpdateAppWidget(widgetId, scroll)
+            val stored = PrayerWidgetConfig.index(ctx, widgetId)
+            val shown = if (stored in cards.indices) {
+                stored
+            } else {
+                PrayerDeck.initialIndex(cards, next).also {
+                    PrayerWidgetConfig.setIndex(ctx, widgetId, it)
+                }
+            }
+
+            // The timer belongs to whichever card is showing, but lives on
+            // the strip rather than inside the card — the card is just the
+            // name and the time. Counting up puts the base in the past and
+            // counts away from it; counting down puts it in the future. Both
+            // deltas are positive, because a Chronometer handed a negative
+            // target climbs from a meaningless number.
+            val card = cards.getOrNull(shown)
+            if (card == null) {
+                views.setViewVisibility(R.id.widget_timer, android.view.View.GONE)
+            } else {
+                views.setViewVisibility(R.id.widget_timer, android.view.View.VISIBLE)
+                val base = if (card.countingUp) {
+                    SystemClock.elapsedRealtime() - card.millisUntil
+                } else {
+                    SystemClock.elapsedRealtime() + card.millisUntil
+                }
+                views.setChronometer(R.id.widget_timer, base, null, true)
+                views.setChronometerCountDown(R.id.widget_timer, !card.countingUp)
+            }
+
+            // Only one arrow pair is meaningful with a single card, and two
+            // dead controls on a 4x1 strip is worse than none.
+            val arrows = if (cards.size > 1) android.view.View.VISIBLE else android.view.View.GONE
+            views.setViewVisibility(R.id.widget_prev, arrows)
+            views.setViewVisibility(R.id.widget_next, arrows)
+
+            mgr.updateAppWidget(widgetId, views)
+
+            // setDisplayedChild must follow updateAppWidget: the adapter is
+            // bound by that call, and a position set before it is discarded.
+            val position = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
+            position.setDisplayedChild(R.id.widget_deck, shown)
+            mgr.partiallyUpdateAppWidget(widgetId, position)
+            @Suppress("DEPRECATION")
+            mgr.notifyAppWidgetViewDataChanged(intArrayOf(widgetId), R.id.widget_deck)
+        }
+
+        /**
+         * Paints the strip from a widget's stored appearance.
+         *
+         * Transparency is applied to the background colour's alpha, never to
+         * the root view: fading the root would fade the text with it, and a
+         * transparent widget exists precisely so opaque text can sit over the
+         * wallpaper. A null colour means "follow the device theme", which is
+         * what an unconfigured widget does.
+         */
+        private fun applyAppearance(
+            ctx: Context,
+            views: RemoteViews,
+            look: PrayerWidgetConfig.Appearance,
+        ) {
+            val background = look.background
+            if (background != null || look.transparency > 0) {
+                // Tint the shape drawable rather than replacing it.
+                // `setBackgroundColor` alone used to be called here, which
+                // swapped the drawable for a flat colour and left a
+                // configured widget with square corners — the rounded card
+                // is part of the design, not a default to trade away.
+                //
+                // From API 31 a background tint list recolours the shape
+                // drawable without discarding it; older releases keep the
+                // old flat-colour behaviour.
+                val base = background ?: defaultBackground(ctx)
+                val tint = PrayerWidgetConfig.withTransparency(base, look.transparency)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Tints the shape drawable in place, so its 16dp corners
+                    // and the alpha carried in the colour both survive.
+                    views.setColorStateList(
+                        R.id.widget_root,
+                        "setBackgroundTintList",
+                        ColorStateList.valueOf(tint),
+                    )
+                } else {
+                    // No per-widget drawable tint before API 31, so a
+                    // configured strip falls back to a flat colour and loses
+                    // its corners there.
+                    //
+                    // The deck card makes the opposite trade on these
+                    // releases — it keeps its shape and drops the accent.
+                    // The difference is transparency: a see-through strip is
+                    // the whole reason the appearance screen exists, and a
+                    // widget that ignored it would look broken, whereas a
+                    // card that renders in the default colour merely looks
+                    // unconfigured. This branch only runs for a widget whose
+                    // appearance was deliberately changed.
+                    views.setInt(R.id.widget_root, "setBackgroundColor", tint)
+                }
+            }
+
+            val text = look.textColor ?: baseTextColor(ctx)
+            listOf(
+                R.id.widget_date,
+                R.id.widget_place,
+                R.id.widget_timer,
+                R.id.widget_prompt,
+            ).forEach { id -> views.setTextColor(id, text) }
+
+            // The icons and chevrons are white vectors; tinting them with the
+            // text colour keeps them visible over whatever the background
+            // became — including a fully transparent one over any wallpaper.
+            listOf(
+                R.id.widget_prev,
+                R.id.widget_next,
+                R.id.widget_icon_date,
+                R.id.widget_icon_place,
+            ).forEach { id -> views.setInt(id, "setColorFilter", text) }
+
+            // One size across the strip: the reference sets the date, place
+            // and timer in the same weight, and a smaller secondary line made
+            // the place name hard to read at the lower font sizes.
+            listOf(
+                R.id.widget_date,
+                R.id.widget_place,
+                R.id.widget_timer,
+            ).forEach { id ->
+                views.setTextViewTextSize(
+                    id,
+                    android.util.TypedValue.COMPLEX_UNIT_SP,
+                    look.fontSp.toFloat(),
+                )
+            }
+            views.setTextViewTextSize(
+                R.id.widget_prompt,
+                android.util.TypedValue.COMPLEX_UNIT_SP,
+                (look.fontSp - 2).coerceAtLeast(PrayerWidgetConfig.MIN_FONT_SP).toFloat(),
+            )
+        }
+
+        /** The background the unconfigured layouts already use, so turning
+         *  transparency up without choosing a colour fades the widget's own
+         *  surface rather than jumping to some other one first. */
+        internal fun defaultBackground(ctx: Context): Int {
+            val nightMode = ctx.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            return if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+                0xFF1A1A1A.toInt()
+            } else {
+                0xFFFFFFFF.toInt()
             }
         }
 
@@ -224,7 +553,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
          * Gregorian date, never something a prayer time is computed from.
          * Available since API 26, which is this app's minSdk.
          */
-        private fun hijriLabel(now: Date, tz: TimeZone): String {
+        internal fun hijriLabel(now: Date, tz: TimeZone): String {
             val zone = runCatching { tz.toZoneId() }.getOrDefault(ZoneId.systemDefault())
             val local = now.toInstant().atZone(zone).toLocalDate()
             val hijri = HijrahDate.from(local)

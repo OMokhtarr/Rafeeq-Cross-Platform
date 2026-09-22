@@ -1,6 +1,7 @@
 package com.rafeeq.quranquiz.prayer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -53,6 +54,56 @@ class WidgetLayoutParityTest {
     }
 
     @Test
+    fun `the vertical timetable layouts agree on ids`() {
+        assertParity("widget_timetable_vertical.xml")
+    }
+
+    @Test
+    fun `the wide timetable layouts agree on ids`() {
+        assertParity("widget_timetable_wide.xml")
+    }
+
+    /**
+     * Both timetable forms are driven by the same provider code, so they must
+     * declare the same ids as each other — not merely each match its own
+     * night variant. PrayerTimetableWideWidget reuses the vertical widget's
+     * rowIds list outright, which is only safe while this holds.
+     */
+    @Test
+    fun `both timetable forms declare the same ids`() {
+        assertEquals(
+            "the vertical and wide timetable layouts must declare the same view ids",
+            idsIn("layout/widget_timetable_vertical.xml"),
+            idsIn("layout/widget_timetable_wide.xml"),
+        )
+    }
+
+    @Test
+    fun `the timetable declares every id the provider sets`() {
+        val ids = idsIn("layout/widget_timetable_vertical.xml")
+        listOf(
+            "tt_root",
+            "tt_date",
+            "tt_hijri",
+            "tt_place",
+            "tt_icon_date",
+            "tt_icon_place",
+            "tt_prompt",
+            "tt_rows",
+        ).forEach { id ->
+            assertTrue("timetable layout is missing $id", id in ids)
+        }
+        // The six row slots the provider addresses by index. RemoteViews
+        // cannot inflate rows at runtime outside a collection view, so every
+        // slot the provider names has to exist up front.
+        (0 until 6).forEach { i ->
+            listOf("tt_row_$i", "tt_label_$i", "tt_time_$i").forEach { id ->
+                assertTrue("timetable layout is missing $id", id in ids)
+            }
+        }
+    }
+
+    @Test
     fun `the strip declares every id the provider sets`() {
         // Named rather than derived: these are the ids PrayerWidgetProvider
         // touches in render(). If one is renamed in the layout but not in the
@@ -62,7 +113,12 @@ class WidgetLayoutParityTest {
             "widget_root",
             "widget_date_column",
             "widget_date",
-            "widget_hijri",
+            "widget_place",
+            "widget_icon_date",
+            "widget_icon_place",
+            "widget_timer",
+            "widget_prev",
+            "widget_next",
             "widget_prompt",
             "widget_deck",
         ).forEach { id ->
@@ -73,8 +129,30 @@ class WidgetLayoutParityTest {
     @Test
     fun `the card declares every id the deck factory sets`() {
         val ids = idsIn("layout/widget_prayer_card.xml")
-        listOf("card_root", "card_name", "card_time", "card_countdown").forEach { id ->
+        // No countdown id: the timer lives on the strip, not on the card.
+        listOf("card_root", "card_name", "card_time").forEach { id ->
             assertTrue("card layout is missing $id", id in ids)
+        }
+    }
+
+    @Test
+    fun `the config screen's include carries no id of its own`() {
+        // Regression test for a launch crash. An android:id on <include>
+        // *replaces* the root id of the included layout rather than wrapping
+        // it, so an id here would delete widget_root from the inflated
+        // hierarchy — and PrayerWidgetConfigActivity's
+        // findViewById(R.id.widget_root) would return null, throwing an NPE
+        // inside onCreate before the screen ever appeared.
+        val config = File(resDir, "layout/widget_prayer_config.xml")
+        assertTrue("missing layout: widget_prayer_config.xml", config.isFile)
+
+        val includes = Regex("<include[^>]*>").findAll(config.readText()).map { it.value }.toList()
+        assertTrue("config screen should include the widget layout", includes.isNotEmpty())
+        includes.forEach { tag ->
+            assertFalse(
+                "an id on <include> replaces widget_root and breaks the preview: $tag",
+                tag.contains("android:id"),
+            )
         }
     }
 }
