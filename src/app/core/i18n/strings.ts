@@ -190,6 +190,28 @@ export interface AppStrings {
     juzWord: string;
     start: string;
     backToList: string;
+    tabSimple: string;
+    tabAdvanced: string;
+    yourRanges: string;
+    noRangesHint: string;
+    addRange: string;
+    addPageRange: string;
+    savedSets: string;
+    saveThisSet: string;
+    updateSet: string;
+    saveAsNew: string;
+    removeRange: string;
+    deleteSet: string;
+    deletedToast: string;
+    undo: string;
+    renameSet: string;
+    alreadyAdded: string;
+    rangeTotals: string;
+    pageWord: string;
+    othersWord: string;
+    juzPlural: string;
+    surahPlural: string;
+    pagePlural: string;
   };
 
   quizTest: {
@@ -663,6 +685,28 @@ const ar: AppStrings = {
     juzWord: "جزء",
     start: "ابدأ الاختبار",
     backToList: "العودة للقائمة",
+    tabSimple: "بسيط",
+    tabAdvanced: "متقدم",
+    yourRanges: "نطاقاتك",
+    noRangesHint: "أضف جزءًا أو سورة أو نطاق صفحات لبدء بناء اختبارك",
+    addRange: "أضف نطاقًا",
+    addPageRange: "أضف النطاق",
+    savedSets: "المجموعات المحفوظة",
+    saveThisSet: "احفظ هذه المجموعة",
+    updateSet: "تحديث",
+    saveAsNew: "حفظ كجديدة",
+    removeRange: "إزالة النطاق",
+    deleteSet: "حذف",
+    deletedToast: "تم الحذف",
+    undo: "تراجع",
+    renameSet: "إعادة التسمية",
+    alreadyAdded: "مُضاف بالفعل",
+    rangeTotals: "الإجمالي",
+    pageWord: "ص",
+    othersWord: "أخرى",
+    juzPlural: "أجزاء",
+    surahPlural: "سور",
+    pagePlural: "نطاقات صفحات",
   },
   quizTest: {
     questionOf: "سؤال",
@@ -1160,6 +1204,28 @@ const en: AppStrings = {
     juzWord: "Juz",
     start: "Start Quiz",
     backToList: "Back to List",
+    tabSimple: "Simple",
+    tabAdvanced: "Advanced",
+    yourRanges: "Your ranges",
+    noRangesHint: "Add a juz, surah or page range to start building your quiz",
+    addRange: "Add a range",
+    addPageRange: "Add range",
+    savedSets: "Saved sets",
+    saveThisSet: "Save this set",
+    updateSet: "Update",
+    saveAsNew: "Save as new",
+    removeRange: "Remove range",
+    deleteSet: "Delete",
+    deletedToast: "Deleted",
+    undo: "Undo",
+    renameSet: "Rename",
+    alreadyAdded: "Already added",
+    rangeTotals: "Total",
+    pageWord: "p.",
+    othersWord: "others",
+    juzPlural: "juz",
+    surahPlural: "surahs",
+    pagePlural: "page ranges",
   },
   quizTest: {
     questionOf: "Question",
