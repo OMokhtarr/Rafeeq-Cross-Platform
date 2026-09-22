@@ -5,6 +5,7 @@ import { Preferences } from "@capacitor/preferences";
 import MushafContextViewer from "../../../../../../shared/components/mushaf-context/MushafContextViewer";
 import { toHindiNumbers as toHindi, removeDiacritics } from "../../../../../../core/utils/arabic.util";
 import { ensureSeeded } from "../../../../../../core/services/data/quran.service";
+import { buildRangeVerses } from "../../../../services/quiz-ranges.service";
 import {
   getSurahVersesList,
   getJuzVerses,
@@ -254,6 +255,7 @@ const AkmelAlNehayat: React.FC = () => {
 
         // Fetch scoped verses (for questions) and full mushaf (for distractors) in parallel
         const scopePromise = (async () => {
+          if (config.ranges?.length) return buildRangeVerses(config.ranges);
           if (config.type === "surah" && config.surah)
             return getSurahVersesList(config.surah);
           if (config.type === "juz")

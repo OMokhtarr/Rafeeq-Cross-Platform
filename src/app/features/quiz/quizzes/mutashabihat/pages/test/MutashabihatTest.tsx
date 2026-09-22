@@ -17,6 +17,7 @@ import {
   filterGroupsBySurahs,
   filterGroupsByPages,
   filterGroupsByJuzs,
+  filterGroupsByRanges,
   buildMutashabihatQuestion,
   checkMutashabihatAnswer,
 } from "../../services/mutashabihat.service";
@@ -128,8 +129,9 @@ const MutashabihatTest: React.FC = () => {
         const allVerses = await getAllVerses();
         const allGroups = getAllMutashabihatGroups(allVerses);
 
-        let filtered =
-          config.scopeType === "surah"
+        let filtered = config.ranges?.length
+          ? filterGroupsByRanges(allGroups, config.ranges)
+          : config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
             : config.scopeType === "page"
             ? filterGroupsByPages(allGroups, config.pageFrom!, config.pageTo!)
