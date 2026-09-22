@@ -44,12 +44,14 @@ class PrayerWidgetProviderTest {
 
     @Test
     fun `enabling duha adds a card without dropping isha`() {
-        // Regression test for the reported bug, kept across the deck rewrite:
-        // PrayerName#values() puts DUHA ahead of DHUHR, ASR, MAGHRIB and ISHA,
-        // so an enum-order filter dropped ISHA out of the visible six once Duha
-        // was added. A deck cannot truncate, so nothing can be displaced now —
-        // but Duha must still sort after the obligatory prayers, not into the
-        // middle of them.
+        // Regression test for the original bug, kept across the deck rewrite:
+        // an enum-order filter over six physical slots dropped ISHA once Duha
+        // was added. A deck cannot truncate, so nothing is displaced now.
+        //
+        // The expected order was itself corrected later: this used to assert
+        // Duha last, which was the four-slot era's priority ordering leaking
+        // into a list that is now simply read top to bottom. Duha falls just
+        // after sunrise and belongs there.
         val visible = PrayerConfig.DEFAULT_VISIBLE_TIMES + "duha"
         val result = PrayerWidgetProvider.selectForDisplay(
             visible = visible,
@@ -60,11 +62,11 @@ class PrayerWidgetProviderTest {
             listOf(
                 PrayerName.FAJR,
                 PrayerName.SUNRISE,
+                PrayerName.DUHA,
                 PrayerName.DHUHR,
                 PrayerName.ASR,
                 PrayerName.MAGHRIB,
                 PrayerName.ISHA,
-                PrayerName.DUHA,
             ),
             result,
         )
@@ -94,11 +96,11 @@ class PrayerWidgetProviderTest {
         assertEquals(
             listOf(
                 PrayerName.FAJR,
+                PrayerName.DUHA,
                 PrayerName.DHUHR,
                 PrayerName.ASR,
                 PrayerName.MAGHRIB,
                 PrayerName.ISHA,
-                PrayerName.DUHA,
             ),
             result,
         )
@@ -136,18 +138,51 @@ class PrayerWidgetProviderTest {
         )
     }
 
+    /**
+     * Replaces an older test that asserted no supplementary time could
+     * outrank an obligatory prayer. That invariant belonged to the widget's
+     * four-slot era, when the list decided which times to *drop*; nothing
+     * truncates any more, so the list is read as display order and the only
+     * correct order is the one the times occur in.
+     *
+     * Duha is the case that was wrong: it falls shortly after sunrise but was
+     * rendered after Isha, because it is absent from DAILY_TIMETABLE and
+     * everything absent from that list was appended to the tail.
+     */
     @Test
-    fun `slot priority never lets a supplementary time outrank an obligatory prayer`() {
-        val obligatory = PrayerConfig.OBLIGATORY_TIMES.map { PrayerName.valueOf(it.uppercase()) }.toSet()
-        val supplementary = setOf(PrayerName.DUHA, PrayerName.MIDNIGHT, PrayerName.LAST_THIRD)
-        val worstObligatoryRank = PrayerWidgetProvider.SLOT_PRIORITY
-            .withIndex()
-            .filter { (_, name) -> name in obligatory }
-            .maxOf { (index, _) -> index }
-        val bestSupplementaryRank = PrayerWidgetProvider.SLOT_PRIORITY
-            .withIndex()
-            .filter { (_, name) -> name in supplementary }
-            .minOf { (index, _) -> index }
-        assertTrue(worstObligatoryRank < bestSupplementaryRank)
+    fun `slot order is chronological through the day`() {
+        assertEquals(
+            listOf(
+                PrayerName.FAJR,
+                PrayerName.SUNRISE,
+                PrayerName.DUHA,
+                PrayerName.DHUHR,
+                PrayerName.ASR,
+                PrayerName.MAGHRIB,
+                PrayerName.ISHA,
+                PrayerName.MIDNIGHT,
+                PrayerName.LAST_THIRD,
+            ),
+            PrayerWidgetProvider.SLOT_PRIORITY,
+        )
+    }
+
+    /** The specific regression: Duha between sunrise and Dhuhr, never last. */
+    @Test
+    fun `duha is displayed straight after sunrise`() {
+        val result = PrayerWidgetProvider.selectForDisplay(
+            visible = setOf("fajr", "sunrise", "duha", "dhuhr", "isha"),
+            withTime = PrayerName.values().toSet(),
+        )
+        assertEquals(
+            listOf(
+                PrayerName.FAJR,
+                PrayerName.SUNRISE,
+                PrayerName.DUHA,
+                PrayerName.DHUHR,
+                PrayerName.ISHA,
+            ),
+            result,
+        )
     }
 }

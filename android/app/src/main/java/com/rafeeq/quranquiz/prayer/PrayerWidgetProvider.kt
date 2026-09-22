@@ -140,22 +140,22 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         private const val COLOR_DARK_TEXT = 0xFFFFFFFF.toInt()
 
         /**
-         * Display order for the deck's cards, highest first: the five
-         * obligatory prayers plus sunrise (PrayerTimesEngine's
-         * DAILY_TIMETABLE, already in that interleaved order), then the
-         * supplementary times in enum declaration order.
+         * Display order for the deck's cards: chronological, which is the
+         * enum's own declaration order.
          *
-         * Built explicitly — rather than relying on PrayerName.values()'
-         * declaration order, where DUHA sits ahead of four obligatory
-         * prayers — so the deck reads as a timetable rather than as the enum.
-         * DAILY_TIMETABLE by construction contains only the five obligatory
-         * prayers and sunrise, so nothing in the supplementary tail can ever
-         * sort ahead of an obligatory prayer: that guarantee is structural,
-         * not a coincidence of list order.
+         * This used to be a *priority* order — DAILY_TIMETABLE first, then
+         * the supplementary times appended — from when the widget had four
+         * fixed slots and had to decide which times to drop. It no longer
+         * truncates: the deck holds a card per visible time and the
+         * timetable widgets show them all. So the only question left is what
+         * order to read them in, and the answer is the order they occur.
+         *
+         * The old form put Duha after Isha, because DAILY_TIMETABLE omits it
+         * and everything missing from that list was appended to the tail.
+         * Duha falls shortly after sunrise, so that was simply wrong once
+         * nothing was being dropped.
          */
-        internal val SLOT_PRIORITY: List<PrayerName> =
-            PrayerTimesEngine.DAILY_TIMETABLE +
-                PrayerName.values().filter { it !in PrayerTimesEngine.DAILY_TIMETABLE }
+        internal val SLOT_PRIORITY: List<PrayerName> = PrayerName.values().toList()
 
         /**
          * Picks which names become cards, in the order the user swipes
@@ -455,42 +455,40 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             views: RemoteViews,
             look: PrayerWidgetConfig.Appearance,
         ) {
-            val background = look.background
-            if (background != null || look.transparency > 0) {
-                // Tint the shape drawable rather than replacing it.
+            // Painted on every render, not only when the user configured a
+            // colour. Left unpainted, the surface is whichever layout the
+            // launcher inflated — layout/ or layout-night/ — and that follows
+            // the DEVICE's dark mode, which is independent of Rafeeq's own
+            // theme. A device in light mode therefore showed a white widget
+            // under a dark app, and a reinstall made it obvious because the
+            // launcher re-inflates the layout then.
+            val base = look.background ?: defaultBackground(ctx)
+            val tint = PrayerWidgetConfig.withTransparency(base, look.transparency)
+
+            // Tint the shape drawable rather than replacing it.
                 // `setBackgroundColor` alone used to be called here, which
                 // swapped the drawable for a flat colour and left a
                 // configured widget with square corners — the rounded card
                 // is part of the design, not a default to trade away.
-                //
-                // From API 31 a background tint list recolours the shape
-                // drawable without discarding it; older releases keep the
-                // old flat-colour behaviour.
-                val base = background ?: defaultBackground(ctx)
-                val tint = PrayerWidgetConfig.withTransparency(base, look.transparency)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // Tints the shape drawable in place, so its 16dp corners
-                    // and the alpha carried in the colour both survive.
-                    views.setColorStateList(
-                        R.id.widget_root,
-                        "setBackgroundTintList",
-                        ColorStateList.valueOf(tint),
-                    )
-                } else {
-                    // No per-widget drawable tint before API 31, so a
-                    // configured strip falls back to a flat colour and loses
-                    // its corners there.
-                    //
-                    // The deck card makes the opposite trade on these
-                    // releases — it keeps its shape and drops the accent.
-                    // The difference is transparency: a see-through strip is
-                    // the whole reason the appearance screen exists, and a
-                    // widget that ignored it would look broken, whereas a
-                    // card that renders in the default colour merely looks
-                    // unconfigured. This branch only runs for a widget whose
-                    // appearance was deliberately changed.
-                    views.setInt(R.id.widget_root, "setBackgroundColor", tint)
-                }
+            //
+            // From API 31 a background tint list recolours the shape
+            // drawable without discarding it; older releases keep the
+            // old flat-colour behaviour.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Tints the shape drawable in place, so its 16dp corners
+                // and the alpha carried in the colour both survive.
+                views.setColorStateList(
+                    R.id.widget_root,
+                    "setBackgroundTintList",
+                    ColorStateList.valueOf(tint),
+                )
+            } else {
+                // No per-widget drawable tint before API 31, so the strip
+                // takes a flat colour and loses its corners there. That is
+                // the trade this release makes for having the right colour
+                // at all: the deck card, which has no transparency to honour,
+                // makes the opposite one and keeps its shape.
+                views.setInt(R.id.widget_root, "setBackgroundColor", tint)
             }
 
             val text = look.textColor ?: baseTextColor(ctx)
@@ -532,18 +530,18 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             )
         }
 
-        /** The background the unconfigured layouts already use, so turning
-         *  transparency up without choosing a colour fades the widget's own
-         *  surface rather than jumping to some other one first. */
-        internal fun defaultBackground(ctx: Context): Int {
-            val nightMode = ctx.resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            return if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-                0xFF1A1A1A.toInt()
-            } else {
-                0xFFFFFFFF.toInt()
-            }
-        }
+        /**
+         * The widget's own surface when the user has not picked a colour.
+         *
+         * Follows Rafeeq's stored theme, not the device's dark mode. The two
+         * are independent — the app's theme is its own preference — and
+         * reading the device instead is what left a white widget sitting
+         * under a dark app. [PrayerConfig.appNight] is mirrored out of
+         * localStorage for exactly this, and defaults to night, which is the
+         * app's own default theme.
+         */
+        internal fun defaultBackground(ctx: Context): Int =
+            if (PrayerConfig.appNight(ctx)) 0xFF1A1A1A.toInt() else 0xFFFFFFFF.toInt()
 
         /**
          * The Hijri date, e.g. "10 Rab. II 1448".
@@ -579,19 +577,13 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         }
 
         /**
-         * The base text color, matching whichever layout variant the system
-         * actually inflated (day vs. night) rather than assuming one — the
-         * widget follows the *device's* configuration, since RemoteViews has
-         * no access to the app's own in-WebView theme.
+         * The base text colour, matching [defaultBackground] — so it follows
+         * Rafeeq's theme too. It used to read the device's night mode and
+         * assume the layout variant agreed; since the background is now
+         * painted explicitly, the text has to be painted from the same
+         * source or the two can disagree and leave white on white.
          */
-        internal fun baseTextColor(ctx: Context): Int {
-            val nightMode = ctx.resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            return if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-                COLOR_DARK_TEXT
-            } else {
-                COLOR_LIGHT_TEXT
-            }
-        }
+        internal fun baseTextColor(ctx: Context): Int =
+            if (PrayerConfig.appNight(ctx)) COLOR_DARK_TEXT else COLOR_LIGHT_TEXT
     }
 }

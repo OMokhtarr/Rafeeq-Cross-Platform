@@ -132,6 +132,15 @@ const MushafPage: React.FC<Props> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * The font size the fit pass settled on, in CSS px before the zoom divide.
+   *
+   * It exists only so the hidden-word bars re-measure when the glyphs resize:
+   * the fit runs imperatively from a ResizeObserver, so nothing in React's
+   * render would otherwise tell that effect the text moved.
+   */
+  const [fittedFontPx, setFittedFontPx] = useState(0);
+
   // Hidden-verse line overlays: one horizontal bar per (verse × mushaf-line).
   interface HiddenSegment {
     top: number;
@@ -270,8 +279,12 @@ const MushafPage: React.FC<Props> = ({
       // Published so the CSS-sized slots (bismillah, surah name) can cancel
       // the same multiplier — they must stay inside their fixed-height slot.
       el.style.setProperty("--text-zoom", `${zoom}`);
+      // Published to state as well as applied, because the hidden-word bars
+      // are measured in a separate effect that has no other way to learn the
+      // glyphs just changed size — see the note on its dependency list.
       const setFontPx = (px: number) => {
         el.style.fontSize = `${px / zoom}px`;
+        setFittedFontPx(px);
       };
       // Pages 1-2 stack naturally from top — width-only sizing.
       if (page <= 2) {
@@ -384,7 +397,7 @@ const MushafPage: React.FC<Props> = ({
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [hidden, partialTarget, fontReady, verses, bigTextMode]);
+  }, [hidden, partialTarget, fontReady, verses, bigTextMode, fittedFontPx]);
 
   if (!fontReady) {
     return (

@@ -430,3 +430,91 @@
     background: var(--color-gold-faint);
   }
 }
+
+/* ── Surah filter inside Pages mode ── */
+.arp-filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.arp-filter-all {
+  padding: 4px 12px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 20px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.arp-filter-all.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+.arp-filter-current {
+  color: var(--color-gold);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+}
+
+/* The filter grid is a chooser, not the main event: cap it so the From/To
+   pickers below stay reachable without a long scroll. */
+.arp-surah-grid-compact {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: var(--space-2);
+}
+.arp-surah-chip.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+.arp-surah-chip.active .arp-chip-en,
+.arp-surah-chip.active .arp-chip-num {
+  color: var(--color-text-on-dark);
+  opacity: 0.8;
+}
+
+/* ── Questions per page ── */
+.arp-perpage {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-card);
+}
+
+.arp-perpage-row {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.arp-perpage-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 8px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.arp-perpage-btn.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+.arp-perpage-total {
+  margin: var(--space-2) 0 0;
+  color: var(--color-gold);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  text-align: start;
+}

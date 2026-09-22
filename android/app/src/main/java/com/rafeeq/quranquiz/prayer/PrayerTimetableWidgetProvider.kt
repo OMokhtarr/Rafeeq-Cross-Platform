@@ -165,25 +165,25 @@ abstract class PrayerTimetableWidgetProvider : AppWidgetProvider() {
         views: RemoteViews,
         look: PrayerWidgetConfig.Appearance,
     ) {
-        val background = look.background
-        if (background != null || look.transparency > 0) {
-            val base = background ?: PrayerWidgetProvider.defaultBackground(ctx)
-            val tint = PrayerWidgetConfig.withTransparency(base, look.transparency)
-            // Tinted, not `setBackgroundColor`: that replaces the rounded
-            // shape drawable with a flat fill and squares the corners. Below
-            // API 31 there is no per-widget drawable tint, so a configured
-            // widget takes the flat colour and loses them — the same trade
-            // the strip makes, and for the same reason: a transparent widget
-            // that ignored the setting would look broken.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                views.setColorStateList(
-                    R.id.tt_root,
-                    "setBackgroundTintList",
-                    ColorStateList.valueOf(tint),
-                )
-            } else {
-                views.setInt(R.id.tt_root, "setBackgroundColor", tint)
-            }
+        // Painted on every render, not only when the user configured a
+        // colour. Left unpainted, the surface is whichever layout the
+        // launcher inflated — layout/ or layout-night/ — and that follows the
+        // DEVICE's dark mode, which is independent of Rafeeq's own theme.
+        val base = look.background ?: PrayerWidgetProvider.defaultBackground(ctx)
+        val tint = PrayerWidgetConfig.withTransparency(base, look.transparency)
+        // Tinted, not `setBackgroundColor`: that replaces the rounded shape
+        // drawable with a flat fill and squares the corners. Below API 31
+        // there is no per-widget drawable tint, so the widget takes the flat
+        // colour and loses them — the same trade the strip makes, and for the
+        // same reason: having the right colour matters more.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorStateList(
+                R.id.tt_root,
+                "setBackgroundTintList",
+                ColorStateList.valueOf(tint),
+            )
+        } else {
+            views.setInt(R.id.tt_root, "setBackgroundColor", tint)
         }
 
         val text = look.textColor ?: PrayerWidgetProvider.baseTextColor(ctx)

@@ -236,6 +236,10 @@ export interface AppStrings {
     juzPlural: string;
     surahPlural: string;
     pagePlural: string;
+    perPageMode: string;
+    perPageCount: string;
+    perPageTotal: string;
+    pagesWord: string;
   };
 
   quizTest: {
@@ -747,6 +751,10 @@ const ar: AppStrings = {
     juzPlural: "أجزاء",
     surahPlural: "سور",
     pagePlural: "نطاقات صفحات",
+    perPageMode: "أسئلة لكل صفحة",
+    perPageCount: "عدد الأسئلة لكل صفحة",
+    perPageTotal: "إجمالي الأسئلة",
+    pagesWord: "صفحة",
   },
   quizTest: {
     questionOf: "سؤال",
@@ -1282,6 +1290,10 @@ const en: AppStrings = {
     juzPlural: "juz",
     surahPlural: "surahs",
     pagePlural: "page ranges",
+    perPageMode: "Questions per page",
+    perPageCount: "Questions for each page",
+    perPageTotal: "Total questions",
+    pagesWord: "pages",
   },
   quizTest: {
     questionOf: "Question",

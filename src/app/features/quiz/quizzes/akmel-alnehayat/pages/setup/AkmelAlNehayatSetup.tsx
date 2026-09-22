@@ -25,6 +25,7 @@ import {
   savePreset,
   updatePreset,
 } from "../../../../services/quiz-presets.service";
+import { totalPageCount } from "../../../../services/quiz-ranges.service";
 import "./AkmelAlNehayatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -52,6 +53,8 @@ const AkmelAlNehayatSetup: React.FC = () => {
   const [tab, setTab] = useState<"simple" | "advanced">("simple");
   const [ranges, setRanges] = useState<QuizRange[]>([]);
   const [saveIntent, setSaveIntent] = useState<SaveIntent>({ mode: "none" });
+  // Questions per page, or null for a plain total. Drives questionCount when set.
+  const [perPage, setPerPage] = useState<number | null>(null);
 
   const allPageOptions = useMemo(
     () =>
@@ -110,6 +113,18 @@ const AkmelAlNehayatSetup: React.FC = () => {
     }
   };
 
+  // In per-page mode the count is derived, so the footer's picker is hidden
+  // and this is what Start uses.
+  const effectiveQuestionCount =
+    tab === "advanced" && perPage !== null
+      ? Math.max(1, perPage * totalPageCount(ranges))
+      : questionCount;
+
+  const perPageDerived =
+    tab === "advanced" && perPage !== null
+      ? Math.max(1, perPage * totalPageCount(ranges))
+      : null;
+
   const handleStart = async () => {
     const advanced = tab === "advanced";
 
@@ -129,7 +144,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
       pageFrom: !advanced && scopeType === "page" ? pageFrom : null,
       pageTo: !advanced && scopeType === "page" ? pageTo : null,
       juzs: !advanced && scopeType === "juz" ? selectedJuzs : [],
-      questionCount,
+      questionCount: effectiveQuestionCount,
       difficulty: "medium",
       ranges: advanced ? ranges : null,
     };
@@ -227,6 +242,8 @@ const AkmelAlNehayatSetup: React.FC = () => {
                   onRangesChange={setRanges}
                   saveIntent={saveIntent}
                   onSaveIntentChange={setSaveIntent}
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
                 />
               </div>
             ) : (
@@ -391,26 +408,34 @@ const AkmelAlNehayatSetup: React.FC = () => {
 
           {/* ── Footer: always visible ── */}
           <div className="an-footer">
-            <div className="an-footer-label">{tq.questionCount}</div>
-            <div className="an-count-row">
-              {[5, 10, 15, 20].map((n) => (
-                <button
-                  key={n}
-                  className={`an-count-btn ${questionCount === n ? "active" : ""}`}
-                  onClick={() => setQuestionCount(n)}
-                >
-                  {isRTL ? toHindi(n) : String(n)}
-                </button>
-              ))}
-              <div className={`an-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
-                <InlineSelect
-                  value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
-                  options={countOptions}
-                  onChange={(v) => setQuestionCount(Number(v))}
-                  fullWidth
-                />
+            {perPageDerived === null ? (
+              <>
+              <div className="an-footer-label">{tq.questionCount}</div>
+              <div className="an-count-row">
+                {[5, 10, 15, 20].map((n) => (
+                  <button
+                    key={n}
+                    className={`an-count-btn ${questionCount === n ? "active" : ""}`}
+                    onClick={() => setQuestionCount(n)}
+                  >
+                    {isRTL ? toHindi(n) : String(n)}
+                  </button>
+                ))}
+                <div className={`an-count-select${[25, 30, 35, 40, 45, 50].includes(questionCount) ? " active" : ""}`}>
+                  <InlineSelect
+                    value={String([5, 10, 15, 20].includes(questionCount) ? 25 : questionCount)}
+                    options={countOptions}
+                    onChange={(v) => setQuestionCount(Number(v))}
+                    fullWidth
+                  />
+                </div>
               </div>
-            </div>
+              </>
+            ) : (
+              <div className="an-footer-label">
+                {tq.perPageTotal}: {isRTL ? toHindi(perPageDerived) : String(perPageDerived)}
+              </div>
+            )}
             <button
               className="an-start-btn"
               onClick={handleStart}
