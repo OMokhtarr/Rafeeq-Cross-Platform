@@ -13,6 +13,7 @@ import MushafContextViewer from "../../../../../../shared/components/mushaf-cont
 import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.util";
 import { removeDiacritics } from "../../../../../../core/utils/arabic.util";
 import { ensureSeeded } from "../../../../../../core/services/data/quran.service";
+import { buildRangeVerses } from "../../../../services/quiz-ranges.service";
 import {
   getSurahVersesList,
   getJuzVerses,
@@ -155,7 +156,9 @@ const AkmelAlAyah: React.FC = () => {
 
         let allVerses: any[] = [];
 
-        if (config.type === "surah" && config.surah) {
+        if (config.ranges?.length) {
+          allVerses = await buildRangeVerses(config.ranges);
+        } else if (config.type === "surah" && config.surah) {
           allVerses = await getSurahVersesList(config.surah);
         } else if (config.type === "juz") {
           allVerses = await getJuzVerses(config.juzs);

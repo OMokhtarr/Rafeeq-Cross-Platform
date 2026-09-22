@@ -13,8 +13,18 @@ import { toHindiNumbers as toHindi } from "../../../../../../core/utils/arabic.u
 import { useLang } from "../../../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomNavBar";
 import InlineSelect from "../../../../../../shared/components/inline-select/InlineSelect";
-import type { QuizConfig } from "../../../../../../shared/models/verse.model";
+import type {
+  QuizConfig,
+  QuizRange,
+} from "../../../../../../shared/models/verse.model";
 import { readQuizPrefill } from "../../../../quiz-prefill";
+import AdvancedRangePicker, {
+  type SaveIntent,
+} from "../../../../components/advanced-range/AdvancedRangePicker";
+import {
+  savePreset,
+  updatePreset,
+} from "../../../../services/quiz-presets.service";
 import "./AkmelAlAyahSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -37,6 +47,11 @@ const AkmelAlAyahSetup: React.FC = () => {
   const [pageFilterSurah, setPageFilterSurah] = useState<number | null>(null);
   const [selectedJuzs, setSelectedJuzs] = useState<number[]>([]);
   const [questionCount, setQuestionCount] = useState(5);
+
+  // Simple | Advanced. The visible tab is the source of truth for Start.
+  const [tab, setTab] = useState<"simple" | "advanced">("simple");
+  const [ranges, setRanges] = useState<QuizRange[]>([]);
+  const [saveIntent, setSaveIntent] = useState<SaveIntent>({ mode: "none" });
 
   const allPageOptions = useMemo(
     () =>
@@ -96,14 +111,27 @@ const AkmelAlAyahSetup: React.FC = () => {
   };
 
   const handleStart = async () => {
+    const advanced = tab === "advanced";
+
+    // The save checkbox is applied here, on Start — a set is only ever saved
+    // alongside a quiz that actually begins.
+    if (advanced && saveIntent.mode !== "none" && ranges.length > 0) {
+      if (saveIntent.mode === "update") {
+        await updatePreset(saveIntent.id, ranges);
+      } else {
+        await savePreset(ranges, saveIntent.name.trim() || tq.savedSets);
+      }
+    }
+
     const quizConfig: QuizConfig = {
       type: scopeType,
-      surah: scopeType === "surah" ? selectedSurah : null,
-      pageFrom: scopeType === "page" ? pageFrom : null,
-      pageTo: scopeType === "page" ? pageTo : null,
-      juzs: scopeType === "juz" ? selectedJuzs : [],
+      surah: !advanced && scopeType === "surah" ? selectedSurah : null,
+      pageFrom: !advanced && scopeType === "page" ? pageFrom : null,
+      pageTo: !advanced && scopeType === "page" ? pageTo : null,
+      juzs: !advanced && scopeType === "juz" ? selectedJuzs : [],
       questionCount,
       difficulty: "medium",
+      ranges: advanced ? ranges : null,
     };
 
     await Preferences.set({
@@ -115,6 +143,7 @@ const AkmelAlAyahSetup: React.FC = () => {
   };
 
   const isReady = () => {
+    if (tab === "advanced") return ranges.length > 0;
     if (scopeType === "surah") return selectedSurah !== null;
     if (scopeType === "page") return pageTo >= pageFrom;
     if (scopeType === "juz") return selectedJuzs.length > 0;
@@ -175,160 +204,189 @@ const AkmelAlAyahSetup: React.FC = () => {
 
           {/* ── Body ── */}
           <div className="aa-body" dir={isRTL ? "rtl" : "ltr"}>
-            {/* Scope selector */}
-            <div className="aa-scope-section">
-              <div className="aa-label">{tq.scope}</div>
-              <div className="aa-type-row">
-                {[
-                  { key: "surah" as const, label: tq.scopeSurah },
-                  { key: "page" as const, label: tq.scopePages },
-                  { key: "juz" as const, label: tq.scopeJuz },
-                ].map((opt) => (
-                  <button
-                    key={opt.key}
-                    className={`aa-type-btn ${scopeType === opt.key ? "active" : ""}`}
-                    onClick={() => setScopeType(opt.key)}
-                  >
-                    <span className="aa-type-ar">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
+            {/* Simple | Advanced — the visible tab is the source of truth */}
+            <div className="aa-tab-row">
+              {[
+                { key: "simple" as const, label: tq.tabSimple },
+                { key: "advanced" as const, label: tq.tabAdvanced },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  className={`aa-tab-btn${tab === opt.key ? " active" : ""}`}
+                  onClick={() => setTab(opt.key)}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
 
-            {/* Scrollable selection zone */}
-            <div className="aa-scroll-zone">
-              <div className="aa-scroll-zone-label">{scrollZoneLabel()}</div>
-
-              {/* Page pickers — always visible above the surah scroll list */}
-              {scopeType === "page" && (
-                <div className="aa-page-picker-bar">
-                  <div className="aa-page-row">
-                    <div className="aa-page-input">
-                      <span>{tq.from}</span>
-                      <InlineSelect
-                        value={String(pageFrom)}
-                        options={pageOptions}
-                        onChange={(v) => {
-                          const n = Number(v);
-                          setPageFrom(n);
-                          if (n > pageTo) setPageTo(n);
-                        }}
-                        fullWidth
-                      />
-                    </div>
-                    <div className="aa-page-input">
-                      <span>{tq.to}</span>
-                      <InlineSelect
-                        value={String(pageTo)}
-                        options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
-                        onChange={(v) => setPageTo(Number(v))}
-                        fullWidth
-                      />
-                    </div>
-                  </div>
-                  <p className="aa-range-info">
-                    {tq.pageCount}: {isRTL ? toHindi(pageTo - pageFrom + 1) : String(pageTo - pageFrom + 1)}
-                  </p>
+            {tab === "advanced" ? (
+              <div className="aa-scroll-zone">
+                <AdvancedRangePicker
+                  ranges={ranges}
+                  onRangesChange={setRanges}
+                  saveIntent={saveIntent}
+                  onSaveIntentChange={setSaveIntent}
+                />
+              </div>
+            ) : (
+              <>
+              {/* Scope selector */}
+              <div className="aa-scope-section">
+                <div className="aa-label">{tq.scope}</div>
+                <div className="aa-type-row">
+                  {[
+                    { key: "surah" as const, label: tq.scopeSurah },
+                    { key: "page" as const, label: tq.scopePages },
+                    { key: "juz" as const, label: tq.scopeJuz },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      className={`aa-type-btn ${scopeType === opt.key ? "active" : ""}`}
+                      onClick={() => setScopeType(opt.key)}
+                    >
+                      <span className="aa-type-ar">{opt.label}</span>
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
-              <div className="aa-scroll-inner">
+              {/* Scrollable selection zone */}
+              <div className="aa-scroll-zone">
+                <div className="aa-scroll-zone-label">{scrollZoneLabel()}</div>
 
-                {/* Surah grid */}
-                {scopeType === "surah" && (
-                  <>
-                    <div className="aa-surah-grid">
-                      {surahNames.slice(1, 115).map((entry, i) => {
-                        const num = i + 1;
-                        return (
-                          <button
-                            key={num}
-                            className={`aa-surah-chip ${selectedSurah === num ? "active" : ""}`}
-                            onClick={() => setSelectedSurah(num)}
-                          >
-                            <span className="aa-chip-text">
-                              {isRTL ? (
-                                <>
-                                  <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                  <span className="aa-chip-en">{entry!.english}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="aa-chip-en">{entry!.english}</span>
-                                  <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                </>
-                              )}
-                            </span>
-                            <span className="aa-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!selectedSurah && (
-                      <p className="aa-hint-text">{tq.hintOneSurah}</p>
-                    )}
-                  </>
-                )}
-
-                {/* Page range — surah filter only; pickers are above */}
+                {/* Page pickers — always visible above the surah scroll list */}
                 {scopeType === "page" && (
-                  <>
-                    <div className="aa-surah-filter-row">
-                      <button
-                        className={`aa-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
-                        onClick={() => handlePageFilterSurahChange(null)}
-                      >
-                        {tq.allPages}
-                      </button>
+                  <div className="aa-page-picker-bar">
+                    <div className="aa-page-row">
+                      <div className="aa-page-input">
+                        <span>{tq.from}</span>
+                        <InlineSelect
+                          value={String(pageFrom)}
+                          options={pageOptions}
+                          onChange={(v) => {
+                            const n = Number(v);
+                            setPageFrom(n);
+                            if (n > pageTo) setPageTo(n);
+                          }}
+                          fullWidth
+                        />
+                      </div>
+                      <div className="aa-page-input">
+                        <span>{tq.to}</span>
+                        <InlineSelect
+                          value={String(pageTo)}
+                          options={pageOptions.filter((o) => Number(o.value) >= pageFrom)}
+                          onChange={(v) => setPageTo(Number(v))}
+                          fullWidth
+                        />
+                      </div>
                     </div>
-                    <div className="aa-surah-grid aa-surah-grid-compact">
-                      {surahNames.slice(1, 115).map((entry, i) => {
-                        const num = i + 1;
-                        return (
-                          <button
-                            key={num}
-                            className={`aa-surah-chip${pageFilterSurah === num ? " active" : ""}`}
-                            onClick={() => handlePageFilterSurahChange(num)}
-                          >
-                            <span className="aa-chip-text">
-                              {isRTL ? (
-                                <>
-                                  <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                  <span className="aa-chip-en">{entry!.english}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="aa-chip-en">{entry!.english}</span>
-                                  <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
-                                </>
-                              )}
-                            </span>
-                            <span className="aa-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-
-                {/* Juz grid */}
-                {scopeType === "juz" && (
-                  <div className="aa-juz-grid">
-                    {JUZS.map((j) => (
-                      <button
-                        key={j}
-                        className={`aa-juz-chip ${selectedJuzs.includes(j) ? "active" : ""}`}
-                        onClick={() => toggleJuz(j)}
-                      >
-                        <span className="aa-juz-label">{tq.juzWord}</span>
-                        <span className="aa-juz-num">{toHindi(j)}</span>
-                      </button>
-                    ))}
+                    <p className="aa-range-info">
+                      {tq.pageCount}: {isRTL ? toHindi(pageTo - pageFrom + 1) : String(pageTo - pageFrom + 1)}
+                    </p>
                   </div>
                 )}
 
+                <div className="aa-scroll-inner">
+
+                  {/* Surah grid */}
+                  {scopeType === "surah" && (
+                    <>
+                      <div className="aa-surah-grid">
+                        {surahNames.slice(1, 115).map((entry, i) => {
+                          const num = i + 1;
+                          return (
+                            <button
+                              key={num}
+                              className={`aa-surah-chip ${selectedSurah === num ? "active" : ""}`}
+                              onClick={() => setSelectedSurah(num)}
+                            >
+                              <span className="aa-chip-text">
+                                {isRTL ? (
+                                  <>
+                                    <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                    <span className="aa-chip-en">{entry!.english}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="aa-chip-en">{entry!.english}</span>
+                                    <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  </>
+                                )}
+                              </span>
+                              <span className="aa-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!selectedSurah && (
+                        <p className="aa-hint-text">{tq.hintOneSurah}</p>
+                      )}
+                    </>
+                  )}
+
+                  {/* Page range — surah filter only; pickers are above */}
+                  {scopeType === "page" && (
+                    <>
+                      <div className="aa-surah-filter-row">
+                        <button
+                          className={`aa-filter-all-btn${pageFilterSurah === null ? " active" : ""}`}
+                          onClick={() => handlePageFilterSurahChange(null)}
+                        >
+                          {tq.allPages}
+                        </button>
+                      </div>
+                      <div className="aa-surah-grid aa-surah-grid-compact">
+                        {surahNames.slice(1, 115).map((entry, i) => {
+                          const num = i + 1;
+                          return (
+                            <button
+                              key={num}
+                              className={`aa-surah-chip${pageFilterSurah === num ? " active" : ""}`}
+                              onClick={() => handlePageFilterSurahChange(num)}
+                            >
+                              <span className="aa-chip-text">
+                                {isRTL ? (
+                                  <>
+                                    <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                    <span className="aa-chip-en">{entry!.english}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="aa-chip-en">{entry!.english}</span>
+                                    <span className="aa-chip-name" lang="ar" dir="rtl">{entry!.arabic}</span>
+                                  </>
+                                )}
+                              </span>
+                              <span className="aa-chip-num">{isRTL ? toHindi(num) : String(num)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Juz grid */}
+                  {scopeType === "juz" && (
+                    <div className="aa-juz-grid">
+                      {JUZS.map((j) => (
+                        <button
+                          key={j}
+                          className={`aa-juz-chip ${selectedJuzs.includes(j) ? "active" : ""}`}
+                          onClick={() => toggleJuz(j)}
+                        >
+                          <span className="aa-juz-label">{tq.juzWord}</span>
+                          <span className="aa-juz-num">{toHindi(j)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
               </div>
-            </div>
+              </>
+            )}
           </div>
 
           {/* ── Footer: always visible ── */}

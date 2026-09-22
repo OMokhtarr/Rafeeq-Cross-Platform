@@ -492,3 +492,29 @@ ion-content::part(scroll) {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
 }
+
+/* ── Simple | Advanced tabs ── */
+.aa-tab-row {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+
+.aa-tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 10px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.aa-tab-btn.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
