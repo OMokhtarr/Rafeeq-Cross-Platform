@@ -1,6 +1,7 @@
 import { stripDiacritics } from "../../../../../core/utils/arabic.util";
 import { getSurahNameArabic, getSurahNameEnglish } from "../../../../../core/services/data/metadata.service";
-import type { Verse } from "../../../../../shared/models/verse.model";
+import type { Verse, QuizRange } from "../../../../../shared/models/verse.model";
+import { isValidRange } from "../../../services/quiz-ranges.service";
 
 export interface MutashabihatGroup {
   id: string;
@@ -141,6 +142,46 @@ export function filterGroupsByJuzs(
   const filtered: MutashabihatGroup[] = [];
   for (const g of groups) {
     const matching = g.verses.filter((v) => set.has(v.juz));
+    if (matching.length >= MIN_GROUP_SIZE) {
+      filtered.push({ ...g, verses: matching });
+    }
+  }
+  return filtered;
+}
+
+/**
+ * Filter groups by an advanced multi-range selection.
+ *
+ * Deliberately NOT a loop over the three single-scope filters above. Each of
+ * those requires MIN_GROUP_SIZE matches within one scope, so a group whose two
+ * matching verses fall in two different ranges would be rejected by both. Here
+ * every verse is tested against the whole range set first, and the group-size
+ * rule is applied to what survives.
+ */
+export function filterGroupsByRanges(
+  groups: MutashabihatGroup[],
+  ranges: QuizRange[],
+): MutashabihatGroup[] {
+  const valid = ranges.filter(isValidRange);
+  if (valid.length === 0) return [];
+
+  const surahs = new Set<number>();
+  const juzs = new Set<number>();
+  const pageSpans: Array<{ from: number; to: number }> = [];
+  for (const r of valid) {
+    if (r.kind === "surah") surahs.add(r.surah);
+    else if (r.kind === "juz") juzs.add(r.juz);
+    else pageSpans.push({ from: r.from, to: r.to });
+  }
+
+  const inRanges = (v: MutashabihatGroup["verses"][number]): boolean =>
+    surahs.has(v.sura) ||
+    juzs.has(v.juz) ||
+    pageSpans.some((s) => v.page >= s.from && v.page <= s.to);
+
+  const filtered: MutashabihatGroup[] = [];
+  for (const g of groups) {
+    const matching = g.verses.filter(inRanges);
     if (matching.length >= MIN_GROUP_SIZE) {
       filtered.push({ ...g, verses: matching });
     }
