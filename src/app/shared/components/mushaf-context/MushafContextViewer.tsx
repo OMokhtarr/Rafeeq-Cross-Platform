@@ -273,8 +273,6 @@ const MushafContextViewer: React.FC<Props> = ({
     return set;
   }, [globalHidden, verses, lastRevealed, verse.sura, verse.aya]);
 
-  const canRevealNextVerse = revealedNextCount < maxRevealable;
-
   const handleRevealNext = () => {
     const nextN = revealedNextCount + 1;
     const nextVerse = nthVerseAfterTarget(nextN);
@@ -338,6 +336,17 @@ const MushafContextViewer: React.FC<Props> = ({
   const partialForPage = partialTarget;
 
   const canHint = targetOnPage && effectiveReveal < targetWordCount;
+
+  // The next verse can only be revealed once every word of the target verse is
+  // showing (via snippet, hints, recitation or the answer). Until then the
+  // button is hidden so the user can't skip past an unfinished verse. While the
+  // target verse isn't loaded its word count is unknown, so treat it as
+  // not-yet-complete rather than letting the gate pass trivially.
+  const targetFullyRevealed =
+    targetWordCount > 0 && effectiveReveal >= targetWordCount;
+
+  const canRevealNextVerse =
+    targetFullyRevealed && revealedNextCount < maxRevealable;
 
   if (!isOpen) return null;
 
