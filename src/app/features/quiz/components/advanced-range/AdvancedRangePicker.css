@@ -6,9 +6,18 @@
  * card-alt surfaces, 1.5px borders. No width cap here — the page owns that.
  */
 
+/* The host .*-scroll-zone is a fixed-height, overflow:hidden box whose inner
+   element does the scrolling. The picker is dropped straight into that box, so
+   it has to be that scrolling element itself: min-height 0 lets it shrink
+   inside the flex parent, and the bottom padding clears the fixed nav bar. */
 .arp-root {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-6));
 }
 
 /* ── Zones ── */
