@@ -1,0 +1,423 @@
+/**
+ * ADVANCED RANGE PICKER
+ *
+ * Lives inside the quiz setup pages' scroll zone, so it inherits their
+ * vocabulary: gold section labels, --color-quran for committed state,
+ * card-alt surfaces, 1.5px borders. No width cap here — the page owns that.
+ */
+
+.arp-root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Zones ── */
+.arp-section {
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--color-border-card);
+  transition: border-color var(--transition-theme);
+}
+.arp-section:last-child {
+  border-bottom: none;
+}
+
+.arp-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  color: var(--color-gold);
+  font-family: var(--font-arabic);
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: start;
+}
+
+.arp-count {
+  background: var(--color-bg-card-alt);
+  color: var(--color-gold);
+  border: 1px solid var(--color-input-border);
+  border-radius: 20px;
+  padding: 1px 9px;
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.arp-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* ── Zone 1: the range list ──
+   Rows, not cards: this is a tally of what has been picked, and the only
+   result on a page otherwise made of choosers. */
+.arp-range-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arp-range-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-card);
+}
+.arp-range-row:last-child {
+  border-bottom: none;
+}
+
+/* The spine encodes which kind a row is, so a mixed list is readable at a
+   glance without a label on every row. */
+.arp-spine {
+  flex-shrink: 0;
+  width: 3px;
+  align-self: stretch;
+  min-height: 1.4em;
+  border-radius: 2px;
+  background: var(--color-text-muted);
+}
+.arp-spine-juz {
+  background: var(--color-gold);
+}
+.arp-spine-surah {
+  background: var(--color-quran);
+}
+
+.arp-range-text {
+  flex: 1;
+  font-family: var(--font-arabic);
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  text-align: start;
+}
+
+.arp-range-remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+.arp-range-remove:hover {
+  background: var(--color-gold-faint);
+  color: var(--color-text-primary);
+}
+
+.arp-totals {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-arabic);
+  font-size: 0.8rem;
+  text-align: start;
+}
+
+/* ── Save checkbox ── */
+.arp-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.arp-save-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.arp-save-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-quran);
+  cursor: pointer;
+}
+
+.arp-save-mode {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.arp-save-mode-btn {
+  padding: 4px 10px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 8px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.arp-save-mode-btn.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+.arp-save-name {
+  flex: 1;
+  min-width: 140px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 8px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  text-align: start;
+}
+
+/* ── Zone 2: add a range ── */
+.arp-kind-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+
+.arp-kind-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 10px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.arp-kind-btn.active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.arp-juz-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  direction: rtl;
+  align-content: start;
+}
+
+.arp-juz-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 10px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.arp-juz-chip:hover {
+  background: var(--color-gold-faint);
+}
+/* Already in the list: dimmed, not disabled — tapping it shakes the row it
+   duplicates, which says why nothing happened. */
+.arp-juz-chip.added {
+  border-color: var(--color-gold);
+  opacity: 0.55;
+}
+.arp-juz-label {
+  font-family: var(--font-arabic);
+  font-size: 0.68rem;
+  opacity: 0.7;
+}
+.arp-juz-num {
+  font-family: var(--font-arabic);
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.arp-surah-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  align-content: start;
+}
+
+.arp-surah-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 8px;
+  background: var(--color-bg-card-alt);
+  color: var(--color-text-primary);
+  direction: rtl;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.arp-surah-chip:hover {
+  background: var(--color-gold-faint);
+}
+.arp-surah-chip.added {
+  border-color: var(--color-quran);
+  opacity: 0.55;
+}
+
+.arp-chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  overflow: hidden;
+}
+.arp-chip-name {
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.arp-chip-en {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.arp-chip-num {
+  flex-shrink: 0;
+  font-family: var(--font-arabic);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.arp-page-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.arp-page-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.arp-page-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.arp-page-add {
+  padding: 8px;
+  border: 1.5px solid var(--color-quran);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-quran);
+  font-family: var(--font-arabic);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+.arp-page-add:hover {
+  background: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+/* ── Zone 3: saved sets ── */
+.arp-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.arp-preset-chip {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 20px;
+  background: var(--color-bg-card-alt);
+  overflow: hidden;
+}
+.arp-preset-chip.loaded {
+  border-color: var(--color-quran);
+  background: var(--color-gold-faint);
+}
+
+/* Logical padding so the gap sits beside the delete button in both
+   directions; :dir() is not safe on the Android WebView this ships to. */
+.arp-preset-name {
+  padding-block: 5px;
+  padding-inline: 12px 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.arp-preset-rename {
+  width: 120px;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-arabic);
+  font-size: 0.85rem;
+  text-align: start;
+}
+
+.arp-preset-delete {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-base);
+}
+.arp-preset-delete:hover {
+  color: var(--color-gold);
+}
+
+/* ── The one moment of motion: a duplicate add shakes the row it duplicates,
+   answering the tap rather than decorating the page. ── */
+@keyframes arp-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.arp-range-row.shake {
+  animation: arp-shake 0.3s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arp-range-row.shake {
+    animation: none;
+    background: var(--color-gold-faint);
+  }
+}
