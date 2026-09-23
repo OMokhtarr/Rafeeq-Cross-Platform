@@ -10,7 +10,15 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.Priority
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -41,6 +49,7 @@ import java.util.TimeZone
  *   openAppSettings()                    — this app's settings page, for launcher-gated permissions
  *   openHomeScreen()                     — leaves the app so the placed widget is visible
  *   openWidgetSettings()                 — the placed widget's appearance screen
+ *   promptEnableLocation()               — the system dialog that turns location on in place
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -52,6 +61,22 @@ import java.util.TimeZone
     ],
 )
 class RafeeqPrayerPlugin : Plugin() {
+
+    /** The call waiting on the turn-on-location dialog, answered by [enableLocationLauncher]. */
+    private var pendingEnableCall: PluginCall? = null
+    private lateinit var enableLocationLauncher: ActivityResultLauncher<IntentSenderRequest>
+
+    // Registered in load(), which runs during the activity's onCreate — the
+    // only point an activity accepts a new result launcher.
+    override fun load() {
+        enableLocationLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult(),
+        ) { result ->
+            val call = pendingEnableCall ?: return@registerForActivityResult
+            pendingEnableCall = null
+            call.resolve(JSObject().put("enabled", result.resultCode == android.app.Activity.RESULT_OK))
+        }
+    }
 
     private fun iso(date: Date): String {
         val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
@@ -121,17 +146,7 @@ class RafeeqPrayerPlugin : Plugin() {
         // The name is best-effort decoration, and Geocoder blocks on the
         // network — so it never delays the call the page is awaiting.
         val ctx = context
-        val locale = Locale.getDefault()
-        Thread {
-            val name = PlaceNameResolver.resolve(ctx, lat, lng, locale)
-            // A newer fix may have landed while this lookup was on the
-            // network. Writing then would label the new coordinates with the
-            // old city, so the result is dropped unless it still belongs.
-            val current = PrayerConfig.coords(ctx)
-            if (name != null && current?.first == lat && current.second == lng) {
-                PrayerConfig.setPlaceName(ctx, name)
-            }
-        }.start()
+        Thread { PlaceNameResolver.resolveAndStore(ctx, lat, lng) }.start()
 
         call.resolve()
     }
@@ -265,6 +280,47 @@ class RafeeqPrayerPlugin : Plugin() {
      * and it has a different remedy: a user who has granted the permission but
      * disabled GPS cannot fix anything by being asked to grant it again.
      */
+    /**
+     * Asks to switch location on with the system's own dialog — one tap, and
+     * the user never leaves the app. Resolves `enabled: true` once location is
+     * on (at once if it already was). Where the dialog cannot be shown (no
+     * Play Services), it falls back to the device's location settings screen
+     * and resolves `enabled: false`, since that screen reports nothing back.
+     */
+    @PluginMethod
+    fun promptEnableLocation(call: PluginCall) {
+        val request = LocationSettingsRequest.Builder()
+            .addLocationRequest(
+                LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10_000L).build(),
+            )
+            .setAlwaysShow(true)
+            .build()
+        LocationServices.getSettingsClient(activity)
+            .checkLocationSettings(request)
+            .addOnSuccessListener { call.resolve(JSObject().put("enabled", true)) }
+            .addOnFailureListener { e ->
+                if (e is ResolvableApiException) {
+                    pendingEnableCall?.resolve(JSObject().put("enabled", false))
+                    pendingEnableCall = call
+                    try {
+                        enableLocationLauncher.launch(IntentSenderRequest.Builder(e.resolution).build())
+                        return@addOnFailureListener
+                    } catch (_: Exception) {
+                        pendingEnableCall = null
+                    }
+                }
+                try {
+                    activity.startActivity(
+                        Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                } catch (_: Exception) {
+                    // No settings screen to offer; the caller's message stands.
+                }
+                call.resolve(JSObject().put("enabled", false))
+            }
+    }
+
     @PluginMethod
     fun locationServicesEnabled(call: PluginCall) {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager

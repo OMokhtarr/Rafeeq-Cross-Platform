@@ -84,7 +84,7 @@ abstract class PrayerTimetableWidgetProvider : AppWidgetProvider() {
 
         val tz = TimeZone.getDefault()
         val now = Date()
-        val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
+        val dateFmt = SimpleDateFormat("EEE, d MMM", PrayerConfig.widgetLocale()).apply { timeZone = tz }
         views.setTextViewText(R.id.tt_date, dateFmt.format(now))
         views.setTextViewText(R.id.tt_hijri, PrayerWidgetProvider.hijriLabel(now, tz))
 

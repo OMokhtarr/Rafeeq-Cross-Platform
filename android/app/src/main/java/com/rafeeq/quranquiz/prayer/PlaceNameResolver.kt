@@ -53,4 +53,23 @@ object PlaceNameResolver {
             null
         }
     }
+
+    /**
+     * Resolves the stored coordinates in English and Arabic and caches both,
+     * so the widget can follow a device-language change without going back
+     * to the network. Blocking — callers must be on a worker thread.
+     *
+     * A newer fix may land while this is on the network; writing then would
+     * label the new coordinates with the old city, so the result is dropped
+     * unless the coordinates still match.
+     */
+    fun resolveAndStore(ctx: Context, lat: Double, lng: Double) {
+        val english = resolve(ctx, lat, lng, Locale.US)
+        val arabic = resolve(ctx, lat, lng, Locale("ar"))
+        val current = PrayerConfig.coords(ctx)
+        if (current?.first == lat && current.second == lng) {
+            PrayerConfig.setPlaceNames(ctx, english, arabic)
+            PrayerWidgetProvider.refresh(ctx)
+        }
+    }
 }

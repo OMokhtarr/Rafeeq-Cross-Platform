@@ -203,6 +203,40 @@
   stroke-width: 2.5;
 }
 
+/* Sunrise and sunset: a sun glyph on a disc, inverted when it is next. */
+.qh-horizon-disc {
+  fill: var(--color-bg-card);
+  stroke: var(--color-gold);
+  stroke-width: 1.5;
+}
+
+.qh-horizon-sun {
+  fill: var(--color-gold);
+}
+
+.qh-horizon-line,
+.qh-horizon-arrow {
+  fill: none;
+  stroke: var(--color-gold);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.qh-horizon--next .qh-horizon-disc {
+  fill: var(--color-gold);
+  stroke: var(--color-bg-card);
+}
+
+.qh-horizon--next .qh-horizon-sun {
+  fill: var(--color-bg-card);
+}
+
+.qh-horizon--next .qh-horizon-line,
+.qh-horizon--next .qh-horizon-arrow {
+  stroke: var(--color-bg-card);
+}
+
 /* The present moment, where the lit arc ends. */
 .qh-ring-now {
   fill: var(--color-text-primary);

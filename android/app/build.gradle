@@ -182,6 +182,10 @@ dependencies {
     // Prayer-time calculation. Lives natively rather than in JS because the
     // home-screen widget renders in the launcher process, with no WebView.
     implementation "com.batoulapps.adhan:adhan:$rootProject.ext.adhanVersion"
+    // The in-app "turn on location" dialog (SettingsClient). Already pulled in
+    // by @capacitor/geolocation, but only as its `implementation`, so it is
+    // declared here to be on this module's compile classpath. Same version.
+    implementation "com.google.android.gms:play-services-location:21.3.0"
     testImplementation "junit:junit:$rootProject.ext.junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.androidxEspressoCoreVersion"

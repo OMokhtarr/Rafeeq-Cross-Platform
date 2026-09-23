@@ -3,8 +3,8 @@
  * The top of the prayer page: place name and location button, then the next
  * prayer beside the day ring, with the qibla compass inside the ring.
  *
- * The ring is a 24-hour clock face (see dayDial.ts): every visible time is a
- * dot on it, the next one is marked, and a lit arc runs up to the present
+ * The ring is a 24-hour clock face (see dayDial.ts): each prayer is a dot on
+ * it and sunrise and sunset are sun glyphs, the next one is marked, and a lit arc runs up to the present
  * moment. Inside it the compass works as before — the dial is fixed to the
  * device, and the needle and the Kaaba marker rotate, converging as the user
  * turns.
@@ -34,6 +34,14 @@ import {
 import { angleOf, arcPath, pointAt, progressSpan } from "./dayDial";
 import "./QiblaHeader.css";
 
+/**
+ * What the ring marks: the five prayers and sunrise, whatever the timetable
+ * shows. Extra times (Duha, the last third) crowded it into a row of
+ * look-alike dots. Sunrise and Maghrib — the day's two horizon moments — are
+ * drawn as sun glyphs so they read at a glance; the rest are dots.
+ */
+export const DIAL_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] as const;
+
 export interface DialTime {
   key: string;
   at: Date;
@@ -45,7 +53,7 @@ interface QiblaHeaderProps {
   locating: boolean;
   /** The next prayer, already localized, or null inside the midnight-sun window. */
   next: { key: string; label: string; time: string; countdown: string } | null;
-  /** Every visible time today, in order — one dot each on the ring. */
+  /** The ring's marks (see DIAL_KEYS), in order. */
   times: DialTime[];
   sunrise?: Date;
   maghrib?: Date;
@@ -63,6 +71,30 @@ const CALIBRATION_SETTLE_MS = 2000;
 const C = 100;
 const RING_R = 90;
 const COMPASS_R = 62;
+
+/**
+ * Sunrise or sunset on the ring: a half sun on the horizon with a small
+ * arrow — up for rising, down for setting — on a disc that masks the track.
+ */
+const HorizonMark: React.FC<{
+  x: number;
+  y: number;
+  rising: boolean;
+  isNext: boolean;
+}> = ({ x, y, rising, isNext }) => (
+  <g
+    className={"qh-horizon" + (isNext ? " qh-horizon--next" : "")}
+    transform={`translate(${x} ${y})`}
+  >
+    <circle className="qh-horizon-disc" r={9} />
+    <path className="qh-horizon-sun" d="M -4 2 A 4 4 0 0 1 4 2 Z" />
+    <line className="qh-horizon-line" x1={-6} y1={2} x2={6} y2={2} />
+    <path
+      className="qh-horizon-arrow"
+      d={rising ? "M -2 -5 L 0 -7 L 2 -5" : "M -2 -7 L 0 -5 L 2 -7"}
+    />
+  </g>
+);
 
 const QiblaHeader: React.FC<QiblaHeaderProps> = ({
   placeName,
@@ -233,6 +265,17 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
             {times.map(({ key, at }) => {
               const p = pointAt(C, C, RING_R, angleOf(at));
               const isNext = key === next?.key;
+              if (key === "sunrise" || key === "maghrib") {
+                return (
+                  <HorizonMark
+                    key={key}
+                    x={p.x}
+                    y={p.y}
+                    rising={key === "sunrise"}
+                    isNext={isNext}
+                  />
+                );
+              }
               return (
                 <circle
                   key={key}

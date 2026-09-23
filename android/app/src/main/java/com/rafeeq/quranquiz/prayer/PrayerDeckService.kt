@@ -91,7 +91,7 @@ internal class PrayerDeckFactory(
 
         // Tint the card's shape drawable rather than replacing it.
         // `setBackgroundColor` was called here unconditionally, which swapped
-        // the 12dp-rounded drawable for a flat fill — so every card rendered
+        // the 18dp-rounded drawable for a flat fill — so every card rendered
         // with square corners, not only a configured one.
         //
         // Below API 31 there is no per-widget drawable tint, so the card
@@ -137,20 +137,16 @@ internal class PrayerDeckFactory(
             PrayerWidgetConfig.fitFontSp(cardSp, card.clock, CARD_FIT_CHARS).toFloat(),
         )
 
-        // The card is a fixed box (widget_card_width/height) so it does not
-        // resize as the arrows step between names. It still grows with the
-        // user's font size, as one box: scaled here from the 14sp it was
-        // sized for. Below API 31 RemoteViews cannot resize a view, so there
-        // it stays the XML size and the text fits itself inside.
+        // The card hugs its text sideways — a snug block, as the system's own
+        // widget draws it — and keeps a fixed height (widget_card_height) so
+        // the strip does not jump as the arrows step between names. The height
+        // still grows with the user's font size, scaled here from the 14sp it
+        // was sized for. Below API 31 RemoteViews cannot resize a view, so
+        // there it stays the XML height.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val scale = look.fontSp.toFloat() / PrayerWidgetConfig.DEFAULT_FONT_SP
             val res = ctx.resources
             val density = res.displayMetrics.density
-            views.setViewLayoutWidth(
-                R.id.card_root,
-                res.getDimension(R.dimen.widget_card_width) / density * scale,
-                android.util.TypedValue.COMPLEX_UNIT_DIP,
-            )
             views.setViewLayoutHeight(
                 R.id.card_root,
                 res.getDimension(R.dimen.widget_card_height) / density * scale,
@@ -179,11 +175,9 @@ internal class PrayerDeckFactory(
         const val CARD_SP_BOOST = 3
 
         /**
-         * Characters one card line holds at the card's own size: 90dp wide
-         * less 12dp of padding, at 17sp bold. The box was widened to exactly
-         * fit the longest label, "ث. الاخير", so every name and time keeps
-         * the full size; only a longer label than any the deck has today
-         * would shrink.
+         * Characters one card line holds before its text is shrunk. The card
+         * now grows to its text, so this only guards the strip against a
+         * label longer than any the deck has today ("ث. الاخير" is 9).
          */
         const val CARD_FIT_CHARS = 9
     }
@@ -324,7 +318,7 @@ internal object PrayerDeck {
      * nothing the card did not.
      */
     fun clockFormat(ctx: Context, tz: TimeZone): SimpleDateFormat =
-        SimpleDateFormat(clockPattern(PrayerConfig.use24Hour(ctx)), Locale.getDefault())
+        SimpleDateFormat(clockPattern(PrayerConfig.use24Hour(ctx)), PrayerConfig.widgetLocale())
             .apply { timeZone = tz }
 
     /** Split from [clockFormat] so the pattern itself is reachable from a

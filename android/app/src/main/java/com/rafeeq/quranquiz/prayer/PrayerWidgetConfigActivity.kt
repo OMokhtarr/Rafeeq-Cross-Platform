@@ -194,7 +194,7 @@ class PrayerWidgetConfigActivity : Activity() {
 
         val tz = TimeZone.getDefault()
         val now = Date()
-        val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
+        val dateFmt = SimpleDateFormat("EEE, d MMM", PrayerConfig.widgetLocale()).apply { timeZone = tz }
         // The strip's own formatter, so the preview cannot drift from the
         // widget it previews — it used to format the Hijri date itself, and
         // kept the year after the widget dropped it.
@@ -239,7 +239,7 @@ class PrayerWidgetConfigActivity : Activity() {
         card.findViewById<TextView>(R.id.card_time).apply {
             // In the clock chosen below, and at the card's single text size —
             // both as the real card renders it.
-            this.text = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour()), Locale.getDefault())
+            this.text = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour()), PrayerConfig.widgetLocale())
                 .format(SAMPLE_TIME)
             setTextColor(onAccent)
             textSize = (look.fontSp + 3).toFloat()
