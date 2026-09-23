@@ -180,6 +180,9 @@ class RafeeqPrayerPlugin : Plugin() {
         if (call.data.has("appNight")) {
             call.getBoolean("appNight")?.let { PrayerConfig.setAppNight(context, it) }
         }
+        // The app's language, for the widget's appearance screen (see
+        // PrayerConfig.appLocale). The widget itself follows the device.
+        call.getString("appLang")?.let { if (it == "ar" || it == "en") PrayerConfig.setAppLang(context, it) }
         PrayerWidgetProvider.refresh(context)
         call.resolve()
     }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { STRINGS, Lang, AppStrings } from "../i18n/strings";
+import { useWidgetLanguage } from "../hooks/useWidgetTheme";
 
 interface LanguageCtx {
   lang: Lang;
@@ -30,6 +31,7 @@ function loadLang(): Lang {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLangState] = useState<Lang>(loadLang);
+  useWidgetLanguage(lang);
 
   useEffect(() => {
     const t = STRINGS[lang];

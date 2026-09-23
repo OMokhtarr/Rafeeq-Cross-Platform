@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
 import type { Theme } from "../context/ThemeContext";
+import type { Lang } from "../i18n/strings";
 
 interface RafeeqPrayerThemePlugin {
-  setConfig(options: { appNight?: boolean }): Promise<void>;
+  setConfig(options: { appNight?: boolean; appLang?: Lang }): Promise<void>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerThemePlugin>("RafeeqPrayer");
@@ -33,4 +34,17 @@ export function useWidgetTheme(theme: Theme): void {
     if (!Capacitor.isNativePlatform()) return;
     RafeeqPrayer.setConfig({ appNight: theme === "night" }).catch(() => {});
   }, [theme]);
+}
+
+/**
+ * Mirror the app's language into native storage, the same way and for the
+ * same reason as the theme: the widget's appearance screen is a plain
+ * Activity with no WebView, and it should speak the app's language rather
+ * than the device's. (The widget itself deliberately follows the device.)
+ */
+export function useWidgetLanguage(lang: Lang): void {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    RafeeqPrayer.setConfig({ appLang: lang }).catch(() => {});
+  }, [lang]);
 }

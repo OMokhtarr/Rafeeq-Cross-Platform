@@ -42,6 +42,7 @@ object PrayerConfig {
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
+    private const val KEY_APP_LANG = "app_lang"
 
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -144,6 +145,19 @@ object PrayerConfig {
 
     fun setAppNight(ctx: Context, night: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_APP_NIGHT, night).apply()
+    }
+
+    /**
+     * The app's own language ("ar" or "en"), mirrored from localStorage by
+     * the web layer like [appNight]. Used by the widget's appearance screen,
+     * which is part of the app; the widget itself follows the device
+     * ([widgetLocale]). Defaults to Arabic, the app's own default.
+     */
+    fun appLocale(ctx: Context): Locale =
+        if (prefs(ctx).getString(KEY_APP_LANG, "ar") == "en") Locale.US else Locale("ar")
+
+    fun setAppLang(ctx: Context, lang: String) {
+        prefs(ctx).edit().putString(KEY_APP_LANG, lang).apply()
     }
 
     fun remindersEnabled(ctx: Context): Boolean =

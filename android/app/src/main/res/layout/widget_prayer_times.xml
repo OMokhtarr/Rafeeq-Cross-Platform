@@ -139,10 +139,16 @@
         android:background="@android:color/transparent"
         android:contentDescription="@string/prayer_widget_prev" />
 
+    <!--
+      Exactly the card's size. Left to wrap_content, the flipper chose its own
+      slot size, smaller than the card, and cropped it — cutting the rounded
+      corners flat. With the slot and the card the same fixed size there is
+      nothing to crop.
+    -->
     <AdapterViewFlipper
         android:id="@+id/widget_deck"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/widget_card_width"
+        android:layout_height="@dimen/widget_card_height"
         android:autoStart="false"
         android:flipInterval="0" />
 

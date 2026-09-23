@@ -89,16 +89,15 @@
         android:contentDescription="@null" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:minWidth="@dimen/widget_card_min_width"
+        android:layout_width="@dimen/widget_card_width"
         android:layout_height="@dimen/widget_card_height"
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/widget_preview_card"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="@dimen/widget_card_padding_h"
+        android:paddingEnd="@dimen/widget_card_padding_h"
+        android:paddingTop="@dimen/widget_card_padding_v"
+        android:paddingBottom="@dimen/widget_card_padding_v">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

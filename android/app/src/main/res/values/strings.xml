@@ -16,7 +16,7 @@
     <string name="prayer_widget_name_maghrib">Maghrib</string>
     <string name="prayer_widget_name_isha">Isha</string>
     <string name="prayer_widget_name_midnight">Midnight</string>
-    <string name="prayer_widget_name_last_third">Last third</string>
+    <string name="prayer_widget_name_last_third">L Third</string>
     <!-- Arrow buttons: spoken by TalkBack, never drawn on screen. -->
     <string name="prayer_widget_prev">Previous time</string>
     <string name="prayer_widget_next">Next time</string>

@@ -10,20 +10,19 @@
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/card_root"
-    android:layout_width="wrap_content"
-    android:minWidth="@dimen/widget_card_min_width"
+    android:layout_width="@dimen/widget_card_width"
     android:layout_height="@dimen/widget_card_height"
     android:orientation="vertical"
     android:gravity="center"
     android:background="@drawable/widget_card_background_light"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:paddingStart="@dimen/widget_card_padding_h"
+    android:paddingEnd="@dimen/widget_card_padding_h"
+    android:paddingTop="@dimen/widget_card_padding_v"
+    android:paddingBottom="@dimen/widget_card_padding_v">
 
     <TextView
         android:id="@+id/card_name"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@android:color/black"
         android:textStyle="bold"
@@ -35,7 +34,8 @@
 
     <TextView
         android:id="@+id/card_time"
-        android:layout_width="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@android:color/black"
         android:textStyle="bold"
