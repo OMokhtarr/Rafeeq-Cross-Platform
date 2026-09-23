@@ -98,6 +98,27 @@ android {
         }
     }
 
+    // AGP 8 leaves the renamed APK under intermediates/apk/, so copy it out to
+    // outputs/apk/<buildType>/ where you'd expect to find it.
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def apkFile = output.outputFile
+            def destDir = new File("${project.buildDir}/outputs/apk/${variant.buildType.name}")
+            variant.assembleProvider.configure {
+                doLast {
+                    if (apkFile.exists()) {
+                        destDir.mkdirs()
+                        java.nio.file.Files.copy(
+                            apkFile.toPath(),
+                            new File(destDir, apkFile.name).toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // Custom AAB naming
     bundle {
         language { enableSplit = true }
