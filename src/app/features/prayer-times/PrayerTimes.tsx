@@ -81,7 +81,6 @@ const PrayerTimes: React.FC = () => {
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
-    use24Hour: boolean;
   } | null>(null);
   const [visible, setVisible] = useState<PrayerKey[] | null>(null);
   const [place, setPlace] = useState<string | null>(null);
@@ -111,11 +110,7 @@ const PrayerTimes: React.FC = () => {
       // is only ever right as of the moment the page is entered.
       getWidgetInfo(),
     ]);
-    setConfig({
-      method: cfg.method,
-      madhab: cfg.madhab,
-      use24Hour: cfg.use24Hour,
-    });
+    setConfig({ method: cfg.method, madhab: cfg.madhab });
     setDay(d);
     setVisible(v);
     setPlace(p);
@@ -206,6 +201,18 @@ const PrayerTimes: React.FC = () => {
 
   const rowLabel = (key: PrayerKey): string => tp[key];
 
+  // Moved here from the header: the dates label the timetable, so they head
+  // its card.
+  const today = new Date(now);
+  const gregorianDate = new Intl.DateTimeFormat(
+    lang === "ar" ? "ar-EG" : "en-GB",
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" },
+  ).format(today);
+  const hijriDate = new Intl.DateTimeFormat(
+    lang === "ar" ? "ar-SA-u-ca-islamic-umalqura" : "en-GB-u-ca-islamic-umalqura",
+    { day: "numeric", month: "long", year: "numeric" },
+  ).format(today);
+
   // One ordered list, filtered to keys that are both user-visible and
   // actually present in today's times — the visible-set preference no longer
   // has a separate collapsible section to defer to.
@@ -257,38 +264,43 @@ const PrayerTimes: React.FC = () => {
                   placeName={place}
                   onUpdateLocation={handleUpdateLocation}
                   locating={locating}
+                  next={
+                    day.next && nextAt !== undefined
+                      ? {
+                          key: day.next.name,
+                          label: rowLabel(day.next.name),
+                          time: formatTime(day.next.at),
+                          countdown: formatCountdown(nextAt - now, lang),
+                        }
+                      : null
+                  }
+                  times={rowKeys.map((key) => ({ key, at: day.times![key]! }))}
+                  sunrise={day.times?.sunrise}
+                  maghrib={day.times?.maghrib}
+                  now={now}
                 />
 
                 <div className="pt-card">
-                  {day.next && nextAt !== undefined && (
-                    <div className="pt-next">
-                      <span className="pt-next-label">{tp.nextPrayer}</span>
-                      <span className="pt-next-name">
-                        {rowLabel(day.next.name)}
-                      </span>
-                      <span className="pt-next-countdown">
-                        {formatCountdown(nextAt - now, lang)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Opens the options menu. Carries its own word rather
-                      than standing as a bare glyph: this is now the only way
-                      into the page's settings, so what it opens has to be
-                      readable without tapping it first. */}
+                  {/* The dates head the timetable they label, with the
+                      options menu at the row's end — the conventional place
+                      for it, so a bare ⋮ is enough here. */}
                   <div className="pt-card-header">
+                    <div className="pt-dates">
+                      <p className="pt-date-greg">{gregorianDate}</p>
+                      <p className="pt-date-hijri">{hijriDate}</p>
+                    </div>
                     <button
                       type="button"
                       className="pt-menu-btn"
                       onClick={() => setSheet("menu")}
                       aria-haspopup="dialog"
+                      aria-label={tp.menuLabel}
                     >
                       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <circle cx="12" cy="5" r="1.8" />
-                        <circle cx="12" cy="12" r="1.8" />
-                        <circle cx="12" cy="19" r="1.8" />
+                        <circle cx="12" cy="5" r="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <circle cx="12" cy="19" r="2" />
                       </svg>
-                      {tp.menuTitle}
                     </button>
                   </div>
 
@@ -362,7 +374,6 @@ const PrayerTimes: React.FC = () => {
                     onClose={closeSheet}
                     onBack={backToMenu}
                     placed={widget.placed}
-                    use24Hour={config?.use24Hour ?? false}
                     onChanged={load}
                   />
                 )}

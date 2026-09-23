@@ -23,7 +23,6 @@ import {
   openAppSettings,
   openHomeScreen,
   openWidgetSettings,
-  setPrayerConfig,
   syncAppTheme,
 } from "../../core/services/prayer/prayer-times.service";
 import "./PrayerSheet.css";
@@ -35,8 +34,6 @@ interface Props {
   onBack: () => void;
   /** How many copies are currently on the home screen. */
   placed: number;
-  /** Clock the widget renders its times in. */
-  use24Hour: boolean;
   /** Re-reads the placed count and config after a change. */
   onChanged: () => void;
 }
@@ -55,25 +52,14 @@ const AppearanceIcon = () => (
   </svg>
 );
 
-/**
- * A fixed late-afternoon time, rendered in each clock as the segment's own
- * example.
- *
- * Fixed rather than "now" so the two samples always differ: at 09:00 both
- * clocks read the same and the control would show two identical options.
- * 16:45 is unambiguous in either.
- */
-const SAMPLE = new Date(2000, 0, 1, 16, 45);
-
 const WidgetSettingsSheet: React.FC<Props> = ({
   open,
   onClose,
   onBack,
   placed,
-  use24Hour,
   onChanged,
 }) => {
-  const { t, lang, isRTL } = useLang();
+  const { t, isRTL } = useLang();
   const { isNight } = useTheme();
   const tp = t.prayerTimes;
 
@@ -130,24 +116,6 @@ const WidgetSettingsSheet: React.FC<Props> = ({
     await syncAppTheme(isNight);
     await openWidgetSettings();
   }, [isNight]);
-
-  const handleFormat = useCallback(
-    async (next: boolean) => {
-      if (next === use24Hour) return;
-      await setPrayerConfig({ use24Hour: next });
-      onChanged();
-    },
-    [use24Hour, onChanged],
-  );
-
-  // The sample in each segment, in that segment's own clock — so the choice
-  // reads off the example rather than the label.
-  const sampleIn = (hour12: boolean) =>
-    SAMPLE.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12,
-    });
 
   if (!open) return null;
 
@@ -217,32 +185,6 @@ const WidgetSettingsSheet: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Offered whether or not a widget is placed: choosing the clock
-              before adding one means the first render is already right. */}
-          <div className="wss-section">
-            <span className="wss-section-label">{tp.timeFormat}</span>
-            <span className="wss-section-hint">{tp.timeFormatHint}</span>
-            <div className="wss-segmented" role="group" aria-label={tp.timeFormat}>
-              <button
-                type="button"
-                className="wss-segment"
-                aria-pressed={!use24Hour}
-                onClick={() => handleFormat(false)}
-              >
-                <span className="wss-segment-name">{tp.timeFormat12}</span>
-                <span className="wss-segment-sample">{sampleIn(true)}</span>
-              </button>
-              <button
-                type="button"
-                className="wss-segment"
-                aria-pressed={use24Hour}
-                onClick={() => handleFormat(true)}
-              >
-                <span className="wss-segment-name">{tp.timeFormat24}</span>
-                <span className="wss-segment-sample">{sampleIn(false)}</span>
-              </button>
-            </div>
-          </div>
         </div>
       </aside>
     </>

@@ -23,6 +23,6 @@
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/widget_prayer_times"
     android:previewImage="@mipmap/ic_launcher"
-    android:previewLayout="@layout/widget_prayer_times"
+    android:previewLayout="@layout/widget_prayer_times_preview"
     android:description="@string/prayer_widget_desc_strip"
     android:updatePeriodMillis="0" />

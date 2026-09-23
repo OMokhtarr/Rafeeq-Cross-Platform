@@ -185,4 +185,18 @@ class PrayerWidgetProviderTest {
             result,
         )
     }
+
+    /** The strip's date line shares its row with both arrows and the card;
+     *  the Hijri year was what pushed it into an ellipsis. */
+    @Test
+    fun `the strip's hijri label has no year`() {
+        val tz = java.util.TimeZone.getTimeZone("UTC")
+        val date = java.util.Date(1_758_542_400_000L) // 2025-09-22
+        val short = PrayerWidgetProvider.hijriLabel(date, tz, withYear = false)
+        val full = PrayerWidgetProvider.hijriLabel(date, tz)
+        // The full label ends in a four-digit year; the short one is exactly
+        // the full one with that last word removed.
+        assertTrue(full.substringAfterLast(' ').matches(Regex("[0-9]{4}")))
+        assertEquals(full.substringBeforeLast(' '), short)
+    }
 }

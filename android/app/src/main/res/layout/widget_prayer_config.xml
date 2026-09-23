@@ -5,10 +5,15 @@
 
   A live preview sits on top, over a checkerboard so transparency is visible
   for what it is rather than reading as "white". Below it, one labelled row per
-  setting: a colour row opens a picker dialog, a slider row carries its value
-  at the end of the label line.
+  setting: a slider row carries its value
+  at the end of the label line, and each colour is a row of swatches chosen
+  in place.
 -->
+<!-- config_root takes the system-bar insets at runtime. The screen is drawn
+     edge to edge (enforced for SDK 36 apps on Android 15+), so without them
+     the preview slid up under the status bar. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/config_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -47,20 +52,17 @@
             android:paddingTop="8dp"
             android:paddingBottom="20dp">
 
-            <!-- ── Background colour ─────────────────────── -->
+            <!-- ── Background colour ───────────────────────────── -->
+            <TextView
+                style="@style/WidgetConfigSectionLabel"
+                android:text="@string/widget_config_background" />
+
+            <!-- Filled with swatches by the activity; tapping one applies it
+                 at once, so there is no dialog between the choice and the
+                 preview. -->
             <LinearLayout
-                android:id="@+id/config_bg_row"
-                style="@style/WidgetConfigRow">
-
-                <TextView
-                    style="@style/WidgetConfigRowLabel"
-                    android:text="@string/widget_config_background" />
-
-                <ImageView
-                    android:id="@+id/config_bg_dot"
-                    style="@style/WidgetConfigDot"
-                    android:contentDescription="@string/widget_config_background" />
-            </LinearLayout>
+                android:id="@+id/config_bg_swatches"
+                style="@style/WidgetConfigSwatches" />
 
             <!-- ── Transparency ──────────────────────────── -->
             <LinearLayout style="@style/WidgetConfigRow">
@@ -81,34 +83,28 @@
                 android:max="100" />
 
             <!-- ── Text colour ───────────────────────────── -->
+            <TextView
+                style="@style/WidgetConfigSectionLabel"
+                android:text="@string/widget_config_text_color" />
+
+            <!-- Filled with swatches by the activity; tapping one applies it
+                 at once, so there is no dialog between the choice and the
+                 preview. -->
             <LinearLayout
-                android:id="@+id/config_text_row"
-                style="@style/WidgetConfigRow">
+                android:id="@+id/config_text_swatches"
+                style="@style/WidgetConfigSwatches" />
 
-                <TextView
-                    style="@style/WidgetConfigRowLabel"
-                    android:text="@string/widget_config_text_color" />
+            <!-- ── Prayer card colour ───────────────────────────── -->
+            <TextView
+                style="@style/WidgetConfigSectionLabel"
+                android:text="@string/widget_config_accent" />
 
-                <ImageView
-                    android:id="@+id/config_text_dot"
-                    style="@style/WidgetConfigDot"
-                    android:contentDescription="@string/widget_config_text_color" />
-            </LinearLayout>
-
-            <!-- ── Prayer card colour ────────────────────── -->
+            <!-- Filled with swatches by the activity; tapping one applies it
+                 at once, so there is no dialog between the choice and the
+                 preview. -->
             <LinearLayout
-                android:id="@+id/config_accent_row"
-                style="@style/WidgetConfigRow">
-
-                <TextView
-                    style="@style/WidgetConfigRowLabel"
-                    android:text="@string/widget_config_accent" />
-
-                <ImageView
-                    android:id="@+id/config_accent_dot"
-                    style="@style/WidgetConfigDot"
-                    android:contentDescription="@string/widget_config_accent" />
-            </LinearLayout>
+                android:id="@+id/config_accent_swatches"
+                style="@style/WidgetConfigSwatches" />
 
             <!-- ── Font size ─────────────────────────────── -->
             <LinearLayout style="@style/WidgetConfigRow">
@@ -126,6 +122,37 @@
                 android:id="@+id/config_font"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <!-- ── Time format ───────────────────────────────
+                 Global rather than per widget, like the rest of the app's
+                 clock: two widgets showing the same timetable in different
+                 clocks would read as a bug. Saved with the rest. -->
+            <LinearLayout style="@style/WidgetConfigRow">
+
+                <TextView
+                    style="@style/WidgetConfigRowLabel"
+                    android:text="@string/widget_config_time_format" />
+
+                <RadioGroup
+                    android:id="@+id/config_time_format"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/config_time_12"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/widget_config_time_12" />
+
+                    <RadioButton
+                        android:id="@+id/config_time_24"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/widget_config_time_24" />
+                </RadioGroup>
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"

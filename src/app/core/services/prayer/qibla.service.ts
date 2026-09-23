@@ -86,6 +86,14 @@ export function watchHeading(
   onUnavailable: () => void,
 ): () => void {
   let settled = false;
+  // Set by the first `deviceorientationabsolute` event. From then on the
+  // plain `deviceorientation` events are ignored: on Android both fire, and
+  // the plain one measures from wherever the phone pointed when the sensor
+  // woke rather than from north. Taking both interleaved drew the needle
+  // from two frames at once — it jumped between them — and flipped the
+  // `absolute` flag on every other sample, which is what made the
+  // calibration hint flash on and off.
+  let sawAbsolute = false;
 
   const timer = window.setTimeout(() => {
     if (!settled) {
@@ -95,6 +103,9 @@ export function watchHeading(
   }, HEADING_TIMEOUT_MS);
 
   const handle = (event: Event) => {
+    if (event.type === "deviceorientationabsolute") sawAbsolute = true;
+    else if (sawAbsolute) return;
+
     const e = event as DeviceOrientationEvent & { webkitCompassHeading?: number };
     // iOS exposes a ready-made compass heading; elsewhere alpha counts
     // anticlockwise from north, so it is subtracted from 360.

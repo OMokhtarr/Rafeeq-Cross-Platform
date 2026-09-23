@@ -43,6 +43,9 @@
     <string name="widget_config_accent">لون بطاقة الصلاة</string>
     <string name="widget_config_font_size">حجم الخط</string>
     <string name="widget_config_save">حفظ</string>
+    <string name="widget_config_time_format">صيغة الوقت</string>
+    <string name="widget_config_time_12">١٢ ساعة</string>
+    <string name="widget_config_time_24">٢٤ ساعة</string>
     <string name="widget_config_reset">استعادة الافتراضي</string>
     <!-- Swatch that clears a colour so the widget follows the device theme. -->
     <string name="widget_config_auto">تلقائي</string>

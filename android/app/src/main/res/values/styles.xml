@@ -80,10 +80,21 @@
         <item name="android:alpha">0.6</item>
     </style>
 
-    <!-- The colour circle at the end of a colour row; its fill is set at
-         runtime from the stored value. -->
-    <style name="WidgetConfigDot">
-        <item name="android:layout_width">32dp</item>
-        <item name="android:layout_height">32dp</item>
+    <!-- A colour setting's name, above its row of swatches. -->
+    <style name="WidgetConfigSectionLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <!-- The row of swatches under a colour setting, filled at runtime. -->
+    <style name="WidgetConfigSwatches">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingBottom">4dp</item>
     </style>
 </resources>

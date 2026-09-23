@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picker previews only: the strip's prayer card, in the default gold, drawn in place because
+     the preview has no code to tint it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#D4B48C" />
+    <corners android:radius="12dp" />
+</shape>

@@ -138,10 +138,17 @@ object PrayerAlarmScheduler {
     }
 
     /**
-     * Arms a single exact alarm for the next 00:01 local time, so the widget
-     * can refresh into the new day on its own rather than showing yesterday's
-     * times until the next enabled prayer (which may be hours into the new
-     * day, or — with reminders off entirely — never).
+     * Arms the widget's own refresh alarm for the next moment its display
+     * changes: whichever comes first of 00:01 (the new day) and the next card
+     * boundary from [PrayerDeck.nextBoundary] (a prayer arriving, or its
+     * elapsed window closing). The receiver refreshes and calls this again,
+     * so the chain walks through the day one boundary at a time.
+     *
+     * It used to target midnight only, leaving the per-prayer refreshes to
+     * the reminder alarm — which [scheduleNext] skips entirely when
+     * reminders are off. With them off, nothing re-rendered the widget at
+     * Maghrib and its countdown ran on through zero into negative numbers
+     * until the app was opened.
      *
      * Independent of [scheduleNext] and of whether reminders are enabled at
      * all: the widget reflects today's times whenever a location is stored,
@@ -152,22 +159,41 @@ object PrayerAlarmScheduler {
     fun scheduleMidnightRoll(ctx: Context) {
         if (PrayerConfig.coords(ctx) == null) return
 
-        val next = Calendar.getInstance(TimeZone.getDefault()).apply {
+        val tz = TimeZone.getDefault()
+        val midnight = Calendar.getInstance(tz).apply {
             set(Calendar.HOUR_OF_DAY, MIDNIGHT_ROLL_HOUR)
             set(Calendar.MINUTE, MIDNIGHT_ROLL_MINUTE)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (!after(Calendar.getInstance(TimeZone.getDefault()))) {
+            if (!after(Calendar.getInstance(tz))) {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
-        }
+        }.timeInMillis
+
+        val boundary = nextCardBoundary(ctx, tz)
+        val at = if (boundary != null && boundary < midnight) boundary else midnight
 
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            next.timeInMillis,
+            at,
             midnightRollPendingIntent(ctx),
         )
+    }
+
+    /** The next card boundary in epoch millis, or null with no stored location. */
+    private fun nextCardBoundary(ctx: Context, tz: TimeZone): Long? {
+        val (lat, lng) = PrayerConfig.coords(ctx) ?: return null
+        val method = PrayerConfig.method(ctx)
+        val madhab = PrayerConfig.madhab(ctx)
+        val now = Date()
+        val today = PrayerTimesEngine.timesFor(lat, lng, now, method, madhab, tz)
+        val cal = Calendar.getInstance(tz).apply {
+            time = now
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        val tomorrow = PrayerTimesEngine.timesFor(lat, lng, cal.time, method, madhab, tz)
+        return PrayerDeck.nextBoundary(now, today, tomorrow)?.time
     }
 
     /** Cancels the pending midnight-roll alarm, if any. */

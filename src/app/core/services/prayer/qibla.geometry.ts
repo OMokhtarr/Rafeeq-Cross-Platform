@@ -30,14 +30,50 @@ export function signedDelta(bearing: number, heading: number): number {
   return raw > 180 ? raw - 360 : raw;
 }
 
-/** Which way to turn to face the qibla, or that the user already does. */
+/**
+ * How far off the qibla the user must drift before "facing" is released.
+ *
+ * Wider than [FACING_TOLERANCE_DEG] on purpose. With a single threshold a
+ * reading hovering around it flips the state on every sample, so "facing"
+ * flashed up for a frame and vanished — effectively never showing at all.
+ * Entering needs 5°, leaving needs 10°.
+ */
+export const FACING_RELEASE_DEG = 10;
+
+/**
+ * Which way to turn to face the qibla, or that the user already does.
+ *
+ * [previous] is the last answer; when it was "facing", the wider release
+ * band applies. Omit it for a stateless answer.
+ */
 export function turnInstruction(
   bearing: number,
   heading: number,
+  previous?: TurnDirection | null,
 ): TurnDirection {
   const delta = signedDelta(bearing, heading);
-  if (Math.abs(delta) < FACING_TOLERANCE_DEG) return "facing";
+  const band = previous === "facing" ? FACING_RELEASE_DEG : FACING_TOLERANCE_DEG;
+  if (Math.abs(delta) < band) return "facing";
   return delta > 0 ? "right" : "left";
+}
+
+/**
+ * Moves [previous] a fraction [factor] of the way towards [next], taking the
+ * short way round the circle.
+ *
+ * A magnetometer is noisy sample to sample; drawing every raw reading made
+ * the needle shake. This low-pass filter trades a little lag for a steady
+ * needle. Plain averaging would fail at the wrap: 359° and 1° average to
+ * 180°, the exact opposite direction, so the step is taken along
+ * [signedDelta] instead.
+ */
+export function smoothHeading(
+  previous: number | null,
+  next: number,
+  factor = 0.2,
+): number {
+  if (previous === null) return normalise(next);
+  return normalise(previous + signedDelta(next, previous) * factor);
 }
 
 /**
@@ -47,4 +83,17 @@ export function turnInstruction(
  */
 export function markerRotation(bearing: number, heading: number): number {
   return normalise(bearing - heading);
+}
+
+/**
+ * [target] expressed as the angle nearest to [previous], without wrapping.
+ *
+ * The needle and marker turn through a CSS transition. Handed wrapped angles,
+ * a step from 359° to 1° animates the long way — a full turn backwards —
+ * every time the heading crosses north. Returning 361° instead lets the
+ * transition take the 2° it actually is.
+ */
+export function continuousAngle(previous: number | null, target: number): number {
+  if (previous === null) return target;
+  return previous + signedDelta(target, previous);
 }

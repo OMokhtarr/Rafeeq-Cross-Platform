@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The strip's prayer card: a fixed box, so it no longer grows and shrinks
+      as the arrows step between a short name ("الظهر") and a long one
+      ("ث. الاخير"). Wide enough for the longest label, "ث. الاخير", whole at the card's
+      default 17sp, so no name ever has to shrink; the
+      provider scales both by the user's font size (API 31+), and fits the
+      text to the box rather than the box to the text.
+    -->
+    <dimen name="widget_card_width">90dp</dimen>
+    <dimen name="widget_card_height">54dp</dimen>
+</resources>

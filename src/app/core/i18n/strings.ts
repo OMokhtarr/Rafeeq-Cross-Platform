@@ -124,11 +124,6 @@ export interface AppStrings {
     /** What each picker actually changes, said in the reader's terms. */
     methodHint: string;
     madhabHint: string;
-    /** Clock the home-screen widget renders its times in. */
-    timeFormat: string;
-    timeFormatHint: string;
-    timeFormat12: string;
-    timeFormat24: string;
   };
 
   /** Confirmation shown on the first of the two back swipes that exit the app. */
@@ -650,10 +645,6 @@ const ar: AppStrings = {
     methodHint:
       "تختلف الهيئات في زاويتي الفجر والعشاء. اختر الهيئة المعتمدة في بلدك.",
     madhabHint: "يؤخّر المذهب الحنفي وقت العصر عن الشافعي.",
-    timeFormat: "صيغة الوقت",
-    timeFormatHint: "كيف تظهر المواقيت في الأداة.",
-    timeFormat12: "١٢ ساعة",
-    timeFormat24: "٢٤ ساعة",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
   offline: {
@@ -1188,10 +1179,6 @@ const en: AppStrings = {
     methodHint:
       "Authorities differ on the sun angles for Fajr and Isha. Pick the one used where you are.",
     madhabHint: "The Hanafi madhab sets Asr later than the Shafi'i.",
-    timeFormat: "Time format",
-    timeFormatHint: "How times are shown on the widget.",
-    timeFormat12: "12-hour",
-    timeFormat24: "24-hour",
   },
   exitConfirm: "Swipe again to exit",
   offline: {

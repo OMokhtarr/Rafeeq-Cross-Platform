@@ -312,9 +312,10 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
             val look = PrayerWidgetConfig.appearance(ctx, widgetId)
 
-            // Only the date column opens the app. The card deliberately has no
-            // PendingIntent of any kind — with the arrows beside it, a card
-            // that also launched the app would make a mis-aimed press costly.
+            // The date column opens the app; the card opens the widget's
+            // appearance screen (wired below, with the deck). Nothing else on
+            // the strip launches anything, so the arrows between them stay
+            // purely for stepping.
             val openApp = PendingIntent.getActivity(
                 ctx,
                 0,
@@ -336,7 +337,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
             views.setTextViewText(
                 R.id.widget_date,
-                "${dateFmt.format(now)} • ${hijriLabel(now, tz)}",
+                "${dateFmt.format(now)} • ${hijriLabel(now, tz, withYear = false)}",
             )
 
             // Decoration on the coordinates: shown when a name has resolved,
@@ -380,6 +381,28 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // adapter stays until this app's floor rises.
             @Suppress("DEPRECATION")
             views.setRemoteAdapter(R.id.widget_deck, deckIntent)
+
+            // Tapping the card opens this widget's appearance screen. A card
+            // inside a collection cannot carry its own PendingIntent, so the
+            // deck holds this template and each card fills it in (see
+            // PrayerDeckFactory). Mutable because a fill-in intent is merged
+            // into it, which an immutable PendingIntent refuses from API 31.
+            // The widget id goes in the data as well as the extras, so two
+            // widgets' templates are distinct rather than one replacing the
+            // other.
+            val styleIntent = Intent(ctx, PrayerWidgetConfigActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                data = android.net.Uri.parse("rafeeq-widget-style://$widgetId")
+            }
+            views.setPendingIntentTemplate(
+                R.id.widget_deck,
+                PendingIntent.getActivity(
+                    ctx,
+                    widgetId,
+                    styleIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                ),
+            )
 
             // Which card to show. A stored index survives only while it still
             // addresses a card: the visible-times preference can shrink the
@@ -544,18 +567,26 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             if (PrayerConfig.appNight(ctx)) 0xFF1A1A1A.toInt() else 0xFFFFFFFF.toInt()
 
         /**
-         * The Hijri date, e.g. "10 Rab. II 1448".
+         * The Hijri date, e.g. "10 Rab. II 1448", or "10 Rab. II" without
+         * [withYear].
+         *
+         * The strip passes false. Its date line shares the row's width with
+         * both arrows and the card, and the year was the difference between
+         * the line fitting and ending in an ellipsis; the year is also the
+         * least useful part of a date read every day. The timetable widgets
+         * give the Hijri date a line of its own and keep it.
          *
          * java.time's HijrahDate is the tabular Umm al-Qura calendar, which can
          * differ by a day from local sighting — it is a label beside the
          * Gregorian date, never something a prayer time is computed from.
          * Available since API 26, which is this app's minSdk.
          */
-        internal fun hijriLabel(now: Date, tz: TimeZone): String {
+        internal fun hijriLabel(now: Date, tz: TimeZone, withYear: Boolean = true): String {
             val zone = runCatching { tz.toZoneId() }.getOrDefault(ZoneId.systemDefault())
             val local = now.toInstant().atZone(zone).toLocalDate()
             val hijri = HijrahDate.from(local)
-            return DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US).format(hijri)
+            val pattern = if (withYear) "d MMM yyyy" else "d MMM"
+            return DateTimeFormatter.ofPattern(pattern, Locale.US).format(hijri)
         }
 
         /** Arabic display label for a prayer name, shown in the widget

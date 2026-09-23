@@ -35,10 +35,11 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.getBooleanExtra(PrayerAlarmScheduler.EXTRA_WIDGET_ROLL, false)) {
-            // The midnight roll: purely a "new day started" nudge for the
-            // widget, not a prayer. No notification, just a refresh and
-            // re-arming the next one — the day-boundary equivalent of
-            // scheduleNext's own self re-arming below.
+            // The widget's own refresh tick: the new day, a prayer arriving,
+            // or a prayer's elapsed window closing — whichever came first.
+            // Not a reminder: no notification, just a refresh and re-arming
+            // the next tick. Independent of the reminder toggle, which is
+            // why it exists at all.
             PrayerWidgetProvider.refresh(context)
             PrayerAlarmScheduler.scheduleMidnightRoll(context)
             return

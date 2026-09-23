@@ -1,16 +1,17 @@
 /* ═══════════════════════════════════════════════
    QIBLA HEADER
-   The gradient band at the top of the prayer page. The ring is fixed to the
-   device; only the needle and the Kaaba marker rotate inside it.
+   The band at the top of the prayer page: the next prayer on one side, the
+   day ring with the qibla compass inside it on the other. The ring is fixed
+   to the device; only the needle and the Kaaba marker rotate.
    ═══════════════════════════════════════════════ */
 
 .qh-header {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: max(var(--space-5), var(--safe-inset-top)) var(--space-4)
-    calc(var(--space-6) + var(--space-5));
+  /* Kept tight so the whole timetable fits below without scrolling. The
+     bottom padding still clears the card's overlap (its -space-5 margin). */
+  padding: max(var(--space-3), var(--safe-inset-top)) var(--space-4)
+    calc(var(--space-3) + var(--space-5));
   background: linear-gradient(
     180deg,
     var(--color-gold-faint) 0%,
@@ -23,14 +24,14 @@
 .qh-place-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
 }
 
 .qh-place {
   font-family: var(--font-arabic);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
@@ -49,25 +50,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   color: var(--color-gold);
   background: none;
   border: none;
-  border-radius: var(--radius-full, 9999px);
+  border-radius: var(--radius-full);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background var(--transition-fast);
 }
 
 .qh-location-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .qh-location-btn:active {
   background: var(--color-gold-faint);
+}
+
+.qh-location-btn:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 .qh-location-btn:disabled {
@@ -90,169 +96,228 @@
   }
 }
 
-/* ── Dial ────────────────────────────────────── */
+/* ── Next prayer beside the ring ─────────────── */
 
-.qh-dial {
-  width: 100%;
-  max-width: 220px;
-  aspect-ratio: 1 / 1;
-  margin: var(--space-4) 0 0;
+.qh-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
 }
 
-.qh-dial-ring {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-full, 9999px);
-  border: 2px solid var(--color-gold-subtle);
-  background: var(--color-bg-card);
-  box-shadow: var(--shadow-card);
+.qh-next {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.qh-dial-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-gold);
-  transform: translate(-50%, -50%);
-}
-
-/* The numeric bearing, shown inside the ring only where there is no needle
-   to point with. */
-.qh-dial-bearing {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.qh-next-label {
   font-family: var(--font-arabic);
-  font-size: var(--text-lg);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.qh-next-name {
+  font-family: var(--font-arabic);
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--color-gold);
-  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
-[dir="ltr"] .qh-dial-bearing {
+/* The time is the figure people look for, so it is the largest thing in the
+   band — set in tabular figures so the digits do not shift as they change. */
+.qh-next-time {
+  font-family: var(--font-arabic);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The page's one loud element: how long is left. */
+.qh-next-countdown {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  font-family: var(--font-arabic);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background: var(--color-gold-subtle);
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+
+[dir="ltr"] .qh-next-label,
+[dir="ltr"] .qh-next-name,
+[dir="ltr"] .qh-next-time,
+[dir="ltr"] .qh-next-countdown {
   font-family: var(--font-latin);
 }
 
-/* ── Kaaba marker ─────────────────────────────
-   A full-height box rotated about the ring's centre, with the dot pinned at
-   its top edge — so rotation carries the dot around the circumference. */
+/* ── Day ring and compass ─────────────────────── */
 
-.qh-marker {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 0;
-  height: 100%;
-  transform-origin: center center;
-  transition: transform var(--transition-base, 0.2s ease-out);
+.qh-dial {
+  width: 42%;
+  max-width: 160px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
 }
 
-.qh-marker-dot {
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  width: 14px;
-  height: 14px;
-  margin-left: -7px;
-  border-radius: 50%;
-  background: var(--color-gold);
-  border: 2px solid var(--color-bg-card);
-  box-sizing: border-box;
-}
-
-/* ── Needle ──────────────────────────────────── */
-
-.qh-needle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 40%;
-  transform-origin: bottom center;
-  margin-left: -2px;
-  margin-top: -40%;
-  transition: transform var(--transition-base, 0.2s ease-out);
-}
-
-.qh-needle-tip {
+.qh-dial-svg {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--color-gold);
-  border-radius: var(--radius-full, 9999px);
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  overflow: visible;
 }
 
-/* ── Turn guidance ───────────────────────────── */
+.qh-ring-track {
+  fill: none;
+  stroke: var(--color-gold-subtle);
+  stroke-width: 6;
+}
+
+.qh-ring-progress {
+  fill: none;
+  stroke: var(--color-gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.qh-ring-dot {
+  fill: var(--color-bg-card);
+  stroke: var(--color-gold);
+  stroke-width: 2;
+}
+
+.qh-ring-dot--next {
+  fill: var(--color-gold);
+  stroke: var(--color-bg-card);
+  stroke-width: 2.5;
+}
+
+/* The present moment, where the lit arc ends. */
+.qh-ring-now {
+  fill: var(--color-text-primary);
+  stroke: var(--color-bg-card);
+  stroke-width: 2;
+}
+
+.qh-compass {
+  fill: var(--color-bg-card);
+  stroke: var(--color-border-card);
+  stroke-width: 1.5;
+}
+
+.qh-compass-tick {
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* Rotated groups turn about the ring's centre, in viewBox units. */
+.qh-rotor {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform var(--transition-base, 0.2s ease-out);
+}
+
+.qh-kaaba {
+  fill: var(--color-text-primary);
+}
+
+.qh-kaaba-band {
+  fill: var(--color-gold);
+}
+
+.qh-needle {
+  fill: var(--color-gold);
+}
+
+.qh-compass-center {
+  fill: var(--color-gold);
+}
+
+/* The numeric bearing, inside the compass only where there is no needle to
+   point with. */
+.qh-bearing {
+  fill: var(--color-gold);
+  font-family: var(--font-latin);
+  font-size: 22px;
+  font-weight: 700;
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Facing the qibla: the compass itself lights up, so the moment reads at a
+   glance rather than only through the label beneath. */
+.qh-compass {
+  transition:
+    fill var(--transition-base),
+    stroke var(--transition-base);
+}
+
+.qh-dial-svg--facing .qh-compass {
+  fill: var(--color-gold-subtle);
+  stroke: var(--color-gold);
+  stroke-width: 3;
+}
+
+.qh-dial-svg--facing .qh-kaaba {
+  fill: var(--color-gold);
+}
+
+.qh-dial-svg--facing .qh-kaaba-band {
+  fill: var(--color-text-primary);
+}
+
+/* ── Turn guidance and hints ─────────────────── */
 
 .qh-turn {
   font-family: var(--font-arabic);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-gold);
-  margin: var(--space-4) 0 0;
+  text-align: center;
+  margin: var(--space-2) 0 0;
   line-height: 1.5;
 }
 
-[dir="ltr"] .qh-turn {
-  font-family: var(--font-latin);
-}
-
+/* The confirmation, set apart from the directions: a filled pill, so it is
+   plainly a different state and not just a different word. */
 .qh-turn--facing {
-  color: var(--color-text-primary);
+  align-self: center;
+  padding: var(--space-1) var(--space-4);
+  color: var(--color-bg-app);
+  background: var(--color-gold);
+  border-radius: var(--radius-pill);
 }
-
-/* ── Hints ───────────────────────────────────── */
 
 .qh-hint {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  text-align: center;
   line-height: var(--leading-normal);
-  margin: var(--space-3) 0 0;
+  margin: var(--space-2) auto 0;
   max-width: 320px;
 }
 
+[dir="ltr"] .qh-turn,
 [dir="ltr"] .qh-hint {
   font-family: var(--font-latin);
 }
 
-/* ── Dates ───────────────────────────────────── */
-
-.qh-dates {
-  margin-top: var(--space-5);
-}
-
-.qh-date-greg {
-  font-family: var(--font-arabic);
-  font-size: var(--text-base);
-  color: var(--color-text-primary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.qh-date-hijri {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: 0;
-  line-height: 1.5;
-}
-
-[dir="ltr"] .qh-date-greg,
-[dir="ltr"] .qh-date-hijri {
-  font-family: var(--font-latin);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .qh-needle,
-  .qh-marker,
+  .qh-rotor,
+  .qh-compass,
   .qh-location-btn {
     transition: none;
   }

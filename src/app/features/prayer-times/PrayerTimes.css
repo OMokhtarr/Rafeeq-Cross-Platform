@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════
    PRAYER TIMES PAGE
    Same shell as More/Settings: IonPage > IonContent fullscreen > wrapper >
-   width-capped container. Rows use the app's card idiom (see .more-card /
-   .settings-card): card surface, gold hairline border, xl radius.
+   width-capped container. The header band (QiblaHeader) carries the next
+   prayer and the day ring; the card below it carries the dates, the options
+   menu and the timetable as one flat list.
    ═══════════════════════════════════════════════ */
 
 ion-content {
@@ -60,106 +61,84 @@ ion-content::part(scroll) {
   font-family: var(--font-latin);
 }
 
-/* ── Card: next prayer, menu button and the timetable ────────────────────
-   Overlaps the compass header above it, so the page reads as one continuous
-   surface rather than two stacked blocks. */
+/* ── Card: dates, menu button and the timetable ───────────────────────────
+   Overlaps the header above it, so the page reads as one continuous surface
+   rather than two stacked blocks. */
 .pt-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   margin-top: calc(-1 * var(--space-5));
-  padding-top: var(--space-5);
-  padding-bottom: var(--space-5);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-3);
   position: relative;
 }
 
-/* ── Next prayer, inside the card ────────────────────────────── */
-/* The page's one loud element. A capsule rather than a block, so it reads as
-   a status attached to the list rather than a second header. */
-.pt-next {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0 var(--space-4) var(--space-4);
-  padding: var(--space-3) var(--space-5);
-  background: var(--color-gold-faint);
-  border: 1.5px solid var(--color-gold-subtle);
-  border-radius: var(--radius-pill);
-}
-
-.pt-next-label {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.pt-next-name {
-  font-family: var(--font-arabic);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-gold);
-}
-
-.pt-next-countdown {
-  font-family: var(--font-arabic);
-  font-size: var(--text-base);
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-[dir="ltr"] .pt-next-label,
-[dir="ltr"] .pt-next-name,
-[dir="ltr"] .pt-next-countdown {
-  font-family: var(--font-latin);
-}
-
-/* The options control. The dates moved into the compass header, so this row
-   holds only the one button. */
+/* ── Card header: the dates, and the options menu at the row's end ─────── */
 .pt-card-header {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 var(--space-4) var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-/* A labelled pill, not a bare glyph. It is the page's only route to the
-   settings now that the pickers have moved off it, so three dots alone would
-   hide the whole of them behind a guess. Kept quiet — a hairline and muted
-   text — because the timetable below is what the page is for. */
-.pt-menu-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
+[dir="rtl"] .pt-card-header {
+  padding: 0 var(--space-5) var(--space-2) var(--space-3);
+}
+
+.pt-dates {
+  min-width: 0;
+}
+
+.pt-date-greg {
+  font-family: var(--font-arabic);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pt-date-hijri {
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  background: none;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-4);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast);
+  margin: 0;
+  line-height: 1.5;
 }
 
-[dir="ltr"] .pt-menu-btn {
+[dir="ltr"] .pt-date-greg,
+[dir="ltr"] .pt-date-hijri {
   font-family: var(--font-latin);
+}
+
+/* A bare ⋮. It sits at the end of a header row, where options menus
+   conventionally live, so it no longer needs the word beside it that it
+   carried while it floated on a row of its own. */
+.pt-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-fast);
 }
 
 .pt-menu-btn svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  color: var(--color-gold);
+  width: 22px;
+  height: 22px;
 }
 
 .pt-menu-btn:active {
   background: var(--color-gold-faint);
-  border-color: var(--color-gold-subtle);
 }
 
 .pt-menu-btn:focus-visible {
@@ -241,74 +220,81 @@ ion-content::part(scroll) {
 }
 
 /* ── Rows ─────────────────────────────────────── */
+/* A flat list, not a stack of cards: the times are one timetable, and a
+   border round every row made seven equal boxes out of it with nothing
+   standing out. Now only the next prayer is outlined. */
 .pt-rows {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-5) var(--space-4) 0;
+  margin: var(--space-1) var(--space-3) 0;
 }
 
 .pt-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
-  background: var(--color-bg-card);
-  border: 1.5px solid var(--color-border-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  /* Tight enough that every time fits on one screen with no scrolling,
+     loose enough that each row is still a comfortable tap target. */
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
   transition:
     border-color var(--transition-base),
     background var(--transition-base);
 }
 
+/* An explicit line height: Scheherazade's default one is tall, and left to
+   it each row stood far taller than its padding suggests. */
 .pt-row-label {
   font-family: var(--font-arabic);
   font-size: var(--text-lg);
+  line-height: 1.5;
   color: var(--color-text-primary);
+  padding: 0 var(--space-2);
 }
 
 .pt-row-time {
   font-family: var(--font-arabic);
   font-size: var(--text-lg);
-  font-weight: 600;
+  line-height: 1.5;
   color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 [dir="ltr"] .pt-row-label,
 [dir="ltr"] .pt-row-time {
   font-family: var(--font-latin);
-  font-size: var(--text-base);
+  font-size: var(--text-md);
 }
 
-/* The currently-active prayer — emphasized with the gold accent. */
+/* The next prayer: outlined, its name in a filled chip. The shape marks it
+   even where the gold is hard to tell apart. */
 .pt-row--next {
-  /* A capsule, not just a tint: the shape alone marks the next prayer even
-     where the colour is hard to distinguish. */
-  border-radius: var(--radius-pill);
   border-color: var(--color-gold);
-  background: var(--color-gold-faint);
-  box-shadow: var(--shadow-card-hover);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+  padding-inline-start: var(--space-2);
 }
 
-.pt-row--next .pt-row-label,
+.pt-row--next .pt-row-label {
+  padding: var(--space-1) var(--space-4);
+  background: var(--color-gold-subtle);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
 .pt-row--next .pt-row-time {
+  font-weight: 700;
   color: var(--color-gold);
 }
 
 /* Sunrise is not a prayer — de-emphasized rather than highlighted. */
-.pt-row--sunrise {
-  box-shadow: none;
-  border-style: dashed;
-}
-
 .pt-row--sunrise .pt-row-label,
 .pt-row--sunrise .pt-row-time {
   color: var(--color-text-muted);
-  font-weight: 400;
 }
 
-/* ── Method / madhab pickers ──────────────────── */
 /* ── Separator ────────────────────────────────── */
 /* Marks the boundary before the first supplementary (non-obligatory) row,
    carrying the section's name on the rule itself. */
@@ -316,7 +302,7 @@ ion-content::part(scroll) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin: var(--space-4) 0 var(--space-1);
+  margin: var(--space-1) 0 0;
 }
 
 .pt-separator::before,

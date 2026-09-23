@@ -1,19 +1,23 @@
 /**
  * QIBLA HEADER
- * The top of the prayer page: place name, location button, compass ring, and
- * the date. Renders inside the page's own container — it owns no page chrome.
+ * The top of the prayer page: place name and location button, then the next
+ * prayer beside the day ring, with the qibla compass inside the ring.
  *
- * The ring is fixed to the device; the needle and the Kaaba marker rotate
- * inside it, converging as the user turns. That convergence is what makes the
- * dial readable at a glance rather than two numbers to compare.
+ * The ring is a 24-hour clock face (see dayDial.ts): every visible time is a
+ * dot on it, the next one is marked, and a lit arc runs up to the present
+ * moment. Inside it the compass works as before — the dial is fixed to the
+ * device, and the needle and the Kaaba marker rotate, converging as the user
+ * turns.
  *
  * Everything heading-dependent (needle, marker, turn label) disappears when no
  * magnetometer is present, but the ring does not: the page's shape should not
  * change with the hardware, and the numeric bearing is a complete answer on
  * its own.
+ *
+ * The dates are not here: they label the timetable, so they head its card.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
 import {
   loadQibla,
@@ -21,23 +25,56 @@ import {
   type QiblaDirection,
 } from "../../core/services/prayer/qibla.service";
 import {
+  continuousAngle,
   markerRotation,
+  smoothHeading,
   turnInstruction,
+  type TurnDirection,
 } from "../../core/services/prayer/qibla.geometry";
+import { angleOf, arcPath, pointAt, progressSpan } from "./dayDial";
 import "./QiblaHeader.css";
+
+export interface DialTime {
+  key: string;
+  at: Date;
+}
 
 interface QiblaHeaderProps {
   placeName: string | null;
   onUpdateLocation: () => void;
   locating: boolean;
+  /** The next prayer, already localized, or null inside the midnight-sun window. */
+  next: { key: string; label: string; time: string; countdown: string } | null;
+  /** Every visible time today, in order — one dot each on the ring. */
+  times: DialTime[];
+  sunrise?: Date;
+  maghrib?: Date;
+  now: number;
 }
+
+/**
+ * How long the reading must stay uncalibrated before the figure-8 hint
+ * appears, and stay calibrated before it goes. A single stray sample then
+ * cannot make it blink, which it did on every other reading before.
+ */
+const CALIBRATION_SETTLE_MS = 2000;
+
+// SVG geometry, in viewBox units.
+const C = 100;
+const RING_R = 90;
+const COMPASS_R = 62;
 
 const QiblaHeader: React.FC<QiblaHeaderProps> = ({
   placeName,
   onUpdateLocation,
   locating,
+  next,
+  times,
+  sunrise,
+  maghrib,
+  now,
 }) => {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const tp = t.prayerTimes;
 
   const [direction, setDirection] = useState<QiblaDirection | null>(null);
@@ -57,16 +94,33 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
 
   const hasBearing = direction?.hasLocation === true;
 
+  // Filter state lives in refs: it changes on every sensor sample, and none
+  // of it should re-render on its own — only the smoothed heading does.
+  const smoothedRef = useRef<number | null>(null);
+  const calibrationSinceRef = useRef<{ absolute: boolean; since: number } | null>(null);
+
   useEffect(() => {
     if (!hasBearing) return undefined;
 
     setSensorUnavailable(false);
     setNeedsCalibration(false);
+    smoothedRef.current = null;
+    calibrationSinceRef.current = null;
 
     const stop = watchHeading(
       (reading) => {
-        setHeading(reading.heading);
-        setNeedsCalibration(!reading.absolute);
+        smoothedRef.current = smoothHeading(smoothedRef.current, reading.heading);
+        setHeading(smoothedRef.current);
+
+        // The hint follows the reading's state only once that state has
+        // held for CALIBRATION_SETTLE_MS.
+        const t = Date.now();
+        const last = calibrationSinceRef.current;
+        if (!last || last.absolute !== reading.absolute) {
+          calibrationSinceRef.current = { absolute: reading.absolute, since: t };
+        } else if (t - last.since >= CALIBRATION_SETTLE_MS) {
+          setNeedsCalibration(!reading.absolute);
+        }
       },
       () => setSensorUnavailable(true),
     );
@@ -74,24 +128,32 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
     return stop;
   }, [hasBearing]);
 
-  const hijriDate = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-
-  const gregorianDate = new Intl.DateTimeFormat(
-    lang === "ar" ? "ar-EG" : "en-GB",
-    { day: "numeric", month: "long", year: "numeric" },
-  ).format(new Date());
-
   const bearing = direction?.bearing ?? 0;
   const magneticBearing = direction?.magneticBearing ?? 0;
   const showNeedle = hasBearing && !sensorUnavailable && heading !== null;
 
-  const needleRotation = magneticBearing - (heading ?? 0);
-  const marker = markerRotation(magneticBearing, heading ?? 0);
-  const turn = showNeedle ? turnInstruction(magneticBearing, heading ?? 0) : null;
+  // Kept continuous across north, so the CSS transition never spins the
+  // long way round (see continuousAngle).
+  const needleRef = useRef<number | null>(null);
+  const markerRef = useRef<number | null>(null);
+  const needleRotation = continuousAngle(
+    needleRef.current,
+    magneticBearing - (heading ?? 0),
+  );
+  const marker = continuousAngle(
+    markerRef.current,
+    markerRotation(magneticBearing, heading ?? 0),
+  );
+  needleRef.current = needleRotation;
+  markerRef.current = marker;
+  // The previous answer feeds back in, so "facing" holds until the user has
+  // clearly turned away rather than flickering at the edge of the band.
+  const turnRef = useRef<TurnDirection | null>(null);
+  const turn = showNeedle
+    ? turnInstruction(magneticBearing, heading ?? 0, turnRef.current)
+    : null;
+  turnRef.current = turn;
+  const facing = turn === "facing";
   const turnLabel =
     turn === "facing"
       ? tp.facingQibla
@@ -100,6 +162,19 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
       : turn === "right"
       ? tp.turnRight
       : null;
+
+  const nowDate = new Date(now);
+  const span = progressSpan(nowDate, sunrise, maghrib);
+  const progress = span
+    ? arcPath(C, C, RING_R, angleOf(span.from), angleOf(span.to))
+    : null;
+  const nowPoint = pointAt(C, C, RING_R, angleOf(nowDate));
+
+  // Rotations are applied through CSS so they can transition; the origin is
+  // the ring's centre in viewBox units.
+  const rotate = (deg: number): React.CSSProperties => ({
+    transform: `rotate(${deg}deg)`,
+  });
 
   return (
     <header className="qh-header">
@@ -127,40 +202,111 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
         </button>
       </div>
 
-      <div className="qh-dial">
-        <div className="qh-dial-ring">
-          {hasBearing && (
-            <div
-              className="qh-marker"
-              style={{ transform: `rotate(${marker}deg)` }}
-              aria-hidden="true"
-            >
-              <span className="qh-marker-dot" />
-            </div>
+      <div className="qh-main">
+        <div className="qh-next" aria-live="polite">
+          {next ? (
+            <>
+              <span className="qh-next-label">{tp.nextPrayer}</span>
+              <span className="qh-next-name">{next.label}</span>
+              <span className="qh-next-time">{next.time}</span>
+              <span className="qh-next-countdown">{next.countdown}</span>
+            </>
+          ) : (
+            <span className="qh-next-name">{tp.title}</span>
           )}
-          {showNeedle && (
-            <div
-              className="qh-needle"
-              style={{ transform: `rotate(${needleRotation}deg)` }}
-              aria-hidden="true"
-            >
-              <span className="qh-needle-tip" />
-            </div>
-          )}
-          <span className="qh-dial-center" aria-hidden="true" />
-          {!showNeedle && hasBearing && (
-            <span className="qh-dial-bearing">
-              {tp.qiblaFromNorth.replace("{deg}", String(Math.round(bearing)))}
-            </span>
-          )}
+        </div>
+
+        <div className="qh-dial">
+          <svg
+            viewBox="0 0 200 200"
+            className={"qh-dial-svg" + (facing ? " qh-dial-svg--facing" : "")}
+            role="img"
+            aria-label={
+              hasBearing
+                ? tp.qiblaFromNorth.replace("{deg}", String(Math.round(bearing)))
+                : tp.qibla
+            }
+          >
+            {/* The day */}
+            <circle className="qh-ring-track" cx={C} cy={C} r={RING_R} />
+            {progress && <path className="qh-ring-progress" d={progress} />}
+            {times.map(({ key, at }) => {
+              const p = pointAt(C, C, RING_R, angleOf(at));
+              const isNext = key === next?.key;
+              return (
+                <circle
+                  key={key}
+                  className={"qh-ring-dot" + (isNext ? " qh-ring-dot--next" : "")}
+                  cx={p.x}
+                  cy={p.y}
+                  r={isNext ? 6 : 3.5}
+                />
+              );
+            })}
+            <circle className="qh-ring-now" cx={nowPoint.x} cy={nowPoint.y} r={5} />
+
+            {/* The compass */}
+            <circle className="qh-compass" cx={C} cy={C} r={COMPASS_R} />
+            {[0, 90, 180, 270].map((a) => {
+              const outer = pointAt(C, C, COMPASS_R - 4, a);
+              const inner = pointAt(C, C, COMPASS_R - 11, a);
+              return (
+                <line
+                  key={a}
+                  className="qh-compass-tick"
+                  x1={outer.x}
+                  y1={outer.y}
+                  x2={inner.x}
+                  y2={inner.y}
+                />
+              );
+            })}
+
+            {hasBearing && (
+              <g className="qh-rotor" style={rotate(marker)}>
+                {/* A small Kaaba rather than a dot: the thing being pointed
+                    at, drawn as itself. */}
+                <rect
+                  className="qh-kaaba"
+                  x={C - 7}
+                  y={C - COMPASS_R - 7}
+                  width={14}
+                  height={14}
+                  rx={2}
+                />
+                <rect
+                  className="qh-kaaba-band"
+                  x={C - 7}
+                  y={C - COMPASS_R - 3}
+                  width={14}
+                  height={2.5}
+                />
+              </g>
+            )}
+
+            {showNeedle && (
+              <g className="qh-rotor" style={rotate(needleRotation)}>
+                <path
+                  className="qh-needle"
+                  d={`M ${C} ${C - COMPASS_R + 16} L ${C + 6} ${C} L ${C - 6} ${C} Z`}
+                />
+              </g>
+            )}
+
+            {showNeedle || !hasBearing ? (
+              <circle className="qh-compass-center" cx={C} cy={C} r={5} />
+            ) : (
+              <text className="qh-bearing" x={C} y={C} dominantBaseline="central">
+                {`${Math.round(bearing)}°`}
+              </text>
+            )}
+          </svg>
         </div>
       </div>
 
       {turnLabel && (
         <p
-          className={
-            "qh-turn" + (turn === "facing" ? " qh-turn--facing" : "")
-          }
+          className={"qh-turn" + (turn === "facing" ? " qh-turn--facing" : "")}
           aria-live="polite"
         >
           {turnLabel}
@@ -171,11 +317,6 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
       {showNeedle && needsCalibration && (
         <p className="qh-hint">{tp.qiblaCalibrate}</p>
       )}
-
-      <div className="qh-dates">
-        <p className="qh-date-greg">{gregorianDate}</p>
-        <p className="qh-date-hijri">{hijriDate}</p>
-      </div>
     </header>
   );
 };

@@ -176,15 +176,61 @@ class PrayerDeckTest {
         assertFalse(timer.countingUp)
     }
 
+    // ── refresh boundaries ────────────────────────────────────────────
+
+    /** The reported bug: with reminders off, nothing re-rendered the widget
+     *  when Maghrib arrived, and its countdown ran through zero into negative
+     *  numbers. The prayer's own time must be a boundary. */
+    @Test
+    fun `the next boundary is the upcoming prayer's time`() {
+        val today = day(PrayerName.MAGHRIB to at(90 * minute), PrayerName.ISHA to at(3 * hour))
+        assertEquals(at(90 * minute), PrayerDeck.nextBoundary(now, today, day()))
+    }
+
+    /** Inside a prayer's elapsed window the card counts up; the widget must
+     *  re-render when that window closes, or it keeps counting up forever. */
+    @Test
+    fun `inside an elapsed window the boundary is the window's end`() {
+        val maghrib = at(-2 * minute)
+        val today = day(PrayerName.MAGHRIB to maghrib, PrayerName.ISHA to at(3 * hour))
+        assertEquals(
+            Date(maghrib.time + PrayerDeck.elapsedWindowMillis(PrayerName.MAGHRIB)),
+            PrayerDeck.nextBoundary(now, today, day()),
+        )
+    }
+
+    @Test
+    fun `after the last time today the boundary comes from tomorrow`() {
+        val today = day(PrayerName.ISHA to at(-5 * hour))
+        val tomorrow = day(PrayerName.FAJR to at(6 * hour))
+        assertEquals(at(6 * hour), PrayerDeck.nextBoundary(now, today, tomorrow))
+    }
+
+    /** A boundary exactly at now has already happened; re-arming for it would
+     *  spin the alarm chain on the same instant. */
+    @Test
+    fun `a boundary exactly now is not returned`() {
+        val today = day(PrayerName.ASR to now, PrayerName.MAGHRIB to at(hour))
+        val next = PrayerDeck.nextBoundary(now, today, day())!!
+        assertTrue(next.after(now))
+    }
+
+    /** adhan-java returns null inside the midnight-sun window; those names
+     *  contribute nothing rather than crashing the scheduler. */
+    @Test
+    fun `null times are skipped and an empty day yields no boundary`() {
+        assertNull(PrayerDeck.nextBoundary(now, day(PrayerName.ISHA to null), day()))
+    }
+
     // ── clock format ───────────────────────────────────────────────────
 
     @Test
-    fun `the 12-hour pattern carries a day-period marker`() {
+    fun `the 12-hour pattern has no am-pm marker`() {
         val fmt = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour = false), Locale.US)
         fmt.timeZone = TimeZone.getTimeZone("UTC")
         // 16:45 UTC — unambiguous in either clock, so the assertion is about
         // the format rather than the hour.
-        assertEquals("4:45 PM", fmt.format(Date(1_758_386_700_000L)))
+        assertEquals("4:45", fmt.format(Date(1_758_386_700_000L)))
     }
 
     @Test

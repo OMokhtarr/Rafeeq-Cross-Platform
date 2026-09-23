@@ -1,5 +1,5 @@
-/* Widget settings sheet — add or find the home-screen widget, choose its
-   time format, and restyle it. Shell comes from PrayerSheet.css.
+/* Widget settings sheet — add or find the home-screen widget, and restyle
+   it. The time format lives on the native appearance screen. Shell comes from PrayerSheet.css.
 
    This is the sheet that rendered white in night mode: it resolved
    `var(--color-bg-card, #ffffff)` and the literal fallback won. Every colour
@@ -84,66 +84,6 @@
   flex-shrink: 0;
 }
 
-/* ── Time format ──────────────────────────────────────────────────────────── */
-
-/* A two-way segmented control rather than a dropdown: there are exactly two
-   choices and both fit side by side, so the alternative is worth showing
-   rather than hiding behind a tap. Each segment carries a live example, so
-   the choice is legible without having to parse the words "12-hour". */
-.wss-segmented {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.wss-segment {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font: inherit;
-  padding: var(--space-3) var(--space-2);
-  background: none;
-  color: var(--color-text-secondary);
-  border: 1.5px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.wss-segment:focus-visible {
-  outline: 2px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-.wss-segment[aria-pressed="true"] {
-  background: var(--color-gold-faint);
-  border-color: var(--color-gold);
-  color: var(--color-gold);
-}
-
-.wss-segment-name {
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-/* The example time. Tabular figures so the two segments do not jitter
-   against each other as the clock advances. */
-.wss-segment-sample {
-  font-size: var(--text-base);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
-}
-
-.wss-segment[aria-pressed="true"] .wss-segment-sample {
-  color: var(--color-gold);
-}
-
 /* ── Launcher refusal ─────────────────────────────────────────────────────── */
 
 /* Shown when the launcher refused the pin request without surfacing anything
@@ -176,8 +116,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wss-btn,
-  .wss-segment {
+  .wss-btn {
     transition: none;
   }
 }

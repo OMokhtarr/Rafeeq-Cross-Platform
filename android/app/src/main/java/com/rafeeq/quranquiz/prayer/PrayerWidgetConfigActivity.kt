@@ -1,26 +1,24 @@
 package com.rafeeq.quranquiz.prayer
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.Chronometer
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.rafeeq.quranquiz.R
 import java.text.SimpleDateFormat
-import java.time.ZoneId
-import java.time.chrono.HijrahDate
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -50,14 +48,15 @@ class PrayerWidgetConfigActivity : Activity() {
     private var textColor: Int? = null
     private var accent = PrayerWidgetConfig.DEFAULT_ACCENT
 
-    private lateinit var bgDot: ImageView
-    private lateinit var textDot: ImageView
-    private lateinit var accentDot: ImageView
+    private lateinit var bgSwatches: LinearLayout
+    private lateinit var textSwatches: LinearLayout
+    private lateinit var accentSwatches: LinearLayout
     private lateinit var transparency: SeekBar
     private lateinit var transparencyValue: TextView
     private lateinit var font: SeekBar
     private lateinit var fontValue: TextView
     private lateinit var preview: View
+    private lateinit var timeFormat: RadioGroup
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate: the window is created there, and a theme set
@@ -90,9 +89,19 @@ class PrayerWidgetConfigActivity : Activity() {
 
         setContentView(R.layout.widget_prayer_config)
 
-        bgDot = findViewById(R.id.config_bg_dot)
-        textDot = findViewById(R.id.config_text_dot)
-        accentDot = findViewById(R.id.config_accent_dot)
+        // The window is edge to edge, so the screen pads itself clear of the
+        // status and navigation bars. Without this the preview sat under the
+        // status bar and the Save button under the gesture bar.
+        val root = findViewById<View>(R.id.config_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+
+        bgSwatches = findViewById(R.id.config_bg_swatches)
+        textSwatches = findViewById(R.id.config_text_swatches)
+        accentSwatches = findViewById(R.id.config_accent_swatches)
         transparency = findViewById(R.id.config_transparency)
         transparencyValue = findViewById(R.id.config_transparency_value)
         font = findViewById(R.id.config_font)
@@ -107,25 +116,6 @@ class PrayerWidgetConfigActivity : Activity() {
         textColor = look.textColor
         accent = look.accentColor
 
-        findViewById<LinearLayout>(R.id.config_bg_row).setOnClickListener {
-            pickColor(R.string.widget_config_background, SURFACES, background, allowAuto = true) {
-                background = it
-                refresh()
-            }
-        }
-        findViewById<LinearLayout>(R.id.config_text_row).setOnClickListener {
-            pickColor(R.string.widget_config_text_color, INKS, textColor, allowAuto = true) {
-                textColor = it
-                refresh()
-            }
-        }
-        findViewById<LinearLayout>(R.id.config_accent_row).setOnClickListener {
-            pickColor(R.string.widget_config_accent, ACCENTS, accent, allowAuto = false) {
-                accent = it ?: PrayerWidgetConfig.DEFAULT_ACCENT
-                refresh()
-            }
-        }
-
         transparency.progress = look.transparency
         transparency.setOnSeekBarChangeListener(onSeek { refresh() })
 
@@ -134,6 +124,12 @@ class PrayerWidgetConfigActivity : Activity() {
         font.max = PrayerWidgetConfig.MAX_FONT_SP - PrayerWidgetConfig.MIN_FONT_SP
         font.progress = look.fontSp - PrayerWidgetConfig.MIN_FONT_SP
         font.setOnSeekBarChangeListener(onSeek { refresh() })
+
+        timeFormat = findViewById(R.id.config_time_format)
+        timeFormat.check(
+            if (PrayerConfig.use24Hour(this)) R.id.config_time_24 else R.id.config_time_12
+        )
+        timeFormat.setOnCheckedChangeListener { _, _ -> refresh() }
 
         findViewById<Button>(R.id.config_save).setOnClickListener { save() }
         findViewById<Button>(R.id.config_reset).setOnClickListener { reset() }
@@ -155,9 +151,15 @@ class PrayerWidgetConfigActivity : Activity() {
         transparencyValue.text = getString(R.string.widget_config_percent, transparency.progress)
         fontValue.text = getString(R.string.widget_config_sp, currentFontSp())
 
-        bgDot.setImageDrawable(dot(background))
-        textDot.setImageDrawable(dot(textColor))
-        accentDot.setImageDrawable(dot(accent))
+        fillSwatches(bgSwatches, R.string.widget_config_background, SURFACES, background, allowAuto = true) {
+            background = it
+        }
+        fillSwatches(textSwatches, R.string.widget_config_text_color, INKS, textColor, allowAuto = true) {
+            textColor = it
+        }
+        fillSwatches(accentSwatches, R.string.widget_config_accent, ACCENTS, accent, allowAuto = false) {
+            accent = it ?: PrayerWidgetConfig.DEFAULT_ACCENT
+        }
 
         renderPreview()
     }
@@ -172,9 +174,11 @@ class PrayerWidgetConfigActivity : Activity() {
      */
     private fun renderPreview() {
         val look = working()
-        val text = look.textColor ?: PrayerWidgetConfig.contrastOn(
-            look.background ?: DEFAULT_SURFACE,
-        )
+        // The same fallbacks the widget uses: Rafeeq's own day/night theme,
+        // not a fixed dark surface, so an unconfigured preview matches the
+        // unconfigured widget.
+        val surface = look.background ?: PrayerWidgetProvider.defaultBackground(this)
+        val text = look.textColor ?: PrayerWidgetProvider.baseTextColor(this)
 
         // preview IS widget_root, so it is painted directly rather than
         // searched for inside itself.
@@ -185,17 +189,16 @@ class PrayerWidgetConfigActivity : Activity() {
         // This is an ordinary View rather than RemoteViews, so the tint
         // needs no API guard here.
         preview.backgroundTintList = ColorStateList.valueOf(
-            PrayerWidgetConfig.withTransparency(
-                look.background ?: DEFAULT_SURFACE,
-                look.transparency,
-            ),
+            PrayerWidgetConfig.withTransparency(surface, look.transparency),
         )
 
         val tz = TimeZone.getDefault()
         val now = Date()
         val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
-        val hijri = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
-            .format(HijrahDate.from(now.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()))
+        // The strip's own formatter, so the preview cannot drift from the
+        // widget it previews — it used to format the Hijri date itself, and
+        // kept the year after the widget dropped it.
+        val hijri = PrayerWidgetProvider.hijriLabel(now, tz, withYear = false)
 
         preview.findViewById<TextView>(R.id.widget_date).apply {
             this.text = "${dateFmt.format(now)} • $hijri"
@@ -231,15 +234,20 @@ class PrayerWidgetConfigActivity : Activity() {
         card.findViewById<TextView>(R.id.card_name).apply {
             this.text = getString(R.string.prayer_widget_name_maghrib)
             setTextColor(onAccent)
-            textSize = look.fontSp.toFloat()
+            textSize = (look.fontSp + 3).toFloat()
         }
         card.findViewById<TextView>(R.id.card_time).apply {
-            this.text = SAMPLE_TIME
+            // In the clock chosen below, and at the card's single text size —
+            // both as the real card renders it.
+            this.text = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour()), Locale.getDefault())
+                .format(SAMPLE_TIME)
             setTextColor(onAccent)
-            textSize = (look.fontSp + 2).toFloat()
+            textSize = (look.fontSp + 3).toFloat()
         }
         holder.addView(card)
     }
+
+    private fun use24Hour() = timeFormat.checkedRadioButtonId == R.id.config_time_24
 
     private fun working() = PrayerWidgetConfig.Appearance(
         background = background,
@@ -250,76 +258,69 @@ class PrayerWidgetConfigActivity : Activity() {
     )
 
     /**
-     * A circle filled with [color], or hollow when null — "follow the device
-     * theme" has no one colour that honestly represents it.
-     */
-    private fun dot(color: Int?): GradientDrawable = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(color ?: Color.TRANSPARENT)
-        setStroke((1.5f * resources.displayMetrics.density).toInt(), Color.GRAY)
-    }
-
-    /**
-     * A dialog of swatches for one setting.
+     * Fills [row] with one swatch per option, the [selected] one ringed.
      *
-     * A grid of circles rather than a full HSV picker: the widget needs
-     * "dark, light, or the app's gold", and a hue wheel is a lot of surface
-     * for that.
+     * The swatches sit on the page itself: a tap applies the colour at once
+     * and the preview above follows, with no dialog between the choice and
+     * seeing it. Rebuilt on every refresh so the ring always marks the
+     * current choice.
+     *
+     * With [allowAuto], the first swatch is "follow the app theme": hollow,
+     * because no single colour honestly stands for it.
      */
-    private fun pickColor(
-        titleRes: Int,
+    private fun fillSwatches(
+        row: LinearLayout,
+        labelRes: Int,
         colors: List<Int>,
         selected: Int?,
         allowAuto: Boolean,
         onPick: (Int?) -> Unit,
     ) {
+        row.removeAllViews()
         val options: List<Int?> = if (allowAuto) listOf(null) + colors else colors
-
         val density = resources.displayMetrics.density
-        val pad = (20 * density).toInt()
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(pad, pad, pad, pad)
-        }
+        val size = (40 * density).toInt()
+        val gap = (10 * density).toInt()
 
-        val dialog = AlertDialog.Builder(this).setTitle(titleRes).setView(row).create()
-
-        val size = (46 * density).toInt()
-        val margin = (6 * density).toInt()
         options.forEach { color ->
+            val chosen = color == selected
             val view = ImageView(this)
             view.layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                marginEnd = margin
+                marginEnd = gap
             }
             view.setImageDrawable(
                 GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(color ?: Color.TRANSPARENT)
                     setStroke(
-                        ((if (color == selected) 3.5f else 1.5f) * density).toInt(),
-                        if (color == selected) SELECTED_RING else Color.GRAY,
+                        ((if (chosen) 3.5f else 1.5f) * density).toInt(),
+                        if (chosen) SELECTED_RING else Color.GRAY,
                     )
                 },
             )
-            view.contentDescription = if (color == null) {
+            val name = if (color == null) {
                 getString(R.string.widget_config_auto)
             } else {
                 String.format("#%06X", 0xFFFFFF and color)
             }
+            view.contentDescription = "${getString(labelRes)}: $name"
+            view.isSelected = chosen
             view.setOnClickListener {
                 onPick(color)
-                dialog.dismiss()
+                refresh()
             }
             row.addView(view)
         }
-
-        dialog.show()
     }
 
     private fun save() {
         PrayerWidgetConfig.setAppearance(this, widgetId, working())
-        PrayerWidgetProvider.refreshOne(this, widgetId)
+        val formatChanged = use24Hour() != PrayerConfig.use24Hour(this)
+        PrayerConfig.setUse24Hour(this, use24Hour())
+        // The clock is global, so a change repaints every widget; otherwise
+        // only this one has changed.
+        if (formatChanged) PrayerWidgetProvider.refresh(this)
+        else PrayerWidgetProvider.refreshOne(this, widgetId)
 
         setResult(
             RESULT_OK,
@@ -339,15 +340,16 @@ class PrayerWidgetConfigActivity : Activity() {
     }
 
     private companion object {
-        val SELECTED_RING = 0xFF3F8F6F.toInt()
+        val SELECTED_RING = PrayerWidgetConfig.DEFAULT_ACCENT
 
-        /** What the preview stands on when no background has been chosen. */
-        val DEFAULT_SURFACE = 0xFF1A1A1A.toInt()
-
-        /** Stand-in on the preview card. A fixed string rather than a real
-         *  time: the preview is about colour and size, and computing a real
-         *  prayer here would need a stored location it may not have. */
-        const val SAMPLE_TIME = "18:51"
+        /** Stand-in on the preview card: 18:51. A fixed moment rather than a
+         *  real prayer — the preview is about colour, size and clock, and a
+         *  real time would need a stored location it may not have. Late
+         *  enough in the day that the 12- and 24-hour forms differ. */
+        val SAMPLE_TIME: Date = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 18)
+            set(java.util.Calendar.MINUTE, 51)
+        }.time
 
         /** Backgrounds: the two theme surfaces plus a few neutrals that read
          *  well behind text at partial transparency. */

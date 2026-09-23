@@ -155,4 +155,32 @@ class WidgetLayoutParityTest {
             )
         }
     }
+
+    /**
+     * The launcher's picker renders android:previewLayout with no provider
+     * code running. Pointed at a real layout, every text arrives empty and
+     * every icon stays the untinted white it is drawn in — invisible on a
+     * light surface. Each provider must point at a *_preview layout that
+     * carries its own sample content.
+     */
+    @Test
+    fun `every widget previews with a dedicated sample layout`() {
+        listOf(
+            "widget_prayer_times_info.xml",
+            "widget_timetable_vertical_info.xml",
+            "widget_timetable_wide_info.xml",
+        ).forEach { info ->
+            val xml = File(resDir, "xml/$info").readText()
+            val layout = Regex("""android:previewLayout="@layout/([a-z_]+)"""")
+                .find(xml)?.groupValues?.get(1)
+            assertTrue("$info declares no previewLayout", layout != null)
+            assertTrue("$info previews with $layout, not a _preview layout", layout!!.endsWith("_preview"))
+            val preview = File(resDir, "layout/$layout.xml")
+            assertTrue("missing preview layout $layout", preview.isFile)
+            assertTrue(
+                "$layout has no sample text, so the picker would show it blank",
+                preview.readText().contains("android:text="),
+            )
+        }
+    }
 }

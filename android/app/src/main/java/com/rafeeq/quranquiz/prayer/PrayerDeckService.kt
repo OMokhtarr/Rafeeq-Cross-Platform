@@ -122,20 +122,46 @@ internal class PrayerDeckFactory(
         //
         // Each line is still shrunk against its own text, so a long name
         // comes down without dragging the time with it.
+        // A step above the strip's own text, so the name and time fill the
+        // card with only a narrow margin — as a system widget's card does —
+        // rather than floating in a box larger than they are.
+        val cardSp = look.fontSp + CARD_SP_BOOST
         views.setTextViewTextSize(
             R.id.card_name,
             android.util.TypedValue.COMPLEX_UNIT_SP,
-            PrayerWidgetConfig.fitFontSp(look.fontSp, card.label).toFloat(),
+            PrayerWidgetConfig.fitFontSp(cardSp, card.label, CARD_FIT_CHARS).toFloat(),
         )
         views.setTextViewTextSize(
             R.id.card_time,
             android.util.TypedValue.COMPLEX_UNIT_SP,
-            PrayerWidgetConfig.fitFontSp(look.fontSp, card.clock).toFloat(),
+            PrayerWidgetConfig.fitFontSp(cardSp, card.clock, CARD_FIT_CHARS).toFloat(),
         )
 
-        // No fill-in intent: the card is deliberately inert. With the arrows
-        // beside it, a card that also opened the app would make a mis-aimed
-        // press costly — see PrayerWidgetProvider's render().
+        // The card is a fixed box (widget_card_width/height) so it does not
+        // resize as the arrows step between names. It still grows with the
+        // user's font size, as one box: scaled here from the 14sp it was
+        // sized for. Below API 31 RemoteViews cannot resize a view, so there
+        // it stays the XML size and the text fits itself inside.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val scale = look.fontSp.toFloat() / PrayerWidgetConfig.DEFAULT_FONT_SP
+            val res = ctx.resources
+            val density = res.displayMetrics.density
+            views.setViewLayoutWidth(
+                R.id.card_root,
+                res.getDimension(R.dimen.widget_card_width) / density * scale,
+                android.util.TypedValue.COMPLEX_UNIT_DIP,
+            )
+            views.setViewLayoutHeight(
+                R.id.card_root,
+                res.getDimension(R.dimen.widget_card_height) / density * scale,
+                android.util.TypedValue.COMPLEX_UNIT_DIP,
+            )
+        }
+
+        // Fills in the deck's template, which opens this widget's appearance
+        // screen (see PrayerWidgetProvider.render). The template already
+        // carries everything; the card only has to say it is tappable.
+        views.setOnClickFillInIntent(R.id.card_root, Intent())
 
         return views
     }
@@ -148,6 +174,19 @@ internal class PrayerDeckFactory(
 
     override fun hasStableIds(): Boolean = true
 
+    private companion object {
+        /** How far above the strip's text size the card's text is set. */
+        const val CARD_SP_BOOST = 3
+
+        /**
+         * Characters one card line holds at the card's own size: 90dp wide
+         * less 12dp of padding, at 17sp bold. The box was widened to exactly
+         * fit the longest label, "ث. الاخير", so every name and time keeps
+         * the full size; only a longer label than any the deck has today
+         * would shrink.
+         */
+        const val CARD_FIT_CHARS = 9
+    }
 }
 
 /**
@@ -185,6 +224,35 @@ internal object PrayerDeck {
         PrayerName.FAJR, PrayerName.DUHA -> 25L * 60_000L
         else -> 20L * 60_000L
     }
+
+    /**
+     * The next moment any card changes state, strictly after [now].
+     *
+     * A card changes at two instants per time: when the time itself arrives
+     * (the countdown ends and the card starts counting up) and when its
+     * elapsed window closes (the card rolls on to tomorrow's entry, and the
+     * deck's default card moves to the next prayer). Between those instants
+     * the system ticks the Chronometer on its own, so these are the only
+     * moments the widget needs re-rendering.
+     *
+     * Without a refresh at these instants the Chronometer counts straight
+     * through zero into negative numbers, which is what a widget did at
+     * Maghrib with reminders switched off: the only per-prayer alarm was the
+     * reminder, and that one is skipped entirely when reminders are off.
+     *
+     * Pure over its arguments, like [timerFor], so it is testable on the JVM.
+     */
+    fun nextBoundary(now: Date, today: DayTimes, tomorrow: DayTimes): Date? =
+        listOf(today, tomorrow)
+            .flatMap { day ->
+                day.times.flatMap { (name, at) ->
+                    if (at == null) emptyList()
+                    else listOf(at.time, at.time + elapsedWindowMillis(name))
+                }
+            }
+            .filter { it > now.time }
+            .minOrNull()
+            ?.let { Date(it) }
 
     /**
      * What a card's timer should show: time remaining until the prayer, or
@@ -249,10 +317,11 @@ internal object PrayerDeck {
      * The clock format the widget renders times in, honouring the user's
      * 12/24-hour choice.
      *
-     * Locale-aware rather than [Locale.US]: at 12 hours the pattern carries a
-     * day-period marker, and a hard-coded US locale would print "AM"/"PM" on
-     * an Arabic widget where every other glyph is Arabic. 24-hour has no marker,
-     * so the locale makes no difference there.
+     * The 12-hour form carries no am/pm marker. The card sits between the
+     * arrows on a 4x1 strip, and the marker widened it enough to push the
+     * date line beside it into an ellipsis. A prayer's name already says
+     * which half of the day it falls in, so the marker told the reader
+     * nothing the card did not.
      */
     fun clockFormat(ctx: Context, tz: TimeZone): SimpleDateFormat =
         SimpleDateFormat(clockPattern(PrayerConfig.use24Hour(ctx)), Locale.getDefault())
@@ -261,7 +330,7 @@ internal object PrayerDeck {
     /** Split from [clockFormat] so the pattern itself is reachable from a
      *  JVM test — the format object needs a Context, the choice does not. */
     fun clockPattern(use24Hour: Boolean): String =
-        if (use24Hour) "HH:mm" else "h:mm a"
+        if (use24Hour) "HH:mm" else "h:mm"
 
     fun build(ctx: Context, now: Date): List<Card> {
         val coords = PrayerConfig.coords(ctx) ?: return emptyList()
