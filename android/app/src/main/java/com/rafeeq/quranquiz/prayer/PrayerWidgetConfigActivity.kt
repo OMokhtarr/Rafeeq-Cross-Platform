@@ -2,6 +2,7 @@ package com.rafeeq.quranquiz.prayer
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -57,6 +58,29 @@ class PrayerWidgetConfigActivity : Activity() {
     private lateinit var fontValue: TextView
     private lateinit var preview: View
     private lateinit var timeFormat: RadioGroup
+
+    /**
+     * The widget's own resources, in the device language. The preview shows
+     * the widget as it will look on the home screen, so its labels follow the
+     * device like the widget does — while the rest of this screen, being part
+     * of the app, follows the app's language (see [attachBaseContext]).
+     */
+    private val widgetRes by lazy {
+        val config = android.content.res.Configuration(resources.configuration)
+        config.setLocale(PrayerConfig.widgetLocale())
+        createConfigurationContext(config).resources
+    }
+
+    // This screen is part of the app, so it speaks the app's language rather
+    // than the device's. The web layer mirrors that language into
+    // PrayerConfig, as it does the theme.
+    override fun attachBaseContext(newBase: Context) {
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        val locale = PrayerConfig.appLocale(newBase)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate: the window is created there, and a theme set
@@ -194,7 +218,7 @@ class PrayerWidgetConfigActivity : Activity() {
 
         val tz = TimeZone.getDefault()
         val now = Date()
-        val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
+        val dateFmt = SimpleDateFormat("EEE, d MMM", PrayerConfig.widgetLocale()).apply { timeZone = tz }
         // The strip's own formatter, so the preview cannot drift from the
         // widget it previews — it used to format the Hijri date itself, and
         // kept the year after the widget dropped it.
@@ -207,7 +231,7 @@ class PrayerWidgetConfigActivity : Activity() {
         }
         preview.findViewById<TextView>(R.id.widget_place).apply {
             this.text = PrayerConfig.placeName(this@PrayerWidgetConfigActivity)
-                ?: getString(R.string.widget_config_sample_place)
+                ?: widgetRes.getString(R.string.widget_config_sample_place)
             setTextColor(text)
             textSize = look.fontSp.toFloat()
         }
@@ -232,14 +256,14 @@ class PrayerWidgetConfigActivity : Activity() {
         card.backgroundTintList = ColorStateList.valueOf(look.accentColor)
         val onAccent = PrayerWidgetConfig.contrastOn(look.accentColor)
         card.findViewById<TextView>(R.id.card_name).apply {
-            this.text = getString(R.string.prayer_widget_name_maghrib)
+            this.text = widgetRes.getString(R.string.prayer_widget_name_maghrib)
             setTextColor(onAccent)
             textSize = (look.fontSp + 3).toFloat()
         }
         card.findViewById<TextView>(R.id.card_time).apply {
             // In the clock chosen below, and at the card's single text size —
             // both as the real card renders it.
-            this.text = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour()), Locale.getDefault())
+            this.text = SimpleDateFormat(PrayerDeck.clockPattern(use24Hour()), PrayerConfig.widgetLocale())
                 .format(SAMPLE_TIME)
             setTextColor(onAccent)
             textSize = (look.fontSp + 3).toFloat()

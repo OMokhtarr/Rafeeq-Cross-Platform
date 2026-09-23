@@ -94,10 +94,10 @@
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/widget_preview_card"
-        android:paddingStart="6dp"
-        android:paddingEnd="6dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingStart="@dimen/widget_card_padding_h"
+        android:paddingEnd="@dimen/widget_card_padding_h"
+        android:paddingTop="@dimen/widget_card_padding_v"
+        android:paddingBottom="@dimen/widget_card_padding_v">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

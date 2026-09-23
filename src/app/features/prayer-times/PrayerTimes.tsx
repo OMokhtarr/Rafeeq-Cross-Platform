@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
-import QiblaHeader from "./QiblaHeader";
+import QiblaHeader, { DIAL_KEYS } from "./QiblaHeader";
 import ShowTimesSheet from "./ShowTimesSheet";
 import PrayerMenuSheet, { type PrayerMenuTarget } from "./PrayerMenuSheet";
 import WidgetSettingsSheet from "./WidgetSettingsSheet";
@@ -88,6 +88,15 @@ const PrayerTimes: React.FC = () => {
   const [locationError, setLocationError] = useState<
     "denied" | "services-off" | "failed" | null
   >(null);
+  // A failed refresh while times are already on screen shows briefly as a
+  // pop-up rather than a standing note: the page is still correct, so the
+  // message only needs to be seen, not kept.
+  const [toastVisible, setToastVisible] = useState(false);
+  useEffect(() => {
+    if (!toastVisible) return;
+    const id = setTimeout(() => setToastVisible(false), 4000);
+    return () => clearTimeout(id);
+  }, [toastVisible]);
   // Which sheet is on screen, if any. One value rather than a flag per
   // sheet: they are steps in a single stack, never open at once, and a flag
   // each would let two of them be true.
@@ -151,6 +160,7 @@ const PrayerTimes: React.FC = () => {
       const outcome = await requestLocation();
       if (outcome !== "granted") {
         setLocationError(outcome);
+        setToastVisible(true);
         return;
       }
       await load();
@@ -274,7 +284,10 @@ const PrayerTimes: React.FC = () => {
                         }
                       : null
                   }
-                  times={rowKeys.map((key) => ({ key, at: day.times![key]! }))}
+                  times={DIAL_KEYS.filter((key) => day.times![key]).map((key) => ({
+                    key,
+                    at: day.times![key]!,
+                  }))}
                   sunrise={day.times?.sunrise}
                   maghrib={day.times?.maghrib}
                   now={now}
@@ -339,18 +352,6 @@ const PrayerTimes: React.FC = () => {
                   </div>
                 </div>
 
-                {/* The times on screen come from the last known fix, so a failure is
-                    a note beside them rather than a takeover of the page. */}
-                {locationError !== null && (
-                  <p className="pt-location-error">
-                    {locationError === "services-off"
-                      ? tp.locationServicesOffDesc
-                      : locationError === "denied"
-                      ? tp.locationDenied
-                      : tp.locationFailed}
-                  </p>
-                )}
-
                 <PrayerMenuSheet
                   open={sheet === "menu"}
                   onClose={closeSheet}
@@ -392,6 +393,17 @@ const PrayerTimes: React.FC = () => {
           </div>
         </div>
       </IonContent>
+      {/* Only over a page that already has times — the no-location state
+          explains the failure in place. */}
+      {toastVisible && day?.times && locationError !== null && (
+        <div className="pt-toast" role="status" onClick={() => setToastVisible(false)}>
+          {locationError === "services-off"
+            ? tp.locationServicesOffDesc
+            : locationError === "denied"
+            ? tp.locationDenied
+            : tp.locationFailed}
+        </div>
+      )}
       <BottomNavBar active="more" fixed />
     </IonPage>
   );

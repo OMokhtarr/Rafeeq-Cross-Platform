@@ -334,7 +334,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val now = Date()
             // Both calendars on one line: the strip has two lines and the
             // second belongs to the place and the timer.
-            val dateFmt = SimpleDateFormat("EEE, d MMM", Locale.US).apply { timeZone = tz }
+            val dateFmt = SimpleDateFormat("EEE, d MMM", PrayerConfig.widgetLocale()).apply { timeZone = tz }
             views.setTextViewText(
                 R.id.widget_date,
                 "${dateFmt.format(now)} • ${hijriLabel(now, tz, withYear = false)}",
@@ -586,12 +586,12 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val local = now.toInstant().atZone(zone).toLocalDate()
             val hijri = HijrahDate.from(local)
             val pattern = if (withYear) "d MMM yyyy" else "d MMM"
-            return DateTimeFormatter.ofPattern(pattern, Locale.US).format(hijri)
+            return DateTimeFormatter.ofPattern(pattern, PrayerConfig.widgetLocale()).format(hijri)
         }
 
-        /** Arabic display label for a prayer name, shown in the widget
-         *  regardless of the app's own language — the launcher process has
-         *  no access to the JS i18n strings. */
+        /** Display label for a prayer name in the device language (Arabic,
+         *  else English) — from resources, since the launcher process has no
+         *  access to the JS i18n strings. */
         internal fun nameLabel(ctx: Context, name: PrayerName): String {
             val resId = when (name) {
                 PrayerName.FAJR -> R.string.prayer_widget_name_fajr

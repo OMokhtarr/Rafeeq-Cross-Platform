@@ -49,6 +49,7 @@ interface RafeeqPrayerPlugin {
   openWidgetSettings(): Promise<{ opened: boolean }>;
   getPlace(): Promise<{ name: string | null }>;
   locationServicesEnabled(): Promise<{ enabled: boolean }>;
+  promptEnableLocation(): Promise<{ enabled: boolean }>;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -109,6 +110,19 @@ export async function locationServicesEnabled(): Promise<boolean> {
 }
 
 /**
+ * Asks the device to switch location on through its own one-tap dialog.
+ * True once location is on; false if the user declined or no dialog exists.
+ */
+async function promptEnableLocation(): Promise<boolean> {
+  try {
+    const { enabled } = await RafeeqPrayer.promptEnableLocation();
+    return enabled;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Why a location attempt ended. A bare boolean could not distinguish a
  * refused permission from switched-off location services, and those have
  * different remedies — asking a user to grant a permission they already hold
@@ -125,6 +139,13 @@ export async function requestLocation(): Promise<LocationOutcome> {
   // Nothing to store a fix into off-device, and no way to tell why — so this
   // is "failed" rather than a more specific claim it cannot support.
   if (!isNative) return "failed";
+
+  // Location off is fixable in place, so offer the system's switch first.
+  // It must come before any Geolocation call: the plugin rejects even
+  // checkPermissions/requestPermissions while location is off.
+  if (!(await locationServicesEnabled()) && !(await promptEnableLocation())) {
+    return "services-off";
+  }
 
   try {
     let status = await Geolocation.checkPermissions();

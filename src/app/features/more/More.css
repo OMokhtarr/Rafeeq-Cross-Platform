@@ -58,19 +58,20 @@ ion-content::part(scroll) {
 /* ── Grid ────────────────────────────────────── */
 .more-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Four tracks, each card spanning two: two equal cards per row, and an odd
+     last card can sit centred (spanning the middle tracks) at the same size. */
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   padding: 0 16px;
   box-sizing: border-box;
 }
 
-/*
- * The lead entry spans both columns: with three cards, a half-width first card
- * would leave a hole beside it. Full width also matches its standing — it is
- * the daily-use destination, Account and Settings are utilities below it.
- */
-.more-grid > .more-card:first-child {
-  grid-column: 1 / -1;
+.more-grid > .more-card {
+  grid-column: span 2;
+}
+
+.more-grid > .more-card:last-child:nth-child(odd) {
+  grid-column: 2 / span 2;
 }
 
 /* ── Card ────────────────────────────────────── */

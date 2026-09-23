@@ -16,11 +16,27 @@ import android.content.Intent
  * The widget's own midnight-roll alarm is dropped by the same reboot and
  * needs the same re-arm; [PrayerAlarmScheduler.scheduleMidnightRoll] no-ops
  * safely without a stored location, same as scheduleNext.
+ *
+ * A device-language change redraws the widgets in the new language. A place
+ * name cached before names were stored in both languages is looked up again
+ * then, off the main thread.
  */
 class PrayerBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         PrayerAlarmScheduler.scheduleNext(context)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
         PrayerWidgetProvider.refresh(context)
+
+        if (intent.action == Intent.ACTION_LOCALE_CHANGED && !PrayerConfig.hasBothPlaceNames(context)) {
+            val coords = PrayerConfig.coords(context) ?: return
+            val pending = goAsync()
+            Thread {
+                try {
+                    PlaceNameResolver.resolveAndStore(context, coords.first, coords.second)
+                } finally {
+                    pending.finish()
+                }
+            }.start()
+        }
     }
 }

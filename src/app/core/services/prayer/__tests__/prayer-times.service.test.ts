@@ -25,6 +25,7 @@ jest.mock("@capacitor/core", () => {
     openWidgetSettings: jest.fn(),
     getPlace: jest.fn(),
     locationServicesEnabled: jest.fn(),
+    promptEnableLocation: jest.fn(),
   };
   return {
     registerPlugin: () => plugin,
@@ -65,6 +66,7 @@ const plugin = registerPlugin("RafeeqPrayer") as unknown as {
   openWidgetSettings: jest.Mock;
   getPlace: jest.Mock;
   locationServicesEnabled: jest.Mock;
+  promptEnableLocation: jest.Mock;
 };
 const {
   getTimes,

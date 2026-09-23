@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Arabic widget strings, chosen when the device language is Arabic.
+         Every other language falls back to the English in values/. -->
+    <string name="prayer_widget_name_fajr">الفجر</string>
+    <string name="prayer_widget_name_sunrise">الشروق</string>
+    <string name="prayer_widget_name_duha">الضحى</string>
+    <string name="prayer_widget_name_dhuhr">الظهر</string>
+    <string name="prayer_widget_name_asr">العصر</string>
+    <string name="prayer_widget_name_maghrib">المغرب</string>
+    <string name="prayer_widget_name_isha">العشاء</string>
+    <string name="prayer_widget_name_midnight">م. الليل</string>
+    <string name="prayer_widget_name_last_third">ث. الاخير</string>
+    <!-- Arrow buttons: spoken by TalkBack, never drawn on screen. -->
+    <string name="prayer_widget_prev">الوقت السابق</string>
+    <string name="prayer_widget_next">الوقت التالي</string>
+    <string name="prayer_widget_prompt">افتح التطبيق لتحديد الموقع</string>
+
+    <!-- Names and one-line descriptions shown in the launcher's widget
+         picker. Each provider needs its own pair; without a label the picker
+         falls back to the app name and lists three identical entries. -->
+    <string name="prayer_widget_label_strip">مواقيت الصلاة</string>
+    <string name="prayer_widget_desc_strip">شريط يعرض وقتاً واحداً مع العد التنازلي</string>
+
+    <string name="prayer_widget_label_vertical">مواقيت الصلاة — قائمة</string>
+    <string name="prayer_widget_desc_vertical">جميع المواقيت في قائمة رأسية</string>
+
+    <string name="prayer_widget_label_wide">مواقيت الصلاة — عريض</string>
+    <string name="prayer_widget_desc_wide">جميع المواقيت في صف أفقي</string>
+
+    <string name="widget_config_title">إعدادات الأداة</string>
+    <string name="widget_config_background">لون الخلفية</string>
+    <string name="widget_config_transparency">الشفافية</string>
+    <string name="widget_config_text_color">لون النص</string>
+    <string name="widget_config_accent">لون بطاقة الصلاة</string>
+    <string name="widget_config_font_size">حجم الخط</string>
+    <string name="widget_config_save">حفظ</string>
+    <string name="widget_config_time_format">صيغة الوقت</string>
+    <string name="widget_config_time_12">١٢ ساعة</string>
+    <string name="widget_config_time_24">٢٤ ساعة</string>
+    <string name="widget_config_reset">استعادة الافتراضي</string>
+    <!-- Swatch that clears a colour so the widget follows the device theme. -->
+    <string name="widget_config_auto">تلقائي</string>
+    <!-- Slider read-outs. Formatted rather than concatenated so the digits
+         localise with the rest of the screen. -->
+    <string name="widget_config_percent">%1$d%%</string>
+    <string name="widget_config_sp">%1$d</string>
+    <!-- Stands in for the place name in the preview before a fix is stored. -->
+    <string name="widget_config_sample_place">موقعك</string>
+</resources>

@@ -1,6 +1,7 @@
 package com.rafeeq.quranquiz.prayer
 
 import android.content.Context
+import java.util.Locale
 
 /**
  * The prayer feature's stored state, in SharedPreferences.
@@ -30,6 +31,7 @@ object PrayerConfig {
     private const val KEY_METHOD = "method"
     private const val KEY_MADHAB = "madhab"
     private const val KEY_PLACE_NAME = "place_name"
+    private const val KEY_PLACE_NAME_AR = "place_name_ar"
 
     /** Sunrise is absent by design: it is displayed with the prayers but is
      *  not one, and never carries a reminder. */
@@ -40,6 +42,7 @@ object PrayerConfig {
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
+    private const val KEY_APP_LANG = "app_lang"
 
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -62,16 +65,42 @@ object PrayerConfig {
             // it here means a user who travels and re-fixes can never be shown
             // the city they left, even if the new lookup fails.
             .remove(KEY_PLACE_NAME)
+            .remove(KEY_PLACE_NAME_AR)
             .apply()
     }
 
-    /** The cached human name for the stored coordinates, if one resolved. */
-    fun placeName(ctx: Context): String? =
-        prefs(ctx).getString(KEY_PLACE_NAME, null)
+    /**
+     * The language the widgets speak: Arabic on an Arabic device, English on
+     * every other. Matches the values/ and values-ar/ string split, so the
+     * dates and place formatted here agree with the resource labels.
+     */
+    fun widgetLocale(): Locale =
+        if (Locale.getDefault().language == "ar") Locale("ar") else Locale.US
 
-    fun setPlaceName(ctx: Context, name: String?) {
+    /**
+     * The cached human name for the stored coordinates in the widget's
+     * language, if one resolved — falling back to the other language rather
+     * than showing nothing.
+     */
+    fun placeName(ctx: Context): String? {
+        val p = prefs(ctx)
+        val en = p.getString(KEY_PLACE_NAME, null)
+        val ar = p.getString(KEY_PLACE_NAME_AR, null)
+        return if (widgetLocale().language == "ar") ar ?: en else en ?: ar
+    }
+
+    /** Whether a name is cached in both languages. */
+    fun hasBothPlaceNames(ctx: Context): Boolean {
+        val p = prefs(ctx)
+        return p.getString(KEY_PLACE_NAME, null) != null &&
+            p.getString(KEY_PLACE_NAME_AR, null) != null
+    }
+
+    /** Stores the names resolved for the stored coordinates; a null keeps the old one. */
+    fun setPlaceNames(ctx: Context, english: String?, arabic: String?) {
         val e = prefs(ctx).edit()
-        if (name.isNullOrBlank()) e.remove(KEY_PLACE_NAME) else e.putString(KEY_PLACE_NAME, name)
+        if (!english.isNullOrBlank()) e.putString(KEY_PLACE_NAME, english)
+        if (!arabic.isNullOrBlank()) e.putString(KEY_PLACE_NAME_AR, arabic)
         e.apply()
     }
 
@@ -116,6 +145,19 @@ object PrayerConfig {
 
     fun setAppNight(ctx: Context, night: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_APP_NIGHT, night).apply()
+    }
+
+    /**
+     * The app's own language ("ar" or "en"), mirrored from localStorage by
+     * the web layer like [appNight]. Used by the widget's appearance screen,
+     * which is part of the app; the widget itself follows the device
+     * ([widgetLocale]). Defaults to Arabic, the app's own default.
+     */
+    fun appLocale(ctx: Context): Locale =
+        if (prefs(ctx).getString(KEY_APP_LANG, "ar") == "en") Locale.US else Locale("ar")
+
+    fun setAppLang(ctx: Context, lang: String) {
+        prefs(ctx).edit().putString(KEY_APP_LANG, lang).apply()
     }
 
     fun remindersEnabled(ctx: Context): Boolean =

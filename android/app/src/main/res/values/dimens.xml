@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-      The strip's prayer card: a fixed box, so it no longer grows and shrinks
-      as the arrows step between a short name ("الظهر") and a long one
-      ("ث. الاخير"). Wide enough for the longest label, "ث. الاخير", whole at the card's
-      default 17sp, so no name ever has to shrink; the
-      provider scales both by the user's font size (API 31+), and fits the
-      text to the box rather than the box to the text.
-    -->
-    <dimen name="widget_card_width">90dp</dimen>
-    <dimen name="widget_card_height">54dp</dimen>
+    <!-- The strip's prayer card: one fixed size for every card, and the
+         flipper holding it is given the same size, so the slot never crops
+         the card. Fits the longest
+         label ("Midnight", "ث. الاخير") at the default size with room to
+         spare; at larger font settings the provider shrinks text to fit. -->
+    <dimen name="widget_card_width">100dp</dimen>
+    <dimen name="widget_card_height">60dp</dimen>
+    <dimen name="widget_card_padding_h">8dp</dimen>
+    <dimen name="widget_card_padding_v">5dp</dimen>
 </resources>

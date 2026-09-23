@@ -206,17 +206,44 @@ ion-content::part(scroll) {
 }
 
 /* ── Location failure, with times already on screen ────────────────────── */
-.pt-location-error {
+/* A location failure over a page that already has times: a brief pop-up
+   above the nav bar, dismissed by a tap or after a few seconds. */
+.pt-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--bottom-nav-height) + var(--space-4));
+  transform: translateX(-50%);
+  width: calc(100% - 2 * var(--space-4));
+  max-width: calc(var(--max-width-mobile, 600px) - 2 * var(--space-4));
+  z-index: 20;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-gold);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
   font-family: var(--font-arabic);
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-align: center;
-  margin: var(--space-4) var(--space-4) 0;
   line-height: var(--leading-normal);
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  animation: pt-toast-in 200ms ease-out;
 }
 
-[dir="ltr"] .pt-location-error {
+[dir="ltr"] .pt-toast {
   font-family: var(--font-latin);
+}
+
+@keyframes pt-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-toast {
+    animation: none;
+  }
 }
 
 /* ── Rows ─────────────────────────────────────── */
