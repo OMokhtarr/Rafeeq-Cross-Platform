@@ -155,6 +155,19 @@ export interface AppStrings {
     resetTitle: string;
     zikr: string;
     allDone: string;
+    favorite: string;
+    unfavorite: string;
+    play: string;
+    pause: string;
+    reference: string;
+    myAzkarTitle: string;
+    myAzkarSubtitle: string;
+    myAzkarEmpty: string;
+    referenceTitle: string;
+    citation: string;
+    narrator: string;
+    grade: string;
+    noOrigin: string;
   };
 
   quiz: {
@@ -666,6 +679,19 @@ const ar: AppStrings = {
     resetTitle: "إعادة العداد",
     zikr: "ذِكر",
     allDone: "✅ اكتملت الأذكار",
+    favorite: "إضافة إلى أذكاري",
+    unfavorite: "إزالة من أذكاري",
+    play: "تشغيل",
+    pause: "إيقاف",
+    reference: "أصل الذكر",
+    myAzkarTitle: "أذكاري",
+    myAzkarSubtitle: "الأذكار التي أضفتها إلى المفضلة",
+    myAzkarEmpty: "لم تُضف أي ذكر بعد. اضغط ☆ على أي ذكر لإضافته هنا.",
+    referenceTitle: "أصل الذكر",
+    citation: "المصدر",
+    narrator: "الراوي",
+    grade: "الحكم والتخريج",
+    noOrigin: "لم يُضف نص الحديث لهذا الذكر بعد.",
   },
   quiz: {
     title: "الاختبارات",
@@ -1201,6 +1227,19 @@ const en: AppStrings = {
     resetTitle: "Reset counter",
     zikr: "dhikr",
     allDone: "✅ All complete",
+    favorite: "Add to My Azkar",
+    unfavorite: "Remove from My Azkar",
+    play: "Play",
+    pause: "Pause",
+    reference: "Origin",
+    myAzkarTitle: "My Azkar",
+    myAzkarSubtitle: "The adhkar you have favourited",
+    myAzkarEmpty: "Nothing here yet. Tap ☆ on any dhikr to add it.",
+    referenceTitle: "Origin of the Dhikr",
+    citation: "Source",
+    narrator: "Narrator",
+    grade: "Grade & collection",
+    noOrigin: "The hadith text for this dhikr has not been added yet.",
   },
   quiz: {
     title: "Quizzes",

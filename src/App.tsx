@@ -24,6 +24,7 @@ import "./App.css";
 
 import Home from "./app/features/home/pages/Home";
 import Azkar from "./app/features/azkar/Azkar";
+import AzkarReference from "./app/features/azkar/AzkarReference";
 import PageViewer from "./app/features/viewer/PageViewer";
 import SurahJuzSelection from "./app/features/viewer/pages/SurahJuzSelection";
 import Search from "./app/features/viewer/pages/Search";
@@ -178,6 +179,7 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/search/results" component={SearchResults} />
       <Route exact path="/azkar" component={Azkar} />
       <Route exact path="/azkar/:categoryId" component={Azkar} />
+      <Route exact path="/azkar/:categoryId/ref/:zikrId" component={AzkarReference} />
       <Route exact path="/quiz-list" component={QuizList} />
       <Route exact path="/akmel-alayah-setup" component={AkmelAlAyahSetup} />
       <Route exact path="/akmel-alayah" component={AkmelAlAyah} />

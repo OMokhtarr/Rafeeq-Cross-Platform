@@ -263,13 +263,6 @@ ion-content::part(scroll) {
   opacity: 0.55;
 }
 
-.azkar-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
 /* Number badge — green circle, matches active-state green */
 .azkar-item-num {
   width: 26px;
@@ -284,28 +277,6 @@ ion-content::part(scroll) {
   font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
-}
-
-.azkar-item-source {
-  font-family: var(--font-arabic);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  background: var(--color-gold-faint);
-  border: 1px solid var(--color-border-card);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-}
-
-.azkar-note {
-  background: var(--color-gold-faint);
-  border-inline-end: 3px solid var(--color-gold);
-  padding: 6px 10px;
-  margin-bottom: 10px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-arabic);
-  font-size: 0.88rem;
-  color: var(--color-gold);
-  line-height: 1.6;
 }
 
 .azkar-item-text {
@@ -347,24 +318,17 @@ ion-content::part(scroll) {
   transition: width 0.2s ease;
 }
 
+/* Action row: ☆ ↺ [counter] ▶ 📖 — counter takes the middle and stretches */
 .azkar-item-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.azkar-repeat-label {
-  font-family: var(--font-latin);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.azkar-counter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.azkar-item-footer .azkar-count-btn {
+  flex: 1;
+  min-width: 64px;
 }
 
 /* Count button — green, matches settings toggle active color */
@@ -433,27 +397,182 @@ ion-content::part(scroll) {
   opacity: 0.8;
 }
 
-/* Reset button — gold border, matches settings back button style */
-.azkar-reset-btn {
+/* Round icon actions (favourite, reset, play, origin) — gold border, matches
+   the settings back button style */
+.azkar-action-btn {
   background: none;
   border: 1.5px solid var(--color-gold-subtle);
   color: var(--color-gold);
   padding: 0;
   border-radius: 50%;
   cursor: pointer;
-  font-family: var(--font-arabic);
-  font-size: 1rem;
-  min-width: 44px;
-  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition-base), border-color var(--transition-base);
+  transition: background var(--transition-base), border-color var(--transition-base), transform 0.1s;
 }
 
-.azkar-reset-btn:hover {
+.azkar-action-btn:hover:not(:disabled),
+.azkar-action-btn.active {
   background: var(--color-gold-faint);
   border-color: var(--color-gold);
+}
+
+.azkar-action-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.azkar-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@media (max-width: 360px) {
+  .azkar-action-btn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* Empty "My Azkar" */
+.azkar-empty {
+  font-family: var(--font-arabic);
+  font-size: var(--text-md, 1rem);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.8;
+  padding: var(--space-6) var(--space-4);
+  margin: 0;
+}
+
+/* "My Azkar" category card — gold accent so it stands apart from the book's
+   categories */
+.azkar-cat-card.azkar-cat-mine {
+  border-color: var(--color-gold);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--color-gold) 22%, transparent) 0%, transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-gold) 10%, var(--color-bg-card)), var(--color-bg-card));
+  box-shadow: var(--shadow-card), 0 0 0 3px var(--color-gold-faint);
+  margin-bottom: 6px;
+  isolation: isolate;
+}
+
+/* Oversized faint star watermark in the far corner */
+.azkar-cat-card.azkar-cat-mine::after {
+  content: "★";
+  position: absolute;
+  inset-inline-end: -10px;
+  bottom: -34px;
+  font-size: 110px;
+  line-height: 1;
+  color: var(--color-gold);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.azkar-cat-mine .azkar-cat-title {
+  color: var(--color-gold);
+}
+
+.azkar-cat-mine .azkar-cat-arrow {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: var(--color-bg-card);
+}
+
+.azkar-cat-mine .azkar-cat-progress-fill {
+  background: var(--color-gold);
+}
+
+.azkar-mine-emblem {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold);
+  background: var(--color-gold-faint);
+  border: 1.5px solid var(--color-gold);
+}
+
+/* ── Reference (origin) page ─────────────────────── */
+.azkar-ref-container {
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: var(--space-4) 16px calc(var(--bottom-nav-height) + var(--space-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.azkar-ref-zikr {
+  color: var(--color-gold);
+  margin: 0;
+}
+
+.azkar-ref-note {
+  font-family: var(--font-arabic);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.azkar-ref-section {
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-card);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.azkar-ref-origin {
+  font-family: var(--font-arabic);
+  font-size: 1.1rem;
+  line-height: 2;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.azkar-ref-empty {
+  font-family: var(--font-arabic);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.azkar-ref-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.azkar-ref-meta > div {
+  border-inline-start: 3px solid var(--color-gold-subtle);
+  padding-inline-start: 12px;
+}
+
+.azkar-ref-meta dt {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.azkar-ref-meta dd {
+  font-family: var(--font-arabic);
+  margin: 2px 0 0;
+  color: var(--color-text-primary);
 }
 
 /* ── Bottom padding so last item clears the nav bar ── */
