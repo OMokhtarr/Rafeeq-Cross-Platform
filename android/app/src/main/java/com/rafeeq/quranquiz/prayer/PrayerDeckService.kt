@@ -153,11 +153,6 @@ internal class PrayerDeckFactory(
         // rounded corners cut flat. One size for every card leaves nothing
         // for the slot to disagree with.
 
-        // Fills in the deck's template, which opens this widget's appearance
-        // screen (see PrayerWidgetProvider.render). The template already
-        // carries everything; the card only has to say it is tappable.
-        views.setOnClickFillInIntent(R.id.card_root, Intent())
-
         return views
     }
 
@@ -347,6 +342,44 @@ internal object PrayerDeck {
     fun clockPattern(use24Hour: Boolean): String =
         if (use24Hour) "HH:mm" else "h:mm"
 
+    /** The times that happen after midnight but belong to the previous
+     *  date's night. */
+    private val NIGHT_TIMES = setOf(PrayerName.MIDNIGHT, PrayerName.LAST_THIRD)
+
+    /**
+     * Today's and tomorrow's times as the deck reads them: each entry is the
+     * occurrence that falls on that calendar day.
+     *
+     * adhan's SunnahTimes for a date describes the night *after* it, so the
+     * engine's MIDNIGHT and LAST_THIRD for today fall early tomorrow morning.
+     * Left as they are, at 1am the last third still ahead tonight was skipped
+     * and the timer counted down to the one a day later. Taking the night
+     * times from the day before puts each on the date it actually lands on.
+     */
+    fun alignNight(yesterday: DayTimes, today: DayTimes, tomorrow: DayTimes): Pair<DayTimes, DayTimes> {
+        fun shift(day: DayTimes, from: DayTimes) =
+            DayTimes(day.times + NIGHT_TIMES.associateWith { from.times[it] })
+        return shift(today, yesterday) to shift(tomorrow, today)
+    }
+
+    /** [alignNight] over the engine's times around [now]. */
+    fun dayPair(
+        lat: Double,
+        lng: Double,
+        now: Date,
+        method: String,
+        madhab: String,
+        tz: TimeZone,
+    ): Pair<DayTimes, DayTimes> {
+        fun on(offset: Int): DayTimes {
+            val cal = Calendar.getInstance(tz)
+            cal.time = now
+            cal.add(Calendar.DAY_OF_YEAR, offset)
+            return PrayerTimesEngine.timesFor(lat, lng, cal.time, method, madhab, tz)
+        }
+        return alignNight(on(-1), on(0), on(1))
+    }
+
     fun build(ctx: Context, now: Date): List<Card> {
         val coords = PrayerConfig.coords(ctx) ?: return emptyList()
         val (lat, lng) = coords
@@ -354,11 +387,7 @@ internal object PrayerDeck {
         val madhab = PrayerConfig.madhab(ctx)
         val tz = TimeZone.getDefault()
 
-        val today = PrayerTimesEngine.timesFor(lat, lng, now, method, madhab, tz)
-        val cal = Calendar.getInstance(tz)
-        cal.time = now
-        cal.add(Calendar.DAY_OF_YEAR, 1)
-        val tomorrow = PrayerTimesEngine.timesFor(lat, lng, cal.time, method, madhab, tz)
+        val (today, tomorrow) = dayPair(lat, lng, now, method, madhab, tz)
 
         val timeFmt = clockFormat(ctx, tz)
         val visible = PrayerConfig.visibleTimes(ctx)
