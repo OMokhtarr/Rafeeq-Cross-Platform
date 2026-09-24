@@ -11,7 +11,6 @@ import android.content.res.ColorStateList
 import android.os.Build
 import android.os.SystemClock
 import android.widget.RemoteViews
-import com.rafeeq.quranquiz.MainActivity
 import com.rafeeq.quranquiz.R
 import java.text.SimpleDateFormat
 import java.time.ZoneId
@@ -37,9 +36,9 @@ import java.util.TimeZone
  * location or calculation settings. The per-second countdown is not a refresh:
  * it is a `Chronometer` ticked by the system in the launcher's own process.
  *
- * Only the date column opens the app. The arrows carry their own broadcasts
- * back to this receiver and the card carries no intent at all, so a press
- * meant for "next" can never launch Rafeeq.
+ * Nothing opens the app on a single tap. A double tap anywhere on the strip
+ * opens the widget's appearance screen; the arrows carry their own step
+ * broadcasts, and the card does nothing when tapped.
  */
 class PrayerWidgetProvider : AppWidgetProvider() {
 
@@ -76,6 +75,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
                 // a revert mid-browse.
                 armRevert(context, widgetId)
             }
+            return
+        }
+
+        if (intent.action == ACTION_TAP) {
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) onTap(context, widgetId)
             return
         }
 
@@ -228,6 +232,59 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         /** +1 for the next prayer, -1 for the previous one. */
         internal const val EXTRA_DELTA = "delta"
 
+        /** The broadcast a tap on the strip (outside arrows and card) sends. */
+        internal const val ACTION_TAP = "com.rafeeq.quranquiz.prayer.WIDGET_TAP"
+
+        /** Two taps closer together than this are a double tap. */
+        internal const val DOUBLE_TAP_MS = 500L
+
+        private const val TAP_PREFS = "rafeeq_widget_taps"
+
+        private fun styleIntent(ctx: Context, widgetId: Int): Intent =
+            Intent(ctx, PrayerWidgetConfigActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                data = android.net.Uri.parse("rafeeq-widget-style://$widgetId")
+            }
+
+        private fun tapIntent(ctx: Context, widgetId: Int): PendingIntent {
+            val intent = Intent(ctx, PrayerWidgetProvider::class.java).apply {
+                action = ACTION_TAP
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                data = android.net.Uri.parse("rafeeq-widget-tap://$widgetId")
+            }
+            return PendingIntent.getBroadcast(
+                ctx,
+                widgetId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        /**
+         * A RemoteViews click has no notion of a double tap, so each tap is a
+         * broadcast and the time of the last one is remembered per widget. The
+         * second tap inside [DOUBLE_TAP_MS] opens the appearance screen and
+         * clears the record, so a triple tap does not open it twice.
+         */
+        private fun onTap(ctx: Context, widgetId: Int) {
+            val prefs = ctx.getSharedPreferences(TAP_PREFS, Context.MODE_PRIVATE)
+            val key = widgetId.toString()
+            val now = SystemClock.elapsedRealtime()
+            val last = prefs.getLong(key, 0L)
+            if (last != 0L && now - last in 0..DOUBLE_TAP_MS) {
+                prefs.edit().remove(key).apply()
+                ctx.startActivity(
+                    styleIntent(ctx, widgetId).addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                    ),
+                )
+            } else {
+                prefs.edit().putLong(key, now).apply()
+            }
+        }
+
         /** The broadcast that puts a browsed widget back on the next prayer. */
         internal const val ACTION_REVERT = "com.rafeeq.quranquiz.prayer.WIDGET_REVERT"
 
@@ -312,19 +369,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
             val look = PrayerWidgetConfig.appearance(ctx, widgetId)
 
-            // The date column opens the app; the card opens the widget's
-            // appearance screen (wired below, with the deck). Nothing else on
-            // the strip launches anything, so the arrows between them stay
-            // purely for stepping.
-            val openApp = PendingIntent.getActivity(
-                ctx,
-                0,
-                Intent(ctx, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            views.setOnClickPendingIntent(R.id.widget_date_column, openApp)
+            // The strip itself only listens for a double tap, which opens the
+            // widget's appearance screen; a single tap does nothing, so a
+            // brushed widget never launches anything. The arrows keep their own
+            // step intents; the card has none.
+            views.setOnClickPendingIntent(R.id.widget_root, tapIntent(ctx, widgetId))
             views.setOnClickPendingIntent(R.id.widget_prev, stepIntent(ctx, widgetId, -1))
             views.setOnClickPendingIntent(R.id.widget_next, stepIntent(ctx, widgetId, +1))
 
@@ -381,28 +430,6 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // adapter stays until this app's floor rises.
             @Suppress("DEPRECATION")
             views.setRemoteAdapter(R.id.widget_deck, deckIntent)
-
-            // Tapping the card opens this widget's appearance screen. A card
-            // inside a collection cannot carry its own PendingIntent, so the
-            // deck holds this template and each card fills it in (see
-            // PrayerDeckFactory). Mutable because a fill-in intent is merged
-            // into it, which an immutable PendingIntent refuses from API 31.
-            // The widget id goes in the data as well as the extras, so two
-            // widgets' templates are distinct rather than one replacing the
-            // other.
-            val styleIntent = Intent(ctx, PrayerWidgetConfigActivity::class.java).apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                data = android.net.Uri.parse("rafeeq-widget-style://$widgetId")
-            }
-            views.setPendingIntentTemplate(
-                R.id.widget_deck,
-                PendingIntent.getActivity(
-                    ctx,
-                    widgetId,
-                    styleIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
-                ),
-            )
 
             // Which card to show. A stored index survives only while it still
             // addresses a card: the visible-times preference can shrink the

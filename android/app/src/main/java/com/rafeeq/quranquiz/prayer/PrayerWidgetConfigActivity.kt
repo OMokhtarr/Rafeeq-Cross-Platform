@@ -82,6 +82,23 @@ class PrayerWidgetConfigActivity : Activity() {
         super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
+    /**
+     * singleTop: repeated double taps on a widget land here instead of
+     * stacking copies of the screen. A tap on a different widget swaps the
+     * screen over to that widget.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val id = intent.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID,
+        )
+        if (id != AppWidgetManager.INVALID_APPWIDGET_ID && id != widgetId) {
+            setIntent(intent)
+            recreate()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate: the window is created there, and a theme set
         // afterwards does not reach it.

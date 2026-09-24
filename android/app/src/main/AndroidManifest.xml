@@ -70,6 +70,7 @@
              input but a widget id, and writes only that widget's own colours. -->
         <activity
             android:name=".prayer.PrayerWidgetConfigActivity"
+            android:launchMode="singleTop"
             android:theme="@style/WidgetConfigTheme.Night"
             android:excludeFromRecents="true"
             android:exported="true">

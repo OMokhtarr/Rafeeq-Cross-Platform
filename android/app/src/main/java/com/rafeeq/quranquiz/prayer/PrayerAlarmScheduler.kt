@@ -187,12 +187,7 @@ object PrayerAlarmScheduler {
         val method = PrayerConfig.method(ctx)
         val madhab = PrayerConfig.madhab(ctx)
         val now = Date()
-        val today = PrayerTimesEngine.timesFor(lat, lng, now, method, madhab, tz)
-        val cal = Calendar.getInstance(tz).apply {
-            time = now
-            add(Calendar.DAY_OF_YEAR, 1)
-        }
-        val tomorrow = PrayerTimesEngine.timesFor(lat, lng, cal.time, method, madhab, tz)
+        val (today, tomorrow) = PrayerDeck.dayPair(lat, lng, now, method, madhab, tz)
         return PrayerDeck.nextBoundary(now, today, tomorrow)?.time
     }
 

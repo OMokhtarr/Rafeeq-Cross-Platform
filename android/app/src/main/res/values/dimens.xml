@@ -3,10 +3,10 @@
     <!-- The strip's prayer card: one fixed size for every card, and the
          flipper holding it is given the same size, so the slot never crops
          the card. Fits the longest
-         label ("Midnight", "ث. الاخير") at the default size with room to
+         label ("L Third", "Maghrib") at the default size with room to
          spare; at larger font settings the provider shrinks text to fit. -->
-    <dimen name="widget_card_width">100dp</dimen>
+    <dimen name="widget_card_width">84dp</dimen>
     <dimen name="widget_card_height">60dp</dimen>
-    <dimen name="widget_card_padding_h">8dp</dimen>
+    <dimen name="widget_card_padding_h">6dp</dimen>
     <dimen name="widget_card_padding_v">5dp</dimen>
 </resources>
