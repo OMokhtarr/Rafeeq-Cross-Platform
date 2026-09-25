@@ -25,7 +25,10 @@ import {
   downloadAndCache,
   hasCached,
 } from "../services/audio/audio-cache.service";
-import { getRangeDurations } from "../services/audio/audio-duration.service";
+import {
+  getRangeDurations,
+  type RangeDurations,
+} from "../services/audio/audio-duration.service";
 import { getSurahNameArabic } from "../services/data/metadata.service";
 import {
   isNativeOutput,
@@ -131,6 +134,9 @@ export interface UsePlaybackQueueOptions {
    */
   onQueueEnded?: () => boolean;
 }
+
+/** Max time start() waits for range durations before playing anyway. */
+const DURATIONS_WAIT_MS = 2500;
 
 const INITIAL_STATE: PlaybackState = {
   currentIndex: -1,
@@ -733,23 +739,32 @@ export function usePlaybackQueue(
       // (the WebView often never reports metadata for capacitor:// URLs), leaving the total
       // wrong and growing one verse at a time. Accurate per-verse durations also keep the
       // cumulative position correct at every verse boundary (no notification-bar reset).
-      const { perVerseSec, totalSec } = await getRangeDurations(
-        reciter,
-        queue,
-        signal,
-      );
+      // Durations are cosmetic (the bar), so never let a slow lookup (e.g. a long, uncached
+      // surah) hold back audio: wait at most DURATIONS_WAIT_MS, then play and apply the total
+      // whenever it lands.
+      const applyDurations = ({ perVerseSec, totalSec }: RangeDurations) => {
+        if (signal.aborted || queueRef.current.length === 0) return;
+        for (let i = 0; i < perVerseSec.length; i++) {
+          if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
+        }
+        totalRangeDurationRef.current = totalSec;
+        let elapsed = 0;
+        for (let i = 0; i < indexRef.current; i++)
+          elapsed += verseDurationsRef.current[i] ?? 0;
+        elapsedBeforeCurrentVerseRef.current = elapsed;
+        setState((s) => ({
+          ...s,
+          durationMs: Math.round(totalRangeDurationRef.current * 1000),
+        }));
+      };
+      const durationsPromise = getRangeDurations(reciter, queue, signal);
+      const early = await Promise.race([
+        durationsPromise,
+        new Promise<null>((r) => setTimeout(() => r(null), DURATIONS_WAIT_MS)),
+      ]);
       if (signal.aborted || queueRef.current.length === 0) return;
-
-      for (let i = 0; i < perVerseSec.length; i++) {
-        if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
-      }
-      totalRangeDurationRef.current = totalSec;
-
-      // Publish the fixed total ONCE, before any audio plays.
-      setState((s) => ({
-        ...s,
-        durationMs: Math.round(totalRangeDurationRef.current * 1000),
-      }));
+      if (early) applyDurations(early);
+      else void durationsPromise.then(applyDurations);
 
       if (isNativeOutput()) {
         // ExoPlayer is the output on Android; the <audio> element is unused.
