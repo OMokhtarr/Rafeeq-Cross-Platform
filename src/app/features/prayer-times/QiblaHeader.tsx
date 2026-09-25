@@ -35,13 +35,10 @@ import { angleOf, arcPath, pointAt, progressSpan } from "./dayDial";
 import "./QiblaHeader.css";
 
 /**
- * What the ring marks: the five prayers and sunrise, whatever the timetable
- * shows. Extra times (Duha, the last third) crowded it into a row of
- * look-alike dots. Sunrise and Maghrib — the day's two horizon moments — are
- * drawn as sun glyphs so they read at a glance; the rest are dots.
+ * A mark on the ring. The ring marks every time the timetable shows.
+ * Sunrise and Maghrib — the day's two horizon moments — are drawn as sun
+ * glyphs so they read at a glance; the rest are dots.
  */
-export const DIAL_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] as const;
-
 export interface DialTime {
   key: string;
   at: Date;
@@ -53,7 +50,7 @@ interface QiblaHeaderProps {
   locating: boolean;
   /** The next prayer, already localized, or null inside the midnight-sun window. */
   next: { key: string; label: string; time: string; countdown: string } | null;
-  /** The ring's marks (see DIAL_KEYS), in order. */
+  /** The ring's marks: the user's visible times, in order. */
   times: DialTime[];
   sunrise?: Date;
   maghrib?: Date;

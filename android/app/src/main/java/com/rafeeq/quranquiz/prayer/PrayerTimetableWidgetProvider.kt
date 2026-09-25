@@ -138,7 +138,7 @@ abstract class PrayerTimetableWidgetProvider : AppWidgetProvider() {
                 return@forEachIndexed
             }
             views.setViewVisibility(row.root, android.view.View.VISIBLE)
-            views.setTextViewText(row.label, PrayerWidgetProvider.nameLabel(ctx, name))
+            views.setTextViewText(row.label, PrayerWidgetProvider.nameLabel(ctx, name, today.times[name], tz))
             views.setTextViewText(row.time, timeFmt.format(today.times[name]!!))
 
             // The next prayer is marked by filling its time in the accent, the

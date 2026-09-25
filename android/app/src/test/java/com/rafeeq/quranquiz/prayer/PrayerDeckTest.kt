@@ -45,7 +45,7 @@ class PrayerDeckTest {
         val timer = PrayerDeck.timerFor(PrayerName.ASR, now, today, tomorrow)
 
         assertEquals(3 * hour, timer!!.millis)
-        assertFalse(timer.countingUp)
+        assertFalse(timer.toIqama)
     }
 
     @Test
@@ -58,7 +58,7 @@ class PrayerDeckTest {
         val timer = PrayerDeck.timerFor(PrayerName.FAJR, now, today, tomorrow)
 
         assertEquals(19 * hour, timer!!.millis)
-        assertFalse(timer.countingUp)
+        assertFalse(timer.toIqama)
     }
 
     @Test
@@ -71,32 +71,29 @@ class PrayerDeckTest {
         assertTrue("timer must be positive", timer!!.millis > 0)
     }
 
-    // ── counting up, inside the window ─────────────────────────────────
+    // ── counting down to the iqama ─────────────────────────────────────
 
     @Test
-    fun `a prayer just called counts up from its time`() {
-        // The window's whole purpose: right after the adhan the widget answers
-        // "how long since?", rather than skipping to the next prayer.
+    fun `a prayer just called counts down to its iqama`() {
+        // Eight minutes after Dhuhr's adhan, twelve remain of its twenty.
         val today = day(PrayerName.DHUHR to at(-8 * minute))
         val tomorrow = day(PrayerName.DHUHR to at(16 * hour))
 
         val timer = PrayerDeck.timerFor(PrayerName.DHUHR, now, today, tomorrow)
 
-        assertEquals(8 * minute, timer!!.millis)
-        assertTrue(timer.countingUp)
+        assertEquals(12 * minute, timer!!.millis)
+        assertTrue(timer.toIqama)
     }
 
     @Test
-    fun `a time exactly now counts up from zero`() {
-        // Boundary at the open end of the window: at the adhan itself the
-        // prayer is current, not still pending.
+    fun `at the adhan the whole iqama gap remains`() {
         val today = day(PrayerName.ASR to now)
         val tomorrow = day(PrayerName.ASR to at(24 * hour))
 
         val timer = PrayerDeck.timerFor(PrayerName.ASR, now, today, tomorrow)
 
-        assertEquals(0L, timer!!.millis)
-        assertTrue(timer.countingUp)
+        assertEquals(20 * minute, timer!!.millis)
+        assertTrue(timer.toIqama)
     }
 
     @Test
@@ -105,39 +102,43 @@ class PrayerDeckTest {
     }
 
     @Test
-    fun `fajr and duha get twenty-five minutes`() {
+    fun `fajr gets twenty-five minutes`() {
         assertEquals(25 * minute, PrayerDeck.elapsedWindowMillis(PrayerName.FAJR))
-        assertEquals(25 * minute, PrayerDeck.elapsedWindowMillis(PrayerName.DUHA))
     }
 
     @Test
-    fun `every other time gets twenty minutes`() {
-        listOf(
-            PrayerName.SUNRISE,
-            PrayerName.DHUHR,
-            PrayerName.ASR,
-            PrayerName.ISHA,
-            PrayerName.MIDNIGHT,
-            PrayerName.LAST_THIRD,
-        ).forEach { name ->
+    fun `dhuhr asr and isha get twenty minutes`() {
+        listOf(PrayerName.DHUHR, PrayerName.ASR, PrayerName.ISHA).forEach { name ->
             assertEquals("window for $name", 20 * minute, PrayerDeck.elapsedWindowMillis(name))
         }
     }
 
     @Test
-    fun `maghrib stops counting up after ten minutes`() {
+    fun `times without an iqama have no window`() {
+        listOf(
+            PrayerName.SUNRISE,
+            PrayerName.DUHA,
+            PrayerName.MIDNIGHT,
+            PrayerName.LAST_THIRD,
+        ).forEach { name ->
+            assertEquals("window for $name", 0L, PrayerDeck.elapsedWindowMillis(name))
+        }
+    }
+
+    @Test
+    fun `maghrib stops awaiting its iqama after ten minutes`() {
         // Just inside, then just outside: the closed end of the window is
         // where an off-by-one would hide.
         val inside = day(PrayerName.MAGHRIB to at(-9 * minute))
         val outside = day(PrayerName.MAGHRIB to at(-11 * minute))
         val tomorrow = day(PrayerName.MAGHRIB to at(21 * hour))
 
-        assertTrue(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, inside, tomorrow)!!.countingUp)
-        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, outside, tomorrow)!!.countingUp)
+        assertTrue(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, inside, tomorrow)!!.toIqama)
+        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, outside, tomorrow)!!.toIqama)
     }
 
     @Test
-    fun `fajr is still counting up where maghrib would have stopped`() {
+    fun `fajr still awaits its iqama where maghrib would have stopped`() {
         // The windows genuinely differ: 15 minutes past is inside Fajr's 25
         // but outside Maghrib's 10.
         val today = day(
@@ -149,8 +150,8 @@ class PrayerDeckTest {
             PrayerName.MAGHRIB to at(21 * hour),
         )
 
-        assertTrue(PrayerDeck.timerFor(PrayerName.FAJR, now, today, tomorrow)!!.countingUp)
-        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, today, tomorrow)!!.countingUp)
+        assertTrue(PrayerDeck.timerFor(PrayerName.FAJR, now, today, tomorrow)!!.toIqama)
+        assertFalse(PrayerDeck.timerFor(PrayerName.MAGHRIB, now, today, tomorrow)!!.toIqama)
     }
 
     // ── absent times ───────────────────────────────────────────────────
@@ -173,7 +174,7 @@ class PrayerDeckTest {
         val timer = PrayerDeck.timerFor(PrayerName.ISHA, now, today, tomorrow)
 
         assertEquals(20 * hour, timer!!.millis)
-        assertFalse(timer.countingUp)
+        assertFalse(timer.toIqama)
     }
 
     // ── refresh boundaries ────────────────────────────────────────────
@@ -187,8 +188,8 @@ class PrayerDeckTest {
         assertEquals(at(90 * minute), PrayerDeck.nextBoundary(now, today, day()))
     }
 
-    /** Inside a prayer's elapsed window the card counts up; the widget must
-     *  re-render when that window closes, or it keeps counting up forever. */
+    /** Between adhan and iqama the card counts to the iqama; the widget must
+     *  re-render when that window closes, or it runs past zero. */
     @Test
     fun `inside an elapsed window the boundary is the window's end`() {
         val maghrib = at(-2 * minute)
@@ -249,60 +250,51 @@ class PrayerDeckTest {
 
     // ── which card opens ───────────────────────────────────────────────
 
-    private fun card(name: PrayerName, countingUp: Boolean = false) = PrayerDeck.Card(
-        name = name,
-        label = name.name,
-        clock = "00:00",
-        millisUntil = hour,
-        countingUp = countingUp,
-    )
-
-    @Test
-    fun `the deck opens on the next prayer`() {
-        val cards = listOf(
-            card(PrayerName.FAJR),
-            card(PrayerName.SUNRISE),
-            card(PrayerName.DHUHR),
-            card(PrayerName.ASR),
+    private fun card(name: PrayerName, millisUntil: Long = hour, toIqama: Boolean = false) =
+        PrayerDeck.Card(
+            name = name,
+            label = name.name,
+            clock = "00:00",
+            millisUntil = millisUntil,
+            toIqama = toIqama,
         )
-        val next = NextPrayer(PrayerName.ASR, at(hour))
-
-        assertEquals(3, PrayerDeck.initialIndex(cards, next))
-    }
 
     @Test
-    fun `a prayer inside its window outranks the next prayer`() {
-        // Maghrib was called two minutes ago and Isha is next. The widget
-        // should stay on Maghrib: skipping to Isha would hide the elapsed
-        // count the window exists to show.
+    fun `the deck opens on the soonest card`() {
         val cards = listOf(
-            card(PrayerName.FAJR),
-            card(PrayerName.MAGHRIB, countingUp = true),
-            card(PrayerName.ISHA),
+            card(PrayerName.FAJR, millisUntil = 20 * hour),
+            card(PrayerName.DHUHR, millisUntil = 5 * hour),
+            card(PrayerName.ASR, millisUntil = 2 * hour),
         )
-        val next = NextPrayer(PrayerName.ISHA, at(hour))
 
-        assertEquals(1, PrayerDeck.initialIndex(cards, next))
+        assertEquals(2, PrayerDeck.initialIndex(cards))
     }
 
     @Test
-    fun `the deck opens on the first card when there is no next prayer`() {
-        // next is null during midnight sun; the deck must still open somewhere.
-        val cards = listOf(card(PrayerName.FAJR), card(PrayerName.DHUHR))
+    fun `after isha a chosen last third comes before fajr`() {
+        // The reported bug: the deck skipped straight to tomorrow's Fajr.
+        val cards = listOf(
+            card(PrayerName.FAJR, millisUntil = 6 * hour),
+            card(PrayerName.ISHA, millisUntil = 22 * hour),
+            card(PrayerName.LAST_THIRD, millisUntil = 3 * hour),
+        )
 
-        assertEquals(0, PrayerDeck.initialIndex(cards, null))
+        assertEquals(2, PrayerDeck.initialIndex(cards))
     }
 
     @Test
-    fun `the deck opens on the first card when the next prayer has no card`() {
-        val cards = listOf(card(PrayerName.FAJR), card(PrayerName.DHUHR))
-        val next = NextPrayer(PrayerName.MAGHRIB, at(hour))
+    fun `a prayer awaiting its iqama outranks the soonest card`() {
+        val cards = listOf(
+            card(PrayerName.FAJR, millisUntil = 10 * hour),
+            card(PrayerName.MAGHRIB, millisUntil = 5 * minute, toIqama = true),
+            card(PrayerName.ISHA, millisUntil = 2 * minute),
+        )
 
-        assertEquals(0, PrayerDeck.initialIndex(cards, next))
+        assertEquals(1, PrayerDeck.initialIndex(cards))
     }
 
     @Test
-    fun `an empty deck has no initial index past zero`() {
-        assertEquals(0, PrayerDeck.initialIndex(emptyList(), NextPrayer(PrayerName.FAJR, at(hour))))
+    fun `an empty deck opens at zero`() {
+        assertEquals(0, PrayerDeck.initialIndex(emptyList()))
     }
 }

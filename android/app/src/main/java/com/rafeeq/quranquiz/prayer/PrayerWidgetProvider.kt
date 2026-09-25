@@ -436,42 +436,29 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // deck, and a day change moves which prayer is next, so an index
             // left over from yesterday would point at the wrong prayer.
             val cards = PrayerDeck.build(ctx, now)
-            val (lat, lng) = coords
-            val next = PrayerTimesEngine.nextAfter(
-                now,
-                lat,
-                lng,
-                PrayerConfig.method(ctx),
-                PrayerConfig.madhab(ctx),
-                tz,
-            )
             val stored = PrayerWidgetConfig.index(ctx, widgetId)
             val shown = if (stored in cards.indices) {
                 stored
             } else {
-                PrayerDeck.initialIndex(cards, next).also {
+                PrayerDeck.initialIndex(cards).also {
                     PrayerWidgetConfig.setIndex(ctx, widgetId, it)
                 }
             }
 
             // The timer belongs to whichever card is showing, but lives on
             // the strip rather than inside the card — the card is just the
-            // name and the time. Counting up puts the base in the past and
-            // counts away from it; counting down puts it in the future. Both
-            // deltas are positive, because a Chronometer handed a negative
-            // target climbs from a meaningless number.
+            // name and the time. It always counts down: to the prayer, or,
+            // between adhan and iqama, to the iqama — marked with a leading
+            // minus so the two cannot be confused.
             val card = cards.getOrNull(shown)
             if (card == null) {
                 views.setViewVisibility(R.id.widget_timer, android.view.View.GONE)
             } else {
                 views.setViewVisibility(R.id.widget_timer, android.view.View.VISIBLE)
-                val base = if (card.countingUp) {
-                    SystemClock.elapsedRealtime() - card.millisUntil
-                } else {
-                    SystemClock.elapsedRealtime() + card.millisUntil
-                }
-                views.setChronometer(R.id.widget_timer, base, null, true)
-                views.setChronometerCountDown(R.id.widget_timer, !card.countingUp)
+                val base = SystemClock.elapsedRealtime() + card.millisUntil
+                val format = if (card.toIqama) "-%s" else null
+                views.setChronometer(R.id.widget_timer, base, format, true)
+                views.setChronometerCountDown(R.id.widget_timer, true)
             }
 
             // Only one arrow pair is meaningful with a single card, and two
@@ -618,8 +605,17 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 
         /** Display label for a prayer name in the device language (Arabic,
          *  else English) — from resources, since the launcher process has no
-         *  access to the JS i18n strings. */
-        internal fun nameLabel(ctx: Context, name: PrayerName): String {
+         *  access to the JS i18n strings. Dhuhr falling on a Friday ([at]) is
+         *  Jumu'ah. */
+        internal fun nameLabel(
+            ctx: Context,
+            name: PrayerName,
+            at: Date? = null,
+            tz: TimeZone = TimeZone.getDefault(),
+        ): String {
+            if (name == PrayerName.DHUHR && at != null && isFriday(at, tz)) {
+                return ctx.getString(R.string.prayer_widget_name_jumuah)
+            }
             val resId = when (name) {
                 PrayerName.FAJR -> R.string.prayer_widget_name_fajr
                 PrayerName.SUNRISE -> R.string.prayer_widget_name_sunrise
@@ -633,6 +629,10 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             }
             return ctx.getString(resId)
         }
+
+        internal fun isFriday(at: Date, tz: TimeZone): Boolean =
+            java.util.Calendar.getInstance(tz).apply { time = at }
+                .get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
 
         /**
          * The base text colour, matching [defaultBackground] — so it follows

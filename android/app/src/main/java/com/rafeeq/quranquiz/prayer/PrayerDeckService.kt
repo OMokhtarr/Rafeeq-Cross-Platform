@@ -215,24 +215,24 @@ internal object PrayerDeck {
         val label: String,
         val clock: String,
         val millisUntil: Long,
-        /** True while the prayer is inside its elapsed window, so the timer
-         *  counts up from its time rather than down to it. */
-        val countingUp: Boolean,
+        /** True between the adhan and the iqama, when the timer counts down
+         *  to the iqama and is shown with a minus sign so it cannot be read
+         *  as the countdown to a prayer's time. */
+        val toIqama: Boolean,
     )
 
     /**
-     * How long a prayer stays "current" after its time, counting up instead of
-     * counting down to the next one.
+     * The gap between a prayer's adhan and its iqama: 25 minutes for Fajr,
+     * 10 for Maghrib, 20 for the rest (Jumu'ah included).
      *
-     * The window is the period in which the prayer is still being performed,
-     * so the widget answers "how long since the adhan?" rather than jumping
-     * straight to the next prayer. Maghrib's window is shortest because its
-     * time is itself short; Fajr and Duha are given longer.
+     * Zero for the supplementary times — sunrise, Duha and the night times
+     * have no iqama, so their card rolls on as soon as the time arrives.
      */
     fun elapsedWindowMillis(name: PrayerName): Long = when (name) {
         PrayerName.MAGHRIB -> 10L * 60_000L
-        PrayerName.FAJR, PrayerName.DUHA -> 25L * 60_000L
-        else -> 20L * 60_000L
+        PrayerName.FAJR -> 25L * 60_000L
+        PrayerName.DHUHR, PrayerName.ASR, PrayerName.ISHA -> 20L * 60_000L
+        else -> 0L
     }
 
     /**
@@ -265,20 +265,20 @@ internal object PrayerDeck {
             ?.let { Date(it) }
 
     /**
-     * What a card's timer should show: time remaining until the prayer, or
-     * time elapsed since it if it started within its window.
+     * What a card's timer should show: time remaining until the prayer, or,
+     * between the adhan and the iqama, time remaining until the iqama.
      *
-     * [millis] is always positive and [countingUp] says which way to read it,
-     * because `Chronometer` cannot render a negative and would otherwise climb
-     * from a meaningless number.
+     * [millis] is always positive and [toIqama] says which target it counts
+     * to, because `Chronometer` cannot render a negative and would otherwise
+     * climb from a meaningless number.
      */
-    data class Timer(val millis: Long, val countingUp: Boolean)
+    data class Timer(val millis: Long, val toIqama: Boolean)
 
     /**
      * The timer for [name] given today's and tomorrow's times.
      *
-     * Three cases, in order: inside the window just after the prayer, count
-     * *up* from it; still ahead today, count down to it; otherwise count down
+     * Three cases, in order: between the adhan and the iqama, count down to
+     * the iqama; still ahead today, count down to it; otherwise count down
      * to tomorrow's occurrence. The elapsed case is checked first because a
      * prayer that has just passed is still the one the user cares about.
      *
@@ -289,33 +289,28 @@ internal object PrayerDeck {
         val todayAt = today.times[name]
         if (todayAt != null) {
             val since = now.time - todayAt.time
-            if (since in 0 until elapsedWindowMillis(name)) {
-                return Timer(since, countingUp = true)
+            val window = elapsedWindowMillis(name)
+            if (since in 0 until window) {
+                return Timer(window - since, toIqama = true)
             }
-            if (todayAt.after(now)) return Timer(todayAt.time - now.time, countingUp = false)
+            if (todayAt.after(now)) return Timer(todayAt.time - now.time, toIqama = false)
         }
         val tomorrowAt = tomorrow.times[name] ?: return null
-        return Timer(tomorrowAt.time - now.time, countingUp = false)
+        return Timer(tomorrowAt.time - now.time, toIqama = false)
     }
 
     /**
      * Which card the deck should open on.
      *
-     * A prayer inside its elapsed window wins: it has just been called, so it
-     * is the one the user is thinking about, and skipping straight to the next
-     * prayer would hide the "how long since the adhan?" the window exists to
-     * answer. Only when no card is counting up does this fall back to [next].
-     *
-     * Falls back to the first card when the next prayer is not itself a card —
-     * the user can hide nothing obligatory, but [next] is null during
-     * midnight sun, and a deck must still open somewhere.
+     * A prayer awaiting its iqama wins: it has just been called, so it is the
+     * one the user is thinking about. Otherwise the soonest of the user's
+     * chosen times — not only the five prayers, so after Isha a visible Last
+     * third comes before tomorrow's Fajr.
      */
-    fun initialIndex(cards: List<Card>, next: NextPrayer?): Int {
-        val elapsed = cards.indexOfFirst { it.countingUp }
-        if (elapsed >= 0) return elapsed
-        if (next == null) return 0
-        val index = cards.indexOfFirst { it.name == next.name }
-        return if (index >= 0) index else 0
+    fun initialIndex(cards: List<Card>): Int {
+        val iqama = cards.indexOfFirst { it.toIqama }
+        if (iqama >= 0) return iqama
+        return cards.indices.minByOrNull { cards[it].millisUntil } ?: 0
     }
 
     /**
@@ -408,10 +403,10 @@ internal object PrayerDeck {
             } ?: tomorrow.times[name] ?: return@mapNotNull null
             Card(
                 name = name,
-                label = PrayerWidgetProvider.nameLabel(ctx, name),
+                label = PrayerWidgetProvider.nameLabel(ctx, name, at, tz),
                 clock = timeFmt.format(at),
                 millisUntil = timer.millis,
-                countingUp = timer.countingUp,
+                toIqama = timer.toIqama,
             )
         }
     }

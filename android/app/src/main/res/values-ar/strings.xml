@@ -6,6 +6,7 @@
     <string name="prayer_widget_name_sunrise">الشروق</string>
     <string name="prayer_widget_name_duha">الضحى</string>
     <string name="prayer_widget_name_dhuhr">الظهر</string>
+    <string name="prayer_widget_name_jumuah">الجمعة</string>
     <string name="prayer_widget_name_asr">العصر</string>
     <string name="prayer_widget_name_maghrib">المغرب</string>
     <string name="prayer_widget_name_isha">العشاء</string>
