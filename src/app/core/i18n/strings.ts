@@ -36,6 +36,25 @@ export interface AppStrings {
     settings: string;
     /** One entry covers both: the page shows the qibla above the times. */
     prayerTimes: string;
+    tracker: string;
+  };
+
+  tracker: {
+    title: string;
+    menuSettings: string;
+    menuInfo: string;
+    noLocation: string;
+    sections: Record<"prayers" | "azkar" | "quran" | "daily" | "rawatib" | "fasting", string>;
+    items: Record<string, { title: string; subtitle?: string }>;
+    fasting: Record<"ramadan" | "arafah" | "ashura" | "tasua" | "shawwal" | "whiteDays" | "monday" | "thursday", { chip: string; subtitle: string }>;
+    fastTodayTitle: string;
+    settings: { title: string; question: string; obligatory: string; footnote: string };
+    info: {
+      subtitle: string;
+      purposeTitle: string; purpose: string;
+      howTitle: string; how: string[];
+      lockedTitle: string; locked: string[];
+    };
   };
 
   prayerTimes: {
@@ -593,6 +612,66 @@ const ar: AppStrings = {
     account: "حسابي",
     settings: "الإعدادات",
     prayerTimes: "المواقيت والقبلة",
+    tracker: "متابعة العبادات",
+  },
+  tracker: {
+    title: "متابعة العبادات",
+    menuSettings: "إعدادات متابعة العبادات",
+    menuInfo: "كيف تعمل؟",
+    noLocation: "حدّد موقعك في المواقيت لتُفتح العبادات في أوقاتها",
+    sections: {
+      prayers: "الصلوات", azkar: "الأذكار", quran: "القرآن الكريم",
+      daily: "عبادات يومية", rawatib: "سنن رواتب", fasting: "الصيام",
+    },
+    items: {
+      fajr: { title: "الفجر" }, dhuhr: { title: "الظهر" }, asr: { title: "العصر" },
+      maghrib: { title: "المغرب" }, isha: { title: "العشاء" },
+      azkarMorning: { title: "أذكار الصباح" },
+      azkarEvening: { title: "أذكار المساء" },
+      azkarSleep: { title: "أذكار النوم" },
+      quranDaily: { title: "قراءة القرآن", subtitle: "ورد يومي من القرآن الكريم" },
+      duha: { title: "صلاة الضحى", subtitle: "من 2 إلى 8 ركعات بعد شروق الشمس" },
+      sunnahFajr: { title: "سنة الفجر", subtitle: "ركعتان قبل صلاة الفجر" },
+      sunnahDhuhrBefore: { title: "سنة الظهر القبلية", subtitle: "4 ركعات قبل صلاة الظهر" },
+      sunnahDhuhrAfter: { title: "سنة الظهر البعدية", subtitle: "ركعتان بعد صلاة الظهر" },
+      sunnahMaghrib: { title: "سنة المغرب", subtitle: "ركعتان بعد صلاة المغرب" },
+      sunnahIsha: { title: "سنة العشاء", subtitle: "ركعتان بعد صلاة العشاء" },
+      qiyam: { title: "قيام الليل", subtitle: "من بعد صلاة العشاء حتى طلوع الفجر" },
+      witr: { title: "صلاة الوتر", subtitle: "ركعة أو ثلاث أو خمس أو سبع أو إحدى عشرة" },
+    },
+    fastTodayTitle: "صمت اليوم",
+    fasting: {
+      ramadan: { chip: "رمضان", subtitle: "صيام شهر رمضان" },
+      arafah: { chip: "يوم عرفة", subtitle: "صيام يوم عرفة" },
+      ashura: { chip: "عاشوراء", subtitle: "صيام يوم عاشوراء" },
+      tasua: { chip: "تاسوعاء", subtitle: "صيام اليوم التاسع من محرم" },
+      shawwal: { chip: "ست من شوال", subtitle: "صيام الست من شوال" },
+      whiteDays: { chip: "الأيام البيض", subtitle: "صيام الأيام البيض" },
+      monday: { chip: "الاثنين", subtitle: "صيام يوم الاثنين" },
+      thursday: { chip: "الخميس", subtitle: "صيام يوم الخميس" },
+    },
+    settings: {
+      title: "إعدادات متابعة العبادات",
+      question: "ما الذي يُحتسب في نسبة الإنجاز؟",
+      obligatory: "إلزامي",
+      footnote: "الصلوات الخمس تُحتسب دائماً بنسبة 50٪، والأقسام المفعّلة تتقاسم الـ 50٪ المتبقية بالتساوي.",
+    },
+    info: {
+      subtitle: "تابع عباداتك اليومية وحافظ على استمرارك",
+      purposeTitle: "وسيلة تنظيمية",
+      purpose: "خاصية المتابعة وسيلة تنظيمية تساعدك على الالتزام بالفرائض والسنن، وليست عبادة بذاتها ولا سنة عن النبي ﷺ؛ فاجعلها سراً بينك وبين الله، لا لجمع «الدرجات» ولا للمفاخرة أو الرياء.",
+      howTitle: "كيف تستخدمها؟",
+      how: [
+        "اضغط على أي عبادة لتسجيل إتمامها، واضغط مرة أخرى للتراجع",
+        "اضغط مطولاً على الأذكار لفتح صفحة القراءة، وعلى القرآن أو سورة الكهف لفتحها مباشرة",
+        "يتم إعادة التعيين تلقائياً كل يوم عند الفجر",
+      ],
+      lockedTitle: "العبادات المقيّدة بالوقت",
+      locked: [
+        "لا يمكن تسجيل الصلاة أو سنتها الراتبة قبل دخول وقتها",
+        "الأذكار والنوافل تُفتح بعد وقتها المسنون",
+      ],
+    },
   },
   prayerTimes: {
     title: "مواقيت الصلاة",
@@ -1141,6 +1220,66 @@ const en: AppStrings = {
     account: "Account",
     settings: "Settings",
     prayerTimes: "Prayer Times & Qibla",
+    tracker: "Worship Tracker",
+  },
+  tracker: {
+    title: "Worship Tracker",
+    menuSettings: "Tracker settings",
+    menuInfo: "How it works",
+    noLocation: "Set your location in Prayer Times so acts unlock at their times",
+    sections: {
+      prayers: "Prayers", azkar: "Azkar", quran: "The Quran",
+      daily: "Daily worship", rawatib: "Sunnah prayers", fasting: "Fasting",
+    },
+    items: {
+      fajr: { title: "Fajr" }, dhuhr: { title: "Dhuhr" }, asr: { title: "Asr" },
+      maghrib: { title: "Maghrib" }, isha: { title: "Isha" },
+      azkarMorning: { title: "Morning azkar" },
+      azkarEvening: { title: "Evening azkar" },
+      azkarSleep: { title: "Sleep azkar" },
+      quranDaily: { title: "Quran reading", subtitle: "A daily portion of the Quran" },
+      duha: { title: "Duha prayer", subtitle: "2 to 8 rak'ahs after sunrise" },
+      sunnahFajr: { title: "Fajr sunnah", subtitle: "2 rak'ahs before Fajr" },
+      sunnahDhuhrBefore: { title: "Dhuhr sunnah (before)", subtitle: "4 rak'ahs before Dhuhr" },
+      sunnahDhuhrAfter: { title: "Dhuhr sunnah (after)", subtitle: "2 rak'ahs after Dhuhr" },
+      sunnahMaghrib: { title: "Maghrib sunnah", subtitle: "2 rak'ahs after Maghrib" },
+      sunnahIsha: { title: "Isha sunnah", subtitle: "2 rak'ahs after Isha" },
+      qiyam: { title: "Qiyam al-Layl", subtitle: "From after Isha until Fajr" },
+      witr: { title: "Witr", subtitle: "1, 3, 5, 7 or 11 rak'ahs" },
+    },
+    fastTodayTitle: "I fasted today",
+    fasting: {
+      ramadan: { chip: "Ramadan", subtitle: "Fasting the month of Ramadan" },
+      arafah: { chip: "Day of Arafah", subtitle: "Fasting the Day of Arafah" },
+      ashura: { chip: "Ashura", subtitle: "Fasting the Day of Ashura" },
+      tasua: { chip: "Tasu'a", subtitle: "Fasting the 9th of Muharram" },
+      shawwal: { chip: "Six of Shawwal", subtitle: "Fasting six days of Shawwal" },
+      whiteDays: { chip: "White Days", subtitle: "Fasting the White Days" },
+      monday: { chip: "Monday", subtitle: "Fasting on Monday" },
+      thursday: { chip: "Thursday", subtitle: "Fasting on Thursday" },
+    },
+    settings: {
+      title: "Tracker settings",
+      question: "What counts toward completion?",
+      obligatory: "Required",
+      footnote: "The five prayers always count for 50%. Enabled sections share the remaining 50% equally.",
+    },
+    info: {
+      subtitle: "Track your daily worship and stay consistent",
+      purposeTitle: "An organising aid",
+      purpose: "Tracking is an aid to help you keep up with obligatory and sunnah acts. It is not an act of worship in itself, nor a sunnah of the Prophet ﷺ. Keep it between you and Allah, not for collecting points, boasting or showing off.",
+      howTitle: "How to use it",
+      how: [
+        "Tap any act to mark it done, and tap again to undo",
+        "Long-press azkar to open them, or the Quran to open it (Surah Al-Kahf on Fridays)",
+        "Everything resets automatically each day at Fajr",
+      ],
+      lockedTitle: "Time-bound acts",
+      locked: [
+        "A prayer or its sunnah can't be logged before its time begins",
+        "Azkar and voluntary prayers open at their recommended times",
+      ],
+    },
   },
   prayerTimes: {
     title: "Prayer Times",
