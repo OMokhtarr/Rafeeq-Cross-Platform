@@ -1,0 +1,442 @@
+/*
+ * WORSHIP TRACKER
+ * Outlined cards on the content background, like the More grid. One accent
+ * (the app gold) marks progress: the ring, today's strip day, ticked acts and
+ * the share chips. Locked acts fade rather than hide, so the day's shape
+ * stays visible.
+ */
+
+.wt-content {
+  --background: var(--color-bg-content);
+}
+
+.wt-page {
+  --wt-accent: var(--color-gold);
+  --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
+  box-sizing: border-box;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
+  padding: max(var(--space-5), var(--safe-inset-top)) var(--space-4)
+    calc(var(--bottom-nav-height) + var(--space-6));
+  color: var(--color-text-primary);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.wt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.wt-header h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.wt-round-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-back-btn-border, var(--color-border-card));
+  background: var(--color-bg-card);
+  color: var(--color-back-btn-color, var(--color-text-primary));
+}
+
+.wt-round-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.wt-menu-wrap {
+  position: relative;
+}
+
+.wt-menu {
+  position: absolute;
+  top: 46px;
+  inset-inline-start: 0;
+  z-index: 10;
+  min-width: 210px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-card);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card-lift);
+}
+
+.wt-menu button {
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--text-base);
+  text-align: start;
+}
+
+.wt-menu button + button {
+  border-top: 1px solid var(--color-border-subtle, var(--color-border-card));
+}
+
+/* ── Summary card ───────────────────────────────────────────────────────── */
+
+.wt-summary {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--color-border-card);
+  background: var(--color-bg-card);
+}
+
+.wt-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.wt-weekday {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.wt-dates {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Ring: a conic fill masked to a band, the score centred inside. */
+.wt-ring {
+  --wt-p: 0;
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.wt-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wt-accent) calc(var(--wt-p) * 1%),
+    var(--color-progress-track, var(--color-border-card)) 0
+  );
+  -webkit-mask: radial-gradient(circle, transparent 22px, #000 23px);
+  mask: radial-gradient(circle, transparent 22px, #000 23px);
+  transition: background var(--transition-base);
+}
+
+.wt-ring span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.wt-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-top: var(--space-4);
+  text-align: center;
+}
+
+.wt-strip-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.wt-strip-day.is-today {
+  color: var(--wt-accent);
+  font-weight: 700;
+}
+
+.wt-strip-dot {
+  --wt-p: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--wt-accent) calc(var(--wt-p) * 1%),
+    var(--color-progress-track, var(--color-border-card)) 0
+  );
+}
+
+.wt-strip-num {
+  font-size: var(--text-base);
+}
+
+.wt-hint {
+  width: 100%;
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--wt-accent-soft);
+  color: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+/* ── Sections ───────────────────────────────────────────────────────────── */
+
+.wt-section {
+  margin-bottom: var(--space-5);
+}
+
+.wt-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.wt-section-head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.wt-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.wt-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--wt-accent-soft);
+  color: var(--wt-accent);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.wt-prayer-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+}
+
+.wt-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wt-prayer,
+.wt-item {
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--color-border-card);
+  background: var(--color-bg-card);
+  color: inherit;
+  font: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.wt-prayer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 72px;
+  padding: var(--space-3) var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.wt-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-target, 44px);
+  padding: var(--space-4);
+  text-align: start;
+}
+
+.wt-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wt-item-title {
+  font-size: var(--text-md);
+}
+
+.wt-item-sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.wt-item-state {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.wt-prayer.is-done,
+.wt-item.is-done {
+  border-color: var(--wt-accent);
+  background: var(--wt-accent-soft);
+}
+
+.wt-prayer.is-locked,
+.wt-item.is-locked {
+  opacity: 0.55;
+}
+
+.wt-prayer:focus-visible,
+.wt-item:focus-visible,
+.wt-round-btn:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 2px;
+}
+
+.wt-lock,
+.wt-check {
+  width: 18px;
+  height: 18px;
+}
+
+.wt-check {
+  color: var(--wt-accent);
+}
+
+/* ── Sheets (rendered inside AccountModal) ──────────────────────────────── */
+
+.wt-sheet {
+  --wt-accent: var(--color-gold);
+  --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--color-text-primary);
+}
+
+.wt-sheet-question {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.wt-settings-list {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--color-border-card);
+}
+
+.wt-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.wt-settings-name {
+  flex: 1;
+}
+
+.wt-settings-fixed {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.wt-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  margin: 0;
+  border-radius: 13px;
+  background: var(--color-progress-track, var(--color-border-card));
+  transition: background var(--transition-fast);
+}
+
+.wt-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: inset-inline-start var(--transition-fast);
+}
+
+.wt-switch:checked {
+  background: var(--wt-accent);
+}
+
+.wt-switch:checked::after {
+  inset-inline-start: 23px;
+}
+
+.wt-sheet-footnote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.wt-info-card {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--color-border-card);
+  background: var(--color-bg-card-alt, var(--color-bg-card));
+}
+
+.wt-info-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.wt-info-card p,
+.wt-info-card li {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.wt-info-card p {
+  margin: 0;
+}
+
+.wt-info-card ul {
+  margin: 0;
+  padding-inline-start: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-ring::before,
+  .wt-prayer,
+  .wt-item,
+  .wt-switch,
+  .wt-switch::after {
+    transition: none;
+  }
+}

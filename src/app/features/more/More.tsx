@@ -1,7 +1,7 @@
 /**
  * MORE PAGE
  * Hub for secondary destinations that don't earn a tab of their own:
- * Prayer Times & Qibla, Account and Settings.
+ * Prayer Times & Qibla, the Worship Tracker, Account and Settings.
  *
  * Prayer times and the qibla share one entry because they share one page —
  * /prayer-times renders the compass in its header above the times, so two
@@ -26,7 +26,7 @@ import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import "./More.css";
 
 interface MoreEntry {
-  id: "account" | "settings" | "prayerTimes";
+  id: "account" | "settings" | "prayerTimes" | "tracker";
   icon: React.ReactNode;
   route: string;
   comingSoon?: boolean;
@@ -44,6 +44,19 @@ const ENTRIES: MoreEntry[] = [
       </svg>
     ),
     route: "/prayer-times",
+  },
+  {
+    id: "tracker",
+    // A checklist: ticked acts down the day.
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6l1.5 1.5L8 5" />
+        <path d="M4 12l1.5 1.5L8 11" />
+        <path d="M4 18l1.5 1.5L8 17" />
+        <path d="M11 6h9M11 12h9M11 18h9" />
+      </svg>
+    ),
+    route: "/tracker",
   },
   {
     id: "account",
@@ -77,6 +90,7 @@ const More: React.FC = () => {
     account: tm.account,
     settings: tm.settings,
     prayerTimes: tm.prayerTimes,
+    tracker: tm.tracker,
   };
 
   return (
