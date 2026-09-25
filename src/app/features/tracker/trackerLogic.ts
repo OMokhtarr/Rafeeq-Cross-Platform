@@ -25,6 +25,19 @@ export function trackingDayKey(now: Date, fajrToday?: Date): string {
   return toDayKey(trackingDate(now, fajrToday));
 }
 
+/**
+ * The page loads times once and stays mounted overnight. After midnight
+ * those anchors belong to yesterday, so they are dropped (nothing locks)
+ * until a fresh set for the new date arrives.
+ */
+export function freshTimes(
+  times: Partial<Record<PrayerKey, Date>> | null,
+  now: Date,
+): Partial<Record<PrayerKey, Date>> | null {
+  if (!times?.fajr) return times;
+  return toDayKey(times.fajr) === toDayKey(now) ? times : null;
+}
+
 const DUHA_AFTER_SUNRISE_MS = 15 * 60 * 1000;
 
 export function isUnlocked(

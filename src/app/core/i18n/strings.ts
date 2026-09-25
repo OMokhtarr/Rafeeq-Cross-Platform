@@ -43,6 +43,10 @@ export interface AppStrings {
     title: string;
     menuSettings: string;
     menuInfo: string;
+    back: string;
+    menu: string;
+    /** Screen-reader text on an act that has not opened yet. */
+    locked: string;
     noLocation: string;
     sections: Record<"prayers" | "azkar" | "quran" | "daily" | "rawatib" | "fasting", string>;
     items: Record<string, { title: string; subtitle?: string }>;
@@ -618,6 +622,9 @@ const ar: AppStrings = {
     title: "متابعة العبادات",
     menuSettings: "إعدادات متابعة العبادات",
     menuInfo: "كيف تعمل؟",
+    back: "رجوع",
+    menu: "المزيد من الخيارات",
+    locked: "مقفلة حتى دخول وقتها",
     noLocation: "حدّد موقعك في المواقيت لتُفتح العبادات في أوقاتها",
     sections: {
       prayers: "الصلوات", azkar: "الأذكار", quran: "القرآن الكريم",
@@ -1226,6 +1233,9 @@ const en: AppStrings = {
     title: "Worship Tracker",
     menuSettings: "Tracker settings",
     menuInfo: "How it works",
+    back: "Back",
+    menu: "More options",
+    locked: "Locked until its time begins",
     noLocation: "Set your location in Prayer Times so acts unlock at their times",
     sections: {
       prayers: "Prayers", azkar: "Azkar", quran: "The Quran",

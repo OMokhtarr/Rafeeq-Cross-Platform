@@ -1,6 +1,6 @@
 import {
   toDayKey, trackingDayKey, isUnlocked, hijriParts, fastingOccasion,
-  visibleSections, sectionShares, dayScore,
+  visibleSections, sectionShares, dayScore, freshTimes,
 } from "../trackerLogic";
 import { SECTIONS, SectionId } from "../trackerCatalog";
 
@@ -130,5 +130,18 @@ describe("scoring", () => {
   });
   it("ignores ticks for sections that aren't visible and never exceeds 100", () => {
     expect(dayScore(["fajr", "dhuhr", "asr", "maghrib", "isha", "fastToday"], ["prayers"])).toBe(100);
+  });
+});
+
+describe("freshTimes", () => {
+  const times = { fajr: new Date(2026, 8, 24, 4, 30), isha: new Date(2026, 8, 24, 19, 10) };
+  it("keeps times computed for today's calendar date", () => {
+    expect(freshTimes(times, new Date(2026, 8, 24, 23, 50))).toBe(times);
+  });
+  it("drops yesterday's times once midnight passes, so nothing locks on stale anchors", () => {
+    expect(freshTimes(times, new Date(2026, 8, 25, 0, 5))).toBeNull();
+  });
+  it("passes null through", () => {
+    expect(freshTimes(null, new Date())).toBeNull();
   });
 });

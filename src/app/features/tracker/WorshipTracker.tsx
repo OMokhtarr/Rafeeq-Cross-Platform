@@ -5,7 +5,7 @@
  * Fajr) can be edited; items open at their prayer times.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { IonPage, IonContent } from "@ionic/react";
+import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
@@ -13,7 +13,7 @@ import { loadPrayerDay } from "../../core/services/prayer/prayer-times.service";
 import type { PrayerDay } from "../../core/services/prayer/prayer-times.types";
 import { SECTIONS, ItemId, TrackerItem } from "./trackerCatalog";
 import {
-  trackingDate, toDayKey, isUnlocked, fastingOccasion, visibleSections, dayScore,
+  trackingDate, toDayKey, isUnlocked, freshTimes, fastingOccasion, visibleSections, dayScore,
 } from "./trackerLogic";
 import { loadDays, toggleItem, loadSettings, saveSettings } from "./trackerStore";
 import TrackerSettingsSheet from "./TrackerSettingsSheet";
@@ -44,13 +44,29 @@ const WorshipTracker: React.FC = () => {
   const pressTimer = useRef<number>();
   const longPressed = useRef(false);
 
-  useEffect(() => {
+  const reloadTimes = () => {
     loadPrayerDay().then(setPrayer).catch(() => setPrayer({ hasLocation: false, times: null, next: null }));
+  };
+
+  // Ionic keeps the page mounted, so re-read the clock and times whenever it
+  // is shown again (e.g. after the app was backgrounded overnight).
+  useIonViewWillEnter(() => {
+    setNow(new Date());
+    reloadTimes();
+  });
+
+  useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(id);
   }, []);
 
-  const times = prayer?.times ?? null;
+  const times = freshTimes(prayer?.times ?? null, now);
+  const timesStale = Boolean(prayer?.times) && !times;
+
+  // Past midnight the loaded times belong to yesterday: fetch the new day's.
+  useEffect(() => {
+    if (timesStale) reloadTimes();
+  }, [timesStale]);
   const today = trackingDate(now, times?.fajr);
   const dayKey = toDayKey(today);
   const isPreviousDay = dayKey !== toDayKey(now);
@@ -90,6 +106,9 @@ const WorshipTracker: React.FC = () => {
     },
     onPointerUp: () => window.clearTimeout(pressTimer.current),
     onPointerLeave: () => window.clearTimeout(pressTimer.current),
+    onPointerCancel: () => window.clearTimeout(pressTimer.current),
+    // Keep Android's long-press context menu from firing alongside navigation.
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
     onClick: () => tap(item),
   });
 
@@ -148,6 +167,7 @@ const WorshipTracker: React.FC = () => {
                   {subtitle && section.id !== "prayers" && <span className="wt-item-sub">{subtitle}</span>}
                 </span>
                 <span className="wt-item-state">{done(item.id) ? checkIcon : open ? null : lockIcon}</span>
+                {!open && <span className="wt-sr-only">{tt.locked}</span>}
               </button>
             );
           })}
@@ -161,18 +181,18 @@ const WorshipTracker: React.FC = () => {
       <IonContent fullscreen className="wt-content">
         <div className="wt-page" dir={isRTL ? "rtl" : "ltr"}>
           <header className="wt-header">
-            <button className="wt-round-btn" onClick={() => history.goBack()} aria-label="back">
+            <button className="wt-round-btn" onClick={() => history.goBack()} aria-label={tt.back}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={isRTL ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             </button>
             <h1>{tt.title}</h1>
             <div className="wt-menu-wrap">
-              <button className="wt-round-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="menu" aria-expanded={menuOpen}>
+              <button className="wt-round-btn" onClick={() => setMenuOpen((o) => !o)} aria-label={tt.menu} aria-expanded={menuOpen}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               </button>
               {menuOpen && (
-                <div className="wt-menu" role="menu">
-                  <button role="menuitem" onClick={() => { setMenuOpen(false); setSheet("settings"); }}>{tt.menuSettings}</button>
-                  <button role="menuitem" onClick={() => { setMenuOpen(false); setSheet("info"); }}>{tt.menuInfo}</button>
+                <div className="wt-menu">
+                  <button onClick={() => { setMenuOpen(false); setSheet("settings"); }}>{tt.menuSettings}</button>
+                  <button onClick={() => { setMenuOpen(false); setSheet("info"); }}>{tt.menuInfo}</button>
                 </div>
               )}
             </div>
@@ -211,6 +231,7 @@ const WorshipTracker: React.FC = () => {
       {sheet === "settings" && (
         <TrackerSettingsSheet
           settings={settings}
+          date={today}
           onChange={(s) => { setSettings(s); saveSettings(s); }}
           onClose={() => setSheet(null)}
         />

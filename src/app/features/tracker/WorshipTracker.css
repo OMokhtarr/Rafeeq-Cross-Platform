@@ -62,7 +62,7 @@
 .wt-menu {
   position: absolute;
   top: 46px;
-  inset-inline-start: 0;
+  inset-inline-end: 0;
   z-index: 10;
   min-width: 210px;
   overflow: hidden;
@@ -439,4 +439,13 @@
   .wt-switch::after {
     transition: none;
   }
+}
+
+.wt-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

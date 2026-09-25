@@ -6,20 +6,22 @@ import React from "react";
 import AccountModal from "../account/AccountModal";
 import { useLang } from "../../core/context/LanguageContext";
 import { OPTIONAL_SECTIONS, SectionId } from "./trackerCatalog";
-import { sectionShares } from "./trackerLogic";
+import { sectionShares, visibleSections } from "./trackerLogic";
 
 interface Props {
   settings: Record<SectionId, boolean>;
+  /** The tracking day, so the preview matches its score (fasting only counts on fasting days). */
+  date: Date;
   onChange: (s: Record<SectionId, boolean>) => void;
   onClose: () => void;
 }
 
 const pct = (n = 0) => `${Math.round(n * 100)}%`;
 
-const TrackerSettingsSheet: React.FC<Props> = ({ settings, onChange, onClose }) => {
+const TrackerSettingsSheet: React.FC<Props> = ({ settings, date, onChange, onClose }) => {
   const { t, isRTL } = useLang();
   const tt = t.tracker;
-  const shares = sectionShares(["prayers", ...OPTIONAL_SECTIONS.filter((id) => settings[id])]);
+  const shares = sectionShares(visibleSections(date, settings));
 
   return (
     <AccountModal title={tt.settings.title} onClose={onClose}>
