@@ -106,6 +106,9 @@ function putCachedMs(
     .catch(() => {});
 }
 
+/** Max timestamp requests in flight at once (stays under the WebView's per-host limit). */
+const DURATION_CONCURRENCY = 4;
+
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
 /**
@@ -152,17 +155,24 @@ export async function getRangeDurations(
   const perVerseSec = new Array<number>(queue.length).fill(0);
   if (queue.length === 0) return { perVerseSec, totalSec: 0 };
 
-  // Resolve every verse's duration cache-first, in parallel.
-  await Promise.all(
-    queue.map(async (v, i) => {
-      if (signal?.aborted) return;
+  // Resolve every verse's duration cache-first, with bounded concurrency. Firing one
+  // request per verse at once (up to 286 for a long surah) queues most of them behind the
+  // WebView's per-host connection limit, where they hit the API client's request timeout
+  // and trip its offline latch — which then blocks the audio URL lookups playback needs.
+  let next = 0;
+  const worker = async () => {
+    while (next < queue.length && !signal?.aborted) {
+      const i = next++;
       perVerseSec[i] = await getVerseDurationSec(
         reciterId,
-        v.sura,
-        v.aya,
+        queue[i].sura,
+        queue[i].aya,
         signal,
       );
-    }),
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(DURATION_CONCURRENCY, queue.length) }, worker),
   );
 
   // Total is ALWAYS the sum of the selected verses' durations — i.e. range-relative. A
