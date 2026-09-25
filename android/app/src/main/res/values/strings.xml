@@ -12,6 +12,7 @@
     <string name="prayer_widget_name_sunrise">Sunrise</string>
     <string name="prayer_widget_name_duha">Duha</string>
     <string name="prayer_widget_name_dhuhr">Dhuhr</string>
+    <string name="prayer_widget_name_jumuah">Jumu\'ah</string>
     <string name="prayer_widget_name_asr">Asr</string>
     <string name="prayer_widget_name_maghrib">Maghrib</string>
     <string name="prayer_widget_name_isha">Isha</string>

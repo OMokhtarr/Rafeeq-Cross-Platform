@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
-import QiblaHeader, { DIAL_KEYS } from "./QiblaHeader";
+import QiblaHeader from "./QiblaHeader";
 import ShowTimesSheet from "./ShowTimesSheet";
 import PrayerMenuSheet, { type PrayerMenuTarget } from "./PrayerMenuSheet";
 import WidgetSettingsSheet from "./WidgetSettingsSheet";
@@ -209,7 +209,9 @@ const PrayerTimes: React.FC = () => {
       minute: "2-digit",
     });
 
-  const rowLabel = (key: PrayerKey): string => tp[key];
+  // Dhuhr on a Friday is Jumu'ah.
+  const rowLabel = (key: PrayerKey): string =>
+    key === "dhuhr" && new Date(now).getDay() === 5 ? tp.jumuah : tp[key];
 
   // Moved here from the header: the dates label the timetable, so they head
   // its card.
@@ -284,7 +286,7 @@ const PrayerTimes: React.FC = () => {
                         }
                       : null
                   }
-                  times={DIAL_KEYS.filter((key) => day.times![key]).map((key) => ({
+                  times={rowKeys.map((key) => ({
                     key,
                     at: day.times![key]!,
                   }))}

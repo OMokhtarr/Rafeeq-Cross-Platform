@@ -60,13 +60,29 @@ const REQUEST_TIMEOUT_MS = 4000;
  * Once a request fails for want of a network, every later call would rediscover
  * the same timeout one at a time. Latch that state so subsequent calls fail
  * instantly, and clear it when the browser reports connectivity is back.
+ *
+ * The latch also EXPIRES after OFFLINE_LATCH_MS. A single timeout is not proof
+ * of being offline (e.g. a burst of parallel requests queued behind the
+ * WebView's per-host connection limit), and the "online" event never fires if
+ * the device never actually lost its connection — so an unbounded latch made
+ * every later audio lookup fail until the app was restarted.
  */
-let offlineUntilOnline = false;
+const OFFLINE_LATCH_MS = 10000;
+let offlineLatchedAt: number | null = null;
 
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
-    offlineUntilOnline = false;
+    offlineLatchedAt = null;
   });
+}
+
+function isOfflineLatched(): boolean {
+  if (offlineLatchedAt === null) return false;
+  if (Date.now() - offlineLatchedAt >= OFFLINE_LATCH_MS) {
+    offlineLatchedAt = null;
+    return false;
+  }
+  return true;
 }
 
 /** True when the failure means "no usable connection", not "server said no". */
@@ -80,7 +96,7 @@ function isNetworkFailure(err: unknown): boolean {
 
 /** Marks the client offline so later calls short-circuit instead of hanging. */
 function markOffline(): void {
-  offlineUntilOnline = true;
+  offlineLatchedAt = Date.now();
 }
 
 /**
@@ -94,7 +110,7 @@ export function isLikelyOffline(): boolean {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return true;
   }
-  return offlineUntilOnline;
+  return isOfflineLatched();
 }
 
 /** Cheap pre-flight: skip the request entirely when we know it cannot succeed. */
@@ -105,7 +121,7 @@ function assertMaybeOnline(): void {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     throw new QuranApiOffline();
   }
-  if (offlineUntilOnline) throw new QuranApiOffline();
+  if (isOfflineLatched()) throw new QuranApiOffline();
 }
 
 /** fetch() that gives up after `ms` instead of hanging on a dead socket. */

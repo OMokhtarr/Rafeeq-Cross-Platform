@@ -44,6 +44,8 @@ export interface AppStrings {
     fajr: string;
     sunrise: string;
     dhuhr: string;
+    /** Dhuhr's name on a Friday. */
+    jumuah: string;
     asr: string;
     maghrib: string;
     isha: string;
@@ -597,6 +599,7 @@ const ar: AppStrings = {
     fajr: "الفجر",
     sunrise: "الشروق",
     dhuhr: "الظهر",
+    jumuah: "الجمعة",
     asr: "العصر",
     maghrib: "المغرب",
     isha: "العشاء",
@@ -1144,6 +1147,7 @@ const en: AppStrings = {
     fajr: "Fajr",
     sunrise: "Sunrise",
     dhuhr: "Dhuhr",
+    jumuah: "Jumu'ah",
     asr: "Asr",
     maghrib: "Maghrib",
     isha: "Isha",
