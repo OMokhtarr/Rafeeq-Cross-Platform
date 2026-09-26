@@ -73,8 +73,8 @@
   <body>
     <h1>Privacy Policy</h1>
     <p class="updated">
-      <strong>Last updated:</strong> 14 August 2026 &nbsp;·&nbsp;
-      <strong>Effective:</strong> 14 August 2026
+      <strong>Last updated:</strong> 26 September 2026 &nbsp;·&nbsp;
+      <strong>Effective:</strong> 26 September 2026
     </p>
 
     <p>
@@ -85,8 +85,10 @@
 
     <p>
       The App has no accounts and no sign-in, and needs no permissions for
-      ordinary use. The one feature that sends data off your device — Recite
-      Mode — is optional and is described below.
+      Quran reading, memorisation, or quizzes. Two optional features ask for a
+      permission and can send limited data off your device: Recite Mode
+      (microphone) and prayer times / qibla (approximate location). Both are
+      described below.
     </p>
 
     <div class="callout">
@@ -112,6 +114,17 @@
       <li>Memorisation (Hifz) plans, progress, and streaks</li>
       <li>Quran text, translations, and fonts cached for offline reading</li>
       <li>Downloaded recitation audio files</li>
+      <li>
+        Your approximate location and the place name derived from it, used for
+        prayer times, qibla, and the home-screen widget
+      </li>
+      <li>
+        Prayer-time settings (calculation method, which times are shown,
+        notification choices) and widget appearance settings
+      </li>
+      <li>Worship tracker entries, such as prayers and fasts you tick off</li>
+      <li>Favourite azkar</li>
+      <li>Saved quiz range sets</li>
     </ul>
     <p>
       Uninstalling the App, or clearing its storage from Android settings,
@@ -152,7 +165,50 @@
       </li>
     </ul>
 
-    <h2>3. Religious information and your consent</h2>
+    <h2>3. Location, prayer times, and qibla</h2>
+    <p>
+      Prayer times, the qibla compass, prayer notifications, and the home-screen
+      widget need to know roughly where you are. Android asks for
+      <strong>approximate (coarse) location</strong> permission the first time
+      you use them. The App never requests precise location.
+    </p>
+    <ul>
+      <li>
+        <strong>Calculated on your device.</strong> Prayer times and the qibla
+        direction are computed on the device from your coordinates. Your
+        location is not sent to us or to any prayer-times service.
+      </li>
+      <li>
+        <strong>Place name lookup.</strong> To show the name of your town or
+        city, the App passes your approximate coordinates to Android's built-in
+        geocoding service. On most devices this service is provided by Google
+        and performs a network request under
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
+          >Google's privacy policy</a
+        >. The result is cached on your device so the lookup is not repeated
+        unless you move.
+      </li>
+      <li>
+        <strong>Compass.</strong> The qibla compass reads the device's motion
+        and magnetic sensors. These readings are used only on the device and
+        are never stored or transmitted.
+      </li>
+      <li>
+        <strong>Notifications and alarms.</strong> If you turn on prayer
+        notifications, the App asks for notification permission and schedules
+        exact alarms on the device. It also restores them after a restart or
+        a time-zone change. No push service or server is involved.
+      </li>
+      <li>
+        <strong>Declining or withdrawing.</strong> If you decline location
+        permission, or revoke it in Android Settings → Apps → Rafeeq →
+        Permissions, the rest of the App works normally. Prayer times and qibla
+        will not be available until a location is provided. Clearing the App's
+        storage removes the saved location.
+      </li>
+    </ul>
+
+    <h2>4. Religious information and your consent</h2>
     <p>
       Recitation audio, memorisation progress, and reading activity reveal
       religious practice, and many privacy laws treat that as a
@@ -162,7 +218,8 @@
     <ul>
       <li>
         <strong>Nothing sensitive is processed by default.</strong> Reading,
-        memorisation, and quiz activity never leave your device at all, so no
+        memorisation, quiz, azkar, and worship tracker activity (including the
+        prayers and fasts you record) never leave your device at all, so no
         consent is needed for them — there is no collection to consent to.
       </li>
       <li>
@@ -181,7 +238,7 @@
       </li>
     </ul>
 
-    <h2>4. We do not train AI models on your content</h2>
+    <h2>5. We do not train AI models on your content</h2>
     <p>
       Your notes, reflections, bookmarks, memorisation records, and recitation
       audio are <strong>never</strong> used to train, fine-tune, or evaluate any
@@ -192,7 +249,7 @@
       first — continuing to use the App would not be treated as agreement.
     </p>
 
-    <h2>5. No account required</h2>
+    <h2>6. No account required</h2>
     <p>
       The App has no sign-in and no user account. Your notes, bookmarks,
       memorisation progress, and your Hifz streak are written only to
@@ -200,7 +257,7 @@
       your identity in any way.
     </p>
 
-    <h2>6. Third parties the App connects to</h2>
+    <h2>7. Third parties the App connects to</h2>
     <p>
       These are every external service the App contacts, what each one is for,
       and what it receives. Each operates under its own privacy policy, linked
@@ -267,11 +324,24 @@
           <td>Mushaf fonts</td>
           <td>Nothing beyond a standard web request</td>
         </tr>
+        <tr>
+          <td>
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
+              >Android geocoding service</a
+            >
+            (usually Google)
+          </td>
+          <td>Turning your approximate location into a place name</td>
+          <td>
+            Approximate coordinates, only when a place name is looked up and only
+            if you have granted location permission
+          </td>
+        </tr>
       </tbody>
     </table>
     <p>All connections use encrypted transport (HTTPS/WSS).</p>
 
-    <h2>7. International data transfers</h2>
+    <h2>8. International data transfers</h2>
     <p>
       Deepgram and Cloudflare are based in the United States, and Cloudflare
       serves requests from data centres worldwide, so if you use Recite Mode
@@ -281,18 +351,27 @@
       identity because the App has none, and reaches no third party beyond the
       transcription provider itself.
     </p>
+    <p>
+      The place-name lookup described in section 3 is handled by your
+      device's geocoding provider, which may also process the coordinates
+      outside your country. Only approximate coordinates are sent, and nothing
+      that identifies you is sent with them.
+    </p>
 
-    <h2>8. What the App does not do</h2>
+    <h2>9. What the App does not do</h2>
     <ul>
       <li>No advertising, and no advertising identifiers</li>
       <li>No analytics or behavioural tracking SDKs</li>
       <li>No selling or sharing of personal data</li>
       <li>
-        No access to your location, contacts, photos, files, or call history
+        No access to your precise location, and no location tracking in the
+        background: approximate location is used only for prayer times and
+        qibla
       </li>
+      <li>No access to your contacts, photos, files, or call history</li>
     </ul>
 
-    <h2>9. Security</h2>
+    <h2>10. Security</h2>
     <p>The measures protecting the small amount of data that moves at all:</p>
     <ul>
       <li>
@@ -327,16 +406,22 @@
       </li>
     </ul>
 
-    <h2>10. Backing up your data</h2>
+    <h2>11. Backing up your data</h2>
     <p>
       Because there is no account, the App gives you a file instead. In
-      <strong>Account → Backup</strong>, "Export My Data" writes your notes,
-      bookmarks and streaks to a JSON file you control; "Restore From File"
+      <strong>Account → Backup</strong>, "Export My Data" writes your data
+      to a JSON file you control; "Restore From File"
       loads it back on another device. The file stays wherever you save it — the
       App never uploads it anywhere.
     </p>
+    <p>
+      The backup file includes your notes, bookmarks, memorisation progress,
+      streaks, preferences, worship tracker entries, favourite azkar, and saved
+      quiz range sets. It does not include your saved location, which the App
+      simply asks for again on the new device.
+    </p>
 
-    <h2>11. Accessing, correcting, and deleting your data</h2>
+    <h2>12. Accessing, correcting, and deleting your data</h2>
     <p>
       <strong>Access and correction.</strong> Everything the App holds about you
       is on your device and directly visible in the App — your notes, bookmarks,
@@ -369,14 +454,15 @@
       no such data exists.
     </div>
 
-    <h2>12. Children's privacy</h2>
+    <h2>13. Children's privacy</h2>
     <p>
       The App is suitable for all ages and does not knowingly collect personal
       information from children under 13. Recite Mode requires microphone
-      permission, which on most devices requires the device owner to grant it.
+      permission, and prayer times require location permission. On most
+      devices, the device owner has to grant these.
     </p>
 
-    <h2>13. Changes to this policy</h2>
+    <h2>14. Changes to this policy</h2>
     <p>
       If this policy changes materially — particularly regarding what data
       leaves your device — the "Last updated" date above will change and the
@@ -403,5 +489,6 @@
     <p>
       See also the <a href="terms.html">Terms &amp; Conditions</a>.
     </p>
+    <p lang="ar" dir="rtl"><a href="privacy-ar.html">اقرأ هذه السياسة بالعربية</a></p>
   </body>
 </html>
