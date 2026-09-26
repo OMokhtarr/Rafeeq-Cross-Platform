@@ -9,11 +9,11 @@ describe("days", () => {
     expect(toggleItem("2026-09-24", "fajr")["2026-09-24"]).toEqual([]);
     expect(loadDays()["2026-09-24"]).toEqual([]);
   });
-  it("keeps only the 7 newest days", () => {
+  it("keeps every day so the calendar can show old history", () => {
     for (let d = 10; d <= 18; d++) toggleItem(`2026-09-${d}`, "fajr");
     const keys = Object.keys(loadDays()).sort();
-    expect(keys).toHaveLength(7);
-    expect(keys[0]).toBe("2026-09-12");
+    expect(keys).toHaveLength(9);
+    expect(keys[0]).toBe("2026-09-10");
   });
   it("survives corrupt JSON", () => {
     localStorage.setItem("rafeeq.tracker.days", "{not json");

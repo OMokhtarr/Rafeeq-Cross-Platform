@@ -47,6 +47,11 @@ export interface AppStrings {
     menu: string;
     /** Screen-reader text on an act that has not opened yet. */
     locked: string;
+    viewingPast: string;
+    backToToday: string;
+    openCalendar: string;
+    prevMonth: string;
+    nextMonth: string;
     noLocation: string;
     sections: Record<"prayers" | "azkar" | "quran" | "daily" | "rawatib" | "fasting", string>;
     items: Record<string, { title: string; subtitle?: string }>;
@@ -625,6 +630,11 @@ const ar: AppStrings = {
     back: "رجوع",
     menu: "المزيد من الخيارات",
     locked: "مقفلة حتى دخول وقتها",
+    viewingPast: "تعرض بيانات يوم سابق",
+    backToToday: "العودة لليوم",
+    openCalendar: "اختيار يوم من التقويم",
+    prevMonth: "الشهر السابق",
+    nextMonth: "الشهر التالي",
     noLocation: "حدّد موقعك في المواقيت لتُفتح العبادات في أوقاتها",
     sections: {
       prayers: "الصلوات", azkar: "الأذكار", quran: "القرآن الكريم",
@@ -1236,6 +1246,11 @@ const en: AppStrings = {
     back: "Back",
     menu: "More options",
     locked: "Locked until its time begins",
+    viewingPast: "Viewing a past day",
+    backToToday: "Back to today",
+    openCalendar: "Pick a day from the calendar",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
     noLocation: "Set your location in Prayer Times so acts unlock at their times",
     sections: {
       prayers: "Prayers", azkar: "Azkar", quran: "The Quran",

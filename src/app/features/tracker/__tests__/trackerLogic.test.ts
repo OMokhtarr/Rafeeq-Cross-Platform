@@ -1,6 +1,6 @@
 import {
   toDayKey, trackingDayKey, isUnlocked, hijriParts, fastingOccasion,
-  visibleSections, sectionShares, dayScore, freshTimes,
+  visibleSections, sectionShares, dayScore, freshTimes, monthGrid,
 } from "../trackerLogic";
 import { SECTIONS, SectionId } from "../trackerCatalog";
 
@@ -143,5 +143,20 @@ describe("freshTimes", () => {
   });
   it("passes null through", () => {
     expect(freshTimes(null, new Date())).toBeNull();
+  });
+});
+
+describe("monthGrid", () => {
+  it("pads September 2026 to start on Saturday", () => {
+    // 1 Sep 2026 is a Tuesday: Sat, Sun, Mon come first as blanks.
+    const cells = monthGrid(2026, 8, 6);
+    expect(cells.slice(0, 3)).toEqual([null, null, null]);
+    expect(cells[3]?.getDate()).toBe(1);
+    expect(cells.filter(Boolean)).toHaveLength(30);
+    expect(cells.length % 7).toBe(0);
+  });
+  it("needs no padding when the month starts on the week start", () => {
+    // 1 Feb 2026 is a Sunday.
+    expect(monthGrid(2026, 1, 0)[0]?.getDate()).toBe(1);
   });
 });

@@ -18,6 +18,7 @@ import {
 import { loadDays, toggleItem, loadSettings, saveSettings } from "./trackerStore";
 import TrackerSettingsSheet from "./TrackerSettingsSheet";
 import TrackerInfoSheet from "./TrackerInfoSheet";
+import TrackerCalendarSheet from "./TrackerCalendarSheet";
 import { ITEM_ICONS } from "./trackerIcons";
 import { getSurahStartPage } from "../../core/services/data/metadata.service";
 import "./WorshipTracker.css";
@@ -41,7 +42,9 @@ const WorshipTracker: React.FC = () => {
   const [days, setDays] = useState(loadDays);
   const [settings, setSettings] = useState(loadSettings);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sheet, setSheet] = useState<"settings" | "info" | null>(null);
+  const [sheet, setSheet] = useState<"settings" | "info" | "calendar" | null>(null);
+  /** A past day being viewed read-only; null shows the current tracking day. */
+  const [viewed, setViewed] = useState<Date | null>(null);
   const pressTimer = useRef<number>();
   const longPressed = useRef(false);
 
@@ -73,9 +76,19 @@ const WorshipTracker: React.FC = () => {
   const today = trackingDate(now, times?.fajr);
   const dayKey = toDayKey(today);
   const isPreviousDay = dayKey !== toDayKey(now);
-  const ticked = days[dayKey] ?? [];
-  const visible = visibleSections(today, settings);
-  const occasion = fastingOccasion(today);
+  // Everything below the strip reads from the shown day: today, or a past
+  // day picked from the strip or calendar, which is read-only.
+  const shown = viewed && toDayKey(viewed) < dayKey ? viewed : today;
+  const shownKey = toDayKey(shown);
+  const readOnly = shownKey !== dayKey;
+  const ticked = days[shownKey] ?? [];
+  const visible = visibleSections(shown, settings);
+  const occasion = fastingOccasion(shown);
+  const logged = useMemo(
+    () => new Set(Object.keys(days).filter((k) => days[k].length > 0)),
+    [days],
+  );
+  const pickDay = (d: Date) => setViewed(toDayKey(d) === dayKey ? null : d);
 
   const strip = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -85,7 +98,7 @@ const WorshipTracker: React.FC = () => {
   }), [today.getTime(), days, settings]);
 
   const tap = (item: TrackerItem) => {
-    if (longPressed.current) return;
+    if (longPressed.current || readOnly) return;
     if (!isUnlocked(item, now, times, isPreviousDay)) return;
     setDays(toggleItem(dayKey, item.id));
   };
@@ -116,12 +129,12 @@ const WorshipTracker: React.FC = () => {
   });
 
   const locale = lang === "ar" ? "ar-EG" : "en-GB";
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(today);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(shown);
   const hijri = new Intl.DateTimeFormat(
     lang === "ar" ? "ar-SA-u-ca-islamic-umalqura" : "en-GB-u-ca-islamic-umalqura",
     { day: "numeric", month: "long" },
-  ).format(today);
-  const greg = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(today);
+  ).format(shown);
+  const greg = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(shown);
   const score = dayScore(ticked, visible);
 
   const done = (id: ItemId) => ticked.includes(id);
@@ -150,7 +163,7 @@ const WorshipTracker: React.FC = () => {
         </div>
         <div className={section.id === "prayers" ? "wt-prayer-row" : "wt-item-list"}>
           {section.items.map((item) => {
-            const open = isUnlocked(item, now, times, isPreviousDay);
+            const open = readOnly || isUnlocked(item, now, times, isPreviousDay);
             const isFast = item.id === "fastToday";
             const title = isFast ? tt.fastTodayTitle : tt.items[item.id].title;
             const subtitle = isFast && occasion ? tt.fasting[occasion].subtitle : tt.items[item.id]?.subtitle;
@@ -159,10 +172,11 @@ const WorshipTracker: React.FC = () => {
                 key={item.id}
                 className={
                   (section.id === "prayers" ? "wt-prayer" : "wt-item") +
-                  (done(item.id) ? " is-done" : "") + (open ? "" : " is-locked")
+                  (done(item.id) ? " is-done" : "") + (open ? "" : " is-locked") +
+                  (readOnly ? " is-readonly" : "")
                 }
                 aria-pressed={done(item.id)}
-                aria-disabled={!open}
+                aria-disabled={!open || readOnly}
                 {...pressHandlers(item)}
               >
                 {section.id !== "prayers" && ITEM_ICONS[item.id] && (
@@ -211,22 +225,46 @@ const WorshipTracker: React.FC = () => {
                 <div className="wt-weekday">{weekday}</div>
                 <div className="wt-dates">{hijri} — {greg}</div>
               </div>
+              <button
+                className="wt-round-btn wt-cal-btn"
+                onClick={() => setSheet("calendar")}
+                aria-label={tt.openCalendar}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+                  <path d="M3.5 10h17M8 3v4M16 3v4" />
+                </svg>
+              </button>
               <div className="wt-ring" style={{ "--wt-p": score } as React.CSSProperties}>
                 <span>{score}</span>
               </div>
             </div>
             <div className="wt-strip">
               {strip.map(({ d, key, score: s }) => (
-                <div key={key} className={"wt-strip-day" + (key === dayKey ? " is-today" : "")}>
+                <button
+                  key={key}
+                  className={
+                    "wt-strip-day" + (key === dayKey ? " is-today" : "") + (key === shownKey ? " is-selected" : "")
+                  }
+                  onClick={() => pickDay(d)}
+                  aria-pressed={key === shownKey}
+                >
                   <span className="wt-strip-name">{new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d)}</span>
                   <span className="wt-strip-dot" style={{ "--wt-p": s } as React.CSSProperties} />
                   <span className="wt-strip-num">{d.getDate()}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
-          {prayer && !prayer.hasLocation && (
+          {readOnly && (
+            <div className="wt-past-banner" role="status">
+              <span>{tt.viewingPast}</span>
+              <button onClick={() => setViewed(null)}>{tt.backToToday}</button>
+            </div>
+          )}
+
+          {prayer && !prayer.hasLocation && !readOnly && (
             <button className="wt-hint" onClick={() => history.push("/prayer-times")}>{tt.noLocation}</button>
           )}
 
@@ -240,6 +278,15 @@ const WorshipTracker: React.FC = () => {
           settings={settings}
           date={today}
           onChange={(s) => { setSettings(s); saveSettings(s); }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {sheet === "calendar" && (
+        <TrackerCalendarSheet
+          selected={shown}
+          today={today}
+          logged={logged}
+          onPick={(d) => { pickDay(d); setSheet(null); }}
           onClose={() => setSheet(null)}
         />
       )}

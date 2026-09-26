@@ -1,14 +1,13 @@
 /**
  * WORSHIP TRACKER STORE
  * Local-only persistence: which items were ticked on each tracking day, and
- * which sections count. Only the last 7 days are kept, which is all the
- * header strip ever shows.
+ * which sections count. Every day is kept (a few bytes each) so the
+ * calendar can show any past day.
  */
 import { ItemId, SectionId, OPTIONAL_SECTIONS } from "./trackerCatalog";
 
 const DAYS_KEY = "rafeeq.tracker.days";
 const SETTINGS_KEY = "rafeeq.tracker.settings";
-const KEEP_DAYS = 7;
 
 function readObject(key: string): Record<string, unknown> {
   try {
@@ -32,14 +31,12 @@ export function toggleItem(dayKey: string, id: ItemId): Record<string, ItemId[]>
   const days = loadDays();
   const current = days[dayKey] ?? [];
   days[dayKey] = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-  const kept: Record<string, ItemId[]> = {};
-  Object.keys(days).sort().slice(-KEEP_DAYS).forEach((k) => (kept[k] = days[k]));
   try {
-    localStorage.setItem(DAYS_KEY, JSON.stringify(kept));
+    localStorage.setItem(DAYS_KEY, JSON.stringify(days));
   } catch {
     // Storage full or blocked: the tick still shows for this session.
   }
-  return kept;
+  return days;
 }
 
 export function loadSettings(): Record<SectionId, boolean> {

@@ -115,3 +115,18 @@ export function dayScore(ticked: ItemId[], visible: SectionId[]): number {
   }, 0);
   return Math.min(100, Math.round(total * 100));
 }
+
+/**
+ * A month as calendar cells: leading nulls up to the first day's weekday
+ * (counted from `weekStart`, 0 = Sunday), then every day, then trailing
+ * nulls to complete the last week.
+ */
+export function monthGrid(year: number, month: number, weekStart: number): (Date | null)[] {
+  const first = new Date(year, month, 1);
+  const days = new Date(year, month + 1, 0).getDate();
+  const lead = (first.getDay() - weekStart + 7) % 7;
+  const cells: (Date | null)[] = Array(lead).fill(null);
+  for (let d = 1; d <= days; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
