@@ -13,9 +13,9 @@ import { loadPrayerDay } from "../../core/services/prayer/prayer-times.service";
 import type { PrayerDay } from "../../core/services/prayer/prayer-times.types";
 import { SECTIONS, ItemId, TrackerItem } from "./trackerCatalog";
 import {
-  trackingDate, toDayKey, isUnlocked, freshTimes, fastingOccasion, visibleSections, dayScore,
+  trackingDate, toDayKey, isUnlocked, freshTimes, earliestViewable, fastingOccasion, visibleSections, dayScore,
 } from "./trackerLogic";
-import { loadDays, toggleItem, loadSettings, saveSettings } from "./trackerStore";
+import { loadDays, toggleItem, loadSettings, saveSettings, ensureSince } from "./trackerStore";
 import TrackerSettingsSheet from "./TrackerSettingsSheet";
 import TrackerInfoSheet from "./TrackerInfoSheet";
 import TrackerCalendarSheet from "./TrackerCalendarSheet";
@@ -87,6 +87,12 @@ const WorshipTracker: React.FC = () => {
   const logged = useMemo(
     () => new Set(Object.keys(days).filter((k) => days[k].length > 0)),
     [days],
+  );
+  // Nothing can be logged before the tracker's start date, except days a
+  // restored backup brought with it.
+  const earliest = useMemo(
+    () => earliestViewable(ensureSince(dayKey), Array.from(logged)),
+    [logged, dayKey],
   );
   const pickDay = (d: Date) => setViewed(toDayKey(d) === dayKey ? null : d);
 
@@ -247,6 +253,7 @@ const WorshipTracker: React.FC = () => {
                     "wt-strip-day" + (key === dayKey ? " is-today" : "") + (key === shownKey ? " is-selected" : "")
                   }
                   onClick={() => pickDay(d)}
+                  disabled={earliest !== null && key < earliest}
                   aria-pressed={key === shownKey}
                 >
                   <span className="wt-strip-name">{new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d)}</span>
@@ -283,6 +290,7 @@ const WorshipTracker: React.FC = () => {
           selected={shown}
           today={today}
           logged={logged}
+          earliest={earliest}
           onPick={(d) => { pickDay(d); setSheet(null); }}
           onClose={() => setSheet(null)}
         />

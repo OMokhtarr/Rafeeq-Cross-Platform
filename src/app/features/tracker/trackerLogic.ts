@@ -130,3 +130,13 @@ export function monthGrid(year: number, month: number, weekStart: number): (Date
   while (cells.length % 7) cells.push(null);
   return cells;
 }
+
+/**
+ * The oldest day the calendar may open: the day the app started tracking,
+ * or any older day that holds restored ticks. Backups made before the
+ * start date existed carry none, so their logged days alone set the floor.
+ */
+export function earliestViewable(since: string | null, loggedKeys: string[]): string | null {
+  const keys = since ? [since, ...loggedKeys] : loggedKeys;
+  return keys.length ? keys.reduce((a, b) => (b < a ? b : a)) : null;
+}

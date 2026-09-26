@@ -1,4 +1,4 @@
-import { loadDays, toggleItem, loadSettings, saveSettings } from "../trackerStore";
+import { loadDays, toggleItem, loadSettings, saveSettings, ensureSince } from "../trackerStore";
 
 beforeEach(() => localStorage.clear());
 
@@ -37,5 +37,16 @@ describe("settings", () => {
   it("survives corrupt JSON", () => {
     localStorage.setItem("rafeeq.tracker.settings", "nope");
     expect(loadSettings().quran).toBe(true);
+  });
+});
+
+describe("since", () => {
+  it("records the first day once and never moves it", () => {
+    expect(ensureSince("2026-09-26")).toBe("2026-09-26");
+    expect(ensureSince("2026-10-01")).toBe("2026-09-26");
+  });
+  it("replaces a malformed value", () => {
+    localStorage.setItem("rafeeq.tracker.since", "garbage");
+    expect(ensureSince("2026-09-26")).toBe("2026-09-26");
   });
 });

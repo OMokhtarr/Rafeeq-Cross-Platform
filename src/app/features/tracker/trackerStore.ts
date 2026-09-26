@@ -8,6 +8,7 @@ import { ItemId, SectionId, OPTIONAL_SECTIONS } from "./trackerCatalog";
 
 const DAYS_KEY = "rafeeq.tracker.days";
 const SETTINGS_KEY = "rafeeq.tracker.settings";
+const SINCE_KEY = "rafeeq.tracker.since";
 
 function readObject(key: string): Record<string, unknown> {
   try {
@@ -52,4 +53,21 @@ export function saveSettings(s: Record<SectionId, boolean>): void {
   } catch {
     // Non-fatal: settings fall back to defaults next launch.
   }
+}
+
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The day the app first ran with the tracker, recorded once. The calendar
+ * uses it as its floor, since no day before it can hold data.
+ */
+export function ensureSince(todayKey: string): string {
+  try {
+    const stored = localStorage.getItem(SINCE_KEY);
+    if (stored && DAY_KEY_RE.test(stored)) return stored;
+    localStorage.setItem(SINCE_KEY, todayKey);
+  } catch {
+    // Storage blocked: the floor falls back to the oldest logged day.
+  }
+  return todayKey;
 }

@@ -734,3 +734,7 @@
 .wt-cal-day.is-selected .wt-cal-dot {
   background: var(--wt-gold-on-green);
 }
+
+.wt-strip-day:disabled {
+  opacity: 0.35;
+}

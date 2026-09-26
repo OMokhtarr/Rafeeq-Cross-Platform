@@ -15,11 +15,13 @@ interface Props {
   today: Date;
   /** Day keys that have at least one tick. */
   logged: Set<string>;
+  /** Oldest pickable day key; null when there is no floor. */
+  earliest: string | null;
   onPick: (d: Date) => void;
   onClose: () => void;
 }
 
-const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, onPick, onClose }) => {
+const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, earliest, onPick, onClose }) => {
   const { t, lang, isRTL } = useLang();
   const tt = t.tracker;
   const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
@@ -32,6 +34,9 @@ const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, onPick
   const selectedKey = toDayKey(selected);
   const atCurrentMonth =
     month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth();
+
+  const atEarliestMonth =
+    earliest !== null && toDayKey(month).slice(0, 7) <= earliest.slice(0, 7);
 
   const shift = (by: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + by, 1));
   // 4 Jan 2026 is a Sunday, so 4 + weekday offset lands on that weekday.
@@ -55,7 +60,12 @@ const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, onPick
     <AccountModal title={tt.openCalendar} onClose={onClose}>
       <div className="wt-sheet" dir={isRTL ? "rtl" : "ltr"}>
         <div className="wt-cal-head">
-          <button className="wt-round-btn" onClick={() => shift(-1)} aria-label={tt.prevMonth}>
+          <button
+            className="wt-round-btn"
+            onClick={() => shift(-1)}
+            disabled={atEarliestMonth}
+            aria-label={tt.prevMonth}
+          >
             {chevron(true)}
           </button>
           <span className="wt-cal-title">{title}</span>
@@ -75,7 +85,7 @@ const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, onPick
           {cells.map((d, i) => {
             if (!d) return <span key={i} />;
             const key = toDayKey(d);
-            const future = key > todayKey;
+            const outOfRange = key > todayKey || (earliest !== null && key < earliest);
             return (
               <button
                 key={key}
@@ -84,7 +94,7 @@ const TrackerCalendarSheet: React.FC<Props> = ({ selected, today, logged, onPick
                   (key === todayKey ? " is-today" : "") +
                   (key === selectedKey ? " is-selected" : "")
                 }
-                disabled={future}
+                disabled={outOfRange}
                 onClick={() => onPick(d)}
                 aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(d)}
               >

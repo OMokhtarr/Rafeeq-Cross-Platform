@@ -1,6 +1,6 @@
 import {
   toDayKey, trackingDayKey, isUnlocked, hijriParts, fastingOccasion,
-  visibleSections, sectionShares, dayScore, freshTimes, monthGrid,
+  visibleSections, sectionShares, dayScore, freshTimes, monthGrid, earliestViewable,
 } from "../trackerLogic";
 import { SECTIONS, SectionId } from "../trackerCatalog";
 
@@ -158,5 +158,18 @@ describe("monthGrid", () => {
   it("needs no padding when the month starts on the week start", () => {
     // 1 Feb 2026 is a Sunday.
     expect(monthGrid(2026, 1, 0)[0]?.getDate()).toBe(1);
+  });
+});
+
+describe("earliestViewable", () => {
+  it("is the start date when nothing older was logged", () => {
+    expect(earliestViewable("2026-09-20", ["2026-09-21", "2026-09-25"])).toBe("2026-09-20");
+  });
+  it("reaches back to restored days older than the start date", () => {
+    expect(earliestViewable("2026-09-20", ["2026-03-02", "2026-09-21"])).toBe("2026-03-02");
+  });
+  it("falls back to the oldest logged day without a start date (old backups)", () => {
+    expect(earliestViewable(null, ["2026-05-01", "2026-04-09"])).toBe("2026-04-09");
+    expect(earliestViewable(null, [])).toBeNull();
   });
 });
