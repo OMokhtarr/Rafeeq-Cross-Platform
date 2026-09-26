@@ -264,9 +264,6 @@ const WorshipTracker: React.FC = () => {
             </div>
           )}
 
-          {prayer && !prayer.hasLocation && !readOnly && (
-            <button className="wt-hint" onClick={() => history.push("/prayer-times")}>{tt.noLocation}</button>
-          )}
 
           {visible.map(renderSection)}
         </div>

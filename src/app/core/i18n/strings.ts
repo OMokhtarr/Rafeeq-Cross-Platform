@@ -52,7 +52,6 @@ export interface AppStrings {
     openCalendar: string;
     prevMonth: string;
     nextMonth: string;
-    noLocation: string;
     sections: Record<"prayers" | "azkar" | "quran" | "daily" | "rawatib" | "fasting", string>;
     items: Record<string, { title: string; subtitle?: string }>;
     fasting: Record<"ramadan" | "arafah" | "ashura" | "tasua" | "shawwal" | "whiteDays" | "monday" | "thursday", { chip: string; subtitle: string }>;
@@ -635,7 +634,6 @@ const ar: AppStrings = {
     openCalendar: "اختيار يوم من التقويم",
     prevMonth: "الشهر السابق",
     nextMonth: "الشهر التالي",
-    noLocation: "حدّد موقعك في المواقيت لتُفتح العبادات في أوقاتها",
     sections: {
       prayers: "الصلوات", azkar: "الأذكار", quran: "القرآن الكريم",
       daily: "عبادات يومية", rawatib: "سنن رواتب", fasting: "الصيام",
@@ -1251,7 +1249,6 @@ const en: AppStrings = {
     openCalendar: "Pick a day from the calendar",
     prevMonth: "Previous month",
     nextMonth: "Next month",
-    noLocation: "Set your location in Prayer Times so acts unlock at their times",
     sections: {
       prayers: "Prayers", azkar: "Azkar", quran: "The Quran",
       daily: "Daily worship", rawatib: "Sunnah prayers", fasting: "Fasting",

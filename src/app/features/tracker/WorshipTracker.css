@@ -190,17 +190,6 @@
   font-size: var(--text-base);
 }
 
-.wt-hint {
-  width: 100%;
-  margin-bottom: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--wt-accent-soft);
-  color: inherit;
-  font-size: var(--text-sm);
-  text-align: start;
-}
 
 /* ── Sections ───────────────────────────────────────────────────────────── */
 
@@ -663,4 +652,85 @@
 .wt-strip-day .wt-strip-name {
   font-size: var(--text-xs);
   white-space: nowrap;
+}
+
+/* ── Rafeeq green ────────────────────────────────────────────────────────
+   The Home screen's forest gradient, paired with the gold. It carries the
+   summary card and fills every done act, so progress reads as green and
+   gold in both themes. */
+
+.wt-page,
+.wt-sheet {
+  --wt-green: linear-gradient(160deg, #0d1f14 0%, #1a3a2a 100%);
+  --wt-green-done: linear-gradient(160deg, #12281c 0%, #103d21 100%);
+  --wt-on-green: #f3ead9;
+  --wt-gold-on-green: #d4b48c;
+}
+
+.wt-summary {
+  border-color: color-mix(in srgb, var(--wt-gold-on-green) 45%, transparent);
+  background: var(--wt-green);
+  color: var(--wt-on-green);
+}
+
+.wt-summary .wt-dates,
+.wt-summary .wt-strip-day {
+  color: color-mix(in srgb, var(--wt-on-green) 70%, transparent);
+}
+
+.wt-summary .wt-strip-day.is-today {
+  color: var(--wt-gold-on-green);
+}
+
+.wt-summary .wt-strip-day.is-selected {
+  border-color: var(--wt-gold-on-green);
+}
+
+.wt-summary .wt-round-btn {
+  border-color: color-mix(in srgb, var(--wt-gold-on-green) 50%, transparent);
+  background: transparent;
+  color: var(--wt-gold-on-green);
+}
+
+.wt-summary .wt-ring::before,
+.wt-summary .wt-strip-dot {
+  background: conic-gradient(
+    var(--wt-gold-on-green) calc(var(--wt-p) * 1%),
+    rgba(243, 234, 217, 0.18) 0
+  );
+}
+
+.wt-prayer.is-done,
+.wt-item.is-done {
+  border-color: var(--wt-gold-on-green);
+  background: var(--wt-green-done);
+  color: var(--wt-on-green);
+}
+
+.is-done .wt-item-title,
+.is-done .wt-item-icon,
+.is-done .wt-check {
+  color: var(--wt-gold-on-green);
+}
+
+.is-done .wt-item-sub {
+  color: color-mix(in srgb, var(--wt-on-green) 70%, transparent);
+}
+
+.wt-prayer.is-done .wt-item-state {
+  background: var(--wt-gold-on-green);
+  color: #0d1f14;
+}
+
+.wt-prayer.is-done .wt-check {
+  color: inherit;
+}
+
+.wt-cal-day.is-selected {
+  background: var(--wt-green-done);
+  color: var(--wt-gold-on-green);
+}
+
+.wt-cal-day.is-selected .wt-cal-dot {
+  background: var(--wt-gold-on-green);
 }
