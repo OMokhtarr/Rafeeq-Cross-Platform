@@ -17,6 +17,9 @@ import android.content.Intent
  * needs the same re-arm; [PrayerAlarmScheduler.scheduleMidnightRoll] no-ops
  * safely without a stored location, same as scheduleNext.
  *
+ * Granting exact alarms re-arms too, so the pending (inexact) alarm is
+ * replaced by an exact one straight away.
+ *
  * A device-language change redraws the widgets in the new language. A place
  * name cached before names were stored in both languages is looked up again
  * then, off the main thread.

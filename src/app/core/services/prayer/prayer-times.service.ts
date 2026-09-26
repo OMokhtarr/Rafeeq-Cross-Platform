@@ -40,6 +40,7 @@ interface RafeeqPrayerPlugin {
     prayers?: PrayerKey[];
   }): Promise<void>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
+  requestExactAlarm(): Promise<{ granted: boolean }>;
   getVisibleTimes(): Promise<{ times: string[] }>;
   setVisibleTimes(options: { times: string[] }): Promise<void>;
   getWidgetInfo(): Promise<{ supported: boolean; placed: number }>;
@@ -276,6 +277,14 @@ export async function enableReminders(): Promise<boolean> {
   if (!notificationsGranted) return false;
 
   await setReminders({ enabled: true });
+
+  // Best effort: without exact alarms a reminder can arrive a few minutes
+  // late under Doze, but it still arrives, so a refusal does not block.
+  try {
+    await RafeeqPrayer.requestExactAlarm();
+  } catch {
+    // Reminders stay inexact.
+  }
   return true;
 }
 

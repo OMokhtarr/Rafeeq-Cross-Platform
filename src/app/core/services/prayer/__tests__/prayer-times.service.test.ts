@@ -15,6 +15,7 @@ jest.mock("@capacitor/core", () => {
     setConfig: jest.fn(),
     getReminders: jest.fn(),
     setReminders: jest.fn(),
+    requestExactAlarm: jest.fn().mockResolvedValue({ granted: true }),
     requestNotificationPermission: jest.fn(),
     getVisibleTimes: jest.fn(),
     setVisibleTimes: jest.fn(),
