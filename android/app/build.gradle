@@ -83,6 +83,8 @@ android {
         release {
             // Only attach the signing config when credentials were actually loaded;
             // otherwise Gradle fails with a confusing "storeFile is null" error.
+            // When they are absent the build is blocked outright — see the
+            // release-signing guard below.
             if (keystoreProps.containsKey("storeFile")) {
                 signingConfig signingConfigs.release
             }
@@ -91,6 +93,28 @@ android {
         }
     }
     
+    // Release signing guard. Without keystore.properties the release build type
+    // silently drops its signing config and emits an UNSIGNED bundle, which only
+    // surfaces as "All uploaded bundles must be signed" once Play rejects the
+    // upload. Fail at the point of building a release instead.
+    //
+    // Deliberately a task-graph check rather than a configuration-phase throw:
+    // configuration runs for every task, so throwing there would break
+    // assembleDebug and Android Studio sync — exactly what the fallback above
+    // exists to avoid. This fires only when a release artifact is actually asked for.
+    gradle.taskGraph.whenReady { graph ->
+        def wantsRelease = graph.allTasks.any { t ->
+            t.project == project && t.name ==~ /(?i)(bundle|assemble)Release.*/
+        }
+        if (wantsRelease && !keystoreProps.containsKey("storeFile")) {
+            throw new GradleException(
+                "Release signing credentials are missing: android/keystore.properties was not found." +
+                "\nA release build without it produces an UNSIGNED bundle that Play will reject." +
+                "\nRestore keystore.properties and the .jks it points at, then rebuild."
+            )
+        }
+    }
+
     // Custom APK naming
     applicationVariants.all { variant ->
         variant.outputs.all {
