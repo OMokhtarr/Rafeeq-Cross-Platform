@@ -3,13 +3,15 @@
  *
  * Rafeeq has no sign-in and no server, so a plain JSON file is the migration
  * path: export on the old device, import on the new one. Everything the user
- * created (notes, bookmarks, Hifz plan and streaks, recitation
- * history) travels; re-downloadable content caches (tafsir, audio, fonts,
+ * created (notes, bookmarks, Hifz plan and streaks, recitation history,
+ * worship tracker, azkar favourites, saved quiz range sets) travels;
+ * re-downloadable content caches (tafsir, audio, fonts,
  * Quran text) deliberately do not, since they would bloat the file for data
  * the new device can simply fetch again.
  */
 
 import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 import {
   loadPlanAsync,
   savePlan,
@@ -24,6 +26,7 @@ import {
   saveHifzReadingSession,
   saveHifzReadingSessionAsync,
 } from "../../../features/hifz/hifz.service";
+import { PRESETS_KEY } from "../../../features/quiz/services/quiz-presets.service";
 
 /** Bump only on a breaking change to the file layout. */
 const BACKUP_VERSION = 1;
@@ -56,6 +59,11 @@ const BACKED_UP_KEYS = [
   "rafiq_last_page_v1",
   "rafiq_search_recents_v1",
   "rafiq_tafsir_resources_v1",
+  // Worship tracker and azkar favourites
+  "rafeeq.tracker.days",
+  "rafeeq.tracker.settings",
+  "rafeeq.tracker.since",
+  "azkar:favorites",
 ] as const;
 
 export interface BackupFile {
@@ -79,6 +87,9 @@ export interface BackupSummary {
   bookmarks: number;
   hifzStreakDays: number;
   hasHifzPlan: boolean;
+  trackerDays: number;
+  azkarFavorites: number;
+  quizRangeSets: number;
   exportedAt: string;
 }
 
@@ -99,6 +110,9 @@ export function summarizeBackup(backup: BackupFile): BackupSummary {
     bookmarks: countJsonEntries(d["rafiq_bookmarks_v1"]),
     hifzStreakDays: countJsonEntries(d["rafiq_hifz_streak_dates_v1"]),
     hasHifzPlan: !!d["rafiq_hifz_v2"],
+    trackerDays: countJsonEntries(d["rafeeq.tracker.days"]),
+    azkarFavorites: countJsonEntries(d["azkar:favorites"]),
+    quizRangeSets: countJsonEntries(d[PRESETS_KEY]),
     exportedAt: backup.exportedAt,
   };
 }
@@ -134,6 +148,14 @@ export async function createBackup(): Promise<BackupFile> {
     if (reading) data["rafiq_hifz_reading_v1"] = JSON.stringify(reading);
   } catch (err) {
     console.warn("[backup] async Hifz read failed, using localStorage copy:", err);
+  }
+
+  // Saved quiz range sets live in Capacitor Preferences, not localStorage.
+  try {
+    const { value } = await Preferences.get({ key: PRESETS_KEY });
+    if (value !== null) data[PRESETS_KEY] = value;
+  } catch (err) {
+    console.warn("[backup] could not read quiz range sets:", err);
   }
 
   return {
@@ -237,6 +259,15 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
   // Hifz stores are dual-written, so push the restored copies through the async
   // writers too — otherwise Android/iOS would keep reading the old plan.
   await restoreHifzStores(backup.data);
+
+  const presets = backup.data[PRESETS_KEY];
+  if (typeof presets === "string") {
+    try {
+      await Preferences.set({ key: PRESETS_KEY, value: presets });
+    } catch (err) {
+      console.warn("[backup] could not restore quiz range sets:", err);
+    }
+  }
 }
 
 async function restoreHifzStores(data: Record<string, string>): Promise<void> {
