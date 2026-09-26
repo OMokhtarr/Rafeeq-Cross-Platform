@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
@@ -83,7 +84,7 @@ object PrayerAlarmScheduler {
     }
 
     /**
-     * Finds the next enabled prayer and arms one exact alarm for it.
+     * Finds the next enabled prayer and arms one alarm for it (exact when permitted).
      *
      * Returns immediately (schedules nothing) when there is no stored
      * location yet, when reminders are turned off, when no prayer is
@@ -111,12 +112,29 @@ object PrayerAlarmScheduler {
             PrayerTimesEngine.nextAfter(at, lat, lng, method, madhab, tz)
         } ?: return
 
+        setAlarm(ctx, next.at.time, pendingIntent(ctx, next.name.name.lowercase()))
+    }
+
+    /** Whether alarms can fire exactly: always below Android 12, otherwise
+     *  only once the user has granted SCHEDULE_EXACT_ALARM. */
+    fun canScheduleExact(ctx: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            next.at.time,
-            pendingIntent(ctx, next.name.name.lowercase()),
-        )
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    /**
+     * Exact when permitted, otherwise the inexact Doze-safe variant — Doze may
+     * defer it by some minutes, but a late reminder beats none, and calling
+     * the exact API without the permission throws SecurityException.
+     */
+    private fun setAlarm(ctx: Context, at: Long, operation: PendingIntent) {
+        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (canScheduleExact(ctx)) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, operation)
+        } else {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, operation)
+        }
     }
 
     /** Cancels whatever prayer alarm is currently pending, if any. */
@@ -173,12 +191,7 @@ object PrayerAlarmScheduler {
         val boundary = nextCardBoundary(ctx, tz)
         val at = if (boundary != null && boundary < midnight) boundary else midnight
 
-        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            at,
-            midnightRollPendingIntent(ctx),
-        )
+        setAlarm(ctx, at, midnightRollPendingIntent(ctx))
     }
 
     /** The next card boundary in epoch millis, or null with no stored location. */

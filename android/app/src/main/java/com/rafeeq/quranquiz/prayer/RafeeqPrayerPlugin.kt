@@ -212,6 +212,32 @@ class RafeeqPrayerPlugin : Plugin() {
     }
 
     /**
+     * Sends the user to the system "Alarms & reminders" page when exact alarms
+     * are not yet allowed (Android 12+; off by default on 14+ fresh installs).
+     * Resolves whether they already were — granting there fires
+     * SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED, which PrayerBootReceiver
+     * answers by re-arming, so nothing here has to wait for the user.
+     */
+    @PluginMethod
+    fun requestExactAlarm(call: PluginCall) {
+        val result = JSObject()
+        if (PrayerAlarmScheduler.canScheduleExact(context)) {
+            result.put("granted", true)
+            call.resolve(result)
+            return
+        }
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            // No settings screen on this device — reminders stay inexact.
+        }
+        result.put("granted", false)
+        call.resolve(result)
+    }
+
+    /**
      * Requests POST_NOTIFICATIONS at runtime (Android 13+). Without this, the
      * manifest declaration alone leaves the permission DENIED by default on
      * API 33+, and PrayerAlarmReceiver's notify() is silently discarded — the

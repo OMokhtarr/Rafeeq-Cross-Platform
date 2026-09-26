@@ -61,6 +61,9 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <!-- Granting exact alarms re-arms at once, upgrading the
+                     pending inexact alarm to an exact one. -->
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
 
@@ -173,11 +176,12 @@
          minute the app displays — and the prompt is gentler. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- USE_EXACT_ALARM rather than SCHEDULE_EXACT_ALARM: Android's own docs
-         name prayer-time and alarm-clock apps as its acceptable use case. It is
-         granted at install and cannot be revoked, so there is no
-         canScheduleExactAlarms() check and no trip to system settings. -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- SCHEDULE_EXACT_ALARM, not USE_EXACT_ALARM: Play restricts the latter to
+         apps whose core function is an alarm clock or calendar. This one is
+         user-revocable (and off by default on Android 14+ fresh installs), so
+         PrayerAlarmScheduler checks canScheduleExactAlarms() and falls back to
+         an inexact alarm when it is not granted. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Alarms do not survive a reboot; the boot receiver re-arms them. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
