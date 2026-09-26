@@ -3,7 +3,7 @@
 Everything needed for the Play Store listing, derived from what the app actually
 declares and does. Answers here are meant to be copied into the console verbatim.
 
-App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 4 / versionName 1.1.0
+App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 6 / versionName 1.1.0
 
 > ⚠️ **The package name is `com.rafeeq.quranquiz` — note the trailing `z`.**
 > The first Play Console entry was created as `com.rafeeq.quranqui` (one character
