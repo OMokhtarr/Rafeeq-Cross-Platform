@@ -7,6 +7,7 @@
  * - All other prefs are persisted to localStorage under STORAGE_KEY.
  */
 
+import { Capacitor } from "@capacitor/core";
 import React, { useState, useEffect } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
@@ -915,6 +916,8 @@ const Settings: React.FC = () => {
               <p className="settings-section-title">
                 {ts.sectionNotifications}
               </p>
+              {/* Prayer reminders run on Android's alarm scheduler; iOS has none yet. */}
+              {Capacitor.getPlatform() !== "ios" && (
               <div className="settings-card">
                 <ToggleRow
                   icon={ICONS.mosque}
@@ -933,6 +936,7 @@ const Settings: React.FC = () => {
                   </div>
                 )}
               </div>
+              )}
               {/* Azkar reminders — coming soon, controls disabled */}
               <div className="settings-card settings-card--coming-soon settings-card--stacked">
                 <span className="settings-coming-soon-badge">

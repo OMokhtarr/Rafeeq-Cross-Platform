@@ -2,31 +2,28 @@ workflows:
   ios-release:
     name: Rafeeq iOS Release
     max_build_duration: 60
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
 
+    # Manual starts from the Codemagic UI always work; pushes only build on an ios-v* tag.
     triggering:
       events:
-        - push
         - tag
-      branch_patterns:
-        - pattern: main
-          include: true
       tag_patterns:
         - pattern: "ios-v*"
           include: true
 
     integrations:
-      app_store_connect: Rafeeq ASC Key # name you give it in Codemagic UI
+      app_store_connect: Rafeeq ASC Key # must match the key name in Codemagic → Integrations
 
     environment:
       ios_signing:
-        distribution_type: app_store # or: ad_hoc, development
+        distribution_type: app_store
         bundle_identifier: com.rafeeq.quranquiz
-      node: 18
+      node: 22
       xcode: latest
-      cocoapods: default
       vars:
-        CI: "false"  # prevents CRA treating warnings as errors
+        CI: "false" # stops react-scripts treating warnings as errors
+        PLIST: ios/App/App/Info.plist
 
     scripts:
       - name: Install dependencies
@@ -44,55 +41,44 @@ workflows:
       - name: Sync Capacitor iOS
         script: npx cap sync ios
 
-      - name: Install CocoaPods
+      - name: Generate app icon and splash
+        script: npx capacitor-assets generate --ios
+
+      - name: Patch Info.plist (permissions, background audio, export compliance)
         script: |
-          cd ios/App
-          pod install
+          set_key() {
+            /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$1 $2 $3" "$PLIST"
+          }
+          set_key NSMicrophoneUsageDescription string "Rafeeq listens while you recite so it can follow along and check your recitation."
+          set_key NSLocationWhenInUseUsageDescription string "Rafeeq uses your location to calculate prayer times and the Qibla direction."
+          set_key ITSAppUsesNonExemptEncryption bool false
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$PLIST"
+
+      - name: Set version and build number
+        script: |
+          VERSION=$(node -p "require('./package.json').version")
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $VERSION;/g" "$PBX"
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBX"
 
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
 
-      - name: Generate export options plist
+      - name: Build IPA
         script: |
-          cat > /Users/builder/export_options.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>signingStyle</key>
-            <string>automatic</string>
-            <key>uploadSymbols</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
-
-      - name: Build iOS archive
-        script: |
-          xcodebuild archive \
-            -workspace ios/App/App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath build/Rafeeq.xcarchive \
-            -destination "generic/platform=iOS" \
-            | xcpretty
-
-      - name: Export IPA
-        script: |
-          xcodebuild -exportArchive \
-            -archivePath build/Rafeeq.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist /Users/builder/export_options.plist \
-            | xcpretty
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App
 
     artifacts:
-      - build/ipa/*.ipa
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
       app_store_connect:
-        auth: integration # uses the integration you connected in UI
-        submit_to_testflight: true # set false if you don't want TestFlight
-        submit_to_app_store: false # set true when ready for production
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

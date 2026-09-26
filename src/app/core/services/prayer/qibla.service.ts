@@ -3,7 +3,7 @@
  * The only module that talks to the plugin's qibla call and to the device
  * orientation sensor.
  *
- * The bearing itself is computed natively, together with the magnetic
+ * The bearing is computed by the plugin (Kotlin on Android, JS on iOS), together with the magnetic
  * declination: adhan-java reports relative to true north while the sensor
  * reports relative to magnetic north, and correcting that in one place keeps
  * every consumer honest.
@@ -13,18 +13,8 @@
  * answer after HEADING_TIMEOUT_MS rather than leaving a spinner forever.
  */
 
-import { Capacitor, registerPlugin } from "@capacitor/core";
-
-interface RafeeqQiblaPlugin {
-  getQibla(): Promise<{
-    hasLocation: boolean;
-    bearing?: number;
-    magneticBearing?: number;
-    declination?: number;
-  }>;
-}
-
-const RafeeqPrayer = registerPlugin<RafeeqQiblaPlugin>("RafeeqPrayer");
+import { Capacitor } from "@capacitor/core";
+import { RafeeqPrayer } from "./rafeeq-prayer.plugin";
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -72,6 +62,35 @@ export async function loadQibla(): Promise<QiblaDirection> {
 export interface HeadingReading {
   heading: number;
   absolute: boolean;
+}
+
+type OrientationPermissionEvent = typeof DeviceOrientationEvent & {
+  requestPermission?: () => Promise<"granted" | "denied">;
+};
+
+/**
+ * iOS withholds orientation events until the page asks, and it only lets the
+ * page ask from inside a tap. Everywhere else the events flow unasked.
+ */
+export function headingNeedsPermission(): boolean {
+  return (
+    typeof DeviceOrientationEvent !== "undefined" &&
+    typeof (DeviceOrientationEvent as OrientationPermissionEvent).requestPermission ===
+      "function"
+  );
+}
+
+/** Must be called from a user gesture. Resolves true when events will flow. */
+export async function requestHeadingPermission(): Promise<boolean> {
+  if (!headingNeedsPermission()) return true;
+  try {
+    const result = await (
+      DeviceOrientationEvent as OrientationPermissionEvent
+    ).requestPermission!();
+    return result === "granted";
+  } catch {
+    return false;
+  }
 }
 
 /**

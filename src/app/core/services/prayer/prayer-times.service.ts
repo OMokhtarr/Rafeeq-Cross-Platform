@@ -8,56 +8,15 @@
  * Dates the page can render.
  */
 
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
-import type {
-  PrayerDay,
-  PrayerKey,
-  PrayerMadhab,
-  PrayerMethod,
-  RawPrayerDay,
-} from "./prayer-times.types";
+import type { PrayerDay, PrayerKey, PrayerMadhab, PrayerMethod } from "./prayer-times.types";
+import { RafeeqPrayer } from "./rafeeq-prayer.plugin";
 import { ADDITIONAL_KEYS, PRAYER_KEYS, PRAYERS_ONLY } from "./prayer-times.types";
 
-interface RafeeqPrayerPlugin {
-  getTimes(options?: { date?: string }): Promise<RawPrayerDay>;
-  setLocation(options: { lat: number; lng: number }): Promise<void>;
-  getConfig(): Promise<{
-    method: PrayerMethod;
-    madhab: PrayerMadhab;
-    use24Hour: boolean;
-    hasLocation: boolean;
-  }>;
-  setConfig(options: {
-    method?: PrayerMethod;
-    madhab?: PrayerMadhab;
-    use24Hour?: boolean;
-    appNight?: boolean;
-  }): Promise<void>;
-  getReminders(): Promise<{ enabled: boolean; prayers: PrayerKey[] }>;
-  setReminders(options: {
-    enabled?: boolean;
-    prayers?: PrayerKey[];
-  }): Promise<void>;
-  requestNotificationPermission(): Promise<{ granted: boolean }>;
-  requestExactAlarm(): Promise<{ granted: boolean }>;
-  getVisibleTimes(): Promise<{ times: string[] }>;
-  setVisibleTimes(options: { times: string[] }): Promise<void>;
-  getWidgetInfo(): Promise<{ supported: boolean; placed: number }>;
-  requestPinWidget(): Promise<{ requested: boolean; alreadyPlaced: boolean }>;
-  openAppSettings(): Promise<{ opened: boolean }>;
-  openHomeScreen(): Promise<{ opened: boolean }>;
-  openWidgetSettings(): Promise<{ opened: boolean }>;
-  getPlace(): Promise<{ name: string | null }>;
-  locationServicesEnabled(): Promise<{ enabled: boolean }>;
-  promptEnableLocation(): Promise<{ enabled: boolean }>;
-}
-
-const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
-
 /**
- * The plugin is Kotlin-only — calculation lives natively so the home-screen
- * widget can read it without a WebView. In a desktop browser (`npm start`)
+ * On Android the plugin is Kotlin, so the home-screen widget can read it
+ * without a WebView; on iOS it is prayer-ios.plugin.ts. In a desktop browser (`npm start`)
  * there is nothing behind the bridge, and every call throws
  * `"RafeeqPrayer" plugin is not implemented on web`.
  *

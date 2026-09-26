@@ -1,14 +1,10 @@
 import { useEffect } from "react";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
+import { RafeeqPrayer } from "../services/prayer/rafeeq-prayer.plugin";
 
 import type { Theme } from "../context/ThemeContext";
 import type { Lang } from "../i18n/strings";
 
-interface RafeeqPrayerThemePlugin {
-  setConfig(options: { appNight?: boolean; appLang?: Lang }): Promise<void>;
-}
-
-const RafeeqPrayer = registerPlugin<RafeeqPrayerThemePlugin>("RafeeqPrayer");
 
 /**
  * Mirror the app's day/night theme into native storage, for the surfaces

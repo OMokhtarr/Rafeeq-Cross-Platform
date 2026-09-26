@@ -349,6 +349,24 @@
   font-family: var(--font-latin);
 }
 
+.qh-enable-compass {
+  display: block;
+  margin: var(--space-2) auto 0;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[dir="ltr"] .qh-enable-compass {
+  font-family: var(--font-latin);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .qh-rotor,
   .qh-compass,

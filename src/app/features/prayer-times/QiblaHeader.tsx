@@ -20,7 +20,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
 import {
+  headingNeedsPermission,
   loadQibla,
+  requestHeadingPermission,
   watchHeading,
   type QiblaDirection,
 } from "../../core/services/prayer/qibla.service";
@@ -110,6 +112,13 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
   const [heading, setHeading] = useState<number | null>(null);
   const [sensorUnavailable, setSensorUnavailable] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
+  // iOS only: the compass stays off until the user taps to allow it.
+  const [headingAllowed, setHeadingAllowed] = useState(() => !headingNeedsPermission());
+
+  const enableCompass = async () => {
+    if (await requestHeadingPermission()) setHeadingAllowed(true);
+    else setSensorUnavailable(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +138,7 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
   const calibrationSinceRef = useRef<{ absolute: boolean; since: number } | null>(null);
 
   useEffect(() => {
-    if (!hasBearing) return undefined;
+    if (!hasBearing || !headingAllowed) return undefined;
 
     setSensorUnavailable(false);
     setNeedsCalibration(false);
@@ -155,7 +164,7 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
     );
 
     return stop;
-  }, [hasBearing]);
+  }, [hasBearing, headingAllowed]);
 
   const bearing = direction?.bearing ?? 0;
   const magneticBearing = direction?.magneticBearing ?? 0;
@@ -353,6 +362,11 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
         </p>
       )}
 
+      {hasBearing && !headingAllowed && !sensorUnavailable && (
+        <button type="button" className="qh-enable-compass" onClick={enableCompass}>
+          {tp.qiblaEnableCompass}
+        </button>
+      )}
       {sensorUnavailable && <p className="qh-hint">{tp.qiblaNoSensor}</p>}
       {showNeedle && needsCalibration && (
         <p className="qh-hint">{tp.qiblaCalibrate}</p>

@@ -110,6 +110,7 @@ export interface AppStrings {
     qibla: string;
     qiblaFromNorth: string;
     qiblaNoSensor: string;
+    qiblaEnableCompass: string;
     qiblaCalibrate: string;
     prayersTab: string;
     /** Compass turn guidance — shown only when a heading is available. */
@@ -728,6 +729,7 @@ const ar: AppStrings = {
     qibla: "القبلة",
     qiblaFromNorth: "{deg}° من الشمال",
     qiblaNoSensor: "لا تتوفر بوصلة في هذا الجهاز. اتجاه القبلة من الشمال مذكور أعلاه.",
+    qiblaEnableCompass: "اضغط لتفعيل البوصلة",
     qiblaCalibrate: "حرّك الجهاز على شكل رقم ٨ لمعايرة البوصلة",
     prayersTab: "الصلوات",
     turnLeft: "استدر يساراً",
@@ -1343,6 +1345,7 @@ const en: AppStrings = {
     qibla: "Qibla",
     qiblaFromNorth: "{deg}° from north",
     qiblaNoSensor: "This device has no compass. The bearing from north is shown above.",
+    qiblaEnableCompass: "Tap to turn on the compass",
     qiblaCalibrate: "Move the device in a figure eight to calibrate the compass",
     prayersTab: "Prayers",
     turnLeft: "Turn left",
