@@ -97,34 +97,6 @@
   padding: 16px 18px calc(32px + var(--safe-inset-bottom));
 }
 
-/* ── Rich text (Terms / Privacy) ── */
-.amod-prose .amod-updated {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: 0 0 18px;
-}
-
-.amod-prose h2 {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--color-gold);
-  margin: 18px 0 6px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.amod-prose p {
-  font-size: var(--text-sm);
-  line-height: 1.65;
-  color: var(--color-text-secondary);
-  margin: 0 0 8px;
-}
-
-.amod-prose strong {
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
 /* ── About ── */
 .amod-about {
   display: flex;

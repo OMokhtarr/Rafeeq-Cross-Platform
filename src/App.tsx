@@ -44,6 +44,9 @@ import TafsirSettings from "./app/features/tafsir/TafsirSettings";
 import Hifz from "./app/features/hifz/Hifz";
 import More from "./app/features/more/More";
 import PrayerTimes from "./app/features/prayer-times/PrayerTimes";
+import WorshipTracker from "./app/features/tracker/WorshipTracker";
+import { ensureSince } from "./app/features/tracker/trackerStore";
+import { toDayKey } from "./app/features/tracker/trackerLogic";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -190,6 +193,7 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/hifz" component={Hifz} />
       <Route exact path="/more" component={More} />
       <Route exact path="/prayer-times" component={PrayerTimes} />
+      <Route exact path="/tracker" component={WorshipTracker} />
       <Route exact path="/account" component={Account} />
       <Route exact path="/bookmarks" component={Bookmarks} />
       <Route exact path="/settings" component={Settings} />
@@ -213,6 +217,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Recorded at launch rather than on first opening the tracker, so the
+    // calendar's floor is the first day the app ran with the tracker.
+    ensureSince(toDayKey(new Date()));
 
     (async () => {
       // Seed Quran text corpus (works offline from bundled JSON)
