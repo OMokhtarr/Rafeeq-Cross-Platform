@@ -18,6 +18,7 @@ import {
 import { loadDays, toggleItem, loadSettings, saveSettings } from "./trackerStore";
 import TrackerSettingsSheet from "./TrackerSettingsSheet";
 import TrackerInfoSheet from "./TrackerInfoSheet";
+import { ITEM_ICONS } from "./trackerIcons";
 import { getSurahStartPage } from "../../core/services/data/metadata.service";
 import "./WorshipTracker.css";
 
@@ -49,13 +50,15 @@ const WorshipTracker: React.FC = () => {
   };
 
   // Ionic keeps the page mounted, so re-read the clock and times whenever it
-  // is shown again (e.g. after the app was backgrounded overnight).
+  // is shown again (e.g. after the app was backgrounded overnight). This does
+  // not fire on the first mount, which the effect below covers.
   useIonViewWillEnter(() => {
     setNow(new Date());
     reloadTimes();
   });
 
   useEffect(() => {
+    reloadTimes();
     const id = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(id);
   }, []);
@@ -162,8 +165,12 @@ const WorshipTracker: React.FC = () => {
                 aria-disabled={!open}
                 {...pressHandlers(item)}
               >
+                {section.id !== "prayers" && ITEM_ICONS[item.id] && (
+                  <span className="wt-item-icon">{ITEM_ICONS[item.id]}</span>
+                )}
                 <span className="wt-item-text">
                   <span className="wt-item-title">{title}</span>
+                  {section.id === "prayers" && <span className="wt-item-icon">{ITEM_ICONS[item.id]}</span>}
                   {subtitle && section.id !== "prayers" && <span className="wt-item-sub">{subtitle}</span>}
                 </span>
                 <span className="wt-item-state">{done(item.id) ? checkIcon : open ? null : lockIcon}</span>
