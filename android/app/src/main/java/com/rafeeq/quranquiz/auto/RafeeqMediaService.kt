@@ -407,6 +407,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                         replayBoundedRangeFromStart()
                     } else {
                         Log.d("RafeeqMedia", "onColdListEnded: bounded range finished — stop")
+                        finishBoundedRange()
                     }
                     return
                 }
@@ -593,7 +594,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             Log.d("RafeeqMedia", "coldStartPlay: starting persisted queue size=${urls.size} idx=$idx")
             requestAudioFocus()
             jsDriving = false
-            nativeRangeBounded = false // car cold-start resume keeps its historical whole-surah behavior
+            // Only a COMPLETE single surah may roll into the next one. A persisted partial range
+            // (page / hizb / rub) must stay bounded — otherwise a play after the range finished
+            // (e.g. the head unit's auto-resume) replays the rest of the page and then continues
+            // into the next surah (page 61 → An-Nisa).
+            val persistedSura = prefs.getInt(KEY_QUEUE_SURA, 0)
+            nativeRangeBounded = persistedSura <= 0 ||
+                urls.size != (RafeeqAudioUrls.SURAH_VERSE_COUNTS[persistedSura] ?: -1)
             // Restore the persisted reciter UNCONDITIONALLY (the persisted URLs ARE this reciter, so
             // it must win over any folder the user merely browsed and over an empty currentReciter
             // after a service restart). This is what stops the phone app switching reciter on open,
@@ -676,6 +683,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             if (!shouldLoopRangeAtEnd()) {
                 Log.d("RafeeqMedia", "fallback: range finished — stop")
                 player?.pause()
+                finishBoundedRange()
                 return
             }
             nextIdx = 0 // loop the range from its first verse
@@ -733,6 +741,18 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         }
         // Play-once (or count exhausted) → stop.
         return false
+    }
+
+    /**
+     * A bounded range played its last pass. Rewind the persisted queue to its first verse (so a
+     * later deliberate play replays the range from the top, not its tail) and re-arm the
+     * auto-resume guard: head units often fire onPlay() as soon as the session goes idle, and that
+     * must not resurrect the range the user just finished.
+     */
+    private fun finishBoundedRange() {
+        resumeOnFocusGain = false
+        userInteracted = false
+        prefs.edit().putInt(KEY_QUEUE_INDEX, 0).apply()
     }
 
     /** Reload the persisted bounded range from its first verse (a range loop lap). Used by the

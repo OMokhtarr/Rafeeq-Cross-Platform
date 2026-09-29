@@ -526,11 +526,6 @@
   color: inherit;
 }
 
-/* A past day is read-only: no press feedback, but not dimmed like a lock. */
-.is-readonly {
-  cursor: default;
-}
-
 /* ── Strip days as buttons, calendar button, past-day banner ─────────── */
 
 .wt-strip-day {

@@ -1,8 +1,8 @@
 /**
  * WORSHIP TRACKER PAGE
  * Today's acts, grouped into sections, with a completion ring and a
- * display-only 7-day strip. Only the current tracking day (which starts at
- * Fajr) can be edited; items open at their prayer times.
+ * 7-day strip. The current tracking day starts at Fajr and its items open at
+ * their prayer times; past days can be picked and edited freely.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
@@ -43,7 +43,7 @@ const WorshipTracker: React.FC = () => {
   const [settings, setSettings] = useState(loadSettings);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<"settings" | "info" | "calendar" | null>(null);
-  /** A past day being viewed read-only; null shows the current tracking day. */
+  /** A past day being viewed and edited; null shows the current tracking day. */
   const [viewed, setViewed] = useState<Date | null>(null);
   const pressTimer = useRef<number>();
   const longPressed = useRef(false);
@@ -77,10 +77,10 @@ const WorshipTracker: React.FC = () => {
   const dayKey = toDayKey(today);
   const isPreviousDay = dayKey !== toDayKey(now);
   // Everything below the strip reads from the shown day: today, or a past
-  // day picked from the strip or calendar, which is read-only.
+  // day picked from the strip or calendar, whose items are all open.
   const shown = viewed && toDayKey(viewed) < dayKey ? viewed : today;
   const shownKey = toDayKey(shown);
-  const readOnly = shownKey !== dayKey;
+  const isPast = shownKey !== dayKey;
   const ticked = days[shownKey] ?? [];
   const visible = visibleSections(shown, settings);
   const occasion = fastingOccasion(shown);
@@ -104,9 +104,9 @@ const WorshipTracker: React.FC = () => {
   }), [today.getTime(), days, settings]);
 
   const tap = (item: TrackerItem) => {
-    if (longPressed.current || readOnly) return;
-    if (!isUnlocked(item, now, times, isPreviousDay)) return;
-    setDays(toggleItem(dayKey, item.id));
+    if (longPressed.current) return;
+    if (!isPast && !isUnlocked(item, now, times, isPreviousDay)) return;
+    setDays(toggleItem(shownKey, item.id));
   };
 
   const openLongPress = (item: TrackerItem) => {
@@ -169,7 +169,7 @@ const WorshipTracker: React.FC = () => {
         </div>
         <div className={section.id === "prayers" ? "wt-prayer-row" : "wt-item-list"}>
           {section.items.map((item) => {
-            const open = readOnly || isUnlocked(item, now, times, isPreviousDay);
+            const open = isPast || isUnlocked(item, now, times, isPreviousDay);
             const isFast = item.id === "fastToday";
             const title = isFast ? tt.fastTodayTitle : tt.items[item.id].title;
             const subtitle = isFast && occasion ? tt.fasting[occasion].subtitle : tt.items[item.id]?.subtitle;
@@ -178,11 +178,10 @@ const WorshipTracker: React.FC = () => {
                 key={item.id}
                 className={
                   (section.id === "prayers" ? "wt-prayer" : "wt-item") +
-                  (done(item.id) ? " is-done" : "") + (open ? "" : " is-locked") +
-                  (readOnly ? " is-readonly" : "")
+                  (done(item.id) ? " is-done" : "") + (open ? "" : " is-locked")
                 }
                 aria-pressed={done(item.id)}
-                aria-disabled={!open || readOnly}
+                aria-disabled={!open}
                 {...pressHandlers(item)}
               >
                 {section.id !== "prayers" && ITEM_ICONS[item.id] && (
@@ -264,7 +263,7 @@ const WorshipTracker: React.FC = () => {
             </div>
           </div>
 
-          {readOnly && (
+          {isPast && (
             <div className="wt-past-banner" role="status">
               <span>{tt.viewingPast}</span>
               <button onClick={() => setViewed(null)}>{tt.backToToday}</button>
