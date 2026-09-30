@@ -42,7 +42,6 @@ const WorshipTracker: React.FC = () => {
   const [days, setDays] = useState(loadDays);
   const [settings, setSettings] = useState(loadSettings);
   const [weights, setWeights] = useState(loadWeights);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<"settings" | "info" | "calendar" | null>(null);
   /** A past day being viewed and edited; null shows the current tracking day. */
   const [viewed, setViewed] = useState<Date | null>(null);
@@ -212,16 +211,19 @@ const WorshipTracker: React.FC = () => {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={isRTL ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             </button>
             <h1>{tt.title}</h1>
-            <div className="wt-menu-wrap">
-              <button className="wt-round-btn" onClick={() => setMenuOpen((o) => !o)} aria-label={tt.menu} aria-expanded={menuOpen}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+            <div className="wt-header-actions">
+              <button className="wt-round-btn" onClick={() => setSheet("info")} aria-label={tt.menuInfo}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.5-2.8 4.2" />
+                  <circle cx="12" cy="18" r="0.6" fill="currentColor" />
+                </svg>
               </button>
-              {menuOpen && (
-                <div className="wt-menu">
-                  <button onClick={() => { setMenuOpen(false); setSheet("settings"); }}>{tt.menuSettings}</button>
-                  <button onClick={() => { setMenuOpen(false); setSheet("info"); }}>{tt.menuInfo}</button>
-                </div>
-              )}
+              <button className="wt-round-btn" onClick={() => setSheet("settings")} aria-label={tt.menuSettings}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
             </div>
           </header>
 

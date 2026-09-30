@@ -26,6 +26,7 @@ const TrackerInfoSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <h3>{ti.lockedTitle}</h3>
           <ul>{ti.locked.map((line) => <li key={line}>{line}</li>)}</ul>
         </section>
+        <p className="wt-sheet-footnote">{ti.credit}</p>
       </div>
     </AccountModal>
   );

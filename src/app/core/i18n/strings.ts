@@ -62,6 +62,7 @@ export interface AppStrings {
       purposeTitle: string; purpose: string;
       howTitle: string; how: string[];
       lockedTitle: string; locked: string[];
+      credit: string;
     };
   };
 
@@ -687,6 +688,7 @@ const ar: AppStrings = {
         "لا يمكن تسجيل الصلاة أو سنتها الراتبة قبل دخول وقتها",
         "الأذكار والنوافل تُفتح بعد وقتها المسنون",
       ],
+      credit: "هذه الخاصية مستوحاة من تطبيق «أذكار» لـ فارس نت",
     },
   },
   prayerTimes: {
@@ -1303,6 +1305,7 @@ const en: AppStrings = {
         "A prayer or its sunnah can't be logged before its time begins",
         "Azkar and voluntary prayers open at their recommended times",
       ],
+      credit: "This feature is inspired by the Athkar app by FaresNet",
     },
   },
   prayerTimes: {

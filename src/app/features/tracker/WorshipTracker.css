@@ -63,36 +63,14 @@
   fill: currentColor;
 }
 
-.wt-menu-wrap {
-  position: relative;
+.wt-header-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
-.wt-menu {
-  position: absolute;
-  top: 46px;
-  inset-inline-end: 0;
-  z-index: 10;
-  min-width: 210px;
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-card);
-  box-shadow: var(--shadow-card-lift);
-}
-
-.wt-menu button {
-  display: block;
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  background: none;
-  color: inherit;
-  font-size: var(--text-base);
-  text-align: start;
-}
-
-.wt-menu button + button {
-  border-top: 1px solid var(--color-border-subtle, var(--color-border-card));
+/* The icons are outlined, so they must not inherit the round button's fill. */
+.wt-header-actions svg {
+  fill: none;
 }
 
 /* ── Summary card ───────────────────────────────────────────────────────── */
