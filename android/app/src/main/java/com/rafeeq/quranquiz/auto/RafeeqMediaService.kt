@@ -222,6 +222,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // the right recovery, not a bug. One extension only — a dead brain that acked once must not be
     // able to keep extending forever.
     private val BRAIN_STALL_EXTENDED_MS = 13500L
+    // Set true when the watchdog handled the current verse-end natively (took over or finished the
+    // range) because the brain was frozen. The brain's late ack then learns its queued
+    // 'nativeTrackEnded' is stale and must not advance/replay the range itself.
+    @Volatile private var nativeHandledThisEnd = false
     // Set true when the brain ACKs a 'nativeTrackEnded' (it does so synchronously, before it
     // downloads the next verse). A frozen/dead WebView can't run JS, so it never acks. The
     // watchdog uses this to tell "brain alive but the next verse's download is slow" (do NOT
@@ -562,6 +566,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun nativeCurrentVersePositionMs(): Long = player?.currentPositionMs() ?: 0L
 
+    /** Whether the native player is actually playing right now — false once a range stopped
+     *  (repeat count reached) or was paused while the brain was frozen. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeIsPlaying(): Boolean = player?.isPlaying() ?: false
+
     /** The surah native cold-start is currently playing, or 0 if native isn't driving. Used so
      *  the brain, on wake, adopts the RIGHT surah instead of defaulting to Al-Fatiha. */
     @androidx.media3.common.util.UnstableApi
@@ -781,6 +790,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         cancelBrainWatchdog()
         // Fresh boundary: assume no ack until the brain sends one.
         brainAckedThisEnd = false
+        nativeHandledThisEnd = false
         val wd = Runnable {
             brainWatchdog = null
             // If the brain ACKED, it's alive and simply resolving the next verse (a slow download
@@ -794,6 +804,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     brainWatchdog = null
                     if (jsDriving && player?.isPlaying() != true) {
                         Log.d("RafeeqMedia", "brainWatchdog(extended): brain acked but never loaded — native rescue to $nextIndex")
+                        nativeHandledThisEnd = true
                         fallbackToNativeAdvance(nextIndex)
                     }
                 }
@@ -803,6 +814,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             }
             if (jsDriving && player?.isPlaying() != true) {
                 Log.d("RafeeqMedia", "brainWatchdog: brain didn't respond, native self-advance to $nextIndex")
+                nativeHandledThisEnd = true
                 fallbackToNativeAdvance(nextIndex)
             }
         }
@@ -820,9 +832,14 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * so the watchdog won't self-advance while the brain resolves a slow (uncached) next verse.
      * If the brain's `loadNativeTrack` lands first, cancelBrainWatchdog() already handled it; this
      * covers the window where the ack arrives before the URL is ready.
+     *
+     * Returns true when the ack is STALE: the brain was frozen and the watchdog already handled this
+     * verse-end natively (continued or finished the range), so the brain must not act on it.
      */
-    fun onBrainAckTrackEnded() {
+    fun onBrainAckTrackEnded(): Boolean {
+        if (nativeHandledThisEnd) return true
         brainAckedThisEnd = true
+        return false
     }
 
     /**

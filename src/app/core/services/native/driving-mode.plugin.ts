@@ -78,6 +78,8 @@ export interface CarActionEvent {
   aya?: number;
   positionMs?: number;
   durationMs?: number;
+  /** Native wall-clock time (ms) the event was sent; used to spot events that sat queued while the WebView was frozen. */
+  sentAtMs?: number;
 }
 
 export interface DrivingModePlugin {
@@ -89,7 +91,7 @@ export interface DrivingModePlugin {
    *  arrives (a truly frozen WebView can't run JS at all, so it never acks); this stops the
    *  watchdog from firing merely because the next verse's download is slow (>timeout), which
    *  otherwise made native take over the persisted queue and jump to a different range. */
-  ackTrackEnded(): Promise<void>;
+  ackTrackEnded(): Promise<{ stale: boolean }>;
 
   setContentTree(options: {
     reciters: ReciterItem[];
@@ -136,6 +138,8 @@ export interface DrivingModePlugin {
     coldIndex: number;
     /** Current verse's in-verse position (ms). */
     positionMs: number;
+    /** Whether the native player is actually playing (false once a range stopped or paused). */
+    playing: boolean;
   }>;
 
   /** Play a one-shot intro (bismillah); a 'nativeIntroEnded' carAction follows. */
@@ -153,7 +157,7 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
   // On web/Electron: no-op stub so the app doesn't crash
   web: {
     jsReady: async () => {},
-    ackTrackEnded: async () => {},
+    ackTrackEnded: async () => ({ stale: false }),
     setContentTree: async () => {},
     updatePlaybackState: async () => {},
     loadNativeTrack: async () => {},
@@ -166,6 +170,7 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
       nativeDriving: false,
       coldIndex: -1,
       positionMs: 0,
+      playing: false,
     }),
     playNativeIntro: async () => {},
     addListener: async (_event: string, _handler: () => void) => ({ remove: () => {} }),

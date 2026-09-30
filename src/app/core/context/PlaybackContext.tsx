@@ -29,6 +29,10 @@ const DEFAULT_OPTS: UsePlaybackQueueOptions = {
   repeatRange: "loop",
 };
 
+// A verse-end event younger than this was delivered before native's 1.5 s stall watchdog could
+// fire, so it cannot be stale (margin left for clock jitter and bridge delay).
+const FRESH_TRACK_END_MS = 1000;
+
 // All 114 surahs for Android Auto's browse tree
 const ALL_SURAHS = Array.from({ length: 114 }, (_, i) => ({
   number: i + 1,
@@ -483,10 +487,25 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           // Immediately tell native we're alive (before any async verse resolution below), so its
           // stall watchdog doesn't self-advance the persisted queue just because the next verse's
           // download is slow — which made playback jump to a different range on uncached pages.
-          DrivingMode.ackTrackEnded().catch(() => {});
-          // The native ExoPlayer finished the current verse. Let the brain apply
-          // repeat/range/page logic and feed the next verse.
-          q.notifyTrackEnded();
+          // An event delivered well inside native's stall timeout (1.5 s) can't have been handled by
+          // its watchdog yet, so advance right away — no bridge round-trip between verses.
+          const ageMs = event.sentAtMs ? Date.now() - event.sentAtMs : Infinity;
+          if (ageMs < FRESH_TRACK_END_MS) {
+            DrivingMode.ackTrackEnded().catch(() => {});
+            q.notifyTrackEnded();
+            break;
+          }
+          // A late event sat queued while the WebView was frozen. The ack tells us if it is STALE:
+          // native's watchdog already handled this verse-end (continued or finished the range).
+          // Acting on it would replay a range that already stopped, so re-sync to native instead.
+          DrivingMode.ackTrackEnded()
+            .then((r) => {
+              if (r?.stale) q.syncFromNative({ afterStall: true }).catch(() => {});
+              else q.notifyTrackEnded();
+            })
+            // The native ExoPlayer finished the current verse. Let the brain apply
+            // repeat/range/page logic and feed the next verse.
+            .catch(() => q.notifyTrackEnded());
           break;
         }
         case "nativePosition": {

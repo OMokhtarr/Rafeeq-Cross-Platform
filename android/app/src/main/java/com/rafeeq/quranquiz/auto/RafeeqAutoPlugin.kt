@@ -174,8 +174,10 @@ class RafeeqAutoPlugin : Plugin() {
     @androidx.media3.common.util.UnstableApi
     @PluginMethod
     fun ackTrackEnded(call: PluginCall) {
-        RafeeqMediaService.instance?.onBrainAckTrackEnded()
-        call.resolve()
+        val stale = RafeeqMediaService.instance?.onBrainAckTrackEnded() ?: false
+        val ret = JSObject()
+        ret.put("stale", stale)
+        call.resolve(ret)
     }
 
     @PluginMethod
@@ -353,6 +355,7 @@ class RafeeqAutoPlugin : Plugin() {
         ret.put("nativeDriving", service?.isNativeDriving() ?: false)
         ret.put("coldIndex", service?.nativeCurrentColdIndex() ?: -1)
         ret.put("positionMs", service?.nativeCurrentVersePositionMs() ?: 0L)
+        ret.put("playing", service?.nativeIsPlaying() ?: false)
         call.resolve(ret)
     }
 
@@ -386,6 +389,9 @@ class RafeeqAutoPlugin : Plugin() {
             if (aya != null) put("aya", aya)
             if (positionMs != null) put("positionMs", positionMs)
             if (durationMs != null) put("durationMs", durationMs)
+            // Wall-clock send time, so JS can tell an event delivered promptly from one that sat
+            // queued while the WebView was frozen (see the 'nativeTrackEnded' handler).
+            put("sentAtMs", System.currentTimeMillis())
         }
 
         // Internal player→brain events (position ticks, track/intro end) are only

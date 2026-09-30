@@ -117,7 +117,7 @@ export interface PlaybackControls {
   }) => Promise<void>;
   /** After the WebView was frozen (phone locked) while native kept advancing the range, re-sync
    *  the brain to native's actual position so playback continues from there, not the lock point. */
-  syncFromNative: () => Promise<void>;
+  syncFromNative: (opts?: { afterStall?: boolean }) => Promise<void>;
 }
 
 export interface UsePlaybackQueueOptions {
@@ -1155,11 +1155,20 @@ export function usePlaybackQueue(
   // verse it froze on, so playback would jump BACK there. This re-syncs the brain to where native
   // ACTUALLY is: if native is driving and ahead of us, adopt its index (and in-verse offset) and
   // take back control from there — no rewind, no lost verses.
-  const syncFromNative = useCallback(async () => {
+  // `afterStall`: native's watchdog is known to have handled a verse-end while we were frozen. If it
+  // finished the range it stops without taking over (nativeDriving stays false), so the stopped
+  // check must run even then.
+  const syncFromNative = useCallback(async (opts?: { afterStall?: boolean }) => {
     if (!isNativeOutput()) return;
     if (queueRef.current.length === 0) return;
     const st = await nativeOutGetState();
-    if (!st.nativeDriving) return; // brain never lost control — nothing to adopt
+    if (!st.nativeDriving && !opts?.afterStall) return; // brain never lost control — nothing to adopt
+    // Native finished the range (repeat count reached) or was paused while we were frozen —
+    // adopting would call playIndex and restart audio the user expects to be stopped.
+    if (!st.playing) {
+      setState((s) => (s.isPlaying ? { ...s, isPlaying: false } : s));
+      return;
+    }
     const idx = st.coldIndex;
     if (idx < 0 || idx >= queueRef.current.length) return;
     // Adopt native's index. Recompute elapsed-before for the range-relative position, load that
