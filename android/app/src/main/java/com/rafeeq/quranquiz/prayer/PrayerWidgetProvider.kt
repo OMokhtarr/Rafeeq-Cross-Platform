@@ -48,6 +48,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray,
     ) {
         appWidgetIds.forEach { id -> render(context, appWidgetManager, id) }
+        // Every update re-arms the refresh chain. A force-stop (some launchers
+        // do one when recents are cleared) wipes the pending alarm, and the
+        // countdown then runs through zero into negatives; the periodic
+        // update in widget_prayer_times_info.xml lands here and restarts it.
+        PrayerAlarmScheduler.scheduleMidnightRoll(context)
     }
 
     /**

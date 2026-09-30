@@ -59,6 +59,8 @@ abstract class PrayerTimetableWidgetProvider : AppWidgetProvider() {
         widgetIds: IntArray,
     ) {
         widgetIds.forEach { id -> render(ctx, mgr, id) }
+        // Re-arms the refresh chain, as PrayerWidgetProvider.onUpdate does.
+        PrayerAlarmScheduler.scheduleMidnightRoll(ctx)
     }
 
     private fun render(ctx: Context, mgr: AppWidgetManager, widgetId: Int) {

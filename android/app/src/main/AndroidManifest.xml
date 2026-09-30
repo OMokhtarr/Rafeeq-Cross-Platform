@@ -60,6 +60,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <!-- A manual clock change moves every pending time, and an
+                     app update restarts the widget's refresh chain in case
+                     the old one was lost. -->
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.LOCALE_CHANGED" />
                 <!-- Granting exact alarms re-arms at once, upgrading the
                      pending inexact alarm to an exact one. -->
