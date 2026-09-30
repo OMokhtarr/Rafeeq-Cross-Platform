@@ -62,6 +62,12 @@ internal class PrayerDeckFactory(
 
     override fun onDataSetChanged() {
         cards = PrayerDeck.build(ctx, Date())
+        // The launcher reads the new cards after this returns, so the
+        // position is re-sent a moment later rather than now.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            { PrayerWidgetProvider.reassertPosition(ctx, widgetId) },
+            POSITION_REASSERT_DELAY_MS,
+        )
     }
 
     override fun onDestroy() {
@@ -196,6 +202,9 @@ internal class PrayerDeckFactory(
 
         /** Share of the card's inner width text may fill, for font drift. */
         const val FIT_SAFETY = 0.94f
+
+        /** Long enough for the launcher to have taken the new cards. */
+        const val POSITION_REASSERT_DELAY_MS = 750L
     }
 }
 

@@ -47,6 +47,10 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        // Back to the next prayer, as refresh() does: an index stored at the
+        // last refresh can outlive its card's moment (Asr, kept after its
+        // iqama window closed, would show tomorrow's Asr instead of Maghrib).
+        appWidgetIds.forEach { id -> PrayerWidgetConfig.setIndex(context, id, -1) }
         appWidgetIds.forEach { id -> render(context, appWidgetManager, id) }
         // Every update re-arms the refresh chain. A force-stop (some launchers
         // do one when recents are cleared) wipes the pending alarm, and the
@@ -229,6 +233,25 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             // plugin all already do, and a new trigger gets all three widget
             // types without having to know they exist.
             PrayerTimetableWidgetProvider.refresh(ctx)
+        }
+
+        /**
+         * Re-sends the stored card position to the launcher.
+         *
+         * render() sets the position right after binding the adapter, but a
+         * freshly bound adapter (after a reinstall, or the launcher
+         * restarting) loads its cards asynchronously, and a position that
+         * lands before them is clamped to 0 — the widget shows Fajr while
+         * the timer counts to the real next prayer. The deck factory calls
+         * this once its cards are built, so the position arrives again after
+         * the data does.
+         */
+        internal fun reassertPosition(ctx: Context, widgetId: Int) {
+            val index = PrayerWidgetConfig.index(ctx, widgetId)
+            if (index < 0) return
+            val position = RemoteViews(ctx.packageName, R.layout.widget_prayer_times)
+            position.setDisplayedChild(R.id.widget_deck, index)
+            AppWidgetManager.getInstance(ctx).partiallyUpdateAppWidget(widgetId, position)
         }
 
         /** The broadcast an arrow sends back to this receiver. */
