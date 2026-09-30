@@ -23,7 +23,7 @@ export type ItemId =
   | "quranDaily"
   | "duha"
   | "sunnahFajr" | "sunnahDhuhrBefore" | "sunnahDhuhrAfter"
-  | "sunnahMaghrib" | "sunnahIsha" | "qiyam" | "witr"
+  | "sunnahMaghrib" | "sunnahIsha" | "qiyam"
   | "fastToday";
 
 export type Unlock = Extract<PrayerKey, "fajr" | "dhuhr" | "asr" | "maghrib" | "isha" | "duha"> | null;
@@ -70,7 +70,6 @@ export const SECTIONS: TrackerSection[] = [
       { id: "sunnahMaghrib", unlock: "maghrib" },
       { id: "sunnahIsha", unlock: "isha" },
       { id: "qiyam", unlock: "isha" },
-      { id: "witr", unlock: "isha" },
     ],
   },
   { id: "fasting", items: [{ id: "fastToday", unlock: null }] },

@@ -9,6 +9,11 @@ import { ItemId, SectionId, OPTIONAL_SECTIONS } from "./trackerCatalog";
 const DAYS_KEY = "rafeeq.tracker.days";
 const SETTINGS_KEY = "rafeeq.tracker.settings";
 const SINCE_KEY = "rafeeq.tracker.since";
+const WEIGHTS_KEY = "rafeeq.tracker.weights";
+
+export const WEIGHT_MIN = 1;
+export const WEIGHT_MAX = 10;
+export const WEIGHT_DEFAULT = 5;
 
 function readObject(key: string): Record<string, unknown> {
   try {
@@ -23,7 +28,12 @@ export function loadDays(): Record<string, ItemId[]> {
   const raw = readObject(DAYS_KEY);
   const days: Record<string, ItemId[]> = {};
   Object.entries(raw).forEach(([k, v]) => {
-    if (Array.isArray(v)) days[k] = v.filter((x): x is ItemId => typeof x === "string");
+    if (!Array.isArray(v)) return;
+    // Witr used to be its own item; it now shares the Qiyam card.
+    const ids = v
+      .filter((x): x is string => typeof x === "string")
+      .map((x) => (x === "witr" ? "qiyam" : x)) as ItemId[];
+    days[k] = Array.from(new Set(ids));
   });
   return days;
 }
@@ -52,6 +62,25 @@ export function saveSettings(s: Record<SectionId, boolean>): void {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...s, prayers: true }));
   } catch {
     // Non-fatal: settings fall back to defaults next launch.
+  }
+}
+
+/** How much each optional section counts relative to the others. */
+export function loadWeights(): Record<SectionId, number> {
+  const raw = readObject(WEIGHTS_KEY);
+  const weights = {} as Record<SectionId, number>;
+  OPTIONAL_SECTIONS.forEach((id) => {
+    const v = raw[id];
+    weights[id] = typeof v === "number" && v >= WEIGHT_MIN && v <= WEIGHT_MAX ? Math.round(v) : WEIGHT_DEFAULT;
+  });
+  return weights;
+}
+
+export function saveWeights(w: Record<SectionId, number>): void {
+  try {
+    localStorage.setItem(WEIGHTS_KEY, JSON.stringify(w));
+  } catch {
+    // Non-fatal: weights fall back to equal next launch.
   }
 }
 

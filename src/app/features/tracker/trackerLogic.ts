@@ -96,16 +96,29 @@ export function visibleSections(d: Date, enabled: Record<SectionId, boolean>): S
   });
 }
 
-export function sectionShares(visible: SectionId[]): Partial<Record<SectionId, number>> {
+/**
+ * Prayers always take half. The other visible sections split the remaining
+ * half in proportion to their weights (equal when no weights are given).
+ */
+export function sectionShares(
+  visible: SectionId[],
+  weights: Partial<Record<SectionId, number>> = {},
+): Partial<Record<SectionId, number>> {
   const others = visible.filter((id) => id !== "prayers");
   if (others.length === 0) return { prayers: 1 };
   const shares: Partial<Record<SectionId, number>> = { prayers: 0.5 };
-  others.forEach((id) => (shares[id] = 0.5 / others.length));
+  const w = (id: SectionId) => weights[id] ?? 1;
+  const total = others.reduce((sum, id) => sum + w(id), 0);
+  others.forEach((id) => (shares[id] = (0.5 * w(id)) / total));
   return shares;
 }
 
-export function dayScore(ticked: ItemId[], visible: SectionId[]): number {
-  const shares = sectionShares(visible);
+export function dayScore(
+  ticked: ItemId[],
+  visible: SectionId[],
+  weights: Partial<Record<SectionId, number>> = {},
+): number {
+  const shares = sectionShares(visible, weights);
   const done = new Set(ticked);
   const total = SECTIONS.reduce((sum, s) => {
     const share = shares[s.id];

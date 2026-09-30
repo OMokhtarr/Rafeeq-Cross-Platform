@@ -15,7 +15,7 @@ import { SECTIONS, ItemId, TrackerItem } from "./trackerCatalog";
 import {
   trackingDate, toDayKey, isUnlocked, freshTimes, earliestViewable, fastingOccasion, visibleSections, dayScore,
 } from "./trackerLogic";
-import { loadDays, toggleItem, loadSettings, saveSettings, ensureSince } from "./trackerStore";
+import { loadDays, toggleItem, loadSettings, saveSettings, ensureSince, loadWeights, saveWeights } from "./trackerStore";
 import TrackerSettingsSheet from "./TrackerSettingsSheet";
 import TrackerInfoSheet from "./TrackerInfoSheet";
 import TrackerCalendarSheet from "./TrackerCalendarSheet";
@@ -41,6 +41,7 @@ const WorshipTracker: React.FC = () => {
   const [prayer, setPrayer] = useState<PrayerDay | null>(null);
   const [days, setDays] = useState(loadDays);
   const [settings, setSettings] = useState(loadSettings);
+  const [weights, setWeights] = useState(loadWeights);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<"settings" | "info" | "calendar" | null>(null);
   /** A past day being viewed and edited; null shows the current tracking day. */
@@ -100,8 +101,8 @@ const WorshipTracker: React.FC = () => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
     const key = toDayKey(d);
-    return { d, key, score: dayScore(days[key] ?? [], visibleSections(d, settings)) };
-  }), [today.getTime(), days, settings]);
+    return { d, key, score: dayScore(days[key] ?? [], visibleSections(d, settings), weights) };
+  }), [today.getTime(), days, settings, weights]);
 
   const tap = (item: TrackerItem) => {
     if (longPressed.current) return;
@@ -141,7 +142,7 @@ const WorshipTracker: React.FC = () => {
     { day: "numeric", month: "long" },
   ).format(shown);
   const greg = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(shown);
-  const score = dayScore(ticked, visible);
+  const score = dayScore(ticked, visible, weights);
 
   const done = (id: ItemId) => ticked.includes(id);
   const lockIcon = (
@@ -281,6 +282,8 @@ const WorshipTracker: React.FC = () => {
           settings={settings}
           date={today}
           onChange={(s) => { setSettings(s); saveSettings(s); }}
+          weights={weights}
+          onWeightsChange={(w) => { setWeights(w); saveWeights(w); }}
           onClose={() => setSheet(null)}
         />
       )}

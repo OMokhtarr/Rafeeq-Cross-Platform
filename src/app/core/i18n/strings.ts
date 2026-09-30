@@ -56,7 +56,7 @@ export interface AppStrings {
     items: Record<string, { title: string; subtitle?: string }>;
     fasting: Record<"ramadan" | "arafah" | "ashura" | "tasua" | "shawwal" | "whiteDays" | "monday" | "thursday", { chip: string; subtitle: string }>;
     fastTodayTitle: string;
-    settings: { title: string; question: string; obligatory: string; footnote: string };
+    settings: { title: string; question: string; obligatory: string; footnote: string; less: string; more: string };
     info: {
       subtitle: string;
       purposeTitle: string; purpose: string;
@@ -651,8 +651,7 @@ const ar: AppStrings = {
       sunnahDhuhrAfter: { title: "سنة الظهر البعدية", subtitle: "ركعتان بعد صلاة الظهر" },
       sunnahMaghrib: { title: "سنة المغرب", subtitle: "ركعتان بعد صلاة المغرب" },
       sunnahIsha: { title: "سنة العشاء", subtitle: "ركعتان بعد صلاة العشاء" },
-      qiyam: { title: "قيام الليل", subtitle: "من بعد صلاة العشاء حتى طلوع الفجر" },
-      witr: { title: "صلاة الوتر", subtitle: "ركعة أو ثلاث أو خمس أو سبع أو إحدى عشرة" },
+      qiyam: { title: "قيام الليل والوتر", subtitle: "من بعد صلاة العشاء حتى طلوع الفجر، ويُختم بالوتر: ركعة أو ثلاث أو خمس أو سبع أو إحدى عشرة" },
     },
     fastTodayTitle: "صمت اليوم",
     fasting: {
@@ -669,7 +668,9 @@ const ar: AppStrings = {
       title: "إعدادات متابعة العبادات",
       question: "ما الذي يُحتسب في نسبة الإنجاز؟",
       obligatory: "إلزامي",
-      footnote: "الصلوات الخمس تُحتسب دائماً بنسبة 50٪، والأقسام المفعّلة تتقاسم الـ 50٪ المتبقية بالتساوي.",
+      footnote: "الصلوات الخمس تُحتسب دائماً بنسبة 50٪، والأقسام المفعّلة تتقاسم الـ 50٪ المتبقية. استخدم − و + لزيادة نصيب أي قسم أو إنقاصه.",
+      less: "تقليل نسبة",
+      more: "زيادة نسبة",
     },
     info: {
       subtitle: "تابع عباداتك اليومية وحافظ على استمرارك",
@@ -1266,8 +1267,7 @@ const en: AppStrings = {
       sunnahDhuhrAfter: { title: "Dhuhr sunnah (after)", subtitle: "2 rak'ahs after Dhuhr" },
       sunnahMaghrib: { title: "Maghrib sunnah", subtitle: "2 rak'ahs after Maghrib" },
       sunnahIsha: { title: "Isha sunnah", subtitle: "2 rak'ahs after Isha" },
-      qiyam: { title: "Qiyam al-Layl", subtitle: "From after Isha until Fajr" },
-      witr: { title: "Witr", subtitle: "1, 3, 5, 7 or 11 rak'ahs" },
+      qiyam: { title: "Qiyam al-Layl & Witr", subtitle: "From after Isha until Fajr, closed with Witr: 1, 3, 5, 7 or 11 rak'ahs" },
     },
     fastTodayTitle: "I fasted today",
     fasting: {
@@ -1284,7 +1284,9 @@ const en: AppStrings = {
       title: "Tracker settings",
       question: "What counts toward completion?",
       obligatory: "Required",
-      footnote: "The five prayers always count for 50%. Enabled sections share the remaining 50% equally.",
+      footnote: "The five prayers always count for 50%. Enabled sections share the remaining 50%; use − and + to give a section more or less of it.",
+      less: "Decrease share of",
+      more: "Increase share of",
     },
     info: {
       subtitle: "Track your daily worship and stay consistent",

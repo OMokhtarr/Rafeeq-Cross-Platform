@@ -357,6 +357,41 @@
   flex: 1;
 }
 
+.wt-weight {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.wt-weight .wt-chip {
+  min-width: 3.2em;
+  text-align: center;
+}
+
+.wt-weight.is-off {
+  opacity: 0.4;
+}
+
+.wt-weight-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--wt-accent-soft);
+  background: transparent;
+  color: var(--wt-accent);
+  font-size: var(--text-base);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.wt-weight-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .wt-settings-fixed {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
