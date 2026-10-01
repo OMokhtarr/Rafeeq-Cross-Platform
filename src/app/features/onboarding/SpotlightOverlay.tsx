@@ -131,7 +131,7 @@ export const SpotlightOverlay: React.FC<Props> = ({
   const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return createPortal(
-    <div className="ob-spot" onClick={swallow} onPointerDown={swallow}>
+    <div className={"ob-spot" + (box ? "" : " ob-spot--pending")} onClick={swallow} onPointerDown={swallow}>
       {box && (
         <>
           <div

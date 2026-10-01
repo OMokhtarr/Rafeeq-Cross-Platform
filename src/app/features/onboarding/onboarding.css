@@ -120,6 +120,9 @@
 
 /* ── Spotlight ──────────────────────────────────── */
 .ob-spot { position: fixed; inset: 0; z-index: 30000; touch-action: none; }
+/* Still looking for the step's target (it may never appear): nothing is drawn,
+   so the page must keep taking taps instead of feeling frozen. */
+.ob-spot--pending { pointer-events: none; touch-action: auto; }
 .ob-spot-ring {
   position: fixed;
   border-radius: 12px;
