@@ -28,6 +28,7 @@ import { useSheetDrag } from "../../../core/hooks/useSheetDrag";
 import { useSwipeNav } from "../../../core/hooks/useSwipeNav";
 import { registerOverlay } from "../../../core/utils/overlay-registry";
 import NoteModal from "../note-modal/NoteModal";
+import { tourAttr } from "../../../features/onboarding/tourCatalog";
 import "./VerseActionSheet.css";
 
 interface Props {
@@ -338,7 +339,7 @@ const VerseActionSheet: React.FC<Props> = ({
 
         <header className="vas-header">
           <h3 className="vas-title">{t.mushaf.actionSheetTitle(displayKey)}</h3>
-          <div className="vas-header-actions">
+          <div className="vas-header-actions" {...tourAttr("viewer.verseSheet.actions")}>
             {/* Play verse */}
             <button
               className={`vas-play-btn${isPlaying ? " vas-play-btn--active" : ""}${isNight ? " vas-play-btn--night" : ""}`}
@@ -422,7 +423,7 @@ const VerseActionSheet: React.FC<Props> = ({
 
         {/* ── Tafsir ── */}
         {/* Resource selector — shows only downloaded tafsirs */}
-        <div className={`vas-resource-bar${nightClass}`}>
+        <div className={`vas-resource-bar${nightClass}`} {...tourAttr("viewer.verseSheet.tafsir")}>
           {resourcesLoading ? (
             <span
               className="vas-spinner vas-spinner--sm"
@@ -470,7 +471,7 @@ const VerseActionSheet: React.FC<Props> = ({
         </div>
 
         {/* Verse + nav row */}
-        <div className={`vas-verse-row${nightClass}`} {...swipeHandlers}>
+        <div className={`vas-verse-row${nightClass}`} {...swipeHandlers} {...tourAttr("viewer.verseSheet.swipe")}>
           <div className="vas-verse-center">
             <div className="vas-nav-inline">
               <button
