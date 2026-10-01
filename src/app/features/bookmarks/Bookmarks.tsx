@@ -23,6 +23,8 @@ import {
   fetchRecitations,
   type ApiRecitation,
 } from "../../core/services/api/quran-api.client";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Bookmarks.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -113,6 +115,7 @@ function formatRange(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const Bookmarks: React.FC = () => {
+  usePageTour(["bookmarks"]);
   const history = useHistory();
   const { lang, isRTL } = useLang();
   const { resumeSession } = usePlayback();
@@ -241,7 +244,7 @@ const Bookmarks: React.FC = () => {
           </header>
 
           {/* Tabs */}
-          <div className="bm-tabs" role="tablist">
+          <div className="bm-tabs" role="tablist" {...tourAttr("bookmarks.tabs")}>
             <button
               role="tab"
               aria-selected={activeTab === "verses"}

@@ -29,6 +29,7 @@ import StreakWeekStrip from "./StreakWeekStrip";
 // The panel's own styles live in Account.css alongside the card that first
 // used them. Imported here rather than by the host page, so rendering this
 // anywhere brings its styling with it.
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Account.css";
 
 interface Props {
@@ -84,7 +85,7 @@ const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
           explainer sheet; the meter below it says how to earn the next one. */}
       {lastActive && (
         <>
-          <button className="ac-freeze-cta" onClick={() => setFreezeSheet(true)}>
+          <button className="ac-freeze-cta" onClick={() => setFreezeSheet(true)} {...tourAttr("account.streak")}>
             <span className="ac-freeze-cta-pips" aria-hidden="true">
               {Array.from({ length: freezeCount }, (_, i) => (
                 <FreezeSnowflake key={i} className="ac-freeze-cta-pip" />

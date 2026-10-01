@@ -25,11 +25,14 @@ import {
   updatePreset,
 } from "../../../../services/quiz-presets.service";
 import { totalPageCount } from "../../../../services/quiz-ranges.service";
+import { usePageTour } from "../../../../../onboarding/usePageTour";
+import { tourAttr } from "../../../../../onboarding/tourCatalog";
 import "./MutashabihatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 const MutashabihatSetup: React.FC = () => {
+  usePageTour(["quizSetup"]);
   const history = useHistory();
   const location = useLocation();
   const { t, isRTL } = useLang();
@@ -224,7 +227,7 @@ const MutashabihatSetup: React.FC = () => {
           {/* ── Body ── */}
           <div className="ms-body" dir={isRTL ? "rtl" : "ltr"}>
             {/* Simple | Advanced — the visible tab is the source of truth */}
-            <div className="ms-tab-row">
+            <div className="ms-tab-row" {...tourAttr("quizSetup.mode")}>
               {[
                 { key: "simple" as const, label: tq.tabSimple },
                 { key: "advanced" as const, label: tq.tabAdvanced },
@@ -253,7 +256,7 @@ const MutashabihatSetup: React.FC = () => {
             ) : (
               <>
               {/* Scope selector */}
-              <div className="ms-scope-section">
+              <div className="ms-scope-section" {...tourAttr("quizSetup.scope")}>
                 <div className="ms-label">{tq.scope}</div>
                 <div className="ms-type-row">
                   {[
@@ -415,7 +418,7 @@ const MutashabihatSetup: React.FC = () => {
             {perPageDerived === null ? (
               <>
               <div className="ms-footer-label">{tq.questionCount}</div>
-              <div className="ms-count-row">
+              <div className="ms-count-row" {...tourAttr("quizSetup.count")}>
                 {[5, 10, 15, 20].map((n) => (
                   <button
                     key={n}
@@ -441,6 +444,7 @@ const MutashabihatSetup: React.FC = () => {
               </div>
             )}
             <button
+              {...tourAttr("quizSetup.start")}
               className="ms-start-btn"
               onClick={handleStart}
               disabled={!isReady()}

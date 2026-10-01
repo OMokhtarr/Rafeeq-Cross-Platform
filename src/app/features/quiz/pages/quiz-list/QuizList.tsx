@@ -9,6 +9,8 @@ import { useHistory, useLocation } from "react-router-dom";
 import { useLang } from "../../../../core/context/LanguageContext";
 import BottomNavBar from "../../../../shared/components/bottom-nav/BottomNavBar";
 import { readQuizPrefill, quizPrefillQuery } from "../../quiz-prefill";
+import { usePageTour } from "../../../onboarding/usePageTour";
+import { tourAttr } from "../../../onboarding/tourCatalog";
 import "./QuizList.css";
 
 interface QuizEntry {
@@ -23,6 +25,7 @@ const QUIZZES: QuizEntry[] = [
 ];
 
 const QuizList: React.FC = () => {
+  usePageTour(["quizList"]);
   const history = useHistory();
   const location = useLocation();
   const { t, isRTL } = useLang();
@@ -55,6 +58,7 @@ const QuizList: React.FC = () => {
               return (
                 <button
                   key={quiz.id}
+                  {...tourAttr(quiz.id === "akmel-alayah" ? "quizList.ayah" : quiz.id === "mutashabihat" ? "quizList.mutashabihat" : "quizList.nehayat")}
                   className="ql-card"
                   dir={isRTL ? "rtl" : "ltr"}
                   onClick={() => history.push(quiz.route + prefillQuery)}

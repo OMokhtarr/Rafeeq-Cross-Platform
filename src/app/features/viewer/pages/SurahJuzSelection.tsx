@@ -13,6 +13,8 @@ import {
   estimatePageForVerse,
   getSuraForPage,
 } from "../../../core/services/data/metadata.service";
+import { usePageTour } from "../../onboarding/usePageTour";
+import { tourAttr } from "../../onboarding/tourCatalog";
 import "./SurahJuzSelection.css";
 
 type Tab = "surah" | "juz" | "hizb";
@@ -44,6 +46,7 @@ const JUZ_START_PAGES: readonly number[] = [
 ];
 
 const SurahJuzSelection: React.FC = () => {
+  usePageTour(["surahJuz"]);
   const history = useHistory();
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
@@ -310,7 +313,7 @@ const SurahJuzSelection: React.FC = () => {
           </div>
 
           {/* ── Tabs ── */}
-          <div className="sjs-tabs" role="tablist">
+          <div className="sjs-tabs" role="tablist" {...tourAttr("surahJuz.tabs")}>
             <button
               role="tab"
               aria-selected={tab === "surah"}
