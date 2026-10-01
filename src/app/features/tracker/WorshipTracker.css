@@ -436,6 +436,27 @@
   margin: 0;
 }
 
+.wt-inline-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--wt-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.wt-info-card .wt-hadith {
+  font-size: var(--text-base);
+  line-height: 2;
+}
+
+.wt-info-card .wt-explanation + .wt-explanation {
+  margin-top: var(--space-3);
+}
+
 .wt-info-card ul {
   margin: 0;
   padding-inline-start: 18px;

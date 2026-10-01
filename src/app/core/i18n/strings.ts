@@ -59,7 +59,9 @@ export interface AppStrings {
     settings: { title: string; question: string; obligatory: string; footnote: string; less: string; more: string };
     info: {
       subtitle: string;
-      purposeTitle: string; purpose: string;
+      /** The purpose text, split around the word that opens the riya hadith. */
+      purposeTitle: string; purpose: string; riyaLink: string; purposeEnd: string;
+      riyaTitle: string;
       howTitle: string; how: string[];
       lockedTitle: string; locked: string[];
       credit: string;
@@ -676,7 +678,10 @@ const ar: AppStrings = {
     info: {
       subtitle: "تابع عباداتك اليومية وحافظ على استمرارك",
       purposeTitle: "وسيلة تنظيمية",
-      purpose: "خاصية المتابعة وسيلة تنظيمية تساعدك على الالتزام بالفرائض والسنن، وليست عبادة بذاتها ولا سنة عن النبي ﷺ؛ فاجعلها سراً بينك وبين الله، لا لجمع «الدرجات» ولا للمفاخرة أو الرياء.",
+      purpose: "خاصية المتابعة وسيلة تنظيمية تساعدك على الالتزام بالفرائض والسنن، وليست عبادة بذاتها ولا سنة عن النبي ﷺ؛ فاجعلها سراً بينك وبين الله، لا لجمع «الدرجات» ولا للمفاخرة أو ",
+      riyaLink: "الرياء",
+      purposeEnd: ".",
+      riyaTitle: "الرياء",
       howTitle: "كيف تستخدمها؟",
       how: [
         "اضغط على أي عبادة لتسجيل إتمامها، واضغط مرة أخرى للتراجع",
@@ -1293,7 +1298,10 @@ const en: AppStrings = {
     info: {
       subtitle: "Track your daily worship and stay consistent",
       purposeTitle: "An organising aid",
-      purpose: "Tracking is an aid to help you keep up with obligatory and sunnah acts. It is not an act of worship in itself, nor a sunnah of the Prophet ﷺ. Keep it between you and Allah, not for collecting points, boasting or showing off.",
+      purpose: "Tracking is an aid to help you keep up with obligatory and sunnah acts. It is not an act of worship in itself, nor a sunnah of the Prophet ﷺ. Keep it between you and Allah, not for collecting points, boasting or ",
+      riyaLink: "showing off",
+      purposeEnd: ".",
+      riyaTitle: "Showing off (Riya)",
       howTitle: "How to use it",
       how: [
         "Tap any act to mark it done, and tap again to undo",
