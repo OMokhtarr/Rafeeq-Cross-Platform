@@ -48,6 +48,8 @@ import {
   type PrayerDay,
 } from "../../core/services/prayer/prayer-times.types";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./PrayerTimes.css";
 
 const ALL_ROW_KEYS: PrayerKey[] = [...PRAYER_KEYS, ...ADDITIONAL_KEYS];
@@ -74,6 +76,7 @@ function formatCountdown(msRemaining: number, lang: string): string {
 }
 
 const PrayerTimes: React.FC = () => {
+  usePageTour(["prayerTimes"]);
   const { t, lang, isRTL } = useLang();
   const tp = t.prayerTimes;
 
@@ -259,6 +262,7 @@ const PrayerTimes: React.FC = () => {
                   </p>
                   <button
                     type="button"
+                    {...tourAttr("prayerTimes.grant")}
                     className="pt-grant-btn"
                     onClick={handleUpdateLocation}
                     disabled={locating}
@@ -306,6 +310,7 @@ const PrayerTimes: React.FC = () => {
                     </div>
                     <button
                       type="button"
+                      {...tourAttr("prayerTimes.menu")}
                       className="pt-menu-btn"
                       onClick={() => setSheet("menu")}
                       aria-haspopup="dialog"

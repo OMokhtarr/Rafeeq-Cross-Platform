@@ -21,6 +21,8 @@ import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import { useAzkarFavorites } from "./azkarFavorites";
 import { zikrAudioUrl } from "./azkarAudio";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Azkar.css";
 
 // ── Settings (read-only read from Settings.tsx's localStorage key) ───────────
@@ -135,6 +137,7 @@ const Azkar: React.FC = () => {
   const history = useHistory();
   const { categoryId } = useParams<{ categoryId?: string }>();
   const selectedCategory = categoryId ?? null;
+  usePageTour([selectedCategory ? "azkarCategory" : "azkar"]);
   const { t, isRTL } = useLang();
   const ta = t.azkar;
   const [counters, setCounters] = useState<Record<string, number>>({});
@@ -303,6 +306,7 @@ const Azkar: React.FC = () => {
                   return (
                     <div
                       key={zikr.id}
+                      {...tourAttr("azkarCategory.swipe")}
                       className={`azkar-item ${isDone ? "completed" : ""}`}
                       onTouchStart={onItemTouchStart(zikr.id)}
                       onTouchEnd={onItemTouchEnd(zikr.id)}
@@ -323,6 +327,7 @@ const Azkar: React.FC = () => {
                         <span className="azkar-item-num">{index + 1}</span>
                         <button
                           className={`azkar-action-btn ${isFavorite ? "active" : ""}`}
+                          {...tourAttr("azkarCategory.star")}
                           onClick={() => toggleFavorite(zikr.id)}
                           aria-label={isFavorite ? ta.unfavorite : ta.favorite}
                           aria-pressed={isFavorite}
@@ -344,6 +349,7 @@ const Azkar: React.FC = () => {
                           </svg>
                         </button>
                         <button
+                          {...tourAttr("azkarCategory.counter")}
                           className={`azkar-count-btn ${isDone ? "done" : ""}`}
                           onClick={() => handleCount(zikr.id, zikr.repeat ?? 1)}
                           disabled={isDone}
@@ -376,6 +382,7 @@ const Azkar: React.FC = () => {
                         <button
                           className="azkar-action-btn"
                           onClick={() => history.push(`/azkar/${selectedCategory}/ref/${zikr.id}`)}
+                          {...tourAttr("azkarCategory.ref")}
                           aria-label={ta.reference}
                           title={ta.reference}
                         >
@@ -413,6 +420,7 @@ const Azkar: React.FC = () => {
                 return (
                   <button
                     key={cat.id}
+                    {...tourAttr(cat.id === MY_AZKAR_ID ? "azkar.mine" : "azkar.progress")}
                     className={"azkar-cat-card" + (isFullyDone ? " azkar-cat-done" : "") + (cat.id === MY_AZKAR_ID ? " azkar-cat-mine" : "")}
                     dir={isRTL ? "rtl" : "ltr"}
                     onClick={() => handleCategorySelect(cat.id)}

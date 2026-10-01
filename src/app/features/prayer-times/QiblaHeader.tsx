@@ -32,6 +32,7 @@ import {
   type TurnDirection,
 } from "../../core/services/prayer/qibla.geometry";
 import { angleOf, arcPath, pointAt, progressSpan } from "./dayDial";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./QiblaHeader.css";
 
 /**
@@ -232,7 +233,7 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
       </div>
 
       <div className="qh-main">
-        <div className="qh-next" aria-live="polite">
+        <div className="qh-next" aria-live="polite" {...tourAttr("prayerTimes.next")}>
           {next ? (
             <>
               <span className="qh-next-label">{tp.nextPrayer}</span>
@@ -245,7 +246,7 @@ const QiblaHeader: React.FC<QiblaHeaderProps> = ({
           )}
         </div>
 
-        <div className="qh-dial">
+        <div className="qh-dial" {...tourAttr("prayerTimes.qibla")}>
           <svg
             viewBox="0 0 200 200"
             className={"qh-dial-svg" + (facing ? " qh-dial-svg--facing" : "")}
