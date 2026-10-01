@@ -15,6 +15,7 @@
 import React from "react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
+import { tourAttr } from "../../../features/onboarding/tourCatalog";
 import "./BottomNavBar.css";
 
 export type NavTabKey =
@@ -166,6 +167,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
     <nav
       className={"rfq-tab-bar" + (fixed ? " rfq-tab-bar-fixed" : "")}
       aria-label="Primary"
+      {...tourAttr("home.tabs")}
     >
       {TABS.map((tab) => {
         const l = labels[tab.id];
@@ -183,6 +185,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
             onClick={() => !tab.comingSoon && goToTab(route)}
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
+            {...(tab.id === "more" ? tourAttr("home.more") : {})}
             aria-label={
               tab.comingSoon ? `${l} (${t.tabs.comingSoon})` : l
             }
