@@ -186,7 +186,8 @@ Requests are dropped when the user leaves the page.
 | `viewer.verseSheet` | first verse-sheet open | `actions` → `.vas-play-btn`…`.vas-bookmark-btn` group; `tafsir` → tafsir resource bar; ✋`swipe` → `.vas-verse-row` |
 | `viewer.playbackSheet` | first playback-sheet open | `range` → range selects; `quick` → quick-select chips; `reciter` → reciter select + Manage downloads; `speed` → speed/repeat chips |
 | `viewer.playbackBar` | first playback | `controls` → `.toolbar-playback-bar` |
-| `viewer.reciteBar` | first recite recording | `transcript` → transcript area; `reveal` → reveal word/verse buttons; `stop` → mic stop button |
+| `viewer.reciteBar` | first recite recording, before the user speaks | `transcript` → transcript area; `stop` → mic stop button |
+| `viewer.reciteReveal` | first time the reveal buttons show mid-recitation (verse recognised, page not shown in full) | `reveal` → reveal word/verse buttons |
 | `viewer.reveal` | first time verses are hidden | `word` → reveal-next-word; `verse` → reveal-next-verse |
 | `surahJuz` | first visit `/surah-juz` | `tabs` → Surahs/Juz/Hizb tabs |
 | `search` | first visit `/search` | `input` → `.search-bottom-bar`; `recents` (optional) → recents list |

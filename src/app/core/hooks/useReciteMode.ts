@@ -80,6 +80,12 @@ export interface UseReciteModeResult {
   /** Stop mic capture without leaving recite mode. */
   stopRecording: () => void;
   /**
+   * Suspends the silence auto-stop while true (e.g. an onboarding card is on
+   * screen and the user is reading, not reciting). Releasing restarts the
+   * countdown from that moment.
+   */
+  holdSilence: (hold: boolean) => void;
+  /**
    * Called when PageViewer's own page-load effect lands on a new page while
    * recite mode is still active (i.e. after `onAdvancePage` triggered a
    * `setCurrentPage`). Keeps the session's verse list in sync with the
@@ -140,6 +146,8 @@ export function useReciteMode(
   // Timestamp (ms) of the last chunk that produced real transcript text —
   // drives the "stopped talking" auto-stop.
   const lastSpeechAtRef = useRef(0);
+  // While true the silence auto-stop is suspended — see holdSilence.
+  const silenceHeldRef = useRef(false);
   // Holds the latest stopRecording — lets the silence timer and driver
   // error callbacks auto-stop without a forward reference to a function
   // declared later.
@@ -294,6 +302,12 @@ export function useReciteMode(
     lastSpeechAtRef.current = Date.now();
   }, []);
 
+  const holdSilence = useCallback((hold: boolean) => {
+    if (silenceHeldRef.current === hold) return;
+    silenceHeldRef.current = hold;
+    if (!hold) lastSpeechAtRef.current = Date.now();
+  }, []);
+
   const stopRecording = useCallback(() => {
     if (!recordingRef.current) return;
     recordingRef.current = false;
@@ -401,7 +415,7 @@ export function useReciteMode(
       setRecordingSeconds((s) => s + 1);
       // Auto-stop if the user has gone quiet — no recognized speech for a
       // while means they've stopped reciting.
-      if (Date.now() - lastSpeechAtRef.current >= SILENCE_TIMEOUT_MS) {
+      if (!silenceHeldRef.current && Date.now() - lastSpeechAtRef.current >= SILENCE_TIMEOUT_MS) {
         stopRecordingRef.current();
       }
     }, 1000);
@@ -490,6 +504,7 @@ export function useReciteMode(
     disarm,
     startRecording,
     stopRecording,
+    holdSilence,
     syncPage,
   };
 }

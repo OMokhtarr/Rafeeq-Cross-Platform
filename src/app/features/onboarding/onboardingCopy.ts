@@ -97,8 +97,10 @@ const ar: OnboardingCopy = {
     },
     "viewer.reciteBar": {
       transcript: { title: "ما تقرؤه", body: "يظهر هنا ما يسمعه رفيق، وتنكشف الآيات كلما قرأتها صحيحة." },
-      reveal: { title: "توقفت؟", body: "اكشف الكلمة التالية أو الآية التالية." },
       stop: { title: "إنهاء التسميع", body: "اضغط لإيقاف الاستماع." },
+    },
+    "viewer.reciteReveal": {
+      reveal: { title: "توقفت؟", body: "اكشف الكلمة التالية أو الآية التالية." },
     },
     "viewer.reveal": {
       word: { title: "اكشف كلمة", body: "يُظهر الكلمة التالية من الآيات المخفية." },
@@ -251,8 +253,10 @@ const en: OnboardingCopy = {
     },
     "viewer.reciteBar": {
       transcript: { title: "What you recite", body: "What Rafeeq hears shows here, and verses appear as you recite them correctly." },
-      reveal: { title: "Stuck?", body: "Reveal the next word or the next verse." },
       stop: { title: "Stop reciting", body: "Tap to stop listening." },
+    },
+    "viewer.reciteReveal": {
+      reveal: { title: "Stuck?", body: "Reveal the next word or the next verse." },
     },
     "viewer.reveal": {
       word: { title: "Reveal a word", body: "Shows the next hidden word." },

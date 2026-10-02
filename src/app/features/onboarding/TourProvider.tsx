@@ -50,6 +50,11 @@ const NOOP: TourApi = {
 const Ctx = createContext<TourApi>(NOOP);
 export const useTours = () => useContext(Ctx);
 
+// Kept apart from TourApi so the API object stays stable while tours come and go.
+const ActiveCtx = createContext<TourId | null>(null);
+/** The page tour on screen now, or null — e.g. to keep recording alive while its card is read. */
+export const useActiveTour = () => useContext(ActiveCtx);
+
 interface ActiveTour {
   req: TourRequest;
   index: number;
@@ -187,10 +192,11 @@ export const TourProvider: React.FC<{ initial: OnboardingState | null; children:
   );
 
   const steps = active ? TOURS[active.req.tourId] : [];
+  const activeTourId = active && !deck ? active.req.tourId : null;
 
   return (
     <Ctx.Provider value={api}>
-      {children}
+      <ActiveCtx.Provider value={activeTourId}>{children}</ActiveCtx.Provider>
       {deck?.kind === "welcome" && <WelcomeSlides onDone={finishWelcome} />}
       {deck?.kind === "whatsNew" && (
         <WhatsNew

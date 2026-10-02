@@ -31,6 +31,7 @@ import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
 import { usePageTour } from "../onboarding/usePageTour";
+import { useActiveTour } from "../onboarding/TourProvider";
 import { tourAttr } from "../onboarding/tourCatalog";
 import { useWakeLock } from "../../core/hooks/useWakeLock";
 import { useReciteMode } from "../../core/hooks/useReciteMode";
@@ -771,6 +772,16 @@ const PageViewer: React.FC = () => {
     onBeforeStart: immersive.showChrome,
   });
   usePageTour(["viewer.reciteBar"], { ready: isRecording, onBeforeStart: immersive.showChrome });
+  // The reveal buttons appear only once the verse is recognised, and fold
+  // away while the whole page is shown.
+  usePageTour(["viewer.reciteReveal"], {
+    ready: isRecording && !recite.identifying && !recite.showingAll,
+    onBeforeStart: immersive.showChrome,
+  });
+  // Reading a tour card is silence; it must not end the recording under it.
+  const tourOnScreen = useActiveTour() !== null;
+  const { holdSilence } = recite;
+  useEffect(() => holdSilence(tourOnScreen), [holdSilence, tourOnScreen]);
   usePageTour(["viewer.reveal"], {
     ready: anyPageHidden && !isRecording && !showPlaybackBar,
     onBeforeStart: immersive.showChrome,
@@ -911,7 +922,7 @@ const PageViewer: React.FC = () => {
                       <button
                         type="button"
                         className="hide-reveal-btn"
-                        {...tourAttr("viewer.reciteBar.reveal")}
+                        {...tourAttr("viewer.reciteReveal.reveal")}
                         onClick={recite.revealNextWord}
                         tabIndex={!recite.showingAll ? 0 : -1}
                         aria-label="Reveal next word"
@@ -935,7 +946,7 @@ const PageViewer: React.FC = () => {
                       <button
                         type="button"
                         className="hide-reveal-btn"
-                        {...tourAttr("viewer.reciteBar.reveal")}
+                        {...tourAttr("viewer.reciteReveal.reveal")}
                         onClick={recite.revealNextVerse}
                         tabIndex={!recite.showingAll ? 0 : -1}
                         aria-label="Reveal next verse"

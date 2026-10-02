@@ -29,6 +29,7 @@ export type TourId =
   | "viewer.playbackSheet"
   | "viewer.playbackBar"
   | "viewer.reciteBar"
+  | "viewer.reciteReveal"
   | "viewer.reveal"
   | "surahJuz"
   | "search"
@@ -62,7 +63,10 @@ export const TOURS: Record<TourId, TourStep[]> = {
   "viewer.verseSheet": [{ key: "actions" }, { key: "tafsir" }, { key: "swipe", gesture: "swipe" }],
   "viewer.playbackSheet": [{ key: "range" }, { key: "quick" }, { key: "reciter" }, { key: "speed" }],
   "viewer.playbackBar": [{ key: "controls" }],
-  "viewer.reciteBar": [{ key: "transcript" }, { key: "reveal", union: true }, { key: "stop" }],
+  "viewer.reciteBar": [{ key: "transcript" }, { key: "stop" }],
+  // Its own tour: the reveal buttons only appear once the verse is recognised,
+  // well after the recording (and the tour above) has started.
+  "viewer.reciteReveal": [{ key: "reveal", union: true }],
   "viewer.reveal": [{ key: "word" }, { key: "verse" }],
   surahJuz: [{ key: "tabs" }],
   search: [{ key: "input" }, { key: "recents" }],
