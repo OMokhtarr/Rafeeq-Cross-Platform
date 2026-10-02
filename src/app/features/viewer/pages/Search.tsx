@@ -26,6 +26,8 @@ import {
   getSurahNameEnglish,
 } from "../../../core/services/data/metadata.service";
 import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
+import { usePageTour } from "../../onboarding/usePageTour";
+import { tourAttr } from "../../onboarding/tourCatalog";
 import "./Search.css";
 
 /** Debounce window for live search-as-you-type (ms). */
@@ -82,6 +84,7 @@ export function pushRecent(query: string, count: number): RecentSearch[] {
 }
 
 const Search: React.FC = () => {
+  usePageTour(["search"]);
   const history = useHistory();
   const { t, lang, isRTL } = useLang();
   const [recents, setRecents] = useState<RecentSearch[]>([]);
@@ -287,7 +290,7 @@ const Search: React.FC = () => {
                     : "Start searching to see your history here."}
                 </p>
               ) : (
-                <ul className="recents-list">
+                <ul className="recents-list" {...tourAttr("search.recents")}>
                   {recents.map((r) => (
                     <li
                       key={r.query}
@@ -328,7 +331,7 @@ const Search: React.FC = () => {
           )}
 
           {/* ── Bottom search input ── */}
-          <form className="search-bottom-bar" onSubmit={handleSubmit}>
+          <form className="search-bottom-bar" onSubmit={handleSubmit} {...tourAttr("search.input")}>
             <span className="search-bottom-icon" aria-hidden>
               <svg
                 viewBox="0 0 24 24"

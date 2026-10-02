@@ -55,6 +55,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".prayer.AzkarReminderReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".prayer.PrayerBootReceiver"
             android:exported="false">
             <intent-filter>

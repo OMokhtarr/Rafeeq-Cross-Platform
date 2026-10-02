@@ -24,6 +24,8 @@ import {
   type BackupSummary,
 } from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Account.css";
 
 type ModalType =
@@ -36,6 +38,7 @@ type ModalType =
 const LEGAL_BASE_URL = "https://omokhtarr.github.io/Rafeeq-Cross-Platform";
 
 const Account: React.FC = () => {
+  usePageTour(["account"]);
   const history = useHistory();
   const { lang, isRTL } = useLang();
 
@@ -277,7 +280,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* ── Notes card ── */}
-            <div className="ac-card ac-notes-card">
+            <div className="ac-card ac-notes-card" {...tourAttr("account.notes")}>
                 <button
                   className="ac-streak-header"
                   onClick={() => setNotesOpen((o) => !o)}
@@ -373,7 +376,7 @@ const Account: React.FC = () => {
             {/* ── Backup group — the cross-device path, since there is no account ── */}
             <p className="ac-section-label">{t.backup}</p>
             <p className="ac-group-hint">{t.backupHint}</p>
-            <div className="ac-group">
+            <div className="ac-group" {...tourAttr("account.backup")}>
               <button className="ac-row" onClick={handleExport}>
                 <span className="ac-row-label">{t.exportData}</span>
                 <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

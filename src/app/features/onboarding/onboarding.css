@@ -1,0 +1,268 @@
+/* Welcome / What's new decks and the spotlight overlay. Above every app
+   surface; colours only from theme tokens so day and night both work. */
+
+/* ── Shared ─────────────────────────────────────── */
+.ob-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-5);
+  border: none;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ob-btn--primary { background: var(--color-gold); color: #111; }
+.ob-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--color-gold);
+  color: var(--color-gold);
+}
+.ob-btn--link {
+  background: none;
+  color: var(--color-text-muted);
+  padding: 0 var(--space-2);
+  font-weight: 400;
+}
+.ob-dots { display: flex; justify-content: center; gap: 6px; }
+.ob-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-gold-subtle);
+  transition: width 0.2s ease;
+}
+.ob-dot.is-on { width: 18px; background: var(--color-gold); }
+.ob-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Slide decks ────────────────────────────────── */
+.ob-deck {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  justify-content: center;
+  background: var(--color-bg-app);
+  color: var(--color-text-primary);
+}
+.ob-deck-inner {
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-inset-top) + var(--space-3)) var(--space-5)
+    calc(var(--safe-inset-bottom) + var(--space-5));
+}
+.ob-deck-top { display: flex; justify-content: flex-end; min-height: 44px; }
+.ob-deck-slide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  overflow-y: auto;
+  touch-action: pan-y;
+  animation: ob-slide-in 0.25s ease-out;
+}
+.ob-deck-art { width: min(56vw, 200px); color: var(--color-gold); }
+.ob-deck-art svg { width: 100%; height: auto; display: block; }
+/* No letter-spacing: tracking breaks Arabic letter joining. */
+.ob-deck-eyebrow {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: var(--text-sm);
+}
+.ob-deck-title {
+  margin: 0;
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-2xl);
+  color: var(--color-gold);
+  outline: none;
+}
+.ob-deck-body {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+.ob-deck .ob-dots { margin: var(--space-4) 0; }
+.ob-deck-nav { display: flex; justify-content: space-between; align-items: center; }
+.ob-lang-row { display: flex; gap: var(--space-3); margin-top: var(--space-2); }
+.ob-lang-btn {
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--color-gold-faint);
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.ob-lang-btn.is-active {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #111;
+}
+@keyframes ob-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Spotlight ──────────────────────────────────── */
+.ob-spot { position: fixed; inset: 0; z-index: 30000; touch-action: none; }
+/* Still looking for the step's target (it may never appear): nothing is drawn,
+   so the page must keep taking taps instead of feeling frozen. */
+.ob-spot--pending { pointer-events: none; touch-action: auto; }
+.ob-spot-ring {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--color-gold), 0 0 0 9999px rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+  transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+.ob-card {
+  position: fixed;
+  left: var(--space-4);
+  right: var(--space-4);
+  margin: 0 auto;
+  max-width: var(--max-width-mobile, 600px);
+  padding: var(--space-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  color: var(--color-text-secondary);
+  outline: none;
+  animation: ob-slide-in 0.2s ease-out;
+}
+.ob-card--bottom { bottom: calc(var(--safe-inset-bottom) + var(--space-4)); }
+.ob-card--top { top: calc(var(--safe-inset-top) + var(--space-4)); }
+.ob-card-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-gold);
+}
+.ob-card-body { margin: 0; font-size: var(--text-base); line-height: var(--leading-normal); }
+.ob-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.ob-card-actions { display: flex; align-items: center; gap: var(--space-1); }
+
+/* ── Touch dot ──────────────────────────────────
+   Acts out a hidden gesture on the target's centre. The resting state
+   (no animation) is a meaningful still: full trail, full ring, one ripple. */
+.ob-touch {
+  --ob-touch-travel: 36px;
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+[dir="rtl"] .ob-touch--swipe { transform: scaleX(-1); }
+/* Anchored top-left explicitly: in RTL an unanchored child sits by its right edge. */
+.ob-touch > * { position: absolute; top: 0; left: 0; }
+.ob-touch-dot {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 0 5px var(--color-gold-subtle), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* Swipe: the dot slides start → end, drawing a fading trail. */
+.ob-touch--swipe .ob-touch-dot {
+  transform: translateX(var(--ob-touch-travel));
+  animation: ob-touch-slide 1.8s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+.ob-touch-trail {
+  left: calc(var(--ob-touch-travel) * -1);
+  width: calc(var(--ob-touch-travel) * 2);
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent, var(--color-gold));
+  opacity: 0.55;
+  transform-origin: left center;
+  animation: ob-touch-trail 1.8s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+@keyframes ob-touch-slide {
+  0% { transform: translateX(calc(var(--ob-touch-travel) * -1)) scale(0.6); opacity: 0; }
+  12% { transform: translateX(calc(var(--ob-touch-travel) * -1)) scale(1); opacity: 1; }
+  65% { transform: translateX(var(--ob-touch-travel)) scale(1); opacity: 1; }
+  80%, 100% { transform: translateX(var(--ob-touch-travel)) scale(0.6); opacity: 0; }
+}
+@keyframes ob-touch-trail {
+  0%, 12% { transform: scaleX(0); opacity: 0.55; }
+  65% { transform: scaleX(1); opacity: 0.55; }
+  85%, 100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* Long-press: the dot presses in while a ring fills around it. */
+.ob-touch-ring {
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+.ob-touch-ring circle {
+  fill: none;
+  stroke: var(--color-gold);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  animation: ob-touch-fill 1.8s ease-in-out infinite;
+}
+.ob-touch--longPress .ob-touch-dot { animation: ob-touch-hold 1.8s ease-in-out infinite; }
+@keyframes ob-touch-fill {
+  0%, 10% { stroke-dashoffset: 100; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  90%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes ob-touch-hold {
+  0% { transform: scale(1); }
+  10%, 70% { transform: scale(0.82); }
+  85%, 100% { transform: scale(1); }
+}
+
+/* Double-tap: two quick taps, each sending out a ripple, then a rest. */
+.ob-touch-ripple {
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 2px solid var(--color-gold);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: ob-touch-ripple 1.6s ease-out infinite;
+}
+.ob-touch-ripple + .ob-touch-ripple { opacity: 0; animation-delay: 0.24s; }
+.ob-touch--doubleTap .ob-touch-dot { animation: ob-touch-tap 1.6s ease-in-out infinite; }
+@keyframes ob-touch-ripple {
+  0% { transform: scale(0.45); opacity: 0.9; }
+  40%, 100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes ob-touch-tap {
+  0%, 10%, 25%, 100% { transform: scale(1); }
+  4%, 17% { transform: scale(0.78); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-touch[aria-hidden] *, .ob-deck-slide, .ob-card { animation: none; }
+  .ob-spot-ring { transition: none; }
+}

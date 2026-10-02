@@ -558,44 +558,6 @@ ion-content::part(scroll) {
   margin: 0 0 4px;
 }
 
-/* ── Coming-soon card (disabled controls) ──────── */
-/* opacity sits on the whole card — both the rows AND the badge — so the pill is
-   dimmed along with the controls, exactly like the Account "Coming soon" group. */
-.settings-card--coming-soon {
-  position: relative;
-  opacity: 0.45;
-}
-
-.settings-card-disabled {
-  pointer-events: none;
-  user-select: none;
-}
-
-/* A second card stacked below another one within the same section. */
-.settings-card--stacked {
-  margin-top: 10px;
-}
-
-.settings-coming-soon-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  font-size: var(--text-base);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--color-gold);
-  background: var(--color-bg-card);
-  border: 1.5px solid var(--color-gold-subtle);
-  border-radius: var(--radius-full, 999px);
-  padding: 8px 20px;
-  line-height: 1.4;
-  white-space: nowrap;
-  box-shadow: var(--shadow-card);
-  pointer-events: none;
-}
-
 /* ── Reset confirm dialog ──────────────────────── */
 .settings-confirm-backdrop {
   position: fixed;

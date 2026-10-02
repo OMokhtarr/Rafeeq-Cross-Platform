@@ -2,9 +2,11 @@ import React from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useLang } from "../../../core/context/LanguageContext";
 import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
+import { usePageTour } from "../../onboarding/usePageTour";
 import "./Home.css";
 
 const Home: React.FC = () => {
+  usePageTour(["home"]);
   const { t } = useLang();
 
   return (

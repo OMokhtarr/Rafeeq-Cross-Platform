@@ -36,6 +36,7 @@ import {
 import { isNetworkReachable } from "../../core/services/api/network.service";
 import { useOfflineGuard } from "../../core/hooks/useOfflineGuard";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./PlaybackSettings.css";
 
 const SETTINGS_KEY = "rafiq_settings_v1";
@@ -672,7 +673,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
           </div>
         )}
 
-        <section className="pb-section">
+        <section className="pb-section" {...tourAttr("viewer.playbackSheet.range")}>
           <h2 className={`pb-section-title${nightCls}`}>{tp.selectRange}</h2>
           <div className={`pb-card${nightCls}`}>
             <div className="pb-row">
@@ -690,7 +691,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
           </div>
         </section>
 
-        <section className="pb-section">
+        <section className="pb-section" {...tourAttr("viewer.playbackSheet.reciter")}>
           <h2 className={`pb-section-title${nightCls}`}>{tp.reciter}</h2>
           <div className={`pb-card${nightCls}`}>
             <InlineSelect
@@ -711,7 +712,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
           </div>
         </section>
 
-        <section className="pb-section">
+        <section className="pb-section" {...tourAttr("viewer.playbackSheet.speed")}>
           <h2 className="pb-section-title">{tp.playSpeed} / {tp.playEachVerse} / {tp.playTheRange}</h2>
           <div className="pb-card pb-card--controls">
             <div className="pb-ctrl-row">
@@ -729,7 +730,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
           </div>
         </section>
 
-        <section className="pb-section">
+        <section className="pb-section" {...tourAttr("viewer.playbackSheet.quick")}>
           <h2 className="pb-section-title">{tp.quickSelect}</h2>
           <div className={`pb-segmented pb-segmented--two-col${nightCls}`}>
             <button

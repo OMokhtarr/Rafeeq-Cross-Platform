@@ -48,4 +48,10 @@
     <string name="widget_config_sp">%1$d</string>
     <!-- Stands in for the place name in the preview before a fix is stored. -->
     <string name="widget_config_sample_place">موقعك</string>
+    <!-- Azkar reminders (AzkarReminderReceiver) -->
+    <string name="azkar_reminder_channel">تذكير الأذكار</string>
+    <string name="azkar_reminder_morning_title">أذكار الصباح</string>
+    <string name="azkar_reminder_morning_text">حان وقت أذكار الصباح</string>
+    <string name="azkar_reminder_evening_title">أذكار المساء</string>
+    <string name="azkar_reminder_evening_text">حان وقت أذكار المساء</string>
 </resources>

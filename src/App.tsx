@@ -47,6 +47,9 @@ import PrayerTimes from "./app/features/prayer-times/PrayerTimes";
 import WorshipTracker from "./app/features/tracker/WorshipTracker";
 import { ensureSince } from "./app/features/tracker/trackerStore";
 import { toDayKey } from "./app/features/tracker/trackerLogic";
+import { TourProvider } from "./app/features/onboarding/TourProvider";
+import { initOnboarding } from "./app/features/onboarding/onboardingStore";
+import { RELEASE_IDS } from "./app/features/onboarding/tourCatalog";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -130,6 +133,23 @@ const MainRouterOutlet: React.FC = () => {
     };
   }, []);
 
+  // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
+  // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
+  // running app receives it as appUrlOpen.
+  useEffect(() => {
+    const open = (url: string | undefined) => {
+      const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);
+      if (m) historyRef.current.push(`/azkar/${m[1]}`);
+    };
+    CapApp.getLaunchUrl()
+      .then((launch) => open(launch?.url))
+      .catch(() => {});
+    const handle = CapApp.addListener("appUrlOpen", ({ url }) => open(url));
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
+
   useEffect(() => {
     let patched: { canStart: (...a: unknown[]) => boolean } | null = null;
     let original: ((...a: unknown[]) => boolean) | null = null;
@@ -205,6 +225,9 @@ const MainRouterOutlet: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Must run before the effect below that calls ensureSince(): the tracker's
+  // launch-time write is one of the keys detectExistingUser() looks for.
+  const [onboarding] = useState(() => initOnboarding(RELEASE_IDS));
   const [preloadProgress, setPreloadProgress] = useState({
     done: 0,
     total: 604,
@@ -271,7 +294,9 @@ const App: React.FC = () => {
                 </div>
               )}
               <IonReactRouter>
-                <MainRouterOutlet />
+                <TourProvider initial={onboarding}>
+                  <MainRouterOutlet />
+                </TourProvider>
               </IonReactRouter>
             </IonApp>
           </PlaybackProvider>

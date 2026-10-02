@@ -14,9 +14,12 @@ import {
 } from "../../core/services/data/tafsir-cache.service";
 import { untrackResource } from "../../core/services/sync/sync-state.service";
 import { purgeResource } from "../../core/services/sync/sync-store.service";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./TafsirSettings.css";
 
 const TafsirSettings: React.FC = () => {
+  usePageTour(["tafsirLibrary"]);
   const history = useHistory();
   const location = useLocation<{ returnVerseKey?: string }>();
   const returnVerseKey = location.state?.returnVerseKey ?? null;
@@ -183,7 +186,7 @@ const TafsirSettings: React.FC = () => {
 
           <div className="tfs-content">
             {/* ── Downloaded section ── */}
-            <div className="tfs-section">
+            <div className="tfs-section" {...tourAttr("tafsirLibrary.downloaded")}>
               <p className="tfs-section-title">{ts.sectionDownloaded}</p>
               <div className={`tfs-card${nightCls}`}>
                 {downloadedResources.length === 0 ? (
@@ -241,7 +244,7 @@ const TafsirSettings: React.FC = () => {
             </div>
 
             {/* ── Available section ── */}
-            <div className="tfs-section">
+            <div className="tfs-section" {...tourAttr("tafsirLibrary.library")}>
               <p className="tfs-section-title">{ts.sectionAvailable}</p>
 
               {loading && (

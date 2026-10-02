@@ -28,6 +28,7 @@ class PrayerBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         PrayerAlarmScheduler.scheduleNext(context)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
+        AzkarReminderScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
 
         if (intent.action == Intent.ACTION_LOCALE_CHANGED && !PrayerConfig.hasBothPlaceNames(context)) {

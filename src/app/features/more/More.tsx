@@ -23,6 +23,8 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./More.css";
 
 interface MoreEntry {
@@ -82,6 +84,7 @@ const ENTRIES: MoreEntry[] = [
 ];
 
 const More: React.FC = () => {
+  usePageTour(["more"]);
   const history = useHistory();
   const { t, isRTL } = useLang();
   const tm = t.more;
@@ -100,7 +103,7 @@ const More: React.FC = () => {
           <div className="more-container" dir={isRTL ? "rtl" : "ltr"}>
             <h1 className="more-title">{tm.title}</h1>
 
-            <div className="more-grid">
+            <div className="more-grid" {...tourAttr("more.cards")}>
               {ENTRIES.map((entry) => {
                 const label = labels[entry.id];
                 return (

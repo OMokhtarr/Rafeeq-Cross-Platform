@@ -200,6 +200,7 @@ export interface AppStrings {
     narrator: string;
     grade: string;
     noOrigin: string;
+    explanation: string;
   };
 
   quiz: {
@@ -480,7 +481,12 @@ export interface AppStrings {
     prayerRemindersDesc: string;
     azkarReminders: string;
     azkarRemindersDesc: string;
-    comingSoon: string;
+    notificationsDenied: string;
+    remindersLate: string;
+    exactAlarmsDesc: string;
+    batteryRestrictedDesc: string;
+    allow: string;
+    openSettings: string;
     resetDefaults: string;
     resetDefaultsDesc: string;
     resetButton: string;
@@ -797,6 +803,7 @@ const ar: AppStrings = {
     narrator: "الراوي",
     grade: "الحكم والتخريج",
     noOrigin: "لم يُضف نص الحديث لهذا الذكر بعد.",
+    explanation: "شرح الحديث",
   },
   quiz: {
     title: "الاختبارات",
@@ -1085,8 +1092,13 @@ const ar: AppStrings = {
     prayerReminders: "تنبيهات مواقيت الصلاة",
     prayerRemindersDesc: "تنبيه عند دخول وقت كل صلاة",
     azkarReminders: "تذكير الأذكار اليومية",
-    azkarRemindersDesc: "تنبيه صباحي ومسائي للأذكار",
-    comingSoon: "قريباً",
+    azkarRemindersDesc: "تنبيه بعد الفجر وبعد العصر للأذكار",
+    notificationsDenied: "اسمح للتطبيق بالإشعارات لتفعيل التذكير",
+    remindersLate: "قد تتأخر التنبيهات",
+    exactAlarmsDesc: "اسمح بالمنبهات الدقيقة ليصل التذكير في وقته",
+    batteryRestrictedDesc: "هاتفك يؤخر تنبيهات التطبيقات في الخلفية. من إعدادات التطبيق فعّل «التشغيل التلقائي» واجعل توفير البطارية «بلا قيود»",
+    allow: "سماح",
+    openSettings: "الإعدادات",
     resetDefaults: "استعادة الإعدادات الافتراضية",
     resetDefaultsDesc: "إعادة جميع الإعدادات لقيمها الأصلية",
     resetButton: "إعادة",
@@ -1418,6 +1430,7 @@ const en: AppStrings = {
     narrator: "Narrator",
     grade: "Grade & collection",
     noOrigin: "The hadith text for this dhikr has not been added yet.",
+    explanation: "Explanation of the hadith",
   },
   quiz: {
     title: "Quizzes",
@@ -1706,8 +1719,13 @@ const en: AppStrings = {
     prayerReminders: "Prayer Time Reminders",
     prayerRemindersDesc: "A notification when each prayer time begins",
     azkarReminders: "Daily Azkar Reminders",
-    azkarRemindersDesc: "Morning and evening notifications",
-    comingSoon: "Coming soon",
+    azkarRemindersDesc: "A reminder after Fajr and after Asr",
+    notificationsDenied: "Allow notifications to turn on reminders",
+    remindersLate: "Reminders may arrive late",
+    exactAlarmsDesc: "Allow exact alarms so reminders arrive on time",
+    batteryRestrictedDesc: "Your phone delays background alerts. In app settings, turn on Autostart and set Battery saver to No restrictions",
+    allow: "Allow",
+    openSettings: "Settings",
     resetDefaults: "Restore Defaults",
     resetDefaultsDesc: "Reset all settings to their original values",
     resetButton: "Reset",

@@ -30,6 +30,9 @@ import { useVerseVisibility } from "../../core/context/VerseVisibilityContext";
 import { usePlayback } from "../../core/context/PlaybackContext";
 import { useAudioPlayer } from "../../core/hooks/useAudioPlayer";
 import { useImmersiveMode } from "../../core/hooks/useImmersiveMode";
+import { usePageTour } from "../onboarding/usePageTour";
+import { useActiveTour } from "../onboarding/TourProvider";
+import { tourAttr } from "../onboarding/tourCatalog";
 import { useWakeLock } from "../../core/hooks/useWakeLock";
 import { useReciteMode } from "../../core/hooks/useReciteMode";
 import { useFeedbackBeep } from "../../core/hooks/useFeedbackBeep";
@@ -755,6 +758,35 @@ const PageViewer: React.FC = () => {
     immersive.maybeToggleOnTap(e.clientX, e.clientY);
   };
 
+  // Onboarding. The page tour waits for a quiet page; the contextual tours
+  // play the first time their bar or sheet appears.
+  const quietPage = !showPlaybackBar && !isRecording && sheetVerseKey === null && !playbackSheetOpen;
+  usePageTour(["viewer"], {
+    ready: !loading && verses.length > 0 && quietPage,
+    onBeforeStart: immersive.showChrome,
+  });
+  usePageTour(["viewer.verseSheet"], { ready: sheetVerseKey !== null, overOverlay: true });
+  usePageTour(["viewer.playbackSheet"], { ready: playbackSheetOpen, overOverlay: true });
+  usePageTour(["viewer.playbackBar"], {
+    ready: showPlaybackBar && !playbackSheetOpen && sheetVerseKey === null,
+    onBeforeStart: immersive.showChrome,
+  });
+  usePageTour(["viewer.reciteBar"], { ready: isRecording, onBeforeStart: immersive.showChrome });
+  // The reveal buttons appear only once the verse is recognised, and fold
+  // away while the whole page is shown.
+  usePageTour(["viewer.reciteReveal"], {
+    ready: isRecording && !recite.identifying && !recite.showingAll,
+    onBeforeStart: immersive.showChrome,
+  });
+  // Reading a tour card is silence; it must not end the recording under it.
+  const tourOnScreen = useActiveTour() !== null;
+  const { holdSilence } = recite;
+  useEffect(() => holdSilence(tourOnScreen), [holdSilence, tourOnScreen]);
+  usePageTour(["viewer.reveal"], {
+    ready: anyPageHidden && !isRecording && !showPlaybackBar,
+    onBeforeStart: immersive.showChrome,
+  });
+
   return (
     <IonPage>
       <IonContent className="mushaf-ion-content" fullscreen scrollY={false}>
@@ -769,6 +801,7 @@ const PageViewer: React.FC = () => {
               <div className="recite-recording-bar">
                 <button
                   type="button"
+                  {...tourAttr("viewer.reciteBar.stop")}
                   className="toolbar-button play-button play-button--recite play-button--listening"
                   onPointerDown={(e) => {
                     e.preventDefault();
@@ -810,6 +843,7 @@ const PageViewer: React.FC = () => {
                   {formatTime(recite.recordingSeconds * 1000)}
                 </span>
                 <span
+                  {...tourAttr("viewer.reciteBar.transcript")}
                   className={`recite-recording-transcript${
                     recite.noMatchHint ? " recite-recording-transcript--warn" : ""
                   }`}
@@ -888,6 +922,7 @@ const PageViewer: React.FC = () => {
                       <button
                         type="button"
                         className="hide-reveal-btn"
+                        {...tourAttr("viewer.reciteReveal.reveal")}
                         onClick={recite.revealNextWord}
                         tabIndex={!recite.showingAll ? 0 : -1}
                         aria-label="Reveal next word"
@@ -911,6 +946,7 @@ const PageViewer: React.FC = () => {
                       <button
                         type="button"
                         className="hide-reveal-btn"
+                        {...tourAttr("viewer.reciteReveal.reveal")}
                         onClick={recite.revealNextVerse}
                         tabIndex={!recite.showingAll ? 0 : -1}
                         aria-label="Reveal next verse"
@@ -942,6 +978,7 @@ const PageViewer: React.FC = () => {
               {!showPlaybackBar && (
                 <button
                   type="button"
+                  {...tourAttr("viewer.play")}
                   className={`toolbar-button play-button${
                     reciteMode ? " play-button--recite" : ""
                   }`}
@@ -1007,6 +1044,7 @@ const PageViewer: React.FC = () => {
                   className={`toolbar-button hide-toggle-button ${
                     hideToggleActive ? "active" : ""
                   }`}
+                  {...tourAttr("viewer.hide")}
                   onClick={isRecording ? recite.toggleShowAll : togglePageHidden}
                   disabled={verses.length === 0}
                   title={
@@ -1067,6 +1105,7 @@ const PageViewer: React.FC = () => {
                   <button
                     type="button"
                     className="hide-reveal-btn"
+                    {...tourAttr("viewer.reveal.word")}
                     onClick={handleRevealNextWord}
                     disabled={!canHint}
                     tabIndex={anyPageHidden ? 0 : -1}
@@ -1091,6 +1130,7 @@ const PageViewer: React.FC = () => {
                   <button
                     type="button"
                     className="hide-reveal-btn"
+                    {...tourAttr("viewer.reveal.verse")}
                     onClick={handleRevealNextVerse}
                     disabled={!canRevealNextVerse}
                     tabIndex={anyPageHidden ? 0 : -1}
@@ -1120,6 +1160,7 @@ const PageViewer: React.FC = () => {
             {/* Center: playback bar when active, else surah info pill */}
             {showPlaybackBar ? (
               <div
+                {...tourAttr("viewer.playbackBar.controls")}
                 className="toolbar-playback-bar"
                 aria-label="Playback controls"
               >
@@ -1264,6 +1305,7 @@ const PageViewer: React.FC = () => {
             ) : (
               <button
                 type="button"
+                {...tourAttr("viewer.pill")}
                 className="toolbar-center-pill"
                 onClick={() => history.push(`/surah-juz?page=${currentPage}`)}
                 aria-label={t.mushaf.surahsAndJuz}
@@ -1302,6 +1344,7 @@ const PageViewer: React.FC = () => {
             <div className="toolbar-right">
               <button
                 type="button"
+                {...tourAttr("viewer.nav")}
                 className={`toolbar-button bookmark-button${
                   bookmarked ? " bookmark-button--active" : ""
                 }`}
@@ -1325,6 +1368,7 @@ const PageViewer: React.FC = () => {
               </button>
               <button
                 type="button"
+                {...tourAttr("viewer.nav")}
                 className="toolbar-button search-button"
                 onClick={() => history.push("/search")}
                 title={t.mushaf.search}
@@ -1352,6 +1396,7 @@ const PageViewer: React.FC = () => {
 
           {/* ── Mushaf Content ── */}
           <div
+            {...tourAttr("viewer.swipe", "viewer.verse", "viewer.immersive")}
             className="mushaf-content"
             ref={contentRef}
             onTouchStart={handleTouchStart}

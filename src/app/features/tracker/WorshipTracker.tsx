@@ -21,6 +21,8 @@ import TrackerInfoSheet from "./TrackerInfoSheet";
 import TrackerCalendarSheet from "./TrackerCalendarSheet";
 import { ITEM_ICONS } from "./trackerIcons";
 import { getSurahStartPage } from "../../core/services/data/metadata.service";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr, TourRef } from "../onboarding/tourCatalog";
 import "./WorshipTracker.css";
 
 const LONG_PRESS_MS = 500;
@@ -33,6 +35,7 @@ const kahfPage = () => {
 };
 
 const WorshipTracker: React.FC = () => {
+  usePageTour(["tracker"]);
   const history = useHistory();
   const { t, lang, isRTL } = useLang();
   const tt = t.tracker;
@@ -110,7 +113,8 @@ const WorshipTracker: React.FC = () => {
   };
 
   const openLongPress = (item: TrackerItem) => {
-    if (item.longPress === "azkarMorningEvening") history.push("/azkar/morning-evening");
+    if (item.longPress === "azkarMorning") history.push("/azkar/morning");
+    else if (item.longPress === "azkarEvening") history.push("/azkar/evening");
     else if (item.longPress === "azkarSleep") history.push("/azkar/sleep");
     else if (item.longPress === "quran") {
       history.push(today.getDay() === 5 ? `/viewer?page=${kahfPage()}` : "/viewer");
@@ -173,6 +177,9 @@ const WorshipTracker: React.FC = () => {
             const isFast = item.id === "fastToday";
             const title = isFast ? tt.fastTodayTitle : tt.items[item.id].title;
             const subtitle = isFast && occasion ? tt.fasting[occasion].subtitle : tt.items[item.id]?.subtitle;
+            const tourRefs: TourRef[] = ["tracker.item"];
+            if (!done(item.id) && !open) tourRefs.push("tracker.locked");
+            if (item.longPress) tourRefs.push("tracker.shortcut");
             return (
               <button
                 key={item.id}
@@ -183,6 +190,7 @@ const WorshipTracker: React.FC = () => {
                 aria-pressed={done(item.id)}
                 aria-disabled={!open}
                 {...pressHandlers(item)}
+                {...tourAttr(...tourRefs)}
               >
                 {section.id !== "prayers" && ITEM_ICONS[item.id] && (
                   <span className="wt-item-icon">{ITEM_ICONS[item.id]}</span>
@@ -211,7 +219,7 @@ const WorshipTracker: React.FC = () => {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={isRTL ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             </button>
             <h1>{tt.title}</h1>
-            <div className="wt-header-actions">
+            <div className="wt-header-actions" {...tourAttr("tracker.header")}>
               <button className="wt-round-btn" onClick={() => setSheet("info")} aria-label={tt.menuInfo}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.5-2.8 4.2" />
@@ -234,6 +242,7 @@ const WorshipTracker: React.FC = () => {
                 <div className="wt-dates">{hijri} — {greg}</div>
               </div>
               <button
+                {...tourAttr("tracker.strip")}
                 className="wt-round-btn wt-cal-btn"
                 onClick={() => setSheet("calendar")}
                 aria-label={tt.openCalendar}
@@ -247,7 +256,7 @@ const WorshipTracker: React.FC = () => {
                 <span>{score}</span>
               </div>
             </div>
-            <div className="wt-strip">
+            <div className="wt-strip" {...tourAttr("tracker.strip")}>
               {strip.map(({ d, key, score: s }) => (
                 <button
                   key={key}

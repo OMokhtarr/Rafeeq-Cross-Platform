@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -39,6 +40,8 @@ import java.util.TimeZone
  *   getTimes({ date? })                  — today's six times plus the next prayer
  *   setLocation({ lat, lng })            — store coordinates for every consumer
  *   getConfig() / setConfig({...})       — method, madhab and clock format
+ *   getAzkarReminders() / setAzkarReminders({ enabled }) — morning/evening azkar reminders
+ *   getReminderHealth()                  — what may delay reminders on this device
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
  *   getPlace()                           — cached place name for the stored location, or null
@@ -76,6 +79,40 @@ class RafeeqPrayerPlugin : Plugin() {
             pendingEnableCall = null
             call.resolve(JSObject().put("enabled", result.resultCode == android.app.Activity.RESULT_OK))
         }
+
+        // Re-arm both reminder chains on every launch. Each is one alarm that
+        // re-arms itself when it fires, so a vendor battery manager that
+        // drops or kills it (Xiaomi does on swipe-away from recents) ends
+        // every later reminder until something re-arms — this is that
+        // something. Both no-op when their reminders are off.
+        PrayerAlarmScheduler.scheduleNext(context)
+        AzkarReminderScheduler.scheduleNext(context)
+    }
+
+    /**
+     * What may stop reminders arriving on time, for the settings page to
+     * explain: exact alarms not granted (denied by default on Android 14+),
+     * and a manufacturer whose battery manager holds or kills background
+     * alarms unless the app is allowed to autostart and run unrestricted.
+     * Neither of the latter can be read or granted through an API.
+     */
+    @PluginMethod
+    fun getReminderHealth(call: PluginCall) {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        call.resolve(
+            JSObject()
+                .put("exactAlarms", PrayerAlarmScheduler.canScheduleExact(context))
+                .put("batteryUnrestricted", pm.isIgnoringBatteryOptimizations(context.packageName))
+                .put("aggressiveBattery", Build.MANUFACTURER.lowercase(java.util.Locale.ROOT) in AGGRESSIVE_BATTERY_BRANDS),
+        )
+    }
+
+    private companion object {
+        /** Brands whose own battery manager restricts background alarms
+         *  beyond stock Android (see dontkillmyapp.com). */
+        val AGGRESSIVE_BATTERY_BRANDS = setOf(
+            "xiaomi", "redmi", "poco", "huawei", "honor", "oppo", "realme", "vivo", "oneplus",
+        )
     }
 
     private fun iso(date: Date): String {
@@ -141,6 +178,8 @@ class RafeeqPrayerPlugin : Plugin() {
         // compass and the widget. This also clears any previously cached name.
         PrayerConfig.setCoords(context, lat, lng)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
+        // A first fix moves the azkar slots from fixed hours onto the prayers.
+        AzkarReminderScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
 
         // The name is best-effort decoration, and Geocoder blocks on the
@@ -166,6 +205,10 @@ class RafeeqPrayerPlugin : Plugin() {
     fun setConfig(call: PluginCall) {
         call.getString("method")?.let { PrayerConfig.setMethod(context, it) }
         call.getString("madhab")?.let { PrayerConfig.setMadhab(context, it) }
+        // Both move Fajr or Asr, which the pending azkar slot was computed from.
+        if (call.data.has("method") || call.data.has("madhab")) {
+            AzkarReminderScheduler.scheduleNext(context)
+        }
         // `has` before `getBoolean`: a plain getBoolean cannot tell "absent"
         // from "false", so a call that only changes the method would quietly
         // reset the clock to 12-hour.
@@ -207,6 +250,27 @@ class RafeeqPrayerPlugin : Plugin() {
             PrayerAlarmScheduler.scheduleNext(context)
         } else {
             PrayerAlarmScheduler.cancelAll(context)
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun getAzkarReminders(call: PluginCall) {
+        call.resolve(JSObject().put("enabled", PrayerConfig.azkarRemindersEnabled(context)))
+    }
+
+    @PluginMethod
+    fun setAzkarReminders(call: PluginCall) {
+        val enabled = call.getBoolean("enabled")
+        if (enabled == null) {
+            call.reject("enabled is required")
+            return
+        }
+        PrayerConfig.setAzkarRemindersEnabled(context, enabled)
+        if (enabled) {
+            AzkarReminderScheduler.scheduleNext(context)
+        } else {
+            AzkarReminderScheduler.cancel(context)
         }
         call.resolve()
     }

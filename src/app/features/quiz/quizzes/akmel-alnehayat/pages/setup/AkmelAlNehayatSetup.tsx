@@ -26,11 +26,14 @@ import {
   updatePreset,
 } from "../../../../services/quiz-presets.service";
 import { totalPageCount } from "../../../../services/quiz-ranges.service";
+import { usePageTour } from "../../../../../onboarding/usePageTour";
+import { tourAttr } from "../../../../../onboarding/tourCatalog";
 import "./AkmelAlNehayatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 const AkmelAlNehayatSetup: React.FC = () => {
+  usePageTour(["quizSetup"]);
   const history = useHistory();
   const location = useLocation();
   const { t, isRTL } = useLang();
@@ -220,7 +223,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
           {/* ── Body ── */}
           <div className="an-body" dir={isRTL ? "rtl" : "ltr"}>
             {/* Simple | Advanced — the visible tab is the source of truth */}
-            <div className="an-tab-row">
+            <div className="an-tab-row" {...tourAttr("quizSetup.mode")}>
               {[
                 { key: "simple" as const, label: tq.tabSimple },
                 { key: "advanced" as const, label: tq.tabAdvanced },
@@ -249,7 +252,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
             ) : (
               <>
               {/* Scope selector */}
-              <div className="an-scope-section">
+              <div className="an-scope-section" {...tourAttr("quizSetup.scope")}>
                 <div className="an-label">{tq.scope}</div>
                 <div className="an-type-row">
                   {[
@@ -411,7 +414,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
             {perPageDerived === null ? (
               <>
               <div className="an-footer-label">{tq.questionCount}</div>
-              <div className="an-count-row">
+              <div className="an-count-row" {...tourAttr("quizSetup.count")}>
                 {[5, 10, 15, 20].map((n) => (
                   <button
                     key={n}
@@ -437,6 +440,7 @@ const AkmelAlNehayatSetup: React.FC = () => {
               </div>
             )}
             <button
+              {...tourAttr("quizSetup.start")}
               className="an-start-btn"
               onClick={handleStart}
               disabled={!isReady()}

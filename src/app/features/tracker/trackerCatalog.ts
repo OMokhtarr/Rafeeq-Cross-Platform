@@ -32,7 +32,7 @@ export interface TrackerItem {
   id: ItemId;
   unlock: Unlock;
   /** Route opened on long-press, if any. "quran" resolves at runtime (Al-Kahf on Fridays). */
-  longPress?: "azkarMorningEvening" | "azkarSleep" | "quran";
+  longPress?: "azkarMorning" | "azkarEvening" | "azkarSleep" | "quran";
 }
 
 export interface TrackerSection {
@@ -54,8 +54,8 @@ export const SECTIONS: TrackerSection[] = [
   {
     id: "azkar",
     items: [
-      { id: "azkarMorning", unlock: "fajr", longPress: "azkarMorningEvening" },
-      { id: "azkarEvening", unlock: "asr", longPress: "azkarMorningEvening" },
+      { id: "azkarMorning", unlock: "fajr", longPress: "azkarMorning" },
+      { id: "azkarEvening", unlock: "asr", longPress: "azkarEvening" },
       { id: "azkarSleep", unlock: "isha", longPress: "azkarSleep" },
     ],
   },

@@ -64,6 +64,8 @@ import {
 } from "../../core/services/data/metadata.service";
 import { todayStr } from "../../core/utils/local-date.util";
 import { useFreezeToast } from "../../core/hooks/useFreezeToast";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Hifz.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -628,6 +630,7 @@ const SetupView: React.FC<SetupViewProps> = ({
           </ul>
         )}
         <button
+          {...tourAttr("hifzSetup.add")}
           className="hifz-add-btn"
           onClick={onOpenAddSheet}
         >
@@ -641,7 +644,7 @@ const SetupView: React.FC<SetupViewProps> = ({
         <p className="hifz-goal-desc">{h.goalSectionDesc}</p>
 
         <label className="hifz-label">{h.quantityPerSession}</label>
-        <div className="hifz-goal-row">
+        <div className="hifz-goal-row" {...tourAttr("hifzSetup.goal")}>
           <input
             type="number"
             inputMode="numeric"
@@ -681,6 +684,7 @@ const SetupView: React.FC<SetupViewProps> = ({
       </section>
 
       <button
+        {...tourAttr("hifzSetup.generate")}
         className="hifz-generate-btn"
         disabled={!canGenerate}
         onClick={onGenerate}
@@ -963,6 +967,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
         <div className="hifz-session-actions">
           {s.done && (
             <button
+              {...tourAttr("hifzSessions.open")}
               className="hifz-session-quiz-btn"
               onClick={() => onQuiz(s)}
               aria-label={h.quizFromSession}
@@ -973,6 +978,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
           )}
           {!multiRange && (
             <button
+              {...tourAttr("hifzSessions.open")}
               className="hifz-session-open-btn"
               onClick={() => onOpenPage(resumePage, s)}
               aria-label={h.openInQuran}
@@ -982,6 +988,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
             </button>
           )}
           <button
+            {...tourAttr("hifzSessions.done")}
             className={`hifz-session-check${s.done ? " checked" : ""}`}
             onClick={() => onToggle(s.id)}
             aria-label={s.done ? h.planUndone : h.planDone}
@@ -1105,6 +1112,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>
       {/* ── Hero card: horizontally scrollable pages of charts ── */}
       <div
+        {...tourAttr("hifzDashboard.hero")}
         className="hifz-hero-scroll"
         ref={heroScrollRef}
         onScroll={() => {
@@ -1239,6 +1247,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             recovery explainer, so that button stops the click from reaching
             the chip behind it. */}
         <div
+          {...tourAttr("hifzDashboard.streak")}
           className="hifz-stat-chip hifz-stat-chip-streak hifz-stat-chip--tappable"
           role="button"
           tabIndex={0}
@@ -1282,6 +1291,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ── All-sessions entry — replaces the removed header button ── */}
       <button
         type="button"
+        {...tourAttr("hifzDashboard.sessions")}
         className="hifz-all-sessions-row"
         onClick={onViewAllSessions}
       >
@@ -1621,6 +1631,14 @@ const Hifz: React.FC = () => {
 
   const [plan, setPlan] = useState<HifzPlan | null>(null);
   const [view, setView] = useState<"setup" | "plan" | "sessions">("setup");
+  // The saved plan loads asynchronously and `view` reads "setup" until it
+  // does, so the tours wait for that first load to settle.
+  const [planChecked, setPlanChecked] = useState(false);
+  // The sessions view, and setup while editing a plan, register themselves
+  // as overlays so Back walks out of them; their tours belong to them.
+  usePageTour(["hifzSetup"], { ready: planChecked && view === "setup", overOverlay: plan !== null });
+  usePageTour(["hifzDashboard"], { ready: planChecked && view === "plan" && plan !== null });
+  usePageTour(["hifzSessions"], { ready: planChecked && view === "sessions", overOverlay: true });
   const [chapters, setChapters] = useState<any[]>([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
@@ -1747,6 +1765,7 @@ const Hifz: React.FC = () => {
         // sees a broken streak until they next complete a session.
         settleHifzFreezes(saved.sessions);
       }
+      setPlanChecked(true);
       const best = await loadBestPlanAsync();
       setBestPlan(best);
       const latest = await loadLatestPlanAsync();

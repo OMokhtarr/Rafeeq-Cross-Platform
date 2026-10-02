@@ -48,6 +48,8 @@ import {
   type PrayerDay,
 } from "../../core/services/prayer/prayer-times.types";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./PrayerTimes.css";
 
 const ALL_ROW_KEYS: PrayerKey[] = [...PRAYER_KEYS, ...ADDITIONAL_KEYS];
@@ -78,6 +80,8 @@ const PrayerTimes: React.FC = () => {
   const tp = t.prayerTimes;
 
   const [day, setDay] = useState<PrayerDay | null>(null);
+  usePageTour(["prayerTimes.setup"], { ready: day !== null && !day.hasLocation });
+  usePageTour(["prayerTimes"], { ready: !!day?.hasLocation });
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
@@ -259,6 +263,7 @@ const PrayerTimes: React.FC = () => {
                   </p>
                   <button
                     type="button"
+                    {...tourAttr("prayerTimes.setup.grant")}
                     className="pt-grant-btn"
                     onClick={handleUpdateLocation}
                     disabled={locating}
@@ -306,6 +311,7 @@ const PrayerTimes: React.FC = () => {
                     </div>
                     <button
                       type="button"
+                      {...tourAttr("prayerTimes.menu")}
                       className="pt-menu-btn"
                       onClick={() => setSheet("menu")}
                       aria-haspopup="dialog"

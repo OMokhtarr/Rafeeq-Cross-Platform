@@ -34,10 +34,21 @@ import {
   relativeDays,
 } from "./sync-status";
 import {
+  enableAzkarReminders,
   enableReminders,
+  getAzkarReminders,
+  getReminderHealth,
   getReminders,
+  openAppSettings,
+  requestExactAlarms,
+  setAzkarReminders,
   setReminders,
+  type ReminderHealth,
 } from "../../core/services/prayer/prayer-times.service";
+import { useTours } from "../onboarding/TourProvider";
+import { usePageTour } from "../onboarding/usePageTour";
+import { ONBOARDING_COPY } from "../onboarding/onboardingCopy";
+import { tourAttr } from "../onboarding/tourCatalog";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -59,7 +70,7 @@ interface AppSettings {
   // Azkar
   azkarVibration: boolean;
   azkarCounterSound: boolean;
-  // Notifications (future)
+  // Notifications — native owns the truth; these mirror it
   prayerReminders: boolean;
   azkarReminders: boolean;
 }
@@ -627,6 +638,12 @@ const Settings: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [prayerReminderError, setPrayerReminderError] = useState(false);
+  const [azkarReminderError, setAzkarReminderError] = useState(false);
+  const [reminderHealth, setReminderHealth] = useState<ReminderHealth | null>(null);
+  const tours = useTours();
+  const oc = ONBOARDING_COPY[lang].settings;
+  const [tipsReset, setTipsReset] = useState(false);
+  usePageTour(["settings"]);
 
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
@@ -674,7 +691,36 @@ const Settings: React.FC = () => {
         ),
       )
       .catch(() => {});
+    getAzkarReminders()
+      .then((enabled) =>
+        setS((prev) =>
+          prev.azkarReminders === enabled
+            ? prev
+            : { ...prev, azkarReminders: enabled },
+        ),
+      )
+      .catch(() => {});
   }, []);
+
+  // Re-read whenever the page becomes visible again: both fixes happen in
+  // system screens, and coming back from one is not a page navigation.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        getReminderHealth().then(setReminderHealth).catch(() => {});
+      }
+    };
+    refresh();
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, []);
+
+  const remindersOn = s.prayerReminders || s.azkarReminders;
+  const needsExactAlarms = remindersOn && reminderHealth?.exactAlarms === false;
+  const needsBatteryExemption =
+    remindersOn &&
+    reminderHealth?.aggressiveBattery === true &&
+    !reminderHealth.batteryUnrestricted;
 
   const handleSyncNow = async () => {
     setSyncing(true);
@@ -718,13 +764,25 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleAzkarRemindersToggle = async (checked: boolean) => {
+    if (checked) {
+      const ok = await enableAzkarReminders();
+      setAzkarReminderError(!ok);
+      if (ok) set("azkarReminders", true);
+    } else {
+      await setAzkarReminders(false);
+      setAzkarReminderError(false);
+      set("azkarReminders", false);
+    }
+  };
+
   return (
     <IonPage>
       <IonContent fullscreen>
         <div className="settings-page-wrapper">
           <div className="settings-container">
             {/* ── Language — two-button row per design index.html ── */}
-            <div className="settings-section">
+            <div className="settings-section" {...tourAttr("settings.look")}>
               <p className="settings-section-title">{ts.sectionLanguage}</p>
               <div className="settings-card">
                 <div className="settings-row settings-row-stack">
@@ -756,7 +814,7 @@ const Settings: React.FC = () => {
             </div>
 
             {/* ── Appearance ── */}
-            <div className="settings-section">
+            <div className="settings-section" {...tourAttr("settings.look")}>
               <p className="settings-section-title">{ts.sectionAppearance}</p>
               <div className="settings-card">
                 <ToggleRow
@@ -799,7 +857,7 @@ const Settings: React.FC = () => {
             </div>
 
             {/* ── Offline content (Content Sync) ── */}
-            <div className="settings-section">
+            <div className="settings-section" {...tourAttr("settings.sync")}>
               <p className="settings-section-title">{ts.sectionSync}</p>
               <div className="settings-card">
                 <div className="settings-row">
@@ -915,7 +973,7 @@ const Settings: React.FC = () => {
               <p className="settings-section-title">
                 {ts.sectionNotifications}
               </p>
-              <div className="settings-card">
+              <div className="settings-card" {...tourAttr("settings.reminders")}>
                 <ToggleRow
                   icon={ICONS.mosque}
                   label={ts.prayerReminders}
@@ -932,21 +990,109 @@ const Settings: React.FC = () => {
                     </p>
                   </div>
                 )}
+                <ToggleRow
+                  icon={ICONS.beads}
+                  label={ts.azkarReminders}
+                  desc={ts.azkarRemindersDesc}
+                  checked={s.azkarReminders}
+                  onChange={(v) => {
+                    void handleAzkarRemindersToggle(v);
+                  }}
+                />
+                {azkarReminderError && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note settings-sync-note--error">
+                      {ts.notificationsDenied}
+                    </p>
+                  </div>
+                )}
+                {needsExactAlarms && (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.remindersLate}</p>
+                        <p className="settings-row-desc">{ts.exactAlarmsDesc}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="settings-sync-btn"
+                      onClick={() => void requestExactAlarms()}
+                    >
+                      {ts.allow}
+                    </button>
+                  </div>
+                )}
+                {needsBatteryExemption && (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.remindersLate}</p>
+                        <p className="settings-row-desc">{ts.batteryRestrictedDesc}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="settings-sync-btn"
+                      onClick={() => void openAppSettings()}
+                    >
+                      {ts.openSettings}
+                    </button>
+                  </div>
+                )}
               </div>
-              {/* Azkar reminders — coming soon, controls disabled */}
-              <div className="settings-card settings-card--coming-soon settings-card--stacked">
-                <span className="settings-coming-soon-badge">
-                  {ts.comingSoon}
-                </span>
-                <div className="settings-card-disabled" aria-hidden="true">
-                  <ToggleRow
-                    icon={ICONS.beads}
-                    label={ts.azkarReminders}
-                    desc={ts.azkarRemindersDesc}
-                    checked={s.azkarReminders}
-                    onChange={() => {}}
-                  />
+            </div>
+
+            {/* ── Tours & tips ── */}
+            <div className="settings-section" {...tourAttr("settings.tours")}>
+              <p className="settings-section-title">{oc.section}</p>
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <div className="settings-row-text">
+                      <p className="settings-row-label">{oc.welcome}</p>
+                      <p className="settings-row-desc">{oc.welcomeDesc}</p>
+                    </div>
+                  </div>
+                  <button className="settings-sync-btn" onClick={tours.showWelcome}>
+                    {oc.show}
+                  </button>
                 </div>
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <div className="settings-row-text">
+                      <p className="settings-row-label">{oc.tips}</p>
+                      <p className="settings-row-desc">{oc.tipsDesc}</p>
+                    </div>
+                  </div>
+                  <button
+                    className="settings-sync-btn"
+                    onClick={() => {
+                      tours.resetTours();
+                      setTipsReset(true);
+                    }}
+                  >
+                    {oc.replay}
+                  </button>
+                </div>
+                {tipsReset && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note" role="status">
+                      {oc.tipsDone}
+                    </p>
+                  </div>
+                )}
+                {tours.hasReleases && (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{oc.whatsNew}</p>
+                        <p className="settings-row-desc">{oc.whatsNewDesc}</p>
+                      </div>
+                    </div>
+                    <button className="settings-sync-btn" onClick={tours.showWhatsNew}>
+                      {oc.show}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
