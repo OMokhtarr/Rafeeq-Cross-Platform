@@ -49,3 +49,9 @@ coverage/
 
 # Local npm config (machine-specific script-shell path)
 .npmrc
+
+# Brainstorm mockups and agent scratch
+.superpowers/
+
+# Playwright run output
+test-results/
