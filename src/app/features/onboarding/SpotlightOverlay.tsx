@@ -76,8 +76,6 @@ export const SpotlightOverlay: React.FC<Props> = ({
   const cb = useRef({ onShown, onMissing, onSkip });
   cb.current = { onShown, onMissing, onSkip };
 
-  useEffect(() => registerOverlay(() => cb.current.onSkip()), []);
-
   useEffect(() => {
     const ref = `${tourId}.${step.key}`;
     const started = Date.now();
@@ -123,8 +121,13 @@ export const SpotlightOverlay: React.FC<Props> = ({
   }, [tourId, step.key, step.union]);
 
   const visible = box !== null;
+  // Back / edge swipe skips the tour only once it is on screen; while a
+  // target is still being looked for nothing is drawn, so Back belongs to
+  // the page.
   useEffect(() => {
-    if (visible) cardRef.current?.focus();
+    if (!visible) return;
+    cardRef.current?.focus();
+    return registerOverlay(() => cb.current.onSkip());
   }, [visible]);
 
   const placement = box ? cardPlacement(box, window.innerHeight) : "bottom";
