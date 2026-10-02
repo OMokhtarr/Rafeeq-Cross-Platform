@@ -40,6 +40,7 @@ export type TourId =
   | "hifzDashboard"
   | "hifzSessions"
   | "more"
+  | "prayerTimes.setup"
   | "prayerTimes"
   | "tracker"
   | "bookmarks"
@@ -73,7 +74,10 @@ export const TOURS: Record<TourId, TourStep[]> = {
   hifzDashboard: [{ key: "hero", gesture: "swipe" }, { key: "streak" }, { key: "sessions" }],
   hifzSessions: [{ key: "done" }, { key: "open" }],
   more: [{ key: "cards" }],
-  prayerTimes: [{ key: "grant" }, { key: "next" }, { key: "qibla" }, { key: "menu" }],
+  // Split so the next-prayer / Qibla / menu steps still play the first time a
+  // location exists, rather than being marked seen while only "grant" showed.
+  "prayerTimes.setup": [{ key: "grant" }],
+  prayerTimes: [{ key: "next" }, { key: "qibla" }, { key: "menu" }],
   tracker: [
     { key: "item" },
     { key: "locked" },

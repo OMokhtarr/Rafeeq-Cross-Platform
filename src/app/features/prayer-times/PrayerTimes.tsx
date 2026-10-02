@@ -76,11 +76,12 @@ function formatCountdown(msRemaining: number, lang: string): string {
 }
 
 const PrayerTimes: React.FC = () => {
-  usePageTour(["prayerTimes"]);
   const { t, lang, isRTL } = useLang();
   const tp = t.prayerTimes;
 
   const [day, setDay] = useState<PrayerDay | null>(null);
+  usePageTour(["prayerTimes.setup"], { ready: day !== null && !day.hasLocation });
+  usePageTour(["prayerTimes"], { ready: !!day?.hasLocation });
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
@@ -262,7 +263,7 @@ const PrayerTimes: React.FC = () => {
                   </p>
                   <button
                     type="button"
-                    {...tourAttr("prayerTimes.grant")}
+                    {...tourAttr("prayerTimes.setup.grant")}
                     className="pt-grant-btn"
                     onClick={handleUpdateLocation}
                     disabled={locating}

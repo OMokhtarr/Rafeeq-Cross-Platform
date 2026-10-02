@@ -198,7 +198,8 @@ Requests are dropped when the user leaves the page.
 | `hifzDashboard` | first visit to the Hifz plan view | ✋`hero` → `.hifz-hero-scroll`; `streak` → streak chip; `sessions` → "View all sessions" |
 | `hifzSessions` | first visit to the Hifz sessions view | `done` → first session's done toggle; `open` (optional) → open-in-Quran / quiz-from-session |
 | `more` | first visit `/more` | `cards` → the `.more-card` grid |
-| `prayerTimes` | first visit `/prayer-times` | without a location: `grant` → `.pt-grant-btn`. With a location: `next` → next-prayer countdown; `qibla` → `.qh-dial`; `menu` → `.pt-menu-btn` |
+| `prayerTimes.setup` | first visit `/prayer-times` with no location | `grant` → `.pt-grant-btn` |
+| `prayerTimes` | first visit `/prayer-times` once a location exists | `next` → next-prayer countdown; `qibla` → `.qh-dial`; `menu` → `.pt-menu-btn` |
 | `tracker` | first visit `/tracker` | `item` → first item (tap to mark done); `locked` (optional) → first locked item; ✋`shortcut` → morning-azkar item (long-press); `strip` → `.wt-strip-day` row + `.wt-cal-btn`; `header` → settings + help icons |
 | `bookmarks` | first visit `/bookmarks` | `tabs` → Verses / Recitation Sessions tabs |
 | `settings` | first visit `/settings` | `look` → Language + Appearance sections; `sync` → Offline content section; `reminders` → Prayer reminders toggle; `tours` → Tours & tips section |

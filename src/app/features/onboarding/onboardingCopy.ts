@@ -149,8 +149,10 @@ const ar: OnboardingCopy = {
     more: {
       cards: { title: "المزيد من رفيق", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، والحساب، والإعدادات." },
     },
-    prayerTimes: {
+    "prayerTimes.setup": {
       grant: { title: "موقعك", body: "اسمح بالوصول إلى موقعك لحساب مواقيت الصلاة واتجاه القبلة." },
+    },
+    prayerTimes: {
       next: { title: "الصلاة القادمة", body: "الوقت المتبقي حتى الصلاة القادمة." },
       qibla: { title: "القبلة", body: "أدر هاتفك حتى يشير المؤشر إلى الكعبة." },
       menu: { title: "الخيارات", body: "طريقة الحساب والمذهب، والمواقيت المعروضة، وإعدادات الأداة." },
@@ -301,8 +303,10 @@ const en: OnboardingCopy = {
     more: {
       cards: { title: "More of Rafeeq", body: "Prayer times & Qibla, the Worship Tracker, Account and Settings." },
     },
-    prayerTimes: {
+    "prayerTimes.setup": {
       grant: { title: "Your location", body: "Allow location access to work out prayer times and the Qibla." },
+    },
+    prayerTimes: {
       next: { title: "Next prayer", body: "Time left until the next prayer." },
       qibla: { title: "Qibla", body: "Turn your phone until the needle points to the Kaaba." },
       menu: { title: "Options", body: "Calculation method, madhab, which times to show, and widget settings." },
