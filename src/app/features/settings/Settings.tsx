@@ -34,9 +34,16 @@ import {
   relativeDays,
 } from "./sync-status";
 import {
+  enableAzkarReminders,
   enableReminders,
+  getAzkarReminders,
+  getReminderHealth,
   getReminders,
+  openAppSettings,
+  requestExactAlarms,
+  setAzkarReminders,
   setReminders,
+  type ReminderHealth,
 } from "../../core/services/prayer/prayer-times.service";
 import { useTours } from "../onboarding/TourProvider";
 import { usePageTour } from "../onboarding/usePageTour";
@@ -63,7 +70,7 @@ interface AppSettings {
   // Azkar
   azkarVibration: boolean;
   azkarCounterSound: boolean;
-  // Notifications (future)
+  // Notifications — native owns the truth; these mirror it
   prayerReminders: boolean;
   azkarReminders: boolean;
 }
@@ -631,6 +638,8 @@ const Settings: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [prayerReminderError, setPrayerReminderError] = useState(false);
+  const [azkarReminderError, setAzkarReminderError] = useState(false);
+  const [reminderHealth, setReminderHealth] = useState<ReminderHealth | null>(null);
   const tours = useTours();
   const oc = ONBOARDING_COPY[lang].settings;
   const [tipsReset, setTipsReset] = useState(false);
@@ -682,7 +691,36 @@ const Settings: React.FC = () => {
         ),
       )
       .catch(() => {});
+    getAzkarReminders()
+      .then((enabled) =>
+        setS((prev) =>
+          prev.azkarReminders === enabled
+            ? prev
+            : { ...prev, azkarReminders: enabled },
+        ),
+      )
+      .catch(() => {});
   }, []);
+
+  // Re-read whenever the page becomes visible again: both fixes happen in
+  // system screens, and coming back from one is not a page navigation.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        getReminderHealth().then(setReminderHealth).catch(() => {});
+      }
+    };
+    refresh();
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, []);
+
+  const remindersOn = s.prayerReminders || s.azkarReminders;
+  const needsExactAlarms = remindersOn && reminderHealth?.exactAlarms === false;
+  const needsBatteryExemption =
+    remindersOn &&
+    reminderHealth?.aggressiveBattery === true &&
+    !reminderHealth.batteryUnrestricted;
 
   const handleSyncNow = async () => {
     setSyncing(true);
@@ -723,6 +761,18 @@ const Settings: React.FC = () => {
       await setReminders({ enabled: false });
       setPrayerReminderError(false);
       set("prayerReminders", false);
+    }
+  };
+
+  const handleAzkarRemindersToggle = async (checked: boolean) => {
+    if (checked) {
+      const ok = await enableAzkarReminders();
+      setAzkarReminderError(!ok);
+      if (ok) set("azkarReminders", true);
+    } else {
+      await setAzkarReminders(false);
+      setAzkarReminderError(false);
+      set("azkarReminders", false);
     }
   };
 
@@ -940,21 +990,54 @@ const Settings: React.FC = () => {
                     </p>
                   </div>
                 )}
-              </div>
-              {/* Azkar reminders — coming soon, controls disabled */}
-              <div className="settings-card settings-card--coming-soon settings-card--stacked">
-                <span className="settings-coming-soon-badge">
-                  {ts.comingSoon}
-                </span>
-                <div className="settings-card-disabled" aria-hidden="true">
-                  <ToggleRow
-                    icon={ICONS.beads}
-                    label={ts.azkarReminders}
-                    desc={ts.azkarRemindersDesc}
-                    checked={s.azkarReminders}
-                    onChange={() => {}}
-                  />
-                </div>
+                <ToggleRow
+                  icon={ICONS.beads}
+                  label={ts.azkarReminders}
+                  desc={ts.azkarRemindersDesc}
+                  checked={s.azkarReminders}
+                  onChange={(v) => {
+                    void handleAzkarRemindersToggle(v);
+                  }}
+                />
+                {azkarReminderError && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note settings-sync-note--error">
+                      {ts.notificationsDenied}
+                    </p>
+                  </div>
+                )}
+                {needsExactAlarms && (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.remindersLate}</p>
+                        <p className="settings-row-desc">{ts.exactAlarmsDesc}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="settings-sync-btn"
+                      onClick={() => void requestExactAlarms()}
+                    >
+                      {ts.allow}
+                    </button>
+                  </div>
+                )}
+                {needsBatteryExemption && (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.remindersLate}</p>
+                        <p className="settings-row-desc">{ts.batteryRestrictedDesc}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="settings-sync-btn"
+                      onClick={() => void openAppSettings()}
+                    >
+                      {ts.openSettings}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

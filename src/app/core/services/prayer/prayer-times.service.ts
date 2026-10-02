@@ -39,6 +39,9 @@ interface RafeeqPrayerPlugin {
     enabled?: boolean;
     prayers?: PrayerKey[];
   }): Promise<void>;
+  getAzkarReminders(): Promise<{ enabled: boolean }>;
+  setAzkarReminders(options: { enabled: boolean }): Promise<void>;
+  getReminderHealth(): Promise<ReminderHealth>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
   requestExactAlarm(): Promise<{ granted: boolean }>;
   getVisibleTimes(): Promise<{ times: string[] }>;
@@ -51,6 +54,17 @@ interface RafeeqPrayerPlugin {
   getPlace(): Promise<{ name: string | null }>;
   locationServicesEnabled(): Promise<{ enabled: boolean }>;
   promptEnableLocation(): Promise<{ enabled: boolean }>;
+}
+
+/** What may stop reminders arriving on time on this device. */
+export interface ReminderHealth {
+  /** Exact alarms allowed — denied by default on Android 14+. */
+  exactAlarms: boolean;
+  /** Exempt from battery optimisation. */
+  batteryUnrestricted: boolean;
+  /** A brand (Xiaomi, Huawei, Oppo…) whose battery manager delays or kills
+   *  background alarms unless the app may autostart and run unrestricted. */
+  aggressiveBattery: boolean;
 }
 
 const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
@@ -286,6 +300,61 @@ export async function enableReminders(): Promise<boolean> {
     // Reminders stay inexact.
   }
   return true;
+}
+
+/** Whether morning/evening azkar reminders are on; false off-device. */
+export async function getAzkarReminders(): Promise<boolean> {
+  if (!isNative) return false;
+  const { enabled } = await RafeeqPrayer.getAzkarReminders();
+  return enabled;
+}
+
+export async function setAzkarReminders(enabled: boolean): Promise<void> {
+  if (!isNative) return;
+  await RafeeqPrayer.setAzkarReminders({ enabled });
+}
+
+/**
+ * Turn azkar reminders on: after Fajr and after Asr when a location is
+ * stored, at fixed morning/evening hours otherwise — so unlike
+ * enableReminders no location is asked for. The notification permission is
+ * still required, for the same reason it is there.
+ */
+export async function enableAzkarReminders(): Promise<boolean> {
+  if (!isNative) return false;
+
+  const notificationsGranted = await requestNotificationPermission();
+  if (!notificationsGranted) return false;
+
+  await setAzkarReminders(true);
+
+  try {
+    await RafeeqPrayer.requestExactAlarm();
+  } catch {
+    // Reminders stay inexact.
+  }
+  return true;
+}
+
+/** Off-device there is nothing to warn about, so everything reads healthy. */
+export async function getReminderHealth(): Promise<ReminderHealth> {
+  const healthy = { exactAlarms: true, batteryUnrestricted: true, aggressiveBattery: false };
+  if (!isNative) return healthy;
+  try {
+    return await RafeeqPrayer.getReminderHealth();
+  } catch {
+    return healthy;
+  }
+}
+
+/** Opens the system "Alarms & reminders" page when exact alarms are off. */
+export async function requestExactAlarms(): Promise<void> {
+  if (!isNative) return;
+  try {
+    await RafeeqPrayer.requestExactAlarm();
+  } catch {
+    // No such screen on this device.
+  }
 }
 
 export async function getVisibleTimes(): Promise<PrayerKey[]> {

@@ -133,6 +133,23 @@ const MainRouterOutlet: React.FC = () => {
     };
   }, []);
 
+  // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
+  // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
+  // running app receives it as appUrlOpen.
+  useEffect(() => {
+    const open = (url: string | undefined) => {
+      const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);
+      if (m) historyRef.current.push(`/azkar/${m[1]}`);
+    };
+    CapApp.getLaunchUrl()
+      .then((launch) => open(launch?.url))
+      .catch(() => {});
+    const handle = CapApp.addListener("appUrlOpen", ({ url }) => open(url));
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
+
   useEffect(() => {
     let patched: { canStart: (...a: unknown[]) => boolean } | null = null;
     let original: ((...a: unknown[]) => boolean) | null = null;

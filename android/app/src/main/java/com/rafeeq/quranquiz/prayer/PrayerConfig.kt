@@ -39,6 +39,7 @@ object PrayerConfig {
         setOf("fajr", "dhuhr", "asr", "maghrib", "isha")
 
     private const val KEY_REMINDERS = "reminders_enabled"
+    private const val KEY_AZKAR_REMINDERS = "azkar_reminders_enabled"
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
@@ -165,6 +166,14 @@ object PrayerConfig {
 
     fun setRemindersEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_REMINDERS, enabled).apply()
+    }
+
+    /** Morning/evening azkar reminders; independent of the prayer toggle. */
+    fun azkarRemindersEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_AZKAR_REMINDERS, false)
+
+    fun setAzkarRemindersEnabled(ctx: Context, enabled: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_AZKAR_REMINDERS, enabled).apply()
     }
 
     fun enabledPrayers(ctx: Context): Set<String> =

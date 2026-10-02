@@ -23,6 +23,8 @@ object PrayerAlarmScheduler {
 
     private const val REQUEST_CODE = 4200
     const val EXTRA_PRAYER_NAME = "prayer_name"
+    /** The prayer's own time in epoch millis — the alarm may fire later. */
+    const val EXTRA_PRAYER_AT = "prayer_at"
 
     // Distinct from REQUEST_CODE above: both PendingIntents target the same
     // receiver class, and a shared request code would let one silently
@@ -44,9 +46,12 @@ object PrayerAlarmScheduler {
     // on (in the plugin's case) the main thread.
     internal const val MAX_LOOKUPS = 8
 
-    private fun pendingIntent(ctx: Context, prayerName: String? = null): PendingIntent {
+    private fun pendingIntent(ctx: Context, prayer: NextPrayer? = null): PendingIntent {
         val intent = Intent(ctx, PrayerAlarmReceiver::class.java).apply {
-            prayerName?.let { putExtra(EXTRA_PRAYER_NAME, it) }
+            prayer?.let {
+                putExtra(EXTRA_PRAYER_NAME, it.name.name.lowercase())
+                putExtra(EXTRA_PRAYER_AT, it.at.time)
+            }
         }
         return PendingIntent.getBroadcast(
             ctx,
@@ -112,7 +117,7 @@ object PrayerAlarmScheduler {
             PrayerTimesEngine.nextAfter(at, lat, lng, method, madhab, tz)
         } ?: return
 
-        setAlarm(ctx, next.at.time, pendingIntent(ctx, next.name.name.lowercase()))
+        setAlarm(ctx, next.at.time, pendingIntent(ctx, next))
     }
 
     /** Whether alarms can fire exactly: always below Android 12, otherwise
@@ -127,8 +132,9 @@ object PrayerAlarmScheduler {
      * Exact when permitted, otherwise the inexact Doze-safe variant — Doze may
      * defer it by some minutes, but a late reminder beats none, and calling
      * the exact API without the permission throws SecurityException.
+     * Shared with [AzkarReminderScheduler].
      */
-    private fun setAlarm(ctx: Context, at: Long, operation: PendingIntent) {
+    internal fun setAlarm(ctx: Context, at: Long, operation: PendingIntent) {
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         if (canScheduleExact(ctx)) {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, operation)
