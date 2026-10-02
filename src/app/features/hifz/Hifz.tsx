@@ -1634,9 +1634,11 @@ const Hifz: React.FC = () => {
   // The saved plan loads asynchronously and `view` reads "setup" until it
   // does, so the tours wait for that first load to settle.
   const [planChecked, setPlanChecked] = useState(false);
-  usePageTour(["hifzSetup"], { ready: planChecked && view === "setup" });
+  // The sessions view, and setup while editing a plan, register themselves
+  // as overlays so Back walks out of them; their tours belong to them.
+  usePageTour(["hifzSetup"], { ready: planChecked && view === "setup", overOverlay: plan !== null });
   usePageTour(["hifzDashboard"], { ready: planChecked && view === "plan" && plan !== null });
-  usePageTour(["hifzSessions"], { ready: planChecked && view === "sessions" });
+  usePageTour(["hifzSessions"], { ready: planChecked && view === "sessions", overOverlay: true });
   const [chapters, setChapters] = useState<any[]>([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [bestPlan, setBestPlan] = useState<BestPlanRecord | null>(null);
