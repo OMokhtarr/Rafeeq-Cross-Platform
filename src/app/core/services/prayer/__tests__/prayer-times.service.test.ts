@@ -94,6 +94,9 @@ const { getCurrentPosition, checkPermissions, requestPermissions } = geolocation
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // requestLocation checks location services before any Geolocation call.
+  // On is the ordinary device state; tests about it being off say so.
+  plugin.locationServicesEnabled.mockResolvedValue({ enabled: true });
 });
 
 describe("loadPrayerDay", () => {
@@ -265,6 +268,10 @@ describe("requestLocation", () => {
   it("reports services-off when the fix fails and location services are off", async () => {
     checkPermissions.mockResolvedValue({ location: "granted", coarseLocation: "granted" });
     getCurrentPosition.mockRejectedValue(new Error("position unavailable"));
+    // On when the attempt starts, off by the time the fix fails.
+    plugin.locationServicesEnabled
+      .mockResolvedValueOnce({ enabled: true })
+      .mockResolvedValueOnce({ enabled: false });
 
     const ok = await service.requestLocation();
 
@@ -516,9 +523,32 @@ describe("requestLocation outcomes", () => {
     // user to grant it would be a dead end.
     checkPermissions.mockResolvedValue({ location: "granted" });
     getCurrentPosition.mockRejectedValue(new Error("location unavailable"));
-    plugin.locationServicesEnabled.mockResolvedValue({ enabled: false });
+    plugin.locationServicesEnabled
+      .mockResolvedValueOnce({ enabled: true })
+      .mockResolvedValueOnce({ enabled: false });
 
     await expect(service.requestLocation()).resolves.toBe("services-off");
+  });
+
+  it("offers the system's location switch first, and stops if it is declined", async () => {
+    // The geolocation plugin rejects even checkPermissions while location is off.
+    plugin.locationServicesEnabled.mockResolvedValue({ enabled: false });
+    plugin.promptEnableLocation.mockResolvedValue({ enabled: false });
+
+    await expect(service.requestLocation()).resolves.toBe("services-off");
+    expect(plugin.promptEnableLocation).toHaveBeenCalled();
+    expect(checkPermissions).not.toHaveBeenCalled();
+  });
+
+  it("carries on once location is switched on from the system prompt", async () => {
+    plugin.locationServicesEnabled.mockResolvedValue({ enabled: false });
+    plugin.promptEnableLocation.mockResolvedValue({ enabled: true });
+    checkPermissions.mockResolvedValue({ location: "granted" });
+    getCurrentPosition.mockResolvedValue({
+      coords: { latitude: 30.0444, longitude: 31.2357 },
+    });
+
+    await expect(service.requestLocation()).resolves.toBe("granted");
   });
 
   it("reports failed when the fix fails but location is on", async () => {
