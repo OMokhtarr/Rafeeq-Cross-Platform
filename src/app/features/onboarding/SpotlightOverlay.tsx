@@ -20,24 +20,27 @@ const FIND_POLL_MS = 100;
 const sameBox = (a: Box | null, b: Box) =>
   !!a && a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height;
 
-// Pointer hand, after Lucide's "pointer" icon (ISC).
-const HAND = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 14a8 8 0 0 1-8 8" />
-    <path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-    <path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1" />
-    <path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10" />
-    <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
-  </svg>
-);
-
+/** A gold touch dot acting out the gesture: a sliding trail for swipe, a
+ *  filling ring for long-press, two ripples for double-tap. */
 const GestureHint: React.FC<{ gesture: Gesture; box: Box }> = ({ gesture, box }) => (
   <div
-    className={`ob-gesture ob-gesture--${gesture}`}
+    className={`ob-touch ob-touch--${gesture}`}
     style={{ top: box.top + box.height / 2, left: box.left + box.width / 2 }}
     aria-hidden="true"
   >
-    {HAND}
+    {gesture === "swipe" && <span className="ob-touch-trail" />}
+    {gesture === "longPress" && (
+      <svg className="ob-touch-ring" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="17" pathLength={100} />
+      </svg>
+    )}
+    {gesture === "doubleTap" && (
+      <>
+        <span className="ob-touch-ripple" />
+        <span className="ob-touch-ripple" />
+      </>
+    )}
+    <span className="ob-touch-dot" />
   </div>
 );
 

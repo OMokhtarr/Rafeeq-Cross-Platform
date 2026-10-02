@@ -59,3 +59,16 @@ it("claims the back button once the target is ringed, and releases it on unmount
   expect(hasOpenOverlay()).toBe(false);
   root = createRoot(host);
 });
+
+it.each([
+  ["swipe", ".ob-touch-trail", 1],
+  ["longPress", ".ob-touch-ring", 1],
+  ["doubleTap", ".ob-touch-ripple", 2],
+] as const)("shows a %s step as a touch dot with its own motion cue", (gesture, cue, count) => {
+  addTarget();
+  act(() => root.render(<SpotlightOverlay {...props} step={{ key: "recents", gesture }} />));
+  const touch = document.querySelector(`.ob-touch--${gesture}`);
+  expect(touch?.querySelector(".ob-touch-dot")).not.toBeNull();
+  expect(touch?.querySelectorAll(cue)).toHaveLength(count);
+  expect(document.querySelector(".ob-gesture")).toBeNull();
+});

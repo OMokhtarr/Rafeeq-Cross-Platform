@@ -163,33 +163,106 @@
 }
 .ob-card-actions { display: flex; align-items: center; gap: var(--space-1); }
 
-/* ── Gesture glyph ──────────────────────────────── */
-.ob-gesture {
+/* ── Touch dot ──────────────────────────────────
+   Acts out a hidden gesture on the target's centre. The resting state
+   (no animation) is a meaningful still: full trail, full ring, one ripple. */
+.ob-touch {
+  --ob-touch-travel: 36px;
   position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+[dir="rtl"] .ob-touch--swipe { transform: scaleX(-1); }
+/* Anchored top-left explicitly: in RTL an unanchored child sits by its right edge. */
+.ob-touch > * { position: absolute; top: 0; left: 0; }
+.ob-touch-dot {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 0 5px var(--color-gold-subtle), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* Swipe: the dot slides start → end, drawing a fading trail. */
+.ob-touch--swipe .ob-touch-dot {
+  transform: translateX(var(--ob-touch-travel));
+  animation: ob-touch-slide 1.8s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+.ob-touch-trail {
+  left: calc(var(--ob-touch-travel) * -1);
+  width: calc(var(--ob-touch-travel) * 2);
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent, var(--color-gold));
+  opacity: 0.55;
+  transform-origin: left center;
+  animation: ob-touch-trail 1.8s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+@keyframes ob-touch-slide {
+  0% { transform: translateX(calc(var(--ob-touch-travel) * -1)) scale(0.6); opacity: 0; }
+  12% { transform: translateX(calc(var(--ob-touch-travel) * -1)) scale(1); opacity: 1; }
+  65% { transform: translateX(var(--ob-touch-travel)) scale(1); opacity: 1; }
+  80%, 100% { transform: translateX(var(--ob-touch-travel)) scale(0.6); opacity: 0; }
+}
+@keyframes ob-touch-trail {
+  0%, 12% { transform: scaleX(0); opacity: 0.55; }
+  65% { transform: scaleX(1); opacity: 0.55; }
+  85%, 100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* Long-press: the dot presses in while a ring fills around it. */
+.ob-touch-ring {
   width: 40px;
   height: 40px;
-  margin: -6px 0 0 -14px;
-  color: var(--color-gold);
-  pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  margin: -20px 0 0 -20px;
+  overflow: visible;
+  transform: rotate(-90deg);
 }
-.ob-gesture svg { width: 100%; height: 100%; }
-.ob-gesture--swipe { animation: ob-swipe 1.6s ease-in-out infinite alternate; }
-.ob-gesture--longPress { animation: ob-press 1.4s ease-in-out infinite; }
-.ob-gesture--doubleTap { animation: ob-double 1.4s ease-in-out infinite; }
-@keyframes ob-swipe {
-  from { transform: translateX(-36px); }
-  to { transform: translateX(36px); }
+.ob-touch-ring circle {
+  fill: none;
+  stroke: var(--color-gold);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  animation: ob-touch-fill 1.8s ease-in-out infinite;
 }
-@keyframes ob-press {
-  0%, 100% { transform: scale(1); }
-  20%, 80% { transform: scale(0.86); }
+.ob-touch--longPress .ob-touch-dot { animation: ob-touch-hold 1.8s ease-in-out infinite; }
+@keyframes ob-touch-fill {
+  0%, 10% { stroke-dashoffset: 100; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  90%, 100% { stroke-dashoffset: 0; opacity: 0; }
 }
-@keyframes ob-double {
-  0%, 30%, 60%, 100% { transform: scale(1); }
-  15%, 45% { transform: scale(0.84); }
+@keyframes ob-touch-hold {
+  0% { transform: scale(1); }
+  10%, 70% { transform: scale(0.82); }
+  85%, 100% { transform: scale(1); }
+}
+
+/* Double-tap: two quick taps, each sending out a ripple, then a rest. */
+.ob-touch-ripple {
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 2px solid var(--color-gold);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: ob-touch-ripple 1.6s ease-out infinite;
+}
+.ob-touch-ripple + .ob-touch-ripple { opacity: 0; animation-delay: 0.24s; }
+.ob-touch--doubleTap .ob-touch-dot { animation: ob-touch-tap 1.6s ease-in-out infinite; }
+@keyframes ob-touch-ripple {
+  0% { transform: scale(0.45); opacity: 0.9; }
+  40%, 100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes ob-touch-tap {
+  0%, 10%, 25%, 100% { transform: scale(1); }
+  4%, 17% { transform: scale(0.78); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ob-gesture, .ob-deck-slide, .ob-card { animation: none; }
+  .ob-touch[aria-hidden] *, .ob-deck-slide, .ob-card { animation: none; }
   .ob-spot-ring { transition: none; }
 }
