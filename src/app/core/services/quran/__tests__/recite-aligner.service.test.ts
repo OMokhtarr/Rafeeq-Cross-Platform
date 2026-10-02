@@ -1,4 +1,5 @@
 import type { Verse, VerseWord } from "../../../../shared/models/verse.model";
+import { quizAlignOptions } from "../../../../features/quiz/hooks/quizReciteProgress";
 import type { RecitePosition } from "../recite-matcher.service";
 import {
   alignPhrase,
@@ -133,6 +134,9 @@ function recite(
 
 const BAQARAH = verses("2:2", "2:3", "2:4", "2:5", "2:6", "2:7");
 const S23 = "الذين يؤمنون بالغيب ويقيمون الصلاة ومما رزقناهم ينفقون";
+// A slip one word before a pause: the word after the slip is said, but the
+// gap needs CONFIRM_AFTER words, so it is still pending when the phrase ends.
+const SLIP_BEFORE_PAUSE = "أولئك على هدى من ربهم وأولئك هو المفلحون"; // هو for هُمُ (2:5:6)
 
 describe("recite aligner: what turns red", () => {
   it("reveals a clean recitation with nothing red", () => {
@@ -172,6 +176,32 @@ describe("recite aligner: what turns red", () => {
     const s = recite(BAQARAH, at(2, 5), ["أولئك على هدى من ربهم وأولئك هم الخاسرون", standard("2:6")]);
     expect(marked(s)).toEqual(["2:5:7"]);
     expect(s.cursor.aya).toBe(6);
+  });
+
+  it("does not mark the word said between a slip and a pause", () => {
+    const s = recite(BAQARAH, at(2, 5), [SLIP_BEFORE_PAUSE, standard("2:6")]);
+    expect(marked(s)).toEqual(["2:5:6"]);
+    expect(pos(s.cursor)).toBe("2:6:11");
+  });
+
+  it("does not mark the word said between a skip and a pause", () => {
+    const s = recite(BAQARAH, at(2, 5), ["أولئك على هدى من ربهم وأولئك المفلحون", standard("2:6")]);
+    expect(marked(s)).toEqual(["2:5:6"]);
+    expect(s.marks.get("2:5:6")!.kind).toBe("missed");
+  });
+
+  it("does not mark the word said before a pause when the next phrase is one word", () => {
+    const next = standard("2:6").split(" ");
+    const s = recite(BAQARAH, at(2, 5), [SLIP_BEFORE_PAUSE, next[0], next.slice(1).join(" ")]);
+    expect(marked(s)).toEqual(["2:5:6"]);
+    expect(s.marks.get("2:5:6")!.kind).toBe("wrong");
+    expect(pos(s.cursor)).toBe("2:6:11");
+  });
+
+  it("reveals the word said before a pause once the reciter goes back for the slip", () => {
+    const s = recite(BAQARAH, at(2, 5), [SLIP_BEFORE_PAUSE, "هم"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:5:8");
   });
 
   it("does not mark an extra word or an immediate self-correction", () => {
@@ -315,7 +345,7 @@ describe("recite aligner: spelling and tajweed joins", () => {
 describe("recite aligner: quiz options", () => {
   const ayatAlKursi = verses("2:255");
   const hiddenStart = at(2, 255, 6);
-  const quiz: AlignOptions = { freeStartUntil: hiddenStart, protectBefore: hiddenStart };
+  const quiz = quizAlignOptions(hiddenStart);
   // Standard words with the separate pause-mark tokens dropped, so index k
   // is verse word k.
   const words = standard("2:255")
@@ -337,6 +367,18 @@ describe("recite aligner: quiz options", () => {
     const s = recite(ayatAlKursi, at(2, 255), [[...words.slice(6, 8), ...words.slice(9, 14)].join(" ")], quiz);
     expect(marked(s)).toEqual(["2:255:8"]);
   });
+
+  it("clears a red word far behind the verse end when the reciter goes back to it", () => {
+    // Skip word 8 and recite on to the verse end, 42 words past it.
+    const hidden = [...words.slice(6, 8), ...words.slice(9)];
+    const phrases: string[] = [];
+    for (let k = 0; k < hidden.length; k += 12) phrases.push(hidden.slice(k, k + 12).join(" "));
+    expect(marked(recite(ayatAlKursi, at(2, 255), phrases, quiz))).toEqual(["2:255:8"]);
+    // Then go back and say words 7–9.
+    const s = recite(ayatAlKursi, at(2, 255), [...phrases, words.slice(7, 10).join(" ")], quiz);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:255:50");
+  });
 });
 
 describe("recite aligner: helpers", () => {
@@ -344,6 +386,15 @@ describe("recite aligner: helpers", () => {
     const marks = markSkipped(new Map(), BAQARAH, at(2, 3, 6), at(2, 4, 1));
     expect([...marks.keys()].sort()).toEqual(["2:3:6", "2:3:7", "2:4:0"]);
     expect([...marks.values()].every((m) => m.kind === "missed")).toBe(true);
+  });
+
+  it("markSkipped leaves a word a phrase already said past the cursor", () => {
+    const tracker = createReciteTracker({ cursor: at(2, 5), marks: new Map() });
+    tracker.onFinal(spokenWordsFrom(SLIP_BEFORE_PAUSE), BAQARAH);
+    const { cursor, marks, pending } = tracker.committed();
+    expect(pos(cursor)).toBe("2:5:6");
+    const skipped = markSkipped(marks, BAQARAH, cursor, at(2, 6, 1), pending);
+    expect([...skipped.keys()].sort()).toEqual(["2:5:6", "2:6:0"]);
   });
 
   it("markPositionKeys converts to the page's word positions", () => {

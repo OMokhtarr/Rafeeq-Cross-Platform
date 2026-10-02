@@ -3717,6 +3717,8 @@ Run: `git grep -n "eslint-disable" -- src/app/core/services/quran src/app/core/h
 3. injection: skipped 1000/1000, replaced 998/1000 caught exactly
 ```
 
+After the final review's fixes, check 4 (added then) prints `4. slip before a pause: skipped 999/1000, replaced 989/1000 caught exactly`, followed by its 12 misses: same-word replacements, لي for لا, إن for عن, and 56:26's repeated سلاما.
+
 - [ ] **Step 3: Hand the device checklist to the user** (they build the app; don't run builds):
 
 1. Recite a passage correctly — nothing turns red.
@@ -3733,7 +3735,7 @@ Run: `git grep -n "eslint-disable" -- src/app/core/services/quran src/app/core/h
 
 ## Appendix: whole-Quran checks (for re-tuning; not committed)
 
-Both scripts live in a scratch folder outside the repo. `fetch-words.js` downloads every page's word-aligned `text_uthmani` and `text_imlaei` from the public Quran.com API (no auth) into `qf-words.json` beside it; `whole-quran-check.ts` then runs the spelling check, the clean sweep and the mistake injection against the modules in the given repo root.
+Both scripts live in a scratch folder outside the repo. `fetch-words.js` downloads every page's word-aligned `text_uthmani` and `text_imlaei` from the public Quran.com API (no auth) into `qf-words.json` beside it; `whole-quran-check.ts` then runs the spelling check, the clean sweep, the mistake injection and (added after the final review) the slip-before-a-pause check against the modules in the given repo root.
 
 Run from the worktree root:
 
@@ -3911,5 +3913,44 @@ function recite(vs: any[], from: any, phrases: string[]) {
     if (b.marks.has(target) && b.marks.size === 1) replaced++;
   }
   console.log(`3. injection: skipped ${skipped}/${N}, replaced ${replaced}/${N} caught exactly`);
+}
+
+// 4. Slip before a pause (added after the final review): the second-to-last
+//    word skipped or replaced, the verse ends the phrase, then the next verse
+//    is recited.
+{
+  let seed = 54321;
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const keys = [...verses.keys()].filter((k) => {
+    const v = verses.get(k);
+    const n = v.words.filter((w: any) => w.charType === "end").length;
+    const std = standard.get(k)!;
+    return n >= 4 && std.length === n && std.every((t) => !/\s/.test(t.trim())) && verses.has(`${v.sura}:${v.aya + 1}`);
+  });
+  const pool = [...standard.values()].flat();
+  let skipped = 0;
+  let replaced = 0;
+  const misses: string[] = [];
+  const N = 1000;
+  for (let s = 0; s < N; s++) {
+    const key = keys[Math.floor(rand() * keys.length)];
+    const v = verses.get(key);
+    const next = verses.get(`${v.sura}:${v.aya + 1}`);
+    const words = standard.get(key)!;
+    const k = words.length - 2;
+    const target = `${v.sura}:${v.aya}:${k}`;
+    const start = { sura: v.sura, aya: v.aya, wordIndex: 0 };
+    const nextWords = standard.get(`${next.sura}:${next.aya}`)!.join(" ").split(/\s+/).filter(Boolean);
+    const nextPhrases: string[] = [];
+    for (let q = 0; q < nextWords.length; q += 12) nextPhrases.push(nextWords.slice(q, q + 12).join(" "));
+    const a = recite([v, next], start, [[...words.slice(0, k), ...words.slice(k + 1)].join(" "), ...nextPhrases]);
+    if (a.marks.has(target) && a.marks.size === 1) skipped++;
+    else if (misses.length < 40) misses.push(`skip ${key}: ${[...a.marks.keys()].join(",")}`);
+    const other = pool[Math.floor(rand() * pool.length)];
+    const b = recite([v, next], start, [[...words.slice(0, k), other, ...words.slice(k + 1)].join(" "), ...nextPhrases]);
+    if (b.marks.has(target) && b.marks.size === 1) replaced++;
+    else if (misses.length < 40) misses.push(`replace ${key} (${other}): ${[...b.marks.keys()].join(",")}`);
+  }
+  console.log(`4. slip before a pause: skipped ${skipped}/${N}, replaced ${replaced}/${N} caught exactly`, misses.length ? `\n   ${misses.join("\n   ")}` : "");
 }
 ```

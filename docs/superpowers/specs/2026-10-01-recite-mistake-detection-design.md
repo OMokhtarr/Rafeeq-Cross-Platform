@@ -118,6 +118,46 @@ changed details below; the sections have been updated to match.
     998/1,000 wrong words marked exactly. The two misses are an ع/ا swap that
     Balanced forgives, and a replacement that was the same word.
 
+## Amendments from the final review (2026-10-02)
+
+A fresh review of the finished branch found faults that no test covered. Each
+fix below started from a test that failed first. The sections below have been
+updated to match.
+
+- **A word said between a slip and a pause turned red too.** The committed
+  state kept only the cursor and the marks. Take "…وأولئك هو المفلحون" and a
+  pause, with هو said for هُمُ. The cursor waited at the slip, and the next
+  phrase counted the correctly said المفلحون as missed. The state now keeps
+  `pending`: what a phrase found for the words past the cursor. A later
+  phrase passes over those words at no cost and keeps their outcome (see
+  Result rules).
+- **The same happened after a skip, for a different reason.** At a phrase's
+  end, dropping the last word as extra (0.7) cost less than a skip followed
+  by that word (0.8), so the word was never recorded. The phrase's last word
+  now costs `LAST_EXTRA_COST` (0.9) as an extra word.
+- **The quiz could not clear a red word more than 10 words back.** After
+  finishing a long verse with an early red word, the question could only be
+  left open or restarted. The quiz now restarts anywhere in its verse
+  (`restartAnywhere`).
+- **Quiz cards put the red on the wrong word.** The verse text carries each
+  pause mark as a space-separated token of its own, so the card's token i was
+  not word i. A red mark landed on a pause mark or a neighbouring word, and
+  the word said wrongly showed green. `hiddenCardTokens` now maps tokens to
+  words. Across all 6,236 verses, the lettered tokens match the word count in
+  6,232. The other four (2:181, 8:6, 13:37, 37:130) write one word as two
+  tokens, so their card can still be one token off after that word.
+- **Measured** with a new whole-Quran check (in the plan's appendix). In
+  1,000 random verses the second-to-last word is skipped or replaced, the
+  verse ends the phrase, and the next verse follows.
+  - Before these fixes, 0/1,000 skips and 0/1,000 replacements were marked
+    exactly: the correctly said last word always turned red as well.
+  - After: 999/1,000 and 989/1,000. Of the misses, 8 replacements were the
+    same word, 1 was a spelling the rules accept (لي for لا), and 1 a
+    forgiven sound-alike (إن for عن). The other 2 (one skip, one replacement)
+    are in 56:26, where the verse repeats سلاما and the other copy was marked.
+  - The earlier checks are unchanged: 70,272 / 71 / 1, 6,216/6,216, and
+    1,000/1,000 and 998/1,000.
+
 ## Design
 
 ### 1. Word comparison — `services/quran/recite-spelling.service.ts`
@@ -214,7 +254,8 @@ A dynamic-programming alignment picks the cheapest explanation using:
 | sound-alike | verdict `soundAlike` | `SOUND_ALIKE_COST` |
 | wrong | verse word ↔ spoken word, verdict `wrong` | `WRONG_COST` |
 | missed | verse word, nothing spoken | `MISSED_COST` |
-| extra | spoken word, no verse word | `EXTRA_COST` |
+| kept | a pending verse word passed over again (see Result rules) | 0 |
+| extra | spoken word, no verse word | `EXTRA_COST`; the phrase's last word `LAST_EXTRA_COST` |
 | merged | one spoken word ↔ two verse words of one verse, concatenation exactly `said` | `JOIN_COST` |
 | split | two spoken words ↔ one verse word, concatenation (or with the first word's final ن assimilated) exactly `said` | `JOIN_COST` |
 | lenient | muqatta'at or irregular verse word ↔ 0–5 spoken words | `LENIENT_TOKEN_COST` per word |
@@ -224,7 +265,14 @@ A dynamic-programming alignment picks the cheapest explanation using:
 - **Restarts.** The alignment may begin up to `RESTART_WINDOW` words *before*
   the cursor, at `RESTART_COST_PER_WORD` per word, so going back a few words
   after a breath or to fix a slip aligns as a restart instead of as extra
-  words.
+  words. With `restartAnywhere` (the quiz) it may begin anywhere in the
+  verses, and going back further than `RESTART_WINDOW` words costs the same
+  as going back `RESTART_WINDOW` words.
+- **Last word.** Deepgram ends a phrase at a pause, after a word the reciter
+  said, so the phrase's last word costs `LAST_EXTRA_COST` as an extra word:
+  more than `MISSED_COST`, so "…وأولئك المفلحون" with هُمُ skipped places
+  المفلحون after the skip; less than `WRONG_COST`, so a stray last word is not
+  forced onto the next verse word.
 
 **Result rules.** *Correctly said* means aligned as `said` or `soundAlike`,
 including merged and split. Lenient words are transparent: they neither
@@ -237,6 +285,13 @@ is said.
 - **New cursor:** one past the last correctly said verse word *before the first
   unconfirmed gap*. It is never behind the committed cursor. Words in an
   unconfirmed gap are pending: not marked, and not revealed.
+- **Pending words.** The state keeps what the phrase found for each word past
+  the new cursor (`pending`: said, or in an unconfirmed gap). A later phrase
+  may pass over a pending word at no cost (`kept`), and the word keeps that
+  outcome. So a word said between a slip and a pause is not counted missed
+  when the reciter carries on, and the slip's gap is confirmed by it. Once the
+  word before them is said, the cursor also moves past pending words that were
+  said. A forward relocation does not mark pending words that were said.
 - **Marks are created** for the words of confirmed gaps at or after the
   committed cursor.
 - **Marks are cleared** for any verse word aligned as correctly said, including
@@ -260,6 +315,7 @@ driver and the quiz use, so phrase handling lives in one place:
 - `AlignOptions`: `freeStartUntil` lets a phrase start anywhere up to a
   position at no cost (the first landing; a quiz's shown snippet).
   `protectBefore` never marks words before a position (a quiz's snippet).
+  `restartAnywhere` lets a phrase restart anywhere in the verses (the quiz).
 
 **Starting parameters** (constants in the aligner, tuned against the replay
 tests):
@@ -270,6 +326,7 @@ tests):
 | `WRONG_COST` | 1.0 |
 | `MISSED_COST` | 0.8 |
 | `EXTRA_COST` | 0.7 |
+| `LAST_EXTRA_COST` | 0.9 |
 | `RESTART_COST_PER_WORD` | 0.15 |
 | `RESTART_WINDOW` | 10 words |
 | `LOOKAHEAD` | 60 words |
@@ -343,9 +400,11 @@ identify (`findVerseOnPage`).
 ### 6. Display and completion — quiz recite
 
 `useQuizRecite` drives the shared tracker from the verse start with
-`freeStartUntil` and `protectBefore` both set to the hidden part's start. The
-reciter may begin anywhere in the shown snippet (or skip it), and a snippet
-word is never marked. This replaces the old two-seed logic. It exposes:
+`freeStartUntil` and `protectBefore` both set to the hidden part's start, and
+with `restartAnywhere` (`quizAlignOptions`). The reciter may begin anywhere in
+the shown snippet (or skip it), a snippet word is never marked, and the
+reciter can go back anywhere in the verse to fix a red word, even after
+finishing it. This replaces the old two-seed logic. It exposes:
 
 - `mistakeWordIndexes: Set<number>`, indexed like `revealedWordCount` (into the
   hidden portion);
@@ -369,7 +428,10 @@ and no marks remain. With red words:
 **Rendering:**
 
 - **Question cards** (`AkmelAlAyah.tsx`, `MutashabihatTest.tsx`): red words get
-  `aa-mistake-inline` / `mst-mistake-inline`.
+  `aa-mistake-inline` / `mst-mistake-inline`. The card splits the verse text
+  on spaces, and the verse text carries each pause mark (ۖ ۗ ۚ ۛ …) as a token
+  of its own, so `hiddenCardTokens` maps tokens to words: a pause mark goes
+  with the word before it.
 - **Context viewer:** `MushafContextViewer` passes `mistakePositions` through to
   `MushafPage` as `mistakes`.
 
@@ -415,6 +477,8 @@ by word as partials, then a final.
 | Wrong word | That word marked |
 | Skip at a pause | That word marked |
 | Wrong verse ending, then next verse | Ending marked |
+| Slip or skip one word before a pause, then the next verse (also as a one-word phrase) | Only the slip marked |
+| Slip before a pause, then going back for it | Nothing red; the word said before the pause is revealed |
 | Extra word, or an immediate self-correction | Nothing red |
 | Restart to fix a red word | Mark cleared |
 | Stop right after a slip | Nothing marked |
@@ -424,7 +488,9 @@ by word as partials, then a final.
 | An-Naba' 78:9–11 (repeated opener وجعلنا) | No stall, nothing red |
 
 **Quiz completion:** reaching the verse end with a mark is not complete;
-clearing the mark makes it complete.
+clearing the mark makes it complete, including after going back more than
+`RESTART_WINDOW` words from the verse end. Card tokens put a red word on that
+word, never on a pause mark before it.
 
 **Whole-Quran spelling check** (one-off script in the scratchpad; neither the
 script nor its data is committed):
@@ -450,6 +516,12 @@ touched files.
 3. A wrong word marks it.
 4. Going back to fix a red word clears it.
 5. A quiz answer with a red word stays open, and fixing it settles it correct.
+6. A slip on a verse's second-to-last word, then carrying on with the next
+   verse, marks only the slip.
+7. In a quiz on a long verse (Ayat al-Kursi), a red word near the start can be
+   fixed after finishing the verse.
+8. In a quiz whose hidden part has a pause mark (ۖ ۚ …) before a mistake, the
+   red lands on the word said wrongly.
 
 ## Out of scope
 
@@ -473,9 +545,13 @@ touched files.
   - `[recite-align]` logs that turn device misfires into tests.
 - **Detection delay:** a red word appears once `CONFIRM_AFTER` (2) later words
   are said, roughly a second after the slip.
-- **Restarts beyond 10 words** are not seen as restarts. The spoken words
-  align as extra words, so nothing is marked, but the cursor waits until the
-  reciter is back at new text.
+- **Restarts beyond 10 words** are not seen as restarts in the Mushaf (the
+  quiz restarts anywhere in its verse). The spoken words align as extra
+  words, so nothing is marked, but the cursor waits until the reciter is back
+  at new text.
+- **Two or more skipped words right before a phrase's last word** still drop
+  that word as an extra word (two skips cost 1.6, more than
+  `LAST_EXTRA_COST`), so it is marked missed along with them.
 
 ## Order of work
 

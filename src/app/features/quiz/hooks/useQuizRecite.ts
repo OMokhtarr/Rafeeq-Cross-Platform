@@ -21,7 +21,7 @@ import {
 import { useLang } from "../../../core/context/LanguageContext";
 import { isNetworkReachable } from "../../../core/services/api/network.service";
 import type { Verse } from "../../../shared/models/verse.model";
-import { quizProgress } from "./quizReciteProgress";
+import { quizAlignOptions, quizProgress } from "./quizReciteProgress";
 
 /**
  * QUIZ RECITE
@@ -324,12 +324,9 @@ export function useQuizRecite(
         aya: question.aya,
         wordIndex: hiddenStart,
       };
-      // Either start point is fine: the shown snippet may be recited or
-      // skipped (a free start up to the hidden part), and a word missed
-      // inside it is never marked.
       trackerRef.current = createReciteTracker(
         { cursor: verseStart, marks: new Map() },
-        { freeStartUntil: hiddenStartPos, protectBefore: hiddenStartPos },
+        quizAlignOptions(hiddenStartPos),
       );
       setLivePosition(verseStart);
       setStatus("armed");

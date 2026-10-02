@@ -293,7 +293,7 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
       const nearby = page === priorPage || page === priorPage + 1;
       if (prior && nearby && cmpPos(landing, prior.cursor) > 0) {
         const span = page === priorPage ? verses : [...priorVerses, ...verses];
-        marks = markSkipped(marks, span, prior.cursor, landing);
+        marks = markSkipped(marks, span, prior.cursor, landing, prior.pending);
       }
       let state: TrackerState = { cursor: landing, marks };
       if (spokenSoFar) {

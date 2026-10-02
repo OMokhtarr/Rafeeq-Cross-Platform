@@ -33,6 +33,7 @@ import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
+import { hiddenCardTokens } from "../../../../hooks/quizReciteProgress";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
 import "./MutashabihatTest.css";
 
@@ -608,23 +609,23 @@ const MutashabihatTest: React.FC = () => {
                             wrongly are red, hint-button words use the hint
                             style. Recitation and hints are independent. */}
                         {(() => {
-                          const shown = Math.max(hintLevel, recite.revealedWordCount);
-                          if (shown === 0) return null;
+                          const tokens = hiddenCardTokens(q.hints, recite, hintLevel);
+                          if (tokens.length === 0) return null;
                           return (
                             <span lang="ar" dir="rtl">
-                              {q.hints.slice(0, shown).map((w: string, i: number) => (
+                              {tokens.map((token, i) => (
                                 <span
                                   key={i}
                                   className={
-                                    recite.mistakeWordIndexes.has(i)
+                                    token.style === "mistake"
                                       ? "mst-mistake-inline"
-                                      : i < recite.revealedWordCount
+                                      : token.style === "recited"
                                         ? "mst-recited-inline"
                                         : "mst-hint-inline"
                                   }
                                 >
                                   {" "}
-                                  {w}
+                                  {token.text}
                                 </span>
                               ))}
                             </span>

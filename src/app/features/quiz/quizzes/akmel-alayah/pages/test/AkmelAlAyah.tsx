@@ -26,6 +26,7 @@ import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
+import { hiddenCardTokens } from "../../../../hooks/quizReciteProgress";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -582,27 +583,27 @@ const AkmelAlAyah: React.FC = () => {
                             style. Recitation and hints are independent — a
                             word can come from either source. */}
                         {(() => {
-                          const words = (q.hiddenPortion ?? q.correctAnswer ?? "")
-                            .trim()
-                            .split(" ")
-                            .filter(Boolean);
-                          const shown = Math.max(hintLevel, recite.revealedWordCount);
-                          if (shown === 0) return null;
+                          const tokens = hiddenCardTokens(
+                            (q.hiddenPortion ?? q.correctAnswer ?? "").trim().split(" ").filter(Boolean),
+                            recite,
+                            hintLevel,
+                          );
+                          if (tokens.length === 0) return null;
                           return (
                             <span lang="ar" dir="rtl">
-                              {words.slice(0, shown).map((w, i) => (
+                              {tokens.map((token, i) => (
                                 <span
                                   key={i}
                                   className={
-                                    recite.mistakeWordIndexes.has(i)
+                                    token.style === "mistake"
                                       ? "aa-mistake-inline"
-                                      : i < recite.revealedWordCount
+                                      : token.style === "recited"
                                         ? "aa-recited-inline"
                                         : "aa-hint-inline"
                                   }
                                 >
                                   {" "}
-                                  {w}
+                                  {token.text}
                                 </span>
                               ))}
                             </span>

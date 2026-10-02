@@ -1,5 +1,5 @@
 import type { Mark } from "../../../../core/services/quran/recite-aligner.service";
-import { quizProgress } from "../quizReciteProgress";
+import { hiddenCardTokens, quizProgress } from "../quizReciteProgress";
 
 const target = { completeAt: 10, wordCount: 10 };
 const at = (wordIndex: number) => ({ sura: 2, aya: 255, wordIndex });
@@ -23,5 +23,37 @@ describe("quizProgress", () => {
 
   it("reveals nothing new while the reciter is still in the shown snippet", () => {
     expect(quizProgress({ cursor: at(3), marks: new Map() }, target, 4).revealedWordCount).toBe(0);
+  });
+});
+
+describe("hiddenCardTokens", () => {
+  // 2:2's hidden half as the question card splits the verse text: each pause
+  // mark is a token of its own, so token i is not word i.
+  const tokens = ["ۛ", "فِيهِ", "ۛ", "هُدًى", "لِّلْمُتَّقِينَ"];
+  const shown = (revealedWordCount: number, mistakes: number[], hintLevel = 0) =>
+    hiddenCardTokens(tokens, { revealedWordCount, mistakeWordIndexes: new Set(mistakes) }, hintLevel).map(
+      (t) => `${t.text}:${t.style}`,
+    );
+
+  it("puts the red on the word said wrongly, not on a pause mark before it", () => {
+    expect(shown(3, [1])).toEqual([
+      "ۛ:recited",
+      "فِيهِ:recited",
+      "ۛ:recited",
+      "هُدًى:mistake",
+      "لِّلْمُتَّقِينَ:recited",
+    ]);
+  });
+
+  it("shows a recited word together with its pause marks", () => {
+    expect(shown(1, [])).toEqual(["ۛ:recited", "فِيهِ:recited", "ۛ:recited"]);
+  });
+
+  it("still shows hint tokens past the recited words", () => {
+    expect(shown(1, [], 4)).toEqual(["ۛ:recited", "فِيهِ:recited", "ۛ:recited", "هُدًى:hint"]);
+  });
+
+  it("shows nothing before anything is recited or hinted", () => {
+    expect(shown(0, [])).toEqual([]);
   });
 });

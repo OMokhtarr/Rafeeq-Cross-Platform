@@ -32,9 +32,16 @@ export const SOUND_ALIKE_COST = 0.25;
 export const WRONG_COST = 1.0;
 export const MISSED_COST = 0.8;
 export const EXTRA_COST = 0.7;
+/** The phrase's last word left unplaced. Deepgram ends a phrase at a pause,
+ *  after a word the reciter said, so "…وأولئك المفلحون" with هُمُ skipped
+ *  places المفلحون after the skip (kept pending) instead of dropping it: more
+ *  than MISSED_COST, and less than WRONG_COST so a stray last word is not
+ *  forced onto the next verse word. */
+const LAST_EXTRA_COST = 0.9;
 /** Cost per word of starting a phrase behind the committed position. */
 export const RESTART_COST_PER_WORD = 0.15;
-/** How far behind the committed position a phrase may restart. */
+/** How far behind the committed position a phrase may restart (anywhere, at
+ *  this distance's cost, with AlignOptions.restartAnywhere). */
 export const RESTART_WINDOW = 10;
 /** How far ahead of the committed position a phrase is aligned — room for a
  *  long phrase Deepgram has not finalized yet. */
@@ -100,10 +107,21 @@ export interface Mark {
 /** Red words, keyed `sura:aya:wordIndex`. */
 export type Marks = ReadonlyMap<string, Mark>;
 
+/** What a committed phrase found for a word it went past without moving the
+ *  cursor there: said, or in a gap too new to mark. */
+export type PendingOutcome = "said" | MarkKind;
+
 export interface TrackerState {
   /** One past the last word said (the existing RecitePosition convention). */
   cursor: RecitePosition;
   marks: Marks;
+  /** Words past the cursor that a committed phrase already went over, keyed
+   *  like marks. The cursor stops before a gap until CONFIRM_AFTER words
+   *  follow it, so a slip one word before a pause leaves a said word here. A
+   *  later phrase that carries on past these words keeps their outcome — the
+   *  said word is not counted missed when the reciter goes on to the next
+   *  verse. */
+  pending?: ReadonlyMap<string, PendingOutcome>;
 }
 
 export type StepKind =
@@ -114,13 +132,15 @@ export type StepKind =
   | "extra"
   | "merged"
   | "split"
-  | "lenient";
+  | "lenient"
+  | "kept";
 
 export interface AlignStep {
+  /** `kept`: a pending word passed over, keeping its earlier outcome. */
   kind: StepKind;
   /** 0 (extra), 1, or 2 (merged) verse words. */
   expected: ExpectedWord[];
-  /** 0 (missed), 1, 2 (split), or 0–5 (lenient) spoken words. */
+  /** 0 (missed, kept), 1, 2 (split), or 0–5 (lenient) spoken words. */
   spoken: SpokenWord[];
 }
 
@@ -146,6 +166,11 @@ export interface AlignOptions {
   freeStartUntil?: RecitePosition;
   /** Words before this position are never marked (a quiz's shown snippet). */
   protectBefore?: RecitePosition;
+  /** A phrase may restart anywhere in `verses`, not only RESTART_WINDOW words
+   *  back — the quiz, whose reciter goes back over its one verse to fix red
+   *  words. Going back further costs the same as going back RESTART_WINDOW
+   *  words. */
+  restartAnywhere?: boolean;
 }
 
 // ─── Expected words ──────────────────────────────────────────────────────────
@@ -228,6 +253,7 @@ const OP_LENIENT = 4;
 const OP_MISSED = 5;
 const OP_EXTRA = 6;
 const OP_START = 7;
+const OP_KEPT = 8;
 
 function verdictCost(v: WordVerdict): number {
   return v === "said" ? 0 : v === "soundAlike" ? SOUND_ALIKE_COST : WRONG_COST;
@@ -253,7 +279,7 @@ export function alignPhrase(
   const freeIdx = options.freeStartUntil
     ? Math.max(cursorIdx, indexAtOrAfter(all, options.freeStartUntil))
     : cursorIdx;
-  const from = Math.max(0, cursorIdx - RESTART_WINDOW);
+  const from = options.restartAnywhere ? 0 : Math.max(0, cursorIdx - RESTART_WINDOW);
   const to = Math.min(all.length, freeIdx + LOOKAHEAD);
   const E = all.slice(from, to);
   const S = spoken;
@@ -264,6 +290,8 @@ export function alignPhrase(
   if (n === 0 || m === 0) {
     return { state, newSaid: 0, saidTotal: 0, added: [], cleared: [], steps: [] };
   }
+  // What an earlier phrase found for words past the cursor (TrackerState.pending).
+  const pendingAt = E.map((w) => state.pending?.get(wordKey(w)));
 
   const width = m + 1;
   const cost = new Float64Array((n + 1) * width).fill(Infinity);
@@ -324,9 +352,15 @@ export function alignPhrase(
           consider(cost[at(i - k, j - 1)] + LENIENT_TOKEN_COST * k, OP_LENIENT, k);
         }
       }
-      if (ej && !ej.lenient) consider(cost[at(i, j - 1)] + MISSED_COST, OP_MISSED);
-      if (i > 0) consider(cost[at(i - 1, j)] + EXTRA_COST, OP_EXTRA);
-      if (i === 0 && j <= f) consider(j <= r ? RESTART_COST_PER_WORD * (r - j) : 0, OP_START);
+      if (ej && !ej.lenient) {
+        // A pending word was already gone over, so passing it again is free.
+        if (pendingAt[j - 1]) consider(cost[at(i, j - 1)], OP_KEPT);
+        else consider(cost[at(i, j - 1)] + MISSED_COST, OP_MISSED);
+      }
+      if (i > 0) consider(cost[at(i - 1, j)] + (i === n ? LAST_EXTRA_COST : EXTRA_COST), OP_EXTRA);
+      if (i === 0 && j <= f) {
+        consider(j <= r ? RESTART_COST_PER_WORD * Math.min(r - j, RESTART_WINDOW) : 0, OP_START);
+      }
       cost[at(i, j)] = best;
       op[at(i, j)] = bestOp;
       opK[at(i, j)] = bestK;
@@ -366,8 +400,8 @@ export function alignPhrase(
       stepWindow.push(j - 1);
       i -= k;
       j -= 1;
-    } else if (o === OP_MISSED) {
-      steps.push({ kind: "missed", expected: [E[j - 1]], spoken: [] });
+    } else if (o === OP_MISSED || o === OP_KEPT) {
+      steps.push({ kind: o === OP_KEPT ? "kept" : "missed", expected: [E[j - 1]], spoken: [] });
       stepWindow.push(j - 1);
       j -= 1;
     } else {
@@ -381,13 +415,20 @@ export function alignPhrase(
 
   // ─── Result rules ───
   // One outcome per verse word, in reading order. Lenient words are
-  // transparent: they neither count as said nor confirm or break a gap.
+  // transparent: they neither count as said nor confirm or break a gap. A
+  // kept word has the outcome the earlier phrase found for it.
   type Outcome = { idx: number; ok: boolean; kind: StepKind };
   const outcomes: Outcome[] = [];
   steps.forEach((step, s) => {
     if (step.kind === "extra" || step.kind === "lenient") return;
     step.expected.forEach((_, k) => {
-      outcomes.push({ idx: stepWindow[s] + k, ok: isCorrect(step.kind), kind: step.kind });
+      const idx = stepWindow[s] + k;
+      const kept = step.kind === "kept" ? pendingAt[idx] : undefined;
+      outcomes.push(
+        kept
+          ? { idx, ok: kept === "said", kind: kept }
+          : { idx, ok: isCorrect(step.kind), kind: step.kind },
+      );
     });
   });
 
@@ -418,13 +459,26 @@ export function alignPhrase(
     k = end;
   }
 
-  const cursorWindowIdx = Math.max(r, lastOkBeforeBlock + 1);
+  let cursorWindowIdx = Math.max(r, lastOkBeforeBlock + 1);
+  // Pending words said earlier, right after the new cursor (the reciter went
+  // back for a slip, and the word after it was said before the pause), are
+  // revealed too.
+  const reached = new Set(outcomes.map((o) => wordKey(E[o.idx])));
+  let keptSaid = 0;
+  while (
+    cursorWindowIdx < m &&
+    pendingAt[cursorWindowIdx] === "said" &&
+    !reached.has(wordKey(E[cursorWindowIdx]))
+  ) {
+    cursorWindowIdx++;
+    keptSaid++;
+  }
   const cursor = cursorWindowIdx > r ? positionAfter(E[cursorWindowIdx - 1]) : state.cursor;
 
   const marks = new Map(state.marks);
   const cleared: string[] = [];
   const added: string[] = [];
-  let newSaid = 0;
+  let newSaid = keptSaid;
   let saidTotal = 0;
   for (const o of outcomes) {
     if (!o.ok) continue;
@@ -440,7 +494,20 @@ export function alignPhrase(
     added.push(key);
   }
 
-  return { state: { cursor, marks }, newSaid, saidTotal, added, cleared, steps };
+  // Past the new cursor: what this phrase found, then earlier pending words
+  // it did not reach.
+  const pending = new Map<string, PendingOutcome>();
+  for (const o of outcomes) {
+    if (o.idx < cursorWindowIdx) continue;
+    pending.set(wordKey(E[o.idx]), o.ok ? "said" : o.kind === "missed" ? "missed" : "wrong");
+  }
+  state.pending?.forEach((outcome, key) => {
+    if (reached.has(key)) return;
+    const [sura, aya, wordIndex] = key.split(":").map(Number);
+    if (cmp({ sura, aya, wordIndex }, cursor) >= 0) pending.set(key, outcome);
+  });
+
+  return { state: { cursor, marks, pending }, newSaid, saidTotal, added, cleared, steps };
 }
 
 // ─── Tracker ─────────────────────────────────────────────────────────────────
@@ -479,16 +546,18 @@ export function createReciteTracker(initial: TrackerState, options: AlignOptions
 // ─── Helpers for callers ─────────────────────────────────────────────────────
 
 /** Marks every recitable word in [from, to) as missed — used when a re-search
- *  relocates forward past words the reciter skipped. */
+ *  relocates forward past words the reciter skipped. Words `pending` records
+ *  as said are left alone. */
 export function markSkipped(
   marks: Marks,
   verses: Verse[],
   from: RecitePosition,
   to: RecitePosition,
+  pending?: TrackerState["pending"],
 ): Marks {
   const next = new Map(marks);
   for (const w of buildExpectedWords(verses)) {
-    if (w.lenient) continue;
+    if (w.lenient || pending?.get(wordKey(w)) === "said") continue;
     if (cmp(w, from) >= 0 && cmp(w, to) < 0) {
       next.set(wordKey(w), { kind: "missed", position: w.position });
     }
@@ -515,6 +584,7 @@ export function formatAlignLog(result: AlignResult): string {
       .join("+");
     if (s.kind === "extra") return `+${spk}`;
     if (s.kind === "missed") return `-${exp}`;
+    if (s.kind === "kept") return `kept:${exp}`;
     if (s.kind === "said") return exp;
     return `${s.kind}:${exp}=${spk}`;
   });
