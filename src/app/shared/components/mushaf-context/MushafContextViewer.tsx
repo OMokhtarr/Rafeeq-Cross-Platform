@@ -50,6 +50,9 @@ interface Props {
    *  past the last revealed word. The revealed extent is remembered as a
    *  high-water mark, so it stays on screen after recitation stops. */
   liveRecitePosition?: { sura: number; aya: number; wordIndex: number } | null;
+  /** Recite mistakes on the target verse (`sura:aya:position` keys), shown
+   *  red once revealed. */
+  reciteMistakes?: Set<string>;
 }
 
 const MushafContextViewer: React.FC<Props> = ({
@@ -60,6 +63,7 @@ const MushafContextViewer: React.FC<Props> = ({
   isOpen,
   onClose,
   liveRecitePosition,
+  reciteMistakes,
 }) => {
   const { t } = useLang();
   const [currentPage, setCurrentPage] = useState(verse.page);
@@ -432,6 +436,7 @@ const MushafContextViewer: React.FC<Props> = ({
               hidden={mergedHidden}
               grey={greySet}
               partialTarget={partialForPage}
+              mistakes={reciteMistakes}
               onVerseTap={handleVerseTap}
               bigTextMode={bigTextMode}
             />

@@ -242,7 +242,7 @@ const AkmelAlAyah: React.FC = () => {
 
   const handleSubmit = useCallback(() => {
     if (!userAnswer.trim() || answered || !q) return;
-    recite.stop(); // typing an answer abandons any in-progress recite session
+    recite.reset(); // typing an answer abandons any recite attempt
     const correctAnswer = (q.hiddenPortion ?? q.correctAnswer ?? "").trim();
     const user = userAnswer.trim();
     const isCorrect =
@@ -280,7 +280,7 @@ const AkmelAlAyah: React.FC = () => {
 
   const handleSkip = () => {
     if (answered || !q) return;
-    recite.stop();
+    recite.reset();
     setSkipped(true);
     setAnswered(true);
     setCorrect(false);
@@ -289,7 +289,7 @@ const AkmelAlAyah: React.FC = () => {
   };
 
   const handleNext = () => {
-    recite.stop();
+    recite.reset();
     if (idx + 1 < questions.length) {
       setIdx((i) => i + 1);
       setUserAnswer("");
@@ -577,9 +577,10 @@ const AkmelAlAyah: React.FC = () => {
                           {q.versePart ?? q.displayedPortion}
                         </p>
                         {/* Hidden-portion words revealed so far, per word:
-                            recited words are green, hint-button words use the
-                            hint style. Recitation and hints are independent —
-                            a word can come from either source. */}
+                            recited words are green, words skipped or said
+                            wrongly are red, hint-button words use the hint
+                            style. Recitation and hints are independent — a
+                            word can come from either source. */}
                         {(() => {
                           const words = (q.hiddenPortion ?? q.correctAnswer ?? "")
                             .trim()
@@ -593,9 +594,11 @@ const AkmelAlAyah: React.FC = () => {
                                 <span
                                   key={i}
                                   className={
-                                    i < recite.revealedWordCount
-                                      ? "aa-recited-inline"
-                                      : "aa-hint-inline"
+                                    recite.mistakeWordIndexes.has(i)
+                                      ? "aa-mistake-inline"
+                                      : i < recite.revealedWordCount
+                                        ? "aa-recited-inline"
+                                        : "aa-hint-inline"
                                   }
                                 >
                                   {" "}
@@ -706,6 +709,7 @@ const AkmelAlAyah: React.FC = () => {
                   onClose={closeContext}
                   mode="sidebar"
                   liveRecitePosition={recite.isArmed ? recite.livePosition : null}
+                  reciteMistakes={recite.mistakePositions}
                 />
               </div>
             )}

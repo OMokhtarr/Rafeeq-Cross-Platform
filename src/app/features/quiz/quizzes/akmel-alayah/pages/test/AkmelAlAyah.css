@@ -239,6 +239,21 @@ ion-content::part(scroll) {
   color: #1faa5a;
   font-weight: 600;
 }
+/* Words the reciter skipped or said wrongly — red with a dotted underline
+   (the underline keeps them distinct from green for readers who can't tell
+   the two colours apart). */
+.aa-mistake-inline {
+  font-family: var(--font-arabic-display);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: #d32f2f;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.3em;
+}
+[data-theme="night"] .aa-mistake-inline {
+  color: #ff6b6b;
+}
 .prompt {
   color: var(--color-text-muted);
   font-size: var(--text-sm);

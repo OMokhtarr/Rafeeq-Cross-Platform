@@ -2,21 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   openSttStream,
   type SttStreamHandle,
+  type SttWord,
 } from "../../../core/services/audio/speech-to-text-stream.service";
 import { getPage } from "../../../core/services/data/quran.service";
 import { removeDiacritics } from "../../../core/utils/arabic.util";
 import {
   firstWordPosition,
-  matchTranscript,
   verseWordCount,
   type RecitePosition,
 } from "../../../core/services/quran/recite-matcher.service";
-import { matchFromPosition } from "../../../core/hooks/recite/deepgram/matchFromPosition";
-import { cmpPos } from "../../../core/hooks/recite/shared/reciteCore";
-import { useRevealAnimator } from "../../../core/hooks/recite/shared/useRevealAnimator";
+import {
+  createReciteTracker,
+  markPositionKeys,
+  spokenWordsFrom,
+  type ReciteTracker,
+  type TrackerState,
+} from "../../../core/services/quran/recite-aligner.service";
 import { useLang } from "../../../core/context/LanguageContext";
 import { isNetworkReachable } from "../../../core/services/api/network.service";
 import type { Verse } from "../../../shared/models/verse.model";
+import { quizProgress } from "./quizReciteProgress";
 
 /**
  * QUIZ RECITE
@@ -25,20 +30,17 @@ import type { Verse } from "../../../shared/models/verse.model";
  * it) the user must recite — unlike the main Quran viewer's Recite Mode,
  * there is nothing to *identify* by searching the whole Quran. This talks to
  * Deepgram's live-streaming transcription directly
- * (../../../core/services/audio/speech-to-text-stream.service) and matches
- * every recognized chunk forward from a known position (the same
- * matchFromPosition tracking logic the main viewer's Deepgram driver uses
- * once it has landed), skipping the whole-Quran/page-first identify phase.
+ * (../../../core/services/audio/speech-to-text-stream.service) and tracks the
+ * recitation with the same recite aligner the main viewer uses
+ * (../../../core/services/quran/recite-aligner.service), skipping the
+ * identify phase.
  *
- * Recitation is always bounded to the single target verse (whether the
- * Mushaf context is open or closed). The user may recite the whole verse
- * from its start, or jump straight into the hidden continuation they're
- * being tested on. Since there's no way to know up front which they'll do,
- * the first recognized speech is matched against *both* candidate start
- * points (word 0, and the hidden portion's start word) and whichever matches
- * further wins — that becomes the session's tracking anchor for the rest of
- * the recitation. The question is complete once the target verse is fully
- * recited.
+ * Recitation is always bounded to the single target verse. The user may
+ * recite the whole verse from its start, or jump straight into the hidden
+ * continuation they're being tested on: the shown snippet may be recited or
+ * skipped, and a word missed inside it is never marked. Words of the hidden
+ * part that are skipped or said wrongly turn red, and the question counts as
+ * complete only once the verse end is reached with no red words left.
  */
 export type QuizReciteStatus = "idle" | "armed" | "recording" | "mic-error";
 
@@ -50,7 +52,8 @@ export interface UseQuizReciteResult {
   recordingSeconds: number;
   lastChunkText: string;
   noMatchHint: boolean;
-  /** True once the target verse has been fully recited this session. */
+  /** True once the target verse has been recited to its end with no red
+   *  words left. */
   isVerseComplete: boolean;
   /**
    * How many words of the *hidden* continuation the user has recited so far
@@ -61,6 +64,12 @@ export interface UseQuizReciteResult {
    * snippet.
    */
   revealedWordCount: number;
+  /** Words of the hidden continuation skipped or said wrongly, as indexes
+   *  counted like `revealedWordCount` — shown red on the question card. */
+  mistakeWordIndexes: Set<number>;
+  /** The same red words as `sura:aya:position` keys, for the Mushaf context
+   *  viewer. */
+  mistakePositions: Set<string>;
   /** The matcher's live position within the target verse; null when idle.
    *  Used to drive the green "you said this" highlight. */
   livePosition: RecitePosition | null;
@@ -76,8 +85,13 @@ export interface UseQuizReciteResult {
     page: number;
     displayedPortion: string;
   }) => Promise<void>;
-  /** Stops the mic and exits recite mode for this question. */
+  /** Stops the mic. The attempt's green and red words stay (and
+   *  isVerseComplete stays readable) until reset() or the next
+   *  startVerseMode. */
   stop: () => void;
+  /** Stops the mic and clears the attempt — call on Next, Skip, a typed
+   *  answer, or any other question change. */
+  reset: () => void;
 }
 
 /** Consecutive non-matching finals before surfacing the "didn't catch that"
@@ -85,28 +99,7 @@ export interface UseQuizReciteResult {
  *  word doesn't flash a warning. */
 const NO_MATCH_HINT_STREAK = 3;
 
-/** No reveal holdback in the quiz. The main viewer holds the matcher's
- *  newest word back by one until a following window confirms it (guarding
- *  against Deepgram revising a streaming window's last word). But in a quiz
- *  the user is reciting known text and wants the word shown the instant it
- *  matches — waiting for a *next* word to release the current one leaves the
- *  verse's final words stranded when they stop at the end. Immediate reveal
- *  is the explicitly-wanted behavior; the forward-only + confirm-on-match
- *  logic in processMatch already prevents revealing ahead of the voice. */
-const REVEAL_HOLDBACK_WORDS = 0;
-
 const SILENCE_TIMEOUT_MS = 10000;
-
-/** Minimum consumed words before trusting which of the two verse-mode seed
- *  points (verse start vs. hidden-portion start) the user actually began
- *  from — enough to rule out a coincidental single-word match while still
- *  resolving within the first couple of recognized words. */
-const SEED_MIN_CONSUMED = 2;
-
-/** How many of the verse's own words the seed-detection search is allowed
- *  to look across — a whole verse is at most a few dozen words, so this is
- *  generous without risking a runaway scan. */
-const SEED_MAX_LOOKAHEAD = 60;
 
 /** How many of the verse's word-tokens are actually recitable — i.e. the
  *  matcher's token count minus the trailing ayah-end marker. That marker is
@@ -152,6 +145,8 @@ export function useQuizRecite(
   const [lastChunkText, setLastChunkText] = useState("");
   const [noMatchHint, setNoMatchHint] = useState(false);
   const [revealedWordCount, setRevealedWordCount] = useState(0);
+  const [mistakeWordIndexes, setMistakeWordIndexes] = useState<Set<number>>(new Set());
+  const [mistakePositions, setMistakePositions] = useState<Set<string>>(new Set());
   const [livePosition, setLivePosition] = useState<RecitePosition | null>(null);
   const [isVerseComplete, setIsVerseComplete] = useState(false);
 
@@ -162,25 +157,17 @@ export function useQuizRecite(
      *  ayah-end marker (which is a token but is never spoken/matched). */
     wordCount: number;
     /** Words the reciter can actually say = wordCount minus the ayah marker.
-     *  Completion is measured against this — the matcher tops out at
-     *  wordIndex === completeAt (never reaching wordCount, since the marker
-     *  is unmatchable), so gating on wordCount would never fire. */
+     *  Completion is measured against this. */
     completeAt: number;
   } | null>(null);
   // Word count of the already-displayed snippet within the target verse —
   // recited words up to here are the shown prompt and reveal nothing new.
   const snippetWordsRef = useRef(0);
   const verseRef = useRef<Verse[]>([]);
+  const trackerRef = useRef<ReciteTracker | null>(null);
   const verseCompletedRef = useRef(false);
   const onVerseCompleteRef = useRef(onVerseComplete);
   onVerseCompleteRef.current = onVerseComplete;
-
-  // Candidate seed positions (verse start / hidden-portion start) not yet
-  // resolved to one. Cleared once the first real match picks a winner.
-  const pendingSeedsRef = useRef<RecitePosition[] | null>(null);
-  // Furthest position ever reported to applyPosition — keeps trailing crawl
-  // applies from moving the reveal/progress backward (see applyPosition).
-  const appliedHighWaterRef = useRef<RecitePosition | null>(null);
 
   const activeRef = useRef(false);
   const recordingRef = useRef(false);
@@ -190,80 +177,23 @@ export function useQuizRecite(
   const noMatchStreakRef = useRef(0);
   const stopRef = useRef<() => void>(() => {});
 
-  const applyPosition = useCallback((verses: Verse[], pos: RecitePosition) => {
+  // Shows a tracker state. Interims show immediately, with no holdback: in a
+  // quiz the user recites known text and wants each word the instant it
+  // matches — the aligner itself never reveals past the last word said.
+  const showState = useCallback((state: TrackerState) => {
     const target = targetRef.current;
     if (!target) return;
-    // Monotonic guard: processMatch applies the true (matched) position
-    // immediately, while the reveal animator's crawl may later call this
-    // with earlier, trailing display positions. Never let a trailing apply
-    // move the reported position backward.
-    const hw = appliedHighWaterRef.current;
-    if (hw && cmpPos(pos, hw) < 0) return;
-    appliedHighWaterRef.current = pos;
-    const wordsIntoVerse = Math.min(pos.wordIndex, target.wordCount);
-    // Report hidden-portion-relative progress: words recited past the
-    // already-shown snippet. Reciting through the visible prompt reveals
-    // nothing new, so this stays 0 until the user reaches the hidden part.
-    setRevealedWordCount(Math.max(0, wordsIntoVerse - snippetWordsRef.current));
-    setLivePosition(pos);
-    if (wordsIntoVerse >= target.completeAt && target.completeAt > 0 && !verseCompletedRef.current) {
-      verseCompletedRef.current = true;
-      setIsVerseComplete(true);
-      onVerseCompleteRef.current();
+    const progress = quizProgress(state, target, snippetWordsRef.current);
+    setRevealedWordCount(progress.revealedWordCount);
+    setMistakeWordIndexes(progress.mistakeWordIndexes);
+    setMistakePositions(markPositionKeys(state.marks));
+    setLivePosition(state.cursor);
+    if (progress.complete !== verseCompletedRef.current) {
+      verseCompletedRef.current = progress.complete;
+      setIsVerseComplete(progress.complete);
+      if (progress.complete) onVerseCompleteRef.current();
     }
   }, []);
-
-  const reveal = useRevealAnimator({
-    isActive: () => activeRef.current,
-    getCombinedVerses: () => verseRef.current,
-    getPageVerses: () => verseRef.current,
-    applyPosition,
-  });
-
-  /** Matches one recognized segment forward from the current true position
-   *  and advances the reveal — but only on a real, forward, multi-word
-   *  match. Returns true if it advanced. Shared by both modes once tracking
-   *  has begun (verse mode only reaches here after its seed is resolved). */
-  const processMatch = useCallback(
-    (text: string, isFinal: boolean): boolean => {
-      const pos = reveal.getTruePosition();
-      if (!pos) return false;
-      const matched = text ? matchFromPosition(text, verseRef.current, pos) : null;
-      // Guard — forward only: the quiz never moves backward through the
-      //   page, so a match that lands at/behind the current position is a
-      //   coincidental word triggering the matcher's rewind. Ignore it (this
-      //   was the stall: a lone "وله" rewound onto the previous verse's tail
-      //   and every later final then failed to match forward from there).
-      //   A single word is enough to advance as long as it's genuinely
-      //   forward: strict matching only advances by the words actually said,
-      //   in order, so it can't leap ahead — and revealing the one word you
-      //   just recited immediately is exactly the wanted behavior. There is
-      //   no reveal holdback here (0): a matched word shows the instant it's
-      //   recognized rather than waiting for a following word to confirm it,
-      //   so the verse's last words never stay stuck behind the matcher.
-      if (matched && cmpPos(matched.position, pos) > 0) {
-        noMatchStreakRef.current = 0;
-        setNoMatchHint(false);
-        reveal.advanceTo(matched.position, REVEAL_HOLDBACK_WORDS);
-        reveal.confirm(matched.position);
-        // Deepgram already delivers words one-at-a-time as they're spoken,
-        // so the reveal should follow the matched (true) position directly.
-        // The animator's own word-by-word crawl would only add a second,
-        // slower trickle on top — and because reveal/completion are driven
-        // off the *display* position the crawl lags behind, the verse's last
-        // words never showed (crawl killed on stop) and page mode never
-        // rolled into the next verse (crawl stuck on the previous one's
-        // tail). Apply the true position immediately instead.
-        applyPosition(verseRef.current, matched.position);
-        return true;
-      }
-      if (!text || !isFinal) return false;
-      noMatchStreakRef.current += 1;
-      if (noMatchStreakRef.current >= NO_MATCH_HINT_STREAK) setNoMatchHint(true);
-      return false;
-    },
-    [reveal, applyPosition],
-  );
 
   const clearDurationTimer = useCallback(() => {
     if (durationTimerRef.current !== null) {
@@ -279,28 +209,35 @@ export function useQuizRecite(
     streamRef.current?.stop();
     streamRef.current = null;
     clearDurationTimer();
-    reveal.reset(null);
+    trackerRef.current = null;
     setRecordingSeconds(0);
     setLastChunkText("");
     setNoMatchHint(false);
-    setRevealedWordCount(0);
-    setLivePosition(null);
+    // NB: the attempt's revealed words, red words and isVerseComplete are
+    // intentionally kept — the quiz reads isVerseComplete right after
+    // stopping to decide correct/open, and the card keeps showing the
+    // attempt. reset() (or the next startVerseMode) clears them.
+    setStatus("idle");
+  }, [clearDurationTimer]);
+  stopRef.current = stop;
+
+  const reset = useCallback(() => {
+    stop();
     targetRef.current = null;
     snippetWordsRef.current = 0;
     verseRef.current = [];
-    pendingSeedsRef.current = null;
-    appliedHighWaterRef.current = null;
-    // NB: isVerseComplete is intentionally NOT reset here — the quiz reads it
-    // right after calling stop() to decide correct/incorrect. It's reset when
-    // the next session starts (startVerseMode).
-    setStatus("idle");
-  }, [clearDurationTimer, reveal]);
-  stopRef.current = stop;
+    verseCompletedRef.current = false;
+    setIsVerseComplete(false);
+    setRevealedWordCount(0);
+    setMistakeWordIndexes(new Set());
+    setMistakePositions(new Set());
+    setLivePosition(null);
+  }, [stop]);
 
-  /** Shared session bring-up once the armed verses/target/seed position are
-   *  set: opens the Deepgram stream and wires it to `handleEvent`. */
+  /** Shared session bring-up once the target verse is set: opens the
+   *  Deepgram stream and wires it to `handleEvent`. */
   const beginSession = useCallback(
-    async (handleEvent: (text: string, isFinal: boolean) => void) => {
+    async (handleEvent: (text: string, isFinal: boolean, words?: SttWord[]) => void) => {
       // Recite matching runs on a live streaming STT service. Check before
       // asking for the microphone, so an offline user gets a clear reason
       // instead of a mic prompt followed by a socket failure.
@@ -326,7 +263,7 @@ export function useQuizRecite(
               setLastChunkText(text);
               lastSpeechAtRef.current = Date.now();
             }
-            handleEvent(text, event.isFinal);
+            handleEvent(text, event.isFinal, event.words);
           },
           (message) => {
             if (!recordingRef.current) return;
@@ -359,9 +296,7 @@ export function useQuizRecite(
 
   const startVerseMode = useCallback(
     async (question: { sura: number; aya: number; page: number; displayedPortion: string }) => {
-      verseCompletedRef.current = false;
-      appliedHighWaterRef.current = null;
-      setIsVerseComplete(false);
+      reset();
       noMatchStreakRef.current = 0;
       setNoMatchHint(false);
       setMicError(null);
@@ -383,63 +318,41 @@ export function useQuizRecite(
 
       const hiddenStart = snippetWordCount(target, question.displayedPortion);
       snippetWordsRef.current = hiddenStart;
-      const verseStartPos = firstWordPosition(target);
+      const verseStart = firstWordPosition(target);
       const hiddenStartPos: RecitePosition = {
         sura: question.sura,
         aya: question.aya,
         wordIndex: hiddenStart,
       };
-      // Two live candidates until the first real match resolves which one
-      // the user actually started from. Display starts at the verse's
-      // beginning (nothing revealed yet either way).
-      pendingSeedsRef.current =
-        hiddenStart > 0 ? [verseStartPos, hiddenStartPos] : [verseStartPos];
-      reveal.reset(verseStartPos);
-      setRevealedWordCount(0);
-      setLivePosition(verseStartPos);
+      // Either start point is fine: the shown snippet may be recited or
+      // skipped (a free start up to the hidden part), and a word missed
+      // inside it is never marked.
+      trackerRef.current = createReciteTracker(
+        { cursor: verseStart, marks: new Map() },
+        { freeStartUntil: hiddenStartPos, protectBefore: hiddenStartPos },
+      );
+      setLivePosition(verseStart);
       setStatus("armed");
 
-      await beginSession((text, isFinal) => {
-        const seeds = pendingSeedsRef.current;
-        if (seeds) {
-          // Still resolving which start point the user is reciting from —
-          // try the text against every candidate seed and commit to
-          // whichever tracks furthest, in order, requiring the same margin
-          // as the main viewer's loose-match tolerance so a single
-          // coincidental word can't decide it.
-          if (!text) return;
-          let best: { pos: RecitePosition; consumed: number } | null = null;
-          for (const seed of seeds) {
-            const result = matchTranscript(text, verseRef.current, seed, {
-              maxLookahead: SEED_MAX_LOOKAHEAD,
-            });
-            if (
-              result.position &&
-              result.consumedTokens >= SEED_MIN_CONSUMED &&
-              (!best || result.consumedTokens > best.consumed)
-            ) {
-              best = { pos: result.position, consumed: result.consumedTokens };
-            }
-          }
-          if (!best) {
-            if (!isFinal) return;
-            noMatchStreakRef.current += 1;
-            if (noMatchStreakRef.current >= NO_MATCH_HINT_STREAK) setNoMatchHint(true);
-            return;
-          }
-          pendingSeedsRef.current = null;
+      await beginSession((text, isFinal, words) => {
+        const tracker = trackerRef.current;
+        if (!tracker || (!text && !isFinal)) return;
+        const spoken = spokenWordsFrom(text, words);
+        const result = isFinal
+          ? tracker.onFinal(spoken, verseRef.current)
+          : tracker.onPartial(spoken, verseRef.current);
+        showState(result.state);
+        if (result.saidTotal > 0) {
           noMatchStreakRef.current = 0;
           setNoMatchHint(false);
-          reveal.advanceTo(best.pos, REVEAL_HOLDBACK_WORDS);
-          reveal.confirm(best.pos);
-          applyPosition(verseRef.current, best.pos);
           return;
         }
-
-        processMatch(text, isFinal);
+        if (!text || !isFinal) return;
+        noMatchStreakRef.current += 1;
+        if (noMatchStreakRef.current >= NO_MATCH_HINT_STREAK) setNoMatchHint(true);
       });
     },
-    [beginSession, reveal, processMatch, applyPosition],
+    [beginSession, reset, showState],
   );
 
   // Clean up if the component unmounts mid-recording (e.g. exiting the quiz).
@@ -461,8 +374,11 @@ export function useQuizRecite(
     noMatchHint,
     isVerseComplete,
     revealedWordCount,
+    mistakeWordIndexes,
+    mistakePositions,
     livePosition,
     startVerseMode,
     stop,
+    reset,
   };
 }

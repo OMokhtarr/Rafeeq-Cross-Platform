@@ -209,7 +209,7 @@ const MutashabihatTest: React.FC = () => {
 
   const handleSubmit = useCallback(() => {
     if (!userAnswer.trim() || answered || !q) return;
-    recite.stop(); // typing an answer abandons any in-progress recite session
+    recite.reset(); // typing an answer abandons any recite attempt
     const isCorrect = checkMutashabihatAnswer(userAnswer, q);
     setCorrect(isCorrect);
     if (isCorrect) setScore((s) => s + 1);
@@ -269,7 +269,7 @@ const MutashabihatTest: React.FC = () => {
 
   const handleSkip = () => {
     if (answered || !q) return;
-    recite.stop();
+    recite.reset();
     setSkipped(true);
     setAnswered(true);
     setCorrect(false);
@@ -279,7 +279,7 @@ const MutashabihatTest: React.FC = () => {
   };
 
   const handleNext = () => {
-    recite.stop();
+    recite.reset();
     if (idx + 1 < questions.length) {
       setIdx((i) => i + 1);
       setUserAnswer("");
@@ -604,8 +604,9 @@ const MutashabihatTest: React.FC = () => {
                           {q.displayedPortion}
                         </p>
                         {/* Hidden-portion words revealed so far, per word:
-                            recited words are green, hint-button words use the
-                            hint style. Recitation and hints are independent. */}
+                            recited words are green, words skipped or said
+                            wrongly are red, hint-button words use the hint
+                            style. Recitation and hints are independent. */}
                         {(() => {
                           const shown = Math.max(hintLevel, recite.revealedWordCount);
                           if (shown === 0) return null;
@@ -615,9 +616,11 @@ const MutashabihatTest: React.FC = () => {
                                 <span
                                   key={i}
                                   className={
-                                    i < recite.revealedWordCount
-                                      ? "mst-recited-inline"
-                                      : "mst-hint-inline"
+                                    recite.mistakeWordIndexes.has(i)
+                                      ? "mst-mistake-inline"
+                                      : i < recite.revealedWordCount
+                                        ? "mst-recited-inline"
+                                        : "mst-hint-inline"
                                   }
                                 >
                                   {" "}
@@ -726,6 +729,7 @@ const MutashabihatTest: React.FC = () => {
                   liveRecitePosition={
                     recite.isArmed && selectedVerseIdx === 0 ? recite.livePosition : null
                   }
+                  reciteMistakes={selectedVerseIdx === 0 ? recite.mistakePositions : undefined}
                 />
               </div>
             )}
