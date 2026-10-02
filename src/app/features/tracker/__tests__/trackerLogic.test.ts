@@ -36,7 +36,7 @@ describe("isUnlocked", () => {
   const noon = new Date(2026, 8, 24, 12, 0);
   it("opens once the anchor time passes", () => {
     expect(isUnlocked(item("dhuhr"), noon, times, false)).toBe(true);
-    expect(isUnlocked(item("witr"), noon, times, false)).toBe(false);
+    expect(isUnlocked(item("qiyam"), noon, times, false)).toBe(false);
   });
   it("uses sunrise + 15 min for duha when no duha time exists", () => {
     expect(isUnlocked(item("duha"), new Date(2026, 8, 24, 6, 0), times, false)).toBe(false);
@@ -46,13 +46,13 @@ describe("isUnlocked", () => {
     expect(isUnlocked(item("quranDaily"), new Date(2026, 8, 24, 5, 0), times, false)).toBe(true);
   });
   it("opens everything when there are no times", () => {
-    expect(isUnlocked(item("witr"), noon, null, false)).toBe(true);
+    expect(isUnlocked(item("qiyam"), noon, null, false)).toBe(true);
   });
   it("opens an item whose anchor key is missing", () => {
     expect(isUnlocked(item("asr"), noon, times, false)).toBe(true);
   });
   it("opens everything on the previous day (before Fajr)", () => {
-    expect(isUnlocked(item("witr"), new Date(2026, 8, 24, 2, 0), times, true)).toBe(true);
+    expect(isUnlocked(item("qiyam"), new Date(2026, 8, 24, 2, 0), times, true)).toBe(true);
   });
 });
 
