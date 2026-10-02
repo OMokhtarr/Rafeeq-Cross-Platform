@@ -8,6 +8,7 @@ import {
   swipeStep,
   shouldMarkSeen,
   previousShown,
+  nextShowable,
 } from "../tourLogic";
 import type { Release } from "../tourCatalog";
 
@@ -106,6 +107,16 @@ describe("shouldMarkSeen", () => {
   it("marks a skipped tour", () => expect(shouldMarkSeen("skip", 1)).toBe(true));
   it("leaves a tour whose targets never appeared unseen", () => expect(shouldMarkSeen("done", 0)).toBe(false));
   it("leaves a tour cut short by navigation unseen", () => expect(shouldMarkSeen("cancel", 3)).toBe(false));
+});
+
+describe("nextShowable", () => {
+  const steps = [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }];
+  const only = (...keys: string[]) => (s: { key: string }) => keys.includes(s.key);
+  it("returns the very next step when its target exists", () => expect(nextShowable(steps, 0, only("b", "c"))).toBe(1));
+  it("skips steps whose targets are missing", () => expect(nextShowable(steps, 0, only("d"))).toBe(3));
+  it("returns null when no later step can show, so the current one is the last", () =>
+    expect(nextShowable(steps, 1, only("a", "b"))).toBeNull());
+  it("returns null from the final step", () => expect(nextShowable(steps, 3, only("a", "b", "c", "d"))).toBeNull());
 });
 
 describe("previousShown", () => {

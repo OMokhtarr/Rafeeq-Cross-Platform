@@ -95,6 +95,16 @@ export function shouldMarkSeen(reason: "done" | "skip" | "cancel", shownSteps: n
   return reason !== "cancel" && shownSteps > 0;
 }
 
+/**
+ * The step after `from` whose target is on screen now, or null when none is —
+ * which makes `from` the last step the user will see. Mid-tour gaps are
+ * skipped at once instead of waiting out each missing step.
+ */
+export function nextShowable<S>(steps: S[], from: number, exists: (step: S) => boolean): number | null {
+  for (let i = from + 1; i < steps.length; i++) if (exists(steps[i])) return i;
+  return null;
+}
+
 /** The step "Previous" returns to: the latest shown step before `index`. */
 export function previousShown(shown: number[], index: number): number | null {
   const earlier = shown.filter((i) => i < index);

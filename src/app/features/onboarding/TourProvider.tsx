@@ -14,8 +14,18 @@ import {
   resetTours as clearSeenTours,
 } from "./onboardingStore";
 import { SpotlightOverlay } from "./SpotlightOverlay";
-import { RELEASES, RELEASE_IDS, Release, TOURS, TourId } from "./tourCatalog";
-import { Deck, TourRequest, launchDeck, pendingTours, pickNext, previousShown, shouldMarkSeen } from "./tourLogic";
+import { RELEASES, RELEASE_IDS, Release, TOURS, TourId, TourStep } from "./tourCatalog";
+import {
+  Deck,
+  TourRequest,
+  launchDeck,
+  nextShowable,
+  pendingTours,
+  pickNext,
+  previousShown,
+  resolveTarget,
+  shouldMarkSeen,
+} from "./tourLogic";
 import { WelcomeSlides } from "./WelcomeSlides";
 import { WhatsNew } from "./WhatsNew";
 
@@ -49,6 +59,10 @@ interface ActiveTour {
 
 /** How long a request blocked by an open sheet waits before re-checking. */
 const GATE_RETRY_MS = 400;
+
+/** The step after `index` whose target is on screen now, or null. */
+const nextStepOnScreen = (tourId: TourId, index: number) =>
+  nextShowable(TOURS[tourId], index, (s: TourStep) => resolveTarget(document, `${tourId}.${s.key}`, !!s.union) !== null);
 
 export const TourProvider: React.FC<{ initial: OnboardingState | null; children: React.ReactNode }> = ({
   initial,
@@ -120,8 +134,9 @@ export const TourProvider: React.FC<{ initial: OnboardingState | null; children:
   const advance = useCallback(() => {
     const a = activeRef.current;
     if (!a) return;
-    if (a.index + 1 >= TOURS[a.req.tourId].length) endTour("done");
-    else setActive({ ...a, index: a.index + 1 });
+    const next = nextStepOnScreen(a.req.tourId, a.index);
+    if (next === null) endTour("done");
+    else setActive({ ...a, index: next });
   }, [endTour]);
 
   const goBack = useCallback(() => {
@@ -192,7 +207,7 @@ export const TourProvider: React.FC<{ initial: OnboardingState | null; children:
           index={active.index}
           total={steps.length}
           canGoBack={previousShown(active.shown, active.index) !== null}
-          isLast={active.index === steps.length - 1}
+          isLast={nextStepOnScreen(active.req.tourId, active.index) === null}
           onShown={markShown}
           onMissing={advance}
           onNext={advance}
