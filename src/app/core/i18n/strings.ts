@@ -200,6 +200,7 @@ export interface AppStrings {
     narrator: string;
     grade: string;
     noOrigin: string;
+    explanation: string;
   };
 
   quiz: {
@@ -797,6 +798,7 @@ const ar: AppStrings = {
     narrator: "الراوي",
     grade: "الحكم والتخريج",
     noOrigin: "لم يُضف نص الحديث لهذا الذكر بعد.",
+    explanation: "شرح الحديث",
   },
   quiz: {
     title: "الاختبارات",
@@ -1418,6 +1420,7 @@ const en: AppStrings = {
     narrator: "Narrator",
     grade: "Grade & collection",
     noOrigin: "The hadith text for this dhikr has not been added yet.",
+    explanation: "Explanation of the hadith",
   },
   quiz: {
     title: "Quizzes",

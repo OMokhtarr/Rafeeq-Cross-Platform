@@ -113,7 +113,8 @@ const WorshipTracker: React.FC = () => {
   };
 
   const openLongPress = (item: TrackerItem) => {
-    if (item.longPress === "azkarMorningEvening") history.push("/azkar/morning-evening");
+    if (item.longPress === "azkarMorning") history.push("/azkar/morning");
+    else if (item.longPress === "azkarEvening") history.push("/azkar/evening");
     else if (item.longPress === "azkarSleep") history.push("/azkar/sleep");
     else if (item.longPress === "quran") {
       history.push(today.getDay() === 5 ? `/viewer?page=${kahfPage()}` : "/viewer");

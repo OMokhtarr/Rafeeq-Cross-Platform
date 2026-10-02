@@ -61,6 +61,15 @@ const AzkarReference: React.FC = () => {
                 )}
               </section>
 
+              {ref?.explanation && (
+                <section className="azkar-ref-section">
+                  <h2 className="azkar-ref-heading">{ta.explanation}</h2>
+                  {ref.explanation.map((para) => (
+                    <p key={para} className="azkar-ref-explanation" lang="ar">{para}</p>
+                  ))}
+                </section>
+              )}
+
               <dl className="azkar-ref-meta">
                 {ref?.narrator && (
                   <div>
