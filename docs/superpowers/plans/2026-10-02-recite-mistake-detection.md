@@ -3807,8 +3807,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 const ROOT = process.argv[2] ?? process.cwd();
-const spelling = require(path.join(ROOT, "src/app/core/services/quran/recite-spelling.service"));
-const aligner = require(path.join(ROOT, "src/app/core/services/quran/recite-aligner.service"));
+const spelling = require(path.resolve(ROOT, "src/app/core/services/quran/recite-spelling.service"));
+const aligner = require(path.resolve(ROOT, "src/app/core/services/quran/recite-aligner.service"));
 
 type Row = [string, number, string, string, string, number];
 const rows: Row[] = JSON.parse(fs.readFileSync(path.join(__dirname, "qf-words.json"), "utf8"));
