@@ -45,12 +45,55 @@ async function fetchDeepgramToken(): Promise<string> {
  *  without any PCM re-encoding. */
 const RECORDER_TIMESLICE_MS = 250;
 
+export interface SttWord {
+  word: string;
+  /** Deepgram's 0–1 confidence for this word. */
+  confidence: number;
+}
+
 export interface SttStreamEvent {
   /** Transcript of the current utterance window. Interims are cumulative
    *  revisions of this window (each one replaces the last); a final settles
    *  the window and the next event starts a fresh one. */
   text: string;
   isFinal: boolean;
+  /** The same words with per-word confidences, when Deepgram sent them —
+   *  recite mode's mistake detection forgives a word Deepgram was unsure of. */
+  words?: SttWord[];
+}
+
+/** The parts of a Deepgram `Results` frame this service reads. */
+interface DeepgramResults {
+  type?: string;
+  is_final?: boolean;
+  channel?: {
+    alternatives?: {
+      transcript?: unknown;
+      words?: { word?: unknown; confidence?: unknown }[];
+    }[];
+  };
+}
+
+/** Parses one websocket frame into an event, or null for frames that are not
+ *  transcription results (metadata, keep-alives, malformed text). */
+export function parseStreamMessage(raw: string): SttStreamEvent | null {
+  let data: DeepgramResults;
+  try {
+    data = JSON.parse(raw) as DeepgramResults;
+  } catch {
+    return null;
+  }
+  if (data?.type !== "Results") return null;
+  const alt = data.channel?.alternatives?.[0];
+  if (!alt) return null;
+  const text = typeof alt.transcript === "string" ? alt.transcript : "";
+  const words = Array.isArray(alt.words)
+    ? alt.words.map((w) => ({
+        word: typeof w.word === "string" ? w.word : "",
+        confidence: typeof w.confidence === "number" ? w.confidence : 1,
+      }))
+    : undefined;
+  return { text, isFinal: data.is_final === true, words };
 }
 
 export interface SttStreamHandle {
@@ -124,20 +167,13 @@ export async function openSttStream(
   };
   socket.onmessage = (msg: MessageEvent) => {
     if (stopped) return;
-    try {
-      const data = JSON.parse(String(msg.data));
-      if (data.type !== "Results") return;
-      const alt = data.channel?.alternatives?.[0];
-      if (!alt) return;
-      const text = typeof alt.transcript === "string" ? alt.transcript : "";
-      // Dev logging (finals only — interims arrive several times a second).
-      if (data.is_final === true && text.trim()) {
-        console.log(`[recite-stream] final: "${text.trim()}"`);
-      }
-      onEvent({ text, isFinal: data.is_final === true });
-    } catch {
-      // Non-JSON frame — ignore.
+    const event = parseStreamMessage(String(msg.data));
+    if (!event) return;
+    // Dev logging (finals only — interims arrive several times a second).
+    if (event.isFinal && event.text.trim()) {
+      console.log(`[recite-stream] final: "${event.text.trim()}"`);
     }
+    onEvent(event);
   };
   socket.onerror = () => {
     if (!stopped) onError("Transcription stream error");
