@@ -240,6 +240,25 @@
   text-shadow: 0 0 7px rgba(61, 220, 132, 0.45);
 }
 
+/* Recite mistake: a word the reciter skipped or said wrongly, revealed in
+   red. The dotted underline is a second cue for readers who can't tell this
+   red from the green "recited" highlight. Day red is #d32f2f (5:1 on the
+   white page); offset/thickness need WebView 87 — older engines still draw
+   the dotted underline. */
+.mushaf-word-mistake {
+  color: #d32f2f !important;
+  -webkit-text-fill-color: #d32f2f !important;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
+}
+[data-theme="night"] .mushaf-word-mistake {
+  color: #ff6b6b !important;
+  -webkit-text-fill-color: #ff6b6b !important;
+}
+
 /* Surah name font. Each surah is a single ornamental glyph — the calligraphic
    name and its decorative frame are drawn into the character itself, exactly
    as the printed Mushaf sets them. Selected by typing the zero-padded surah

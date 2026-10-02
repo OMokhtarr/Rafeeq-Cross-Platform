@@ -17,13 +17,22 @@
 import { useCallback, useRef } from "react";
 import type { Verse } from "../../../../shared/models/verse.model";
 import { getPage, findVerseByStartingPhrase } from "../../../services/data/quran.service";
-import { firstWordPosition, matchTranscript } from "../../../services/quran/recite-matcher.service";
+import {
+  firstWordPosition,
+  matchTranscript,
+  verseWordCount,
+} from "../../../services/quran/recite-matcher.service";
+import {
+  alignPhrase,
+  markSkipped,
+  spokenWordsFrom,
+  type Marks,
+  type TrackerState,
+} from "../../../services/quran/recite-aligner.service";
 import { correctMuqattaatOpening } from "./muqattaat";
 import { stripOpeningPhrases } from "./openingPhrases";
 import {
   ESTABLISHED_WORDS_ON_PAGE,
-  LOOSE_MATCH_MAX_SKIP,
-  LOOSE_MATCH_MIN_CONSUMED,
   cmpPos,
   type RecitePosition,
   type RevealAnimator,
@@ -147,19 +156,20 @@ export interface IdentifySessionDeps {
    *  (Groq: chunk length; Deepgram: no-op, streaming has no cadence). */
   onSwitchToTracking: () => void;
   /**
-   * A mid-session re-search turned out to be a false alarm — this text
-   * matched forward from where tracking already was. Lets the driver
-   * resume with its own holdback/corroboration rules (e.g. Groq resets its
-   * chunk-overlap anchor) instead of the identify session reaching into
-   * reveal state with a one-size-fits-all holdback.
+   * A mid-session re-search may be a false alarm: if `text` (the current
+   * utterance, from the event being handled) aligns from where tracking was
+   * with enough correctly said words, the driver resumes tracking with it
+   * and returns how many words it said; otherwise it changes nothing and
+   * returns 0.
    */
-  resumeTrackingAt: (pos: RecitePosition, consumed: number) => void;
-  /** Fires once a page is freshly landed on (identify succeeded), with the
-   *  position the replay reveal ended up at (may be null if the page had no
-   *  verses). Lets a driver seed its own per-session anchors — e.g. Groq's
-   *  chunk-overlap corroboration anchor — the same instant the shared
-   *  position/reveal state is seeded. */
-  onLanded: (pos: RecitePosition | null) => void;
+  tryResume: (text: string, isFinal: boolean) => number;
+  /** The tracker's committed state — where tracking was and its red words —
+   *  or null before the first landing. */
+  getTrackerState: () => TrackerState | null;
+  /** Fires once a page is freshly landed on (identify succeeded) with the
+   *  tracking state the landing replay produced — the driver starts its
+   *  tracker from it. Null if the page had no verses. */
+  onLanded: (state: TrackerState | null) => void;
   /** Clears the driver's own consecutive-mismatch streak — called whenever
    *  identify hands control back to tracking, so a stale streak from before
    *  the re-search doesn't immediately re-trigger another one. */
@@ -252,37 +262,53 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
   // words of the identified verse hidden until the next segment.
   const beginOnPage = useCallback(
     async (page: number, startSura: number, startAya: number, spokenSoFar?: string) => {
+      // Captured before the new page replaces them: where tracking was (null
+      // on the first landing) and the page it was on — a forward relocation
+      // marks the words the reciter skipped to get here.
+      const prior = hasIdentifiedRef.current ? deps.getTrackerState() : null;
+      const priorPage = deps.getPage();
+      const priorVerses = deps.getPageVerses();
       const verses = await getPage(page);
       if (!deps.isActive()) return;
       deps.setPage(page);
       deps.setPageVerses(verses);
       deps.clearNextPageVerses();
       const startVerse = verses.find((v) => v.sura === startSura && v.aya === startAya);
-      let pos = startVerse
+      const landing = startVerse
         ? firstWordPosition(startVerse)
         : verses.length
           ? firstWordPosition(verses[0])
           : null;
-      if (pos && spokenSoFar) {
-        // Everything in the replay text was already recited, so skipping
-        // words the STT garbled just catches the reveal up to where the
-        // reciter actually is — it can't reveal ahead of them. Strict
-        // maxSkip: 0 here would stall the seed at the first garbled word.
-        const advanced = matchTranscript(spokenSoFar, verses, pos, {
-          maxSkip: LOOSE_MATCH_MAX_SKIP,
-        });
-        if (advanced.position) pos = advanced.position;
-      }
       hasIdentifiedRef.current = true;
       wordsSinceLandingRef.current = 0;
-      if (pos) {
-        const landing = startVerse ? firstWordPosition(startVerse) : pos;
-        deps.reveal.landOnPage(verses, landing, pos);
-      } else {
+      if (!landing) {
         deps.reveal.reset(null);
         deps.hideWholePage(verses);
+        deps.onLanded(null);
+        deps.onNavigateToPage(page);
+        deps.prefetchNextPage(page);
+        return;
       }
-      deps.onLanded(pos);
+      let marks: Marks = prior ? prior.marks : new Map();
+      const nearby = page === priorPage || page === priorPage + 1;
+      if (prior && nearby && cmpPos(landing, prior.cursor) > 0) {
+        const span = page === priorPage ? verses : [...priorVerses, ...verses];
+        marks = markSkipped(marks, span, prior.cursor, landing);
+      }
+      let state: TrackerState = { cursor: landing, marks };
+      if (spokenSoFar) {
+        // The text that identified the page was recited — replay it so the
+        // reveal (and any red words) catch up. On the first landing the
+        // reciter may have begun anywhere in the landing verse, so skipping
+        // its opening words costs nothing and marks nothing.
+        const freeStartUntil =
+          !prior && startVerse
+            ? { sura: startVerse.sura, aya: startVerse.aya, wordIndex: verseWordCount(startVerse) }
+            : undefined;
+        state = alignPhrase(state, spokenWordsFrom(spokenSoFar), verses, { freeStartUntil }).state;
+      }
+      deps.reveal.landOnPage(verses, landing, state.cursor);
+      deps.onLanded(state);
       deps.onNavigateToPage(page);
       deps.prefetchNextPage(page);
     },
@@ -310,18 +336,15 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
         currentInterimRef.current = "";
       }
 
-      // Mid-session re-search only: if this text matches forward from the
-      // position we were tracking, the re-search was a false alarm — cancel
-      // it and resume right where we were instead of waiting for a
-      // whole-Quran identification to play out. Uses just the current
-      // utterance's text (not the full accumulated buffer) since that's the
-      // freshest signal of what's being said right now.
-      const truePos = deps.reveal.getTruePosition();
-      if (hasIdentifiedRef.current && truePos) {
-        const resume = matchTranscript(text, deps.getCombinedVerses(), truePos, {
-          maxSkip: LOOSE_MATCH_MAX_SKIP,
-        });
-        if (resume.position && resume.consumedTokens >= LOOSE_MATCH_MIN_CONSUMED) {
+      // Mid-session re-search only: if this text aligns from the position we
+      // were tracking, the re-search was a false alarm — cancel it and resume
+      // right where we were instead of waiting for a whole-Quran
+      // identification to play out. Uses just the current utterance's text
+      // (not the full accumulated buffer) since that's the freshest signal
+      // of what's being said right now.
+      if (hasIdentifiedRef.current) {
+        const resumedWords = deps.tryResume(text, isFinal);
+        if (resumedWords > 0) {
           // Reciter is back on their tracked position — any armed move-away
           // candidate was a false alarm.
           pendingMoveAwayRef.current = null;
@@ -330,8 +353,7 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
           deps.onSwitchToTracking();
           deps.resetMismatchStreak();
           deps.setNoMatchHint(false);
-          wordsSinceLandingRef.current += resume.consumedTokens;
-          deps.resumeTrackingAt(resume.position, resume.consumedTokens);
+          wordsSinceLandingRef.current += resumedWords;
           return;
         }
       }

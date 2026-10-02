@@ -71,6 +71,9 @@ interface Props {
      *  as live "you said this" feedback during recite mode. */
     recitedPositions?: Set<number>;
   };
+  /** Recite mode's red words — skipped or said wrongly — as
+   *  `sura:aya:position` keys. A hidden word stays hidden. */
+  mistakes?: Set<string>;
   onVerseTap?: (verseKey: string) => void;
   onVerseLongPress?: (verseKey: string) => void;
   /**
@@ -93,6 +96,7 @@ const MushafPage: React.FC<Props> = ({
   green,
   grey,
   partialTarget,
+  mistakes,
   onVerseTap,
   onVerseLongPress,
   bigTextMode = false,
@@ -556,6 +560,14 @@ const MushafPage: React.FC<Props> = ({
       tw.word.charType === "end" &&
       !!partialTarget!.recitedPositions?.has(tw.word.position);
 
+    // Recite mistake: skipped or said wrongly — red once revealed, and red
+    // wins over the green "recited" highlight.
+    const isMistake =
+      tw.word.charType === "end" &&
+      !isHidden &&
+      !isWordPastReveal &&
+      !!mistakes?.has(`${key}:${tw.word.position}`);
+
     const isEndMarker =
       tw.word.charType === "end" &&
       tw.word.position ===
@@ -577,7 +589,8 @@ const MushafPage: React.FC<Props> = ({
       isGrey ? "mushaf-verse-grey" : "",
       isWordPastReveal ? "mushaf-verse-hidden" : "",
       isWordHinted ? "mushaf-word-hinted" : "",
-      isWordRecited ? "mushaf-word-recited" : "",
+      isWordRecited && !isMistake ? "mushaf-word-recited" : "",
+      isMistake ? "mushaf-word-mistake" : "",
       isEndMarker ? "mushaf-verse-end-marker" : "",
     ]
       .filter(Boolean)

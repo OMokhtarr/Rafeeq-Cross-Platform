@@ -1395,6 +1395,7 @@ const PageViewer: React.FC = () => {
                   selected={selected}
                   hidden={displayHiddenForPage}
                   partialTarget={displayPartialTargetForPage}
+                  mistakes={recite.status !== "idle" ? recite.reciteMistakes : undefined}
                   green={greenVerse ? new Set([greenVerse]) : undefined}
                   onVerseLongPress={handleVerseLongPress}
                   target={

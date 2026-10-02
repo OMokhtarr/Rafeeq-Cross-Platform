@@ -11,6 +11,7 @@ import {
   verseWordCount,
   type RecitePosition,
 } from "../../../services/quran/recite-matcher.service";
+import type { Marks } from "../../../services/quran/recite-aligner.service";
 import type { RevealAnimator } from "./useRevealAnimator";
 
 export type { RecitePosition, RevealAnimator };
@@ -41,6 +42,8 @@ export interface ReciteDriverDeps {
   setNoMatchHint: (v: boolean) => void;
   touchLastSpeechAt: () => void;
   stopRecording: () => void;
+  /** The session's red words changed (recite mistake detection). */
+  setMarks: (marks: Marks) => void;
 }
 
 /** What every driver hook returns — `useReciteMode` only ever talks to a
@@ -54,6 +57,10 @@ export interface ReciteDriver {
   start: () => void;
   /** Ends the session (called from stopRecording/disarm/unmount). */
   stop: () => void;
+  /** The reveal position jumped without speech (manual reveal buttons, a
+   *  page landing under the session) — continue matching from `pos` so the
+   *  words passed over are not treated as skipped. */
+  moveCursor: (pos: RecitePosition) => void;
 }
 
 /** The strict (maxSkip: 0) reveal pass can get permanently stuck when the

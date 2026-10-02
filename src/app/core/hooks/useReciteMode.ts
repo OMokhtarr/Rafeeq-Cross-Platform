@@ -6,6 +6,7 @@ import {
   verseWordCount,
   type RecitePosition,
 } from "../services/quran/recite-matcher.service";
+import { markPositionKeys } from "../services/quran/recite-aligner.service";
 import { SILENCE_TIMEOUT_MS, type ReciteDriverDeps } from "./recite/shared/reciteCore";
 import { useRevealAnimator } from "./recite/shared/useRevealAnimator";
 import { useDeepgramDriver } from "./recite/deepgram/deepgramDriver";
@@ -54,6 +55,10 @@ export interface UseReciteModeResult {
   reciteHidden: Set<string>;
   /** Word-level reveal state for the verse currently being recited, or undefined. */
   recitePartialTarget: RecitePartialTarget | undefined;
+  /** Words recited wrongly or skipped this session, as `sura:aya:position`
+   *  keys — shown red. Kept after recording stops (for review); cleared when
+   *  a new recording starts or recite mode is exited. */
+  reciteMistakes: Set<string>;
   micError: string | null;
   /** Seconds elapsed since the current recording started, ticking once per second. 0 when not recording. */
   recordingSeconds: number;
@@ -122,6 +127,7 @@ export function useReciteMode(
   const [recitePartialTarget, setRecitePartialTarget] = useState<
     RecitePartialTarget | undefined
   >(undefined);
+  const [reciteMistakes, setReciteMistakes] = useState<Set<string>>(new Set());
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [lastChunkText, setLastChunkText] = useState("");
   const [showingAll, setShowingAll] = useState(false);
@@ -149,6 +155,9 @@ export function useReciteMode(
   // stopRecordingRef above), so it can't be constructed before stopRecording
   // exists. Broken via the same ref-indirection pattern as stopRecordingRef.
   const driverStopRef = useRef<() => void>(() => {});
+  // Holds the driver's .moveCursor() for the manual reveal buttons and
+  // syncPage, declared before the driver exists (same pattern as above).
+  const driverMoveCursorRef = useRef<(pos: RecitePosition) => void>(() => {});
 
   // Position has moved past the last verse on this page (matched across the
   // page boundary within one chunk) — reveal the whole page and ask
@@ -226,6 +235,7 @@ export function useReciteMode(
         ? firstWordPosition(nextVerse)
         : { sura: activePos.sura, aya: activePos.aya + 1, wordIndex: 0 };
       reveal.reset(nextPos);
+      driverMoveCursorRef.current(nextPos);
       applyPosition(verses, nextPos);
     },
     [applyPosition, reveal],
@@ -248,6 +258,7 @@ export function useReciteMode(
     if (pos.wordIndex < total) {
       const nextPos: RecitePosition = { sura: pos.sura, aya: pos.aya, wordIndex: pos.wordIndex + 1 };
       reveal.reset(nextPos);
+      driverMoveCursorRef.current(nextPos);
       applyPosition(verses, nextPos);
       return;
     }
@@ -270,6 +281,7 @@ export function useReciteMode(
     if (pos.wordIndex < total) {
       const nextPos: RecitePosition = { sura: pos.sura, aya: pos.aya, wordIndex: total };
       reveal.reset(nextPos);
+      driverMoveCursorRef.current(nextPos);
       applyPosition(verses, nextPos);
       return;
     }
@@ -309,7 +321,7 @@ export function useReciteMode(
     // over trailing silence (a session usually ends with silence), and
     // revealing unrecited words is the one thing this mode must never do.
     // The held word or two — if genuinely recited — is a tap on the reveal
-    // button away.
+    // button away. Red words (reciteMistakes) stay, for review.
     reveal.stop();
     // Recording no longer owns the page's visibility (the toolbar falls
     // back to the persisted Hifz hide state once armed) — clear recite's
@@ -348,10 +360,12 @@ export function useReciteMode(
     setNoMatchHint,
     touchLastSpeechAt,
     stopRecording: () => stopRecordingRef.current(),
+    setMarks: (marks) => setReciteMistakes(markPositionKeys(marks)),
   };
 
   const deepgramDriver = useDeepgramDriver(driverDeps);
   driverStopRef.current = deepgramDriver.stop;
+  driverMoveCursorRef.current = deepgramDriver.moveCursor;
 
   const clearDurationTimer = useCallback(() => {
     if (durationTimerRef.current !== null) {
@@ -388,6 +402,7 @@ export function useReciteMode(
     setRecordingSeconds(0);
     setNoMatchHint(false);
     setIdentifying(true);
+    setReciteMistakes(new Set());
     // Starting to recite: hide the page and reveal word-by-word as matched.
     reveal.reset(versesRef.current.length ? firstWordPosition(versesRef.current[0]) : null);
     hideWholePage(versesRef.current);
@@ -430,6 +445,7 @@ export function useReciteMode(
         dPos && verses.some((v) => v.sura === dPos.sura && v.aya === dPos.aya);
 
       reveal.reconcile(posOnPage ? null : fallback, dOnPage ? null : (posOnPage ? pos : fallback));
+      if (!posOnPage && fallback) driverMoveCursorRef.current(fallback);
 
       const displayPos = reveal.getDisplayPosition();
       if (displayPos) applyPosition(verses, displayPos);
@@ -448,6 +464,7 @@ export function useReciteMode(
     reveal.reset(null);
     setReciteHidden(new Set());
     setRecitePartialTarget(undefined);
+    setReciteMistakes(new Set());
     setRecordingSeconds(0);
     setLastChunkText("");
     setNoMatchHint(false);
@@ -477,6 +494,7 @@ export function useReciteMode(
     status,
     reciteHidden,
     recitePartialTarget,
+    reciteMistakes,
     micError,
     recordingSeconds,
     lastChunkText,
