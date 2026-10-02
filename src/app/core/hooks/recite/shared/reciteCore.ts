@@ -63,15 +63,6 @@ export interface ReciteDriver {
   moveCursor: (pos: RecitePosition) => void;
 }
 
-/** The strict (maxSkip: 0) reveal pass can get permanently stuck when the
- *  STT garbles one expected word — no later input can ever advance past it.
- *  A loose fallback pass may skip a couple of expected words, but only when
- *  it matches at least this many spoken words as evidence the recitation
- *  really is past the stuck word. The skipped word *was* recited (just
- *  misheard), so accepting the fallback never reveals ahead of the reciter. */
-export const LOOSE_MATCH_MAX_SKIP = 2;
-export const LOOSE_MATCH_MIN_CONSUMED = 3;
-
 /** Matched words on the current page (after landing on it) beyond which the
  *  identification is considered confirmed — the recitation has tracked well
  *  past the shared phrasing any near-duplicate could explain. Before this

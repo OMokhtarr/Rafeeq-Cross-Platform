@@ -86,8 +86,8 @@ const PAGE_FIRST_MIN_CONSUMED = 4;
 const ESTABLISHED_WORDS_IF_UNIQUE = 4;
 
 /**
- * Skip budget for the page-first anchor scan — deliberately larger than the
- * tracking matcher's LOOSE_MATCH_MAX_SKIP. Some verses carry a leading
+ * Skip budget for the page-first anchor scan — deliberately generous. Some
+ * verses carry a leading
  * basmalah in the bundled corpus (e.g. An-Naba' 78:1 is stored as "بسم الله
  * الرحمن الرحيم عم يتساءلون"), so the reciter's actual first word can sit
  * several tokens into the verse; a tight skip would miss that start entirely.
