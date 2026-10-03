@@ -1,4 +1,5 @@
 @import "./styles/tokens.css";
+@import "./styles/controls.css";
 
 /* ── Text scaling ───────────────────────────────────────────
    The app honours the OS text-size setting, capped so dense
