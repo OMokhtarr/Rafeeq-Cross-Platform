@@ -92,6 +92,7 @@ const PrayerTimes: React.FC = () => {
   const [day, setDay] = useState<PrayerDay | null>(null);
   usePageTour(["prayerTimes.setup"], { ready: day !== null && !day.hasLocation });
   usePageTour(["prayerTimes"], { ready: !!day?.hasLocation });
+  usePageTour(["prayerTimes.alarms"], { ready: !!day?.hasLocation && alarmsSupported() });
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
@@ -365,7 +366,7 @@ const PrayerTimes: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      {...tourAttr("prayerTimes.menu")}
+                      {...tourAttr("prayerTimes.menu", "prayerTimes.alarms.menu")}
                       className="pt-menu-btn"
                       onClick={() => setSheet("menu")}
                       aria-haspopup="dialog"

@@ -13,6 +13,8 @@
  *  2. Add a Release whose feature points at that route and tour id.
  */
 
+import { Capacitor } from "@capacitor/core";
+
 export type Gesture = "swipe" | "longPress" | "doubleTap";
 
 export interface TourStep {
@@ -43,6 +45,7 @@ export type TourId =
   | "more"
   | "prayerTimes.setup"
   | "prayerTimes"
+  | "prayerTimes.alarms"
   | "tracker"
   | "bookmarks"
   | "settings"
@@ -82,6 +85,9 @@ export const TOURS: Record<TourId, TourStep[]> = {
   // location exists, rather than being marked seen while only "grant" showed.
   "prayerTimes.setup": [{ key: "grant" }],
   prayerTimes: [{ key: "next" }, { key: "qibla" }, { key: "menu" }],
+  // Announced in 1.2.0. Its own id so existing users, who have seen the tour
+  // above, still get it from "Show me".
+  "prayerTimes.alarms": [{ key: "menu" }],
   tracker: [
     { key: "item" },
     { key: "locked" },
@@ -123,6 +129,8 @@ export interface ReleaseFeature {
   route: string;
   /** Played on arrival; must be in that page's usePageTour list. */
   tourId: TourId;
+  /** Where the feature exists, as Capacitor names platforms; everywhere when absent. */
+  platforms?: string[];
 }
 
 export interface Release {
@@ -131,7 +139,30 @@ export interface Release {
   features: ReleaseFeature[];
 }
 
-/** Oldest first. Everything shipped so far is covered by the welcome slides. */
-export const RELEASES: Release[] = [];
+/** Oldest first. Everything before 1.2.0 is covered by the welcome slides. */
+export const ALL_RELEASES: Release[] = [
+  {
+    id: "1.2.0",
+    features: [
+      // Ringing needs AlarmManager and a lock-screen activity: Android only.
+      { key: "alarms", art: "qibla", route: "/prayer-times", tourId: "prayerTimes.alarms", platforms: ["android"] },
+    ],
+  },
+];
+
+/**
+ * The releases worth announcing on [platform]: features that do not exist
+ * there are dropped, and so is a release left with nothing to show.
+ */
+export function releasesForPlatform(releases: Release[], platform: string): Release[] {
+  return releases
+    .map((r) => ({
+      ...r,
+      features: r.features.filter((f) => !f.platforms || f.platforms.includes(platform)),
+    }))
+    .filter((r) => r.features.length > 0);
+}
+
+export const RELEASES: Release[] = releasesForPlatform(ALL_RELEASES, Capacitor.getPlatform());
 
 export const RELEASE_IDS = RELEASES.map((r) => r.id);

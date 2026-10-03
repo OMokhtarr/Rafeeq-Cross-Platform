@@ -1,5 +1,5 @@
 import { ONBOARDING_COPY } from "../onboardingCopy";
-import { TOURS, TourId, WELCOME_SLIDES, RELEASES } from "../tourCatalog";
+import { TOURS, TourId, WELCOME_SLIDES, ALL_RELEASES } from "../tourCatalog";
 
 describe.each(["ar", "en"] as const)("%s copy", (lang) => {
   const copy = ONBOARDING_COPY[lang];
@@ -29,12 +29,12 @@ describe.each(["ar", "en"] as const)("%s copy", (lang) => {
   });
 
   it("covers every release feature", () => {
-    for (const r of RELEASES) for (const f of r.features) expect(copy.releases[`${r.id}.${f.key}`]?.title).toBeTruthy();
+    for (const r of ALL_RELEASES) for (const f of r.features) expect(copy.releases[`${r.id}.${f.key}`]?.title).toBeTruthy();
   });
 });
 
 it("every release has a unique id and at least one feature", () => {
-  const ids = RELEASES.map((r) => r.id);
+  const ids = ALL_RELEASES.map((r) => r.id);
   expect(new Set(ids).size).toBe(ids.length);
-  for (const r of RELEASES) expect(r.features.length).toBeGreaterThan(0);
+  for (const r of ALL_RELEASES) expect(r.features.length).toBeGreaterThan(0);
 });
