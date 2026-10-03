@@ -124,7 +124,7 @@
   font-family: var(--font-arabic);
   font-size: var(--text-2xl);
   font-weight: 700;
-  color: var(--color-quran);
+  color: var(--color-quran-text);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;

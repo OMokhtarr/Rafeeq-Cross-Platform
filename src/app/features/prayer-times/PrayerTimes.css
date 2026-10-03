@@ -336,12 +336,12 @@ ion-content::part(scroll) {
   background: color-mix(in srgb, var(--color-quran) 15%, transparent);
   border-radius: var(--radius-pill);
   font-weight: 700;
-  color: var(--color-quran);
+  color: var(--color-quran-text);
 }
 
 .pt-row--next .pt-row-time {
   font-weight: 700;
-  color: var(--color-quran);
+  color: var(--color-quran-text);
 }
 
 /* Sunrise is not a prayer — de-emphasized rather than highlighted. */

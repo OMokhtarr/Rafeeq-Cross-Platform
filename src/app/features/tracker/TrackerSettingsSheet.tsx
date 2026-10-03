@@ -5,6 +5,7 @@
  */
 import React from "react";
 import AccountModal from "../account/AccountModal";
+import { Switch } from "../../shared/components/controls/Switch";
 import { useLang } from "../../core/context/LanguageContext";
 import { OPTIONAL_SECTIONS, SectionId } from "./trackerCatalog";
 import { sectionShares, visibleSections } from "./trackerLogic";
@@ -57,13 +58,10 @@ const TrackerSettingsSheet: React.FC<Props> = ({ settings, date, onChange, weigh
                   aria-label={`${tt.settings.more} ${tt.sections[id]}`}
                 >+</button>
               </span>
-              <input
-                type="checkbox"
-                role="switch"
-                className="wt-switch"
+              <Switch
                 checked={settings[id]}
-                aria-label={tt.sections[id]}
-                onChange={() => onChange({ ...settings, [id]: !settings[id] })}
+                label={tt.sections[id]}
+                onChange={(on) => onChange({ ...settings, [id]: on })}
               />
             </div>
           ))}

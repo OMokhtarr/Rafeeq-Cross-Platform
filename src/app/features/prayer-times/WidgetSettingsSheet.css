@@ -93,7 +93,7 @@
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-quran);
+  color: var(--color-quran-text);
   background: none;
   border: none;
   padding: var(--space-2) 0 0;
