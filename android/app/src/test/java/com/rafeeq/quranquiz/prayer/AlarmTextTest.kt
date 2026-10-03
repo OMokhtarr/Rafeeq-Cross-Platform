@@ -1,6 +1,8 @@
 package com.rafeeq.quranquiz.prayer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AlarmTextTest {
@@ -76,5 +78,24 @@ class PrayerAlarmRingModeTest {
     @Test
     fun `a ring whose alarms were all deleted or switched off stays silent`() {
         assertEquals(RingMode.SILENT, PrayerAlarmRingReceiver.ringMode(emptyList(), now, now, exactAllowed = true))
+    }
+}
+
+class MissedAlarmNotificationIdTest {
+
+    @Test
+    fun `each alarm has its own missed notification`() {
+        assertNotEquals(AlarmRingService.missedNotificationId("suhoor-id"), AlarmRingService.missedNotificationId("fajr-wake-id"))
+    }
+
+    @Test
+    fun `missing the same alarm again replaces its own notification`() {
+        assertEquals(AlarmRingService.missedNotificationId("suhoor-id"), AlarmRingService.missedNotificationId("suhoor-id"))
+    }
+
+    @Test
+    fun `missed notifications never take the ids of the app's other notifications`() {
+        val ids = listOf("a", "b", "suhoor-id", "f47ac10b-58cc-4372-a567-0e02b2c3d479").map { AlarmRingService.missedNotificationId(it) }
+        assertTrue(ids.none { it in 4200..4299 })
     }
 }

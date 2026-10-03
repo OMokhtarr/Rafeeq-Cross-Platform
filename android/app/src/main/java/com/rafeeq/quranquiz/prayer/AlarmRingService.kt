@@ -60,7 +60,17 @@ class AlarmRingService : Service() {
         private const val CHANNEL = "rafeeq_prayer_alarm"
         private const val MISSED_CHANNEL = "rafeeq_prayer_alarm_missed"
         private const val NOTIFICATION_ID = 4230
-        private const val MISSED_NOTIFICATION_ID = 4235
+
+        /** Above every fixed notification id the app uses (42xx). */
+        private const val MISSED_ID_BASE = 100_000
+
+        /**
+         * One missed notification per alarm: missing Suhoor and then the
+         * Fajr wake-up leaves both in the shade, while missing the same
+         * alarm again the next day replaces its own older one.
+         */
+        internal fun missedNotificationId(alarmId: String): Int =
+            MISSED_ID_BASE + (alarmId.hashCode() and 0x7FFFF)
 
         /** Quiet start, full alarm volume after this long. */
         private const val RAMP_MS = 20_000L
@@ -302,17 +312,21 @@ class AlarmRingService : Service() {
             Intent(this, com.rafeeq.quranquiz.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(this, MISSED_CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
-            .setContentTitle(res.getString(R.string.alarm_missed_title))
-            .setContentText(AlarmText.ringLines(this, ringing.ids, ringing.prayerAts).joinToString("\n"))
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setContentIntent(open)
-            .setAutoCancel(true)
-            .build()
-        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-            .notify(MISSED_NOTIFICATION_ID, notification)
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        ringing.ids.forEachIndexed { i, id ->
+            val line = AlarmText.ringLines(this, listOf(id), longArrayOf(ringing.prayerAts.getOrElse(i) { 0L }))
+                .firstOrNull() ?: return@forEachIndexed
+            val notification = NotificationCompat.Builder(this, MISSED_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
+                .setContentTitle(res.getString(R.string.alarm_missed_title))
+                .setContentText(line)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build()
+            nm.notify(missedNotificationId(id), notification)
+        }
     }
 
     private fun finish(missed: Boolean) {
