@@ -6,14 +6,18 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.app.NotificationManager
 import android.location.LocationManager
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.provider.OpenableColumns
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
@@ -28,6 +32,7 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +58,11 @@ import java.util.TimeZone
  *   openHomeScreen()                     — leaves the app so the placed widget is visible
  *   openWidgetSettings()                 — the placed widget's appearance screen
  *   promptEnableLocation()               — the system dialog that turns location on in place
+ *   getAlarms() / saveAlarm(alarm) / deleteAlarm({ id }) — the ringing prayer alarms
+ *   setAlarmSettings({...})              — sound, snooze, vibration and Ramadan start, shared by all alarms
+ *   previewAlarm(alarm)                  — when an alarm being edited would next ring
+ *   pickAlarmSound({ source })           — the system ringtone picker, or an audio file
+ *   getAlarmHealth() / requestFullScreenAlarms() — what may stop alarms ringing properly
  *
  * The web layer never computes prayer times itself; this is the only path.
  * Mirrors RafeeqAutoPlugin's shape, which bridges JS to the media service.
@@ -64,6 +74,11 @@ import java.util.TimeZone
     ],
 )
 class RafeeqPrayerPlugin : Plugin() {
+
+    /** The call waiting on a sound picker, answered by [ringtoneLauncher] or [audioFileLauncher]. */
+    private var pendingSoundCall: PluginCall? = null
+    private lateinit var ringtoneLauncher: ActivityResultLauncher<Intent>
+    private lateinit var audioFileLauncher: ActivityResultLauncher<Array<String>>
 
     /** The call waiting on the turn-on-location dialog, answered by [enableLocationLauncher]. */
     private var pendingEnableCall: PluginCall? = null
@@ -80,6 +95,52 @@ class RafeeqPrayerPlugin : Plugin() {
             call.resolve(JSObject().put("enabled", result.resultCode == android.app.Activity.RESULT_OK))
         }
 
+        ringtoneLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            val call = pendingSoundCall ?: return@registerForActivityResult
+            pendingSoundCall = null
+            val picked: Uri? = if (result.resultCode == android.app.Activity.RESULT_OK) {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            } else {
+                null
+            }
+            if (picked == null) {
+                call.resolve(JSObject().put("cancelled", true))
+                return@registerForActivityResult
+            }
+            // The "Default" entry is stored as no choice, so it keeps
+            // following the device's alarm sound if that changes later.
+            val isDefault = picked == Settings.System.DEFAULT_ALARM_ALERT_URI
+            val name = if (isDefault) null else runCatching {
+                RingtoneManager.getRingtone(context, picked)?.getTitle(context)
+            }.getOrNull()
+            resolveSound(call, if (isDefault) null else picked, name)
+        }
+
+        audioFileLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            val call = pendingSoundCall ?: return@registerForActivityResult
+            pendingSoundCall = null
+            if (uri == null) {
+                call.resolve(JSObject().put("cancelled", true))
+                return@registerForActivityResult
+            }
+            // Without a persisted grant the file is unreadable once the app
+            // restarts, and alarms ring when it is not running at all.
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val name = runCatching {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) c.getString(0) else null
+                }
+            }.getOrNull()
+            resolveSound(call, uri, name)
+        }
+
         // Re-arm both reminder chains on every launch. Each is one alarm that
         // re-arms itself when it fires, so a vendor battery manager that
         // drops or kills it (Xiaomi does on swipe-away from recents) ends
@@ -88,6 +149,162 @@ class RafeeqPrayerPlugin : Plugin() {
         PrayerAlarmScheduler.scheduleNext(context)
         AzkarReminderScheduler.scheduleNext(context)
         PrayerAlarmClockScheduler.scheduleNext(context)
+    }
+
+    // ── Prayer alarms ───────────────────────────────────────────────────────
+
+    private fun alarmJson(alarm: PrayerAlarm): JSObject {
+        val o = JSObject.fromJSONObject(PrayerAlarmConfig.alarmToJson(alarm))
+        val next = PrayerAlarmClockScheduler.nextFor(context, alarm)
+        o.put("nextAt", if (next != null) iso(Date(next)) else JSONObject.NULL)
+        return o
+    }
+
+    @PluginMethod
+    fun getAlarms(call: PluginCall) {
+        val alarms = JSArray()
+        PrayerAlarmConfig.alarms(context).forEach { alarms.put(alarmJson(it)) }
+        call.resolve(
+            JSObject()
+                .put("alarms", alarms)
+                .put("settings", JSObject.fromJSONObject(PrayerAlarmConfig.settingsToJson(PrayerAlarmConfig.settings(context)))),
+        )
+    }
+
+    /** Inserts or replaces by id; resolves the stored (sanitised) alarm. */
+    @PluginMethod
+    fun saveAlarm(call: PluginCall) {
+        val alarm = PrayerAlarmConfig.alarmFromJson(call.data)
+        if (alarm == null) {
+            call.reject("invalid alarm")
+            return
+        }
+        val saved = PrayerAlarmConfig.upsert(context, alarm)
+        PrayerAlarmClockScheduler.scheduleNext(context)
+        call.resolve(JSObject().put("alarm", alarmJson(saved)))
+    }
+
+    @PluginMethod
+    fun deleteAlarm(call: PluginCall) {
+        val id = call.getString("id")
+        if (id == null) {
+            call.reject("id is required")
+            return
+        }
+        PrayerAlarmConfig.delete(context, id)
+        PrayerAlarmClockScheduler.scheduleNext(context)
+        call.resolve()
+    }
+
+    /** Merges the keys present in the call over the stored settings. */
+    @PluginMethod
+    fun setAlarmSettings(call: PluginCall) {
+        val merged = PrayerAlarmConfig.settingsToJson(PrayerAlarmConfig.settings(context))
+        call.data.keys().forEach { key -> merged.put(key, call.data.opt(key)) }
+        PrayerAlarmConfig.setSettings(context, PrayerAlarmConfig.decodeSettings(merged.toString()))
+        // The Ramadan start moves which days Ramadan-only alarms ring on.
+        PrayerAlarmClockScheduler.scheduleNext(context)
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun previewAlarm(call: PluginCall) {
+        val alarm = PrayerAlarmConfig.alarmFromJson(call.data)
+        val next = alarm?.let { PrayerAlarmClockScheduler.previewNext(context, it) }
+        call.resolve(JSObject().put("nextAt", if (next != null) iso(Date(next)) else JSONObject.NULL))
+    }
+
+    /**
+     * Picks the alarm sound and stores it. "system" is the ringtone picker
+     * (alarm sounds, ringtones, and any the user has added); "file" is the
+     * document picker, for an adhan recording saved on the phone.
+     */
+    @PluginMethod
+    fun pickAlarmSound(call: PluginCall) {
+        pendingSoundCall?.resolve(JSObject().put("cancelled", true))
+        pendingSoundCall = call
+        try {
+            if (call.getString("source") == "file") {
+                audioFileLauncher.launch(arrayOf("audio/*"))
+            } else {
+                val current = PrayerAlarmConfig.settings(context).soundUri?.let { Uri.parse(it) }
+                ringtoneLauncher.launch(
+                    Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, Settings.System.DEFAULT_ALARM_ALERT_URI)
+                        putExtra(
+                            RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                            current ?: Settings.System.DEFAULT_ALARM_ALERT_URI,
+                        )
+                    },
+                )
+            }
+        } catch (e: Exception) {
+            pendingSoundCall = null
+            call.reject("no sound picker on this device")
+        }
+    }
+
+    private fun resolveSound(call: PluginCall, uri: Uri?, name: String?) {
+        val old = PrayerAlarmConfig.settings(context)
+        // Let go of a previously picked file's grant: the system keeps only a
+        // limited number per app. Harmless for ringtone URIs, which hold none.
+        old.soundUri?.let { prev ->
+            if (prev != uri?.toString()) {
+                runCatching {
+                    context.contentResolver.releasePersistableUriPermission(
+                        Uri.parse(prev), Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                }
+            }
+        }
+        PrayerAlarmConfig.setSettings(context, old.copy(soundUri = uri?.toString(), soundName = name))
+        call.resolve(
+            JSObject()
+                .put("uri", uri?.toString() ?: JSONObject.NULL)
+                .put("name", name ?: JSONObject.NULL),
+        )
+    }
+
+    /**
+     * What may stop an alarm ringing properly: notifications blocked (no
+     * screen to stop it from), exact alarms denied (rings may be late),
+     * full-screen intents denied on Android 14+ (it rings as a heads-up
+     * notification instead), and the same battery concerns as reminders.
+     */
+    @PluginMethod
+    fun getAlarmHealth(call: PluginCall) {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        call.resolve(
+            JSObject()
+                .put("notifications", NotificationManagerCompat.from(context).areNotificationsEnabled())
+                .put("exactAlarms", PrayerAlarmScheduler.canScheduleExact(context))
+                .put("fullScreen", canUseFullScreen())
+                .put("batteryUnrestricted", pm.isIgnoringBatteryOptimizations(context.packageName))
+                .put("aggressiveBattery", Build.MANUFACTURER.lowercase(java.util.Locale.ROOT) in AGGRESSIVE_BATTERY_BRANDS),
+        )
+    }
+
+    private fun canUseFullScreen(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()
+
+    /** Opens the "full-screen notifications" permission page on Android 14+. */
+    @PluginMethod
+    fun requestFullScreenAlarms(call: PluginCall) {
+        if (canUseFullScreen()) {
+            call.resolve(JSObject().put("granted", true))
+            return
+        }
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+        call.resolve(JSObject().put("granted", false))
     }
 
     /**
