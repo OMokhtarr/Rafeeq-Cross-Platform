@@ -21,11 +21,12 @@ import com.rafeeq.quranquiz.R
  *
  * A ring starts [AlarmRingService]. Android only lets a background app start
  * a foreground service from an *exact* alarm, so when exact alarms are not
- * allowed the start can be refused; the alarm then rings as an insistent
- * notification instead, which repeats its sound until dismissed. Either way
- * the chain is re-armed in `finally`: it is the only link to every later
- * ring.
+ * allowed the alarm rings as an insistent notification instead, which
+ * repeats its sound until dismissed (see [ringMode]). Either way the chain
+ * is re-armed in `finally`: it is the only link to every later ring.
  */
+enum class RingMode { SILENT, STALE, SERVICE, NOTIFICATION }
+
 class PrayerAlarmRingReceiver : BroadcastReceiver() {
 
     companion object {
@@ -39,6 +40,19 @@ class PrayerAlarmRingReceiver : BroadcastReceiver() {
 
         /** Same window as the reminders: past this, the ring names the wrong moment. */
         internal const val MAX_LATENESS_MS = PrayerAlarmReceiver.MAX_LATENESS_MS
+
+        /**
+         * How a delivered ring is answered. Without exact alarms the service
+         * is never started: its systemExempted type needs that permission on
+         * Android 14+, and a service started in the foreground that cannot
+         * reach it crashes the app when it stops.
+         */
+        internal fun ringMode(ids: List<String>, ringAt: Long, now: Long, exactAllowed: Boolean): RingMode = when {
+            ids.isEmpty() -> RingMode.SILENT
+            ringAt > 0 && now - ringAt > MAX_LATENESS_MS -> RingMode.STALE
+            exactAllowed -> RingMode.SERVICE
+            else -> RingMode.NOTIFICATION
+        }
 
         /** Rings as an insistent notification when the service cannot start. */
         fun postFallback(context: Context, ids: List<String>, prayerAts: LongArray) {
@@ -114,11 +128,12 @@ class PrayerAlarmRingReceiver : BroadcastReceiver() {
             val ids = keep.map { rawIds[it] }
             val prayerAts = LongArray(keep.size) { rawAts.getOrElse(keep[it]) { 0L } }
 
-            when {
-                ids.isEmpty() -> Unit
-                ringAt > 0 && now - ringAt > MAX_LATENESS_MS ->
-                    Log.w(TAG, "alarm ${ids} delivered ${(now - ringAt) / 60_000} min late — not rung")
-                else -> startRinging(context, ids, prayerAts)
+            when (ringMode(ids, ringAt, now, PrayerAlarmScheduler.canScheduleExact(context))) {
+                RingMode.SILENT -> Unit
+                RingMode.STALE ->
+                    Log.w(TAG, "alarm $ids delivered ${(now - ringAt) / 60_000} min late — not rung")
+                RingMode.SERVICE -> startRinging(context, ids, prayerAts)
+                RingMode.NOTIFICATION -> postFallback(context, ids, prayerAts)
             }
         } catch (e: Exception) {
             Log.e(TAG, "ring failed — still re-arming", e)
