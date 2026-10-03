@@ -56,8 +56,8 @@ but belongs to the Isha's day. Weekday and Ramadan checks both use this date.
 ## Ramadan only
 An alarm counts as in Ramadan when its prayer's civil date, shifted by
 `ramadanShiftDays`, falls in Hijri month 9 of the Umm al-Qura calendar
-(`android.icu.util.IslamicCalendar`, `ISLAMIC_UMALQURA`, same calendar the app
-displays). This is the "fasting day" rule: suhoor, Fajr and iftar alarms are
+(`java.time.chrono.HijrahDate`, the tabular Umm al-Qura calendar the widget
+already uses, and JVM-testable). This is the "fasting day" rule: suhoor, Fajr and iftar alarms are
 right on every day. Known, accepted gap: an Isha Ramadan-only alarm misses the
 eve of the first fast (first taraweeh) and fires on the eve of Eid.
 
