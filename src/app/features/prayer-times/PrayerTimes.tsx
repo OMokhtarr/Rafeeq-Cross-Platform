@@ -319,7 +319,7 @@ const PrayerTimes: React.FC = () => {
                   <button
                     type="button"
                     {...tourAttr("prayerTimes.setup.grant")}
-                    className="pt-grant-btn"
+                    className="rf-btn rf-btn--primary pt-grant-btn"
                     onClick={handleUpdateLocation}
                     disabled={locating}
                   >

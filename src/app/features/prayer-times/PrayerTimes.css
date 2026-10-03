@@ -173,22 +173,10 @@ ion-content::part(scroll) {
   margin: 0 0 var(--space-5);
 }
 
+/* The page's one action: the shared green rf-btn--primary, sized here. */
 .pt-grant-btn {
-  font-family: var(--font-arabic);
   font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-bg-app);
-  background: var(--color-gold);
-  border: none;
-  border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-6);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity var(--transition-fast);
-}
-
-.pt-grant-btn:active {
-  opacity: 0.85;
 }
 
 .pt-denied {
@@ -337,7 +325,7 @@ ion-content::part(scroll) {
 /* The next prayer: outlined, its name in a filled chip. The shape marks it
    even where the gold is hard to tell apart. */
 .pt-row--next {
-  border-color: var(--color-gold);
+  border-color: var(--color-quran);
   padding-top: var(--space-1);
   padding-bottom: var(--space-1);
   padding-inline-start: var(--space-2);
@@ -345,15 +333,15 @@ ion-content::part(scroll) {
 
 .pt-row--next .pt-row-label {
   padding: var(--space-1) var(--space-4);
-  background: var(--color-gold-subtle);
+  background: color-mix(in srgb, var(--color-quran) 15%, transparent);
   border-radius: var(--radius-pill);
   font-weight: 700;
-  color: var(--color-gold);
+  color: var(--color-quran);
 }
 
 .pt-row--next .pt-row-time {
   font-weight: 700;
-  color: var(--color-gold);
+  color: var(--color-quran);
 }
 
 /* Sunrise is not a prayer — de-emphasized rather than highlighted. */

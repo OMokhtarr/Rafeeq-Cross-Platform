@@ -1,7 +1,8 @@
 /* Alarms sheet — prayer alarms grouped under their prayers, the alarm
    editor, and the shared alarm settings. Shell and rows come from
-   PrayerSheet.css, the switch from ShowTimesSheet.css; this file adds only
-   what is the alarms' own.
+   PrayerSheet.css; switches, segmented choices, buttons and chips are the
+   shared Rafeeq controls (styles/controls.css). This file adds only what is
+   the alarms' own: green where the user acts, gold for structure.
 
    The ring time is the one large element: it is the number the user sets
    and checks. Everything else stays at the sheet's body size. */
@@ -128,7 +129,7 @@
   padding: var(--space-2) 0;
   background: none;
   border: none;
-  color: var(--color-gold);
+  color: var(--color-quran);
   font: inherit;
   font-size: var(--text-md);
   font-weight: 600;
@@ -175,17 +176,8 @@
   color: var(--color-text-primary);
 }
 
-.as-warning-action {
+.as-warning .rf-btn {
   flex-shrink: 0;
-  padding: var(--space-1) var(--space-3);
-  background: var(--color-gold);
-  border: none;
-  border-radius: var(--radius-full);
-  color: var(--color-text-on-dark);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .as-error {
@@ -202,7 +194,7 @@
   padding: var(--space-1) 0;
   background: none;
   border: none;
-  color: var(--color-gold);
+  color: var(--color-quran);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -219,70 +211,14 @@
   padding: 0 0 var(--space-3);
 }
 
-.as-chip {
+.as-sound-choice {
   flex: 1;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: 1px solid var(--color-gold-subtle);
-  border-radius: var(--radius-full);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
 }
 
-.as-chip:active {
-  background: var(--color-gold-faint);
-}
-
-/* ── Segmented control ───────────────────────────────────────────────────── */
-
-.as-seg {
-  display: flex;
-  padding: 3px;
-  gap: 3px;
-  background: var(--color-gold-faint);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-full);
-}
-
-.as-seg-btn {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  border-radius: var(--radius-full);
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.as-seg-btn.is-active {
-  background: var(--color-gold);
-  color: var(--color-text-on-dark);
-}
-
-.as-seg-btn:focus-visible,
 .as-step:focus-visible,
-.as-day:focus-visible,
 .as-minutes:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
-}
-
-.as-seg--compact {
-  flex: 0 0 auto;
-}
-
-.as-seg--compact .as-seg-btn {
-  padding: var(--space-1) var(--space-3);
 }
 
 /* ── Editor ──────────────────────────────────────────────────────────────── */
@@ -360,7 +296,7 @@
   height: 56px;
   background: none;
   border: none;
-  border-bottom: 2px solid var(--color-gold);
+  border-bottom: 2px solid var(--color-quran);
   color: var(--color-text-primary);
   font: inherit;
   font-size: var(--text-3xl);
@@ -384,7 +320,7 @@
   text-align: center;
   font-size: var(--text-md);
   font-weight: 600;
-  color: var(--color-gold);
+  color: var(--color-quran);
 }
 
 .as-text {
@@ -399,7 +335,7 @@
 
 .as-text:focus {
   outline: none;
-  border-color: var(--color-gold);
+  border-color: var(--color-quran);
 }
 
 .as-days {
@@ -408,27 +344,12 @@
   gap: var(--space-1);
 }
 
+/* Colours come from rf-chip; this only makes the seven chips round and
+   equal so the week fits one row on a phone. */
 .as-day {
   aspect-ratio: 1;
   max-height: 44px;
-  background: none;
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-full);
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.as-day.is-active {
-  background: var(--color-gold);
-  border-color: var(--color-gold);
-  color: var(--color-text-on-dark);
+  padding: 0;
 }
 
 .as-switch-row {
@@ -443,19 +364,6 @@
   min-width: 0;
 }
 
-.as-primary {
-  padding: var(--space-3);
-  background: var(--color-gold);
-  border: none;
-  border-radius: var(--radius-full);
-  color: var(--color-text-on-dark);
-  font: inherit;
-  font-size: var(--text-md);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.as-primary:disabled,
 .as-danger:disabled {
   opacity: 0.6;
   cursor: default;
@@ -473,19 +381,14 @@
   cursor: pointer;
 }
 
-.as-primary:focus-visible,
 .as-danger:focus-visible,
-.as-warning-action:focus-visible,
-.as-value-btn:focus-visible,
-.as-chip:focus-visible {
+.as-value-btn:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .as-alarm,
-  .as-seg-btn,
-  .as-day {
+  .as-alarm {
     transition: none;
   }
 }

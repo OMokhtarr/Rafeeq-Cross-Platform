@@ -48,10 +48,11 @@ import {
 } from "../../core/services/prayer/prayer-alarms.types";
 import type { PrayerKey } from "../../core/services/prayer/prayer-times.types";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
+import { Segmented } from "../../shared/components/controls/Segmented";
+import { Switch } from "../../shared/components/controls/Switch";
 import AlarmEditor from "./AlarmEditor";
 import { formatClock, repeatSummary } from "./alarmFormat";
 import "./PrayerSheet.css";
-import "./ShowTimesSheet.css";
 import "./AlarmsSheet.css";
 
 interface Props {
@@ -321,7 +322,7 @@ const AlarmsSheet: React.FC<Props> = ({
                   {warnings.map((w) => (
                     <li key={w.text} className="as-warning">
                       <span className="as-warning-text">{w.text}</span>
-                      <button type="button" className="as-warning-action" onClick={w.run}>
+                      <button type="button" className="rf-btn rf-btn--primary rf-btn--sm" onClick={w.run}>
                         {w.action}
                       </button>
                     </li>
@@ -386,15 +387,7 @@ const AlarmsSheet: React.FC<Props> = ({
                               </span>
                             </span>
                           </button>
-                          <label className="sts-toggle">
-                            <input
-                              type="checkbox"
-                              checked={on}
-                              onChange={() => handleToggle(a)}
-                              aria-label={s.toggle}
-                            />
-                            <span className="sts-toggle-slider" />
-                          </label>
+                          <Switch checked={on} onChange={() => handleToggle(a)} label={s.toggle} />
                         </div>
                       );
                     })}
@@ -430,10 +423,18 @@ const AlarmsSheet: React.FC<Props> = ({
                 </div>
                 {choosingSound && (
                   <div className="as-sound-choices">
-                    <button type="button" className="as-chip" onClick={() => chooseSound("system")}>
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
+                      onClick={() => chooseSound("system")}
+                    >
                       {s.phoneSounds}
                     </button>
-                    <button type="button" className="as-chip" onClick={() => chooseSound("file")}>
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
+                      onClick={() => chooseSound("file")}
+                    >
                       {s.audioFile}
                     </button>
                   </div>
@@ -441,50 +442,36 @@ const AlarmsSheet: React.FC<Props> = ({
 
                 <div className="sts-row">
                   <span className="sts-row-label">{s.snooze}</span>
-                  <div className="as-seg as-seg--compact" role="group" aria-label={s.snooze}>
-                    {SNOOZE_CHOICES.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={"as-seg-btn" + (settings.snoozeMinutes === m ? " is-active" : "")}
-                        aria-pressed={settings.snoozeMinutes === m}
-                        onClick={() => changeSettings({ snoozeMinutes: m })}
-                      >
-                        {s.minutesShort.replace("{n}", num(m))}
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented
+                    compact
+                    label={s.snooze}
+                    options={SNOOZE_CHOICES.map((m) => ({
+                      value: m,
+                      label: s.minutesShort.replace("{n}", num(m)),
+                    }))}
+                    value={settings.snoozeMinutes}
+                    onChange={(m) => changeSettings({ snoozeMinutes: m })}
+                  />
                 </div>
 
                 <div className="sts-row">
                   <span className="sts-row-label">{s.vibrate}</span>
-                  <label className="sts-toggle">
-                    <input
-                      type="checkbox"
-                      checked={settings.vibrate}
-                      onChange={() => changeSettings({ vibrate: !settings.vibrate })}
-                      aria-label={s.vibrate}
-                    />
-                    <span className="sts-toggle-slider" />
-                  </label>
+                  <Switch
+                    checked={settings.vibrate}
+                    onChange={(vibrate) => changeSettings({ vibrate })}
+                    label={s.vibrate}
+                  />
                 </div>
 
                 <div className="as-field as-field--row-end">
                   <span className="sts-row-label">{s.ramadanStarts}</span>
                   <span className="as-hint">{s.ramadanStartsDesc}</span>
-                  <div className="as-seg" role="group" aria-label={s.ramadanStarts}>
-                    {RAMADAN_SHIFTS.map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        className={"as-seg-btn" + (settings.ramadanShiftDays === d ? " is-active" : "")}
-                        aria-pressed={settings.ramadanShiftDays === d}
-                        onClick={() => changeSettings({ ramadanShiftDays: d })}
-                      >
-                        {shiftLabel[d]}
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented
+                    label={s.ramadanStarts}
+                    options={RAMADAN_SHIFTS.map((d) => ({ value: d, label: shiftLabel[d] }))}
+                    value={settings.ramadanShiftDays}
+                    onChange={(d) => changeSettings({ ramadanShiftDays: d })}
+                  />
                 </div>
               </section>
             </>
