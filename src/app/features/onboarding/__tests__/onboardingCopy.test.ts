@@ -29,12 +29,12 @@ describe.each(["ar", "en"] as const)("%s copy", (lang) => {
   });
 
   it("covers every release feature", () => {
-    for (const r of ALL_RELEASES) for (const f of r.features) expect(copy.releases[`${r.id}.${f.key}`]?.title).toBeTruthy();
+    for (const r of ALL_RELEASES) for (const f of r.features) expect(copy.releases[f.key]?.title).toBeTruthy();
   });
 });
 
-it("every release has a unique id and at least one feature", () => {
-  const ids = ALL_RELEASES.map((r) => r.id);
-  expect(new Set(ids).size).toBe(ids.length);
+it("every feature has a unique key and every update at least one feature", () => {
+  const keys = ALL_RELEASES.flatMap((r) => r.features.map((f) => f.key));
+  expect(new Set(keys).size).toBe(keys.length);
   for (const r of ALL_RELEASES) expect(r.features.length).toBeGreaterThan(0);
 });

@@ -12,19 +12,29 @@ import {
 } from "../tourLogic";
 import type { Release } from "../tourCatalog";
 
-const rel = (id: string): Release => ({ id, features: [{ key: "x", art: "brand", route: "/", tourId: "home" }] });
+// One app update's announcements; a feature's key is what "seen" remembers.
+const rel = (...keys: string[]): Release => ({
+  features: keys.map((key) => ({ key, art: "brand" as const, route: "/", tourId: "home" as const })),
+});
 const state = (over = {}) => ({ welcomeDone: true, seenTours: [] as string[], seenReleases: [] as string[], ...over });
 
 describe("launchDeck", () => {
-  it("shows nothing when storage is unusable", () => expect(launchDeck(null, [rel("1")])).toBeNull());
+  it("shows nothing when storage is unusable", () => expect(launchDeck(null, [rel("a")])).toBeNull());
   it("shows the welcome until it is done", () =>
-    expect(launchDeck(state({ welcomeDone: false }), [rel("1")])).toEqual({ kind: "welcome" }));
-  it("shows unseen releases oldest first", () =>
-    expect(launchDeck(state({ seenReleases: ["1"] }), [rel("1"), rel("2"), rel("3")])).toEqual({
+    expect(launchDeck(state({ welcomeDone: false }), [rel("a")])).toEqual({ kind: "welcome" }));
+  it("shows unseen features oldest first", () =>
+    expect(launchDeck(state({ seenReleases: ["a"] }), [rel("a"), rel("b"), rel("c")])).toEqual({
       kind: "whatsNew",
-      releases: [rel("2"), rel("3")],
+      releases: [rel("b"), rel("c")],
     }));
-  it("shows nothing when everything is seen", () => expect(launchDeck(state({ seenReleases: ["1"] }), [rel("1")])).toBeNull());
+  it("shows only the unseen features of an update", () =>
+    expect(launchDeck(state({ seenReleases: ["a"] }), [rel("a", "b")])).toEqual({
+      kind: "whatsNew",
+      releases: [rel("b")],
+    }));
+  it("never shows a seen feature again, whatever version the app is now", () =>
+    expect(launchDeck(state({ seenReleases: ["a", "b"] }), [rel("a"), rel("b")])).toBeNull());
+  it("shows nothing when everything is seen", () => expect(launchDeck(state({ seenReleases: ["a"] }), [rel("a")])).toBeNull());
 });
 
 describe("pendingTours", () => {

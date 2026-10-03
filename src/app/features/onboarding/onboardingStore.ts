@@ -9,6 +9,7 @@ export const ONBOARDING_KEY = "rafiq_onboarding_v1";
 export interface OnboardingState {
   welcomeDone: boolean;
   seenTours: string[];
+  /** Keys of the announced features already seen (the name predates that). */
   seenReleases: string[];
 }
 

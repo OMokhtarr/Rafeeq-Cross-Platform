@@ -49,7 +49,7 @@ import { ensureSince } from "./app/features/tracker/trackerStore";
 import { toDayKey } from "./app/features/tracker/trackerLogic";
 import { TourProvider } from "./app/features/onboarding/TourProvider";
 import { initOnboarding } from "./app/features/onboarding/onboardingStore";
-import { RELEASE_IDS } from "./app/features/onboarding/tourCatalog";
+import { RELEASE_FEATURE_KEYS } from "./app/features/onboarding/tourCatalog";
 
 import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
@@ -227,7 +227,7 @@ const MainRouterOutlet: React.FC = () => {
 const App: React.FC = () => {
   // Must run before the effect below that calls ensureSince(): the tracker's
   // launch-time write is one of the keys detectExistingUser() looks for.
-  const [onboarding] = useState(() => initOnboarding(RELEASE_IDS));
+  const [onboarding] = useState(() => initOnboarding(RELEASE_FEATURE_KEYS));
   const [preloadProgress, setPreloadProgress] = useState({
     done: 0,
     total: 604,

@@ -14,7 +14,7 @@ import {
   resetTours as clearSeenTours,
 } from "./onboardingStore";
 import { SpotlightOverlay } from "./SpotlightOverlay";
-import { RELEASES, RELEASE_IDS, Release, TOURS, TourId, TourStep } from "./tourCatalog";
+import { RELEASES, RELEASE_FEATURE_KEYS, Release, TOURS, TourId, TourStep } from "./tourCatalog";
 import {
   Deck,
   TourRequest,
@@ -159,14 +159,14 @@ export const TourProvider: React.FC<{ initial: OnboardingState | null; children:
 
   const finishWelcome = useCallback(() => {
     const s = stateRef.current;
-    if (s && !s.welcomeDone) commit(completeWelcome(s, RELEASE_IDS));
+    if (s && !s.welcomeDone) commit(completeWelcome(s, RELEASE_FEATURE_KEYS));
     setDeck(null);
   }, [commit]);
 
   const closeWhatsNew = useCallback(
     (releases: Release[], route?: string) => {
       const s = stateRef.current;
-      if (s) commit(markReleasesSeen(s, releases.map((r) => r.id)));
+      if (s) commit(markReleasesSeen(s, releases.flatMap((r) => r.features.map((f) => f.key))));
       setDeck(null);
       if (route) history.push(route);
     },

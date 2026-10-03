@@ -4,6 +4,7 @@
  * checks it covers the catalog exactly.
  */
 import type { Lang } from "../../core/i18n/strings";
+import { toHindiNumbers } from "../../core/utils/arabic.util";
 import type { TourId, WelcomeSlideId } from "./tourCatalog";
 
 export interface StepCopy {
@@ -20,6 +21,8 @@ export interface OnboardingCopy {
     getStarted: string;
     showMe: string;
     whatsNew: string;
+    /** The What's new heading once the installed versionName is known. */
+    whatsNewIn: (version: string) => string;
     chooseLanguage: string;
     arabic: string;
     english: string;
@@ -28,7 +31,7 @@ export interface OnboardingCopy {
   };
   slides: Record<WelcomeSlideId, StepCopy>;
   tours: Record<TourId, Record<string, StepCopy>>;
-  /** Keyed `${release.id}.${feature.key}`. */
+  /** Keyed by the feature's key. */
   releases: Record<string, StepCopy>;
   settings: {
     section: string;
@@ -53,6 +56,7 @@ const ar: OnboardingCopy = {
     getStarted: "ابدأ الآن",
     showMe: "أرني",
     whatsNew: "ما الجديد",
+    whatsNewIn: (version) => `الجديد في الإصدار ${toHindiNumbers(version).replace(/\./g, "٫")}`,
     chooseLanguage: "اختر اللغة",
     arabic: "العربية",
     english: "English",
@@ -189,7 +193,7 @@ const ar: OnboardingCopy = {
     },
   },
   releases: {
-    "1.2.0.alarms": {
+    prayerAlarms: {
       title: "منبّهات الصلاة",
       body: "اضبط منبّهات ترنّ قبل الصلاة أو بعدها، كالسحور قبل الفجر، وتتبع المواقيت كل يوم. يمكن تخصيصها لأيام معيّنة أو لرمضان فقط.",
     },
@@ -217,6 +221,7 @@ const en: OnboardingCopy = {
     getStarted: "Get started",
     showMe: "Show me",
     whatsNew: "What's new",
+    whatsNewIn: (version) => `What's new in ${version}`,
     chooseLanguage: "Choose your language",
     arabic: "العربية",
     english: "English",
@@ -353,7 +358,7 @@ const en: OnboardingCopy = {
     },
   },
   releases: {
-    "1.2.0.alarms": {
+    prayerAlarms: {
       title: "Prayer alarms",
       body: "Set alarms that ring before or after a prayer, like suhoor before Fajr, and follow the prayer times every day. Limit them to certain days or to Ramadan.",
     },

@@ -8,8 +8,11 @@ import type { Release, TourId } from "./tourCatalog";
 
 export type Deck = { kind: "welcome" } | { kind: "whatsNew"; releases: Release[] } | null;
 
+/** Each update's features not yet seen; updates with none left are dropped. */
 export function unseenReleases(state: OnboardingState, releases: Release[]): Release[] {
-  return releases.filter((r) => !state.seenReleases.includes(r.id));
+  return releases
+    .map((r) => ({ ...r, features: r.features.filter((f) => !state.seenReleases.includes(f.key)) }))
+    .filter((r) => r.features.length > 0);
 }
 
 export function launchDeck(state: OnboardingState | null, releases: Release[]): Deck {

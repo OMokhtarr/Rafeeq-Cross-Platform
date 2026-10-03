@@ -10,7 +10,9 @@
  * Shipping a feature later:
  *  1. Add a tour with a NEW id here (+ copy, + data-tour targets, + the page's
  *     usePageTour list).
- *  2. Add a Release whose feature points at that route and tour id.
+ *  2. Add a Release whose feature (with a NEW key) points at that route and
+ *     tour id. Bump versionName in android/app/build.gradle as usual; the
+ *     What's new heading reads it, so no version number goes here.
  */
 
 import { Capacitor } from "@capacitor/core";
@@ -122,7 +124,10 @@ export const WELCOME_SLIDES: { id: WelcomeSlideId; art: IllustrationId }[] = [
 ];
 
 export interface ReleaseFeature {
-  /** Copy lives at onboardingCopy releases[`${release.id}.${key}`]. */
+  /**
+   * The feature's identity, unique across every release and never reused:
+   * "seen" remembers it, and its copy lives at onboardingCopy releases[key].
+   */
   key: string;
   art: IllustrationId;
   /** Where "Show me" navigates. */
@@ -133,19 +138,21 @@ export interface ReleaseFeature {
   platforms?: string[];
 }
 
+/**
+ * One app update's announcements. It carries no version number: seen state is
+ * kept per feature, so bumping versionName can never re-announce an old
+ * feature, and the deck's heading reads the installed versionName itself.
+ */
 export interface Release {
-  /** A label, e.g. "1.2.0". Nothing reads the app's versionName. */
-  id: string;
   features: ReleaseFeature[];
 }
 
-/** Oldest first. Everything before 1.2.0 is covered by the welcome slides. */
+/** Oldest first. Everything before prayer alarms is covered by the welcome slides. */
 export const ALL_RELEASES: Release[] = [
   {
-    id: "1.2.0",
     features: [
       // Ringing needs AlarmManager and a lock-screen activity: Android only.
-      { key: "alarms", art: "qibla", route: "/prayer-times", tourId: "prayerTimes.alarms", platforms: ["android"] },
+      { key: "prayerAlarms", art: "qibla", route: "/prayer-times", tourId: "prayerTimes.alarms", platforms: ["android"] },
     ],
   },
 ];
@@ -165,4 +172,5 @@ export function releasesForPlatform(releases: Release[], platform: string): Rele
 
 export const RELEASES: Release[] = releasesForPlatform(ALL_RELEASES, Capacitor.getPlatform());
 
-export const RELEASE_IDS = RELEASES.map((r) => r.id);
+/** Every announced feature's key; a new user starts with all of them seen. */
+export const RELEASE_FEATURE_KEYS = RELEASES.flatMap((r) => r.features.map((f) => f.key));

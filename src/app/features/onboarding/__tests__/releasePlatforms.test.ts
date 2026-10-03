@@ -1,7 +1,6 @@
 import { ALL_RELEASES, Release, releasesForPlatform } from "../tourCatalog";
 
 const release: Release = {
-  id: "9.9.9",
   features: [
     { key: "androidOnly", art: "qibla", route: "/prayer-times", tourId: "prayerTimes", platforms: ["android"] },
     { key: "everywhere", art: "qibla", route: "/prayer-times", tourId: "prayerTimes" },
@@ -19,7 +18,7 @@ it("drops a platform-limited feature elsewhere", () => {
 });
 
 it("drops a release with nothing left to announce", () => {
-  const onlyAndroid: Release = { id: "9.9.8", features: [release.features[0]] };
+  const onlyAndroid: Release = { features: [release.features[0]] };
   expect(releasesForPlatform([onlyAndroid], "web")).toEqual([]);
 });
 
