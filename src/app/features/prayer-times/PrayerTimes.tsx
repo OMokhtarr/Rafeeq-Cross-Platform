@@ -26,7 +26,8 @@ import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import QiblaHeader from "./QiblaHeader";
 import ShowTimesSheet from "./ShowTimesSheet";
-import PrayerMenuSheet, { type PrayerMenuTarget } from "./PrayerMenuSheet";
+import PrayerMenuSheet, { AlarmIcon, type PrayerMenuTarget } from "./PrayerMenuSheet";
+import AlarmsSheet from "./AlarmsSheet";
 import WidgetSettingsSheet from "./WidgetSettingsSheet";
 import CalculationSheet, { METHOD_LABEL_KEY, MADHABS } from "./CalculationSheet";
 import {
@@ -47,6 +48,15 @@ import {
   type PrayerMethod,
   type PrayerDay,
 } from "../../core/services/prayer/prayer-times.types";
+import {
+  alarmsSupported,
+  loadAlarms,
+} from "../../core/services/prayer/prayer-alarms.service";
+import type {
+  AlarmPrayer,
+  AlarmSettings,
+  PrayerAlarmWithNext,
+} from "../../core/services/prayer/prayer-alarms.types";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
@@ -82,6 +92,7 @@ const PrayerTimes: React.FC = () => {
   const [day, setDay] = useState<PrayerDay | null>(null);
   usePageTour(["prayerTimes.setup"], { ready: day !== null && !day.hasLocation });
   usePageTour(["prayerTimes"], { ready: !!day?.hasLocation });
+  usePageTour(["prayerTimes.alarms"], { ready: !!day?.hasLocation && alarmsSupported() });
   const [config, setConfig] = useState<{
     method: PrayerMethod;
     madhab: PrayerMadhab;
@@ -109,8 +120,28 @@ const PrayerTimes: React.FC = () => {
     supported: boolean;
     placed: number;
   } | null>(null);
+  const [alarmData, setAlarmData] = useState<{
+    alarms: PrayerAlarmWithNext[];
+    settings: AlarmSettings;
+  } | null>(null);
+  // Where the Alarms sheet was opened from decides where its back arrow
+  // goes: the menu, or straight off the page from a row's alarm icon.
+  const [alarmsFrom, setAlarmsFrom] = useState<{
+    via: "menu" | "row";
+    prayer: AlarmPrayer | null;
+  }>({ via: "menu", prayer: null });
   const [now, setNow] = useState(() => Date.now());
   const requestingRef = useRef(false);
+
+  // Android only; elsewhere alarms cannot ring and the feature stays hidden.
+  const loadAlarmData = useCallback(async () => {
+    if (!alarmsSupported()) return;
+    try {
+      setAlarmData(await loadAlarms());
+    } catch {
+      // Keeps the last list rather than blanking the menu row.
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const [cfg, d, v, p, w] = await Promise.all([
@@ -128,7 +159,10 @@ const PrayerTimes: React.FC = () => {
     setVisible(v);
     setPlace(p);
     setWidget(w);
-  }, []);
+    // Next ring times depend on today's prayer times, so they are re-read
+    // with them.
+    loadAlarmData();
+  }, [loadAlarmData]);
 
   useEffect(() => {
     load();
@@ -206,6 +240,27 @@ const PrayerTimes: React.FC = () => {
     : widget.placed > 0
     ? tp.widgetPlacedStatus
     : tp.widgetNotPlacedStatus;
+
+  const enabledAlarmPrayers = new Set(
+    (alarmData?.alarms ?? []).filter((a) => a.enabled).map((a) => a.prayer)
+  );
+  const alarmsOn = (alarmData?.alarms ?? []).filter((a) => a.enabled).length;
+  const alarmsStatus = !alarmData
+    ? null
+    : alarmsOn > 0
+    ? t.prayerAlarms.menuOn.replace(
+        "{n}",
+        lang === "ar" ? toHindiNumbers(alarmsOn) : String(alarmsOn)
+      )
+    : t.prayerAlarms.menuNone;
+
+  const openAlarms = (via: "menu" | "row", prayer: AlarmPrayer | null) => {
+    setAlarmsFrom({ via, prayer });
+    setSheet("alarms");
+  };
+
+  const selectFromMenu = (target: PrayerMenuTarget) =>
+    target === "alarms" ? openAlarms("menu", null) : setSheet(target);
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", {
@@ -311,7 +366,7 @@ const PrayerTimes: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      {...tourAttr("prayerTimes.menu")}
+                      {...tourAttr("prayerTimes.menu", "prayerTimes.alarms.menu")}
                       className="pt-menu-btn"
                       onClick={() => setSheet("menu")}
                       aria-haspopup="dialog"
@@ -349,6 +404,19 @@ const PrayerTimes: React.FC = () => {
                           >
                             <span className="pt-row-label">
                               {rowLabel(key)}
+                              {enabledAlarmPrayers.has(key as AlarmPrayer) && (
+                                <button
+                                  type="button"
+                                  className="pt-row-alarm"
+                                  aria-label={t.prayerAlarms.rowAlarms.replace(
+                                    "{prayer}",
+                                    rowLabel(key)
+                                  )}
+                                  onClick={() => openAlarms("row", key as AlarmPrayer)}
+                                >
+                                  <AlarmIcon className="pt-row-alarm-icon" />
+                                </button>
+                              )}
                             </span>
                             <span className="pt-row-time">
                               {formatTime(time)}
@@ -363,9 +431,10 @@ const PrayerTimes: React.FC = () => {
                 <PrayerMenuSheet
                   open={sheet === "menu"}
                   onClose={closeSheet}
-                  onSelect={setSheet}
+                  onSelect={selectFromMenu}
                   methodLabel={methodLabel}
                   widgetStatus={widgetStatus}
+                  alarmsStatus={alarmsStatus}
                 />
 
                 <ShowTimesSheet
@@ -384,6 +453,19 @@ const PrayerTimes: React.FC = () => {
                     onBack={backToMenu}
                     placed={widget.placed}
                     onChanged={load}
+                  />
+                )}
+
+                {alarmData && (
+                  <AlarmsSheet
+                    open={sheet === "alarms"}
+                    onClose={closeSheet}
+                    onBack={alarmsFrom.via === "menu" ? backToMenu : closeSheet}
+                    times={day.times}
+                    alarms={alarmData.alarms}
+                    settings={alarmData.settings}
+                    focusPrayer={alarmsFrom.prayer}
+                    onChanged={loadAlarmData}
                   />
                 )}
 

@@ -18,8 +18,9 @@ import type {
   RawPrayerDay,
 } from "./prayer-times.types";
 import { ADDITIONAL_KEYS, PRAYER_KEYS, PRAYERS_ONLY } from "./prayer-times.types";
+import type { PrayerAlarmPlugin } from "./prayer-alarms.types";
 
-interface RafeeqPrayerPlugin {
+interface RafeeqPrayerPlugin extends PrayerAlarmPlugin {
   getTimes(options?: { date?: string }): Promise<RawPrayerDay>;
   setLocation(options: { lat: number; lng: number }): Promise<void>;
   getConfig(): Promise<{
@@ -67,7 +68,8 @@ export interface ReminderHealth {
   aggressiveBattery: boolean;
 }
 
-const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
+/** Exported for prayer-alarms.service, so the plugin is registered once. */
+export const RafeeqPrayer = registerPlugin<RafeeqPrayerPlugin>("RafeeqPrayer");
 
 /**
  * The plugin is Kotlin-only — calculation lives natively so the home-screen

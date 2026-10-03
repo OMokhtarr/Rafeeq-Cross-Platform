@@ -55,6 +55,18 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- The prayer alarm's ringing screen. Painted at runtime from the app's
+         stored theme (see AlarmRingActivity); the window starts dark so a
+         night-mode alarm never flashes white while it inflates. -->
+    <style name="AlarmRingTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/widgetConfigNightBg</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
     <!-- One tappable setting row in the widget configuration screen: a label
          on one side, its current value or colour dot on the other. -->
     <style name="WidgetConfigRow">

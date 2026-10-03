@@ -159,6 +159,9 @@ const ar: OnboardingCopy = {
       qibla: { title: "القبلة", body: "أدر هاتفك حتى يشير المؤشر إلى الكعبة." },
       menu: { title: "الخيارات", body: "طريقة الحساب والمذهب، والمواقيت المعروضة، وإعدادات الأداة." },
     },
+    "prayerTimes.alarms": {
+      menu: { title: "منبّهات الصلاة", body: "من هنا تضبط منبّهًا قبل أي صلاة أو بعدها، يرنّ كل يوم حتى والتطبيق مغلق." },
+    },
     tracker: {
       item: { title: "سجّل عبادتك", body: "اضغط على العبادة بعد أدائها." },
       locked: { title: "لم يحن وقتها", body: "تُفتح كل عبادة عند دخول وقتها." },
@@ -185,7 +188,12 @@ const ar: OnboardingCopy = {
       streak: { title: "احمِ سلسلتك", body: "استخدم التجميد لتحافظ على سلسلتك في يوم يفوتك." },
     },
   },
-  releases: {},
+  releases: {
+    "1.2.0.alarms": {
+      title: "منبّهات الصلاة",
+      body: "اضبط منبّهات ترنّ قبل الصلاة أو بعدها، كالسحور قبل الفجر، وتتبع المواقيت كل يوم. يمكن تخصيصها لأيام معيّنة أو لرمضان فقط.",
+    },
+  },
   settings: {
     section: "الجولات والنصائح",
     welcome: "شرائح الترحيب",
@@ -315,6 +323,9 @@ const en: OnboardingCopy = {
       qibla: { title: "Qibla", body: "Turn your phone until the needle points to the Kaaba." },
       menu: { title: "Options", body: "Calculation method, madhab, which times to show, and widget settings." },
     },
+    "prayerTimes.alarms": {
+      menu: { title: "Prayer alarms", body: "Set alarms before or after any prayer here. They ring every day, even with the app closed." },
+    },
     tracker: {
       item: { title: "Log it", body: "Tap an act of worship once you've done it." },
       locked: { title: "Not yet", body: "Each act unlocks when its time comes in." },
@@ -341,7 +352,12 @@ const en: OnboardingCopy = {
       streak: { title: "Protect your streak", body: "Use a freeze to keep your streak on a day you miss." },
     },
   },
-  releases: {},
+  releases: {
+    "1.2.0.alarms": {
+      title: "Prayer alarms",
+      body: "Set alarms that ring before or after a prayer, like suhoor before Fajr, and follow the prayer times every day. Limit them to certain days or to Ramadan.",
+    },
+  },
   settings: {
     section: "Tours & tips",
     welcome: "Welcome slides",

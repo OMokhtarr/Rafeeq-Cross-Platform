@@ -54,4 +54,15 @@
     <string name="azkar_reminder_morning_text">حان وقت أذكار الصباح</string>
     <string name="azkar_reminder_evening_title">أذكار المساء</string>
     <string name="azkar_reminder_evening_text">حان وقت أذكار المساء</string>
+
+    <!-- منبّهات الصلاة -->
+    <string name="alarm_stop">إيقاف</string>
+    <string name="alarm_snooze">غفوة</string>
+    <string name="alarm_snooze_for">غفوة · %1$d د</string>
+    <string name="alarm_ringing">منبّه الصلاة</string>
+    <string name="alarm_missed_title">منبّه فائت</string>
+    <string name="alarm_channel_name">منبّهات الصلاة</string>
+    <string name="alarm_channel_desc">منبّهات ترنّ حول أوقات الصلاة</string>
+    <string name="alarm_missed_channel_name">منبّهات الصلاة الفائتة</string>
+    <string name="alarm_fallback_channel_name">منبّهات الصلاة (عند إيقاف المنبّهات الدقيقة)</string>
 </resources>

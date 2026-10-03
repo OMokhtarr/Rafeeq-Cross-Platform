@@ -162,6 +162,67 @@ export interface AppStrings {
   exitConfirm: string;
 
   /** Shown when a feature that needs the network is used while offline. */
+  /** Ringing alarms around prayer times (PrayerTimes → Alarms). */
+  prayerAlarms: {
+    menuLabel: string;
+    menuOn: string;
+    menuNone: string;
+    title: string;
+    desc: string;
+    add: string;
+    rowAlarms: string;
+    atPrayer: string;
+    before: string;
+    after: string;
+    offsetHint: string;
+    minutes: string;
+    label: string;
+    labelPlaceholder: string;
+    repeat: string;
+    everyDay: string;
+    ramadanOnly: string;
+    ramadanOnlyDesc: string;
+    ramadan: string;
+    rings: string;
+    todayAt: string;
+    tomorrowAt: string;
+    dateAt: string;
+    neverRings: string;
+    off: string;
+    toggle: string;
+    save: string;
+    delete: string;
+    newTitle: string;
+    editTitle: string;
+    back: string;
+    decrease: string;
+    increase: string;
+    settingsTitle: string;
+    sound: string;
+    defaultSound: string;
+    phoneSounds: string;
+    audioFile: string;
+    snooze: string;
+    minutesShort: string;
+    vibrate: string;
+    ramadanStarts: string;
+    ramadanStartsDesc: string;
+    ramadanEarlier: string;
+    ramadanCalculated: string;
+    ramadanLater: string;
+    warnNotifications: string;
+    warnExact: string;
+    warnFullScreen: string;
+    warnBattery: string;
+    allow: string;
+    openSettings: string;
+    notificationsNeeded: string;
+    saveFailed: string;
+    /** Short weekday names, ISO order: Monday first. */
+    dayChips: string[];
+    dayNames: string[];
+  };
+
   offline: {
     /** Generic message for any online-only action. */
     message: string;
@@ -771,6 +832,65 @@ const ar: AppStrings = {
     madhabHint: "يؤخّر المذهب الحنفي وقت العصر عن الشافعي.",
   },
   exitConfirm: "اسحب مرة أخرى للخروج",
+  prayerAlarms: {
+    menuLabel: "المنبّهات",
+    menuOn: "{n} مفعّل",
+    menuNone: "لا توجد منبّهات",
+    title: "منبّهات الصلاة",
+    desc: "منبّه يرنّ قبل الصلاة أو بعدها كل يوم، حتى والتطبيق مغلق",
+    add: "إضافة منبّه",
+    rowAlarms: "منبّهات {prayer}",
+    atPrayer: "عند دخول الوقت",
+    before: "قبل",
+    after: "بعد",
+    offsetHint: "حتى ٣ ساعات من وقت الصلاة",
+    minutes: "الدقائق",
+    label: "الاسم",
+    labelPlaceholder: "مثلًا: السحور",
+    repeat: "التكرار",
+    everyDay: "كل يوم",
+    ramadanOnly: "في رمضان فقط",
+    ramadanOnlyDesc: "حسب تقويم أم القرى، ويمكن تعديل بدايته من إعدادات المنبّهات.",
+    ramadan: "رمضان",
+    rings: "يرنّ {when}",
+    todayAt: "اليوم {time}",
+    tomorrowAt: "غدًا {time}",
+    dateAt: "{date} {time}",
+    neverRings: "لن يرنّ بهذه الإعدادات",
+    off: "متوقف",
+    toggle: "تشغيل المنبّه أو إيقافه",
+    save: "حفظ المنبّه",
+    delete: "حذف المنبّه",
+    newTitle: "منبّه جديد لصلاة {prayer}",
+    editTitle: "منبّه صلاة {prayer}",
+    back: "العودة إلى المنبّهات",
+    decrease: "دقائق أقل",
+    increase: "دقائق أكثر",
+    settingsTitle: "إعدادات المنبّهات",
+    sound: "الصوت",
+    defaultSound: "صوت المنبّه في الهاتف",
+    phoneSounds: "أصوات الهاتف",
+    audioFile: "ملف صوتي",
+    snooze: "الغفوة",
+    minutesShort: "{n} د",
+    vibrate: "الاهتزاز",
+    ramadanStarts: "بداية رمضان",
+    ramadanStartsDesc: "لتوافق رؤية الهلال في بلدك",
+    ramadanEarlier: "قبل بيوم",
+    ramadanCalculated: "حسب التقويم",
+    ramadanLater: "بعد بيوم",
+    warnNotifications: "الإشعارات متوقفة، فلن يظهر زر الإيقاف عند رنين المنبّه.",
+    warnExact: "قد ترنّ المنبّهات متأخرة بضع دقائق.",
+    warnFullScreen: "لن تظهر المنبّهات على شاشة القفل كاملة، بل كإشعار.",
+    warnBattery: "قد يوقف هاتفك المنبّهات لتوفير البطارية.",
+    allow: "سماح",
+    openSettings: "فتح الإعدادات",
+    notificationsNeeded: "اسمح بالإشعارات لتفعيل المنبّهات.",
+    saveFailed: "تعذّر حفظ المنبّه. حاول مرة أخرى.",
+    dayChips: ["ن", "ث", "ر", "خ", "ج", "س", "ح"],
+    dayNames: ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"],
+  },
+
   offline: {
     message: "هذه الميزة تتطلب الاتصال بالإنترنت",
     download: "تحميل التلاوات يتطلب الاتصال بالإنترنت",
@@ -1397,6 +1517,65 @@ const en: AppStrings = {
     madhabHint: "The Hanafi madhab sets Asr later than the Shafi'i.",
   },
   exitConfirm: "Swipe again to exit",
+  prayerAlarms: {
+    menuLabel: "Alarms",
+    menuOn: "{n} on",
+    menuNone: "None set",
+    title: "Prayer alarms",
+    desc: "Ring before or after a prayer every day, even with the app closed",
+    add: "Add alarm",
+    rowAlarms: "Alarms for {prayer}",
+    atPrayer: "At the prayer time",
+    before: "Before",
+    after: "After",
+    offsetHint: "Up to 3 hours from the prayer",
+    minutes: "Minutes",
+    label: "Label",
+    labelPlaceholder: "For example, Suhoor",
+    repeat: "Repeat",
+    everyDay: "Every day",
+    ramadanOnly: "Only during Ramadan",
+    ramadanOnlyDesc: "Uses the Umm al-Qura calendar. Adjust the start under alarm settings.",
+    ramadan: "Ramadan",
+    rings: "Rings {when}",
+    todayAt: "today at {time}",
+    tomorrowAt: "tomorrow at {time}",
+    dateAt: "{date} at {time}",
+    neverRings: "Won't ring with these settings",
+    off: "Off",
+    toggle: "Turn alarm on or off",
+    save: "Save alarm",
+    delete: "Delete alarm",
+    newTitle: "New {prayer} alarm",
+    editTitle: "{prayer} alarm",
+    back: "Back to alarms",
+    decrease: "Fewer minutes",
+    increase: "More minutes",
+    settingsTitle: "Alarm settings",
+    sound: "Sound",
+    defaultSound: "Phone's alarm sound",
+    phoneSounds: "Phone sounds",
+    audioFile: "Audio file",
+    snooze: "Snooze",
+    minutesShort: "{n} min",
+    vibrate: "Vibrate",
+    ramadanStarts: "Ramadan starts",
+    ramadanStartsDesc: "Match your local moon sighting",
+    ramadanEarlier: "Day earlier",
+    ramadanCalculated: "As calculated",
+    ramadanLater: "Day later",
+    warnNotifications: "Notifications are off, so a ringing alarm has no Stop button.",
+    warnExact: "Alarms may ring a few minutes late.",
+    warnFullScreen: "Alarms won't fill the lock screen. They'll show as a notification.",
+    warnBattery: "Your phone may stop alarms to save battery.",
+    allow: "Allow",
+    openSettings: "Open settings",
+    notificationsNeeded: "Allow notifications to turn alarms on.",
+    saveFailed: "Couldn't save the alarm. Try again.",
+    dayChips: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    dayNames: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+  },
+
   offline: {
     message: "This feature is only available when connected to the Internet",
     download: "Downloading recitations requires an Internet connection",

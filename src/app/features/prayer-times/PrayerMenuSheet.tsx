@@ -8,8 +8,8 @@
  * calculation method, whether a widget is placed — so the menu answers "what
  * is it set to" without being opened further.
  *
- * The widget row is absent where the platform has no widget at all (web,
- * iOS), rather than present and inert.
+ * The widget and alarm rows are absent where the platform has no widget or
+ * cannot ring alarms (web, iOS), rather than present and inert.
  */
 
 import React, { useEffect } from "react";
@@ -18,7 +18,7 @@ import { registerOverlay } from "../../core/utils/overlay-registry";
 import "./PrayerSheet.css";
 import "./PrayerMenuSheet.css";
 
-export type PrayerMenuTarget = "shown" | "widget" | "calculation";
+export type PrayerMenuTarget = "shown" | "widget" | "calculation" | "alarms";
 
 interface Props {
   open: boolean;
@@ -28,6 +28,8 @@ interface Props {
   methodLabel: string;
   /** Absent where the platform has no home-screen widget. */
   widgetStatus: string | null;
+  /** Absent where alarms cannot ring (anywhere but Android). */
+  alarmsStatus: string | null;
 }
 
 const EyeIcon = () => (
@@ -59,6 +61,20 @@ const WidgetIcon = () => (
   >
     <rect x="3" y="4" width="18" height="16" rx="2.5" />
     <rect x="6" y="9" width="12" height="6" rx="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const AlarmIcon: React.FC<{ className?: string }> = ({ className = "pms-option-icon" }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="13" r="7.5" />
+    <path d="M12 9v4.2l2.6 1.6M4.5 4.8 7 2.8M19.5 4.8 17 2.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -98,6 +114,7 @@ const PrayerMenuSheet: React.FC<Props> = ({
   onSelect,
   methodLabel,
   widgetStatus,
+  alarmsStatus,
 }) => {
   const { t, isRTL } = useLang();
   const tp = t.prayerTimes;
@@ -147,6 +164,21 @@ const PrayerMenuSheet: React.FC<Props> = ({
             </span>
             <Chevron />
           </button>
+
+          {alarmsStatus !== null && (
+            <button
+              type="button"
+              className="pms-option"
+              onClick={() => onSelect("alarms")}
+            >
+              <AlarmIcon />
+              <span className="pms-option-text">
+                <span className="pms-option-label">{t.prayerAlarms.menuLabel}</span>
+                <span className="pms-option-value">{alarmsStatus}</span>
+              </span>
+              <Chevron />
+            </button>
+          )}
 
           {widgetStatus !== null && (
             <button

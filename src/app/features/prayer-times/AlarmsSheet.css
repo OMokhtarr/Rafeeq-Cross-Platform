@@ -1,0 +1,491 @@
+/* Alarms sheet — prayer alarms grouped under their prayers, the alarm
+   editor, and the shared alarm settings. Shell and rows come from
+   PrayerSheet.css, the switch from ShowTimesSheet.css; this file adds only
+   what is the alarms' own.
+
+   The ring time is the one large element: it is the number the user sets
+   and checks. Everything else stays at the sheet's body size. */
+
+/* ── Prayer groups ───────────────────────────────────────────────────────── */
+
+.as-prayer,
+.as-settings {
+  padding-top: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  scroll-margin-top: var(--space-2);
+}
+
+.as-settings {
+  border-bottom: none;
+}
+
+.as-prayer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.as-prayer-time {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Alarm row ───────────────────────────────────────────────────────────── */
+
+.as-alarm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  transition: opacity var(--transition-fast);
+}
+
+.as-alarm.is-off {
+  opacity: 0.5;
+}
+
+.as-alarm-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.as-alarm-open:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.as-alarm-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 4.5em;
+}
+
+.as-alarm-clock {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-alarm-offset {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  /* "−1:30" must not reorder inside Arabic text. */
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+[dir="rtl"] .as-alarm-offset {
+  text-align: end;
+}
+
+.as-alarm-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.as-alarm-label {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-alarm-repeat {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.as-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 var(--space-3);
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  color: var(--color-gold);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.as-add svg {
+  width: 18px;
+  height: 18px;
+}
+
+.as-add:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Warnings ────────────────────────────────────────────────────────────── */
+/* The only tinted blocks in the sheet, because each needs an action. */
+
+.as-warnings {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.as-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-gold-faint);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-md);
+}
+
+.as-warning-text {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.as-warning-action {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-gold);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-on-dark);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.as-error {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-error, #e53935);
+}
+
+/* ── Settings values ─────────────────────────────────────────────────────── */
+
+.as-value-btn {
+  min-width: 0;
+  max-width: 60%;
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  color: var(--color-gold);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.as-sound-choices {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 0 var(--space-3);
+}
+
+.as-chip {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.as-chip:active {
+  background: var(--color-gold-faint);
+}
+
+/* ── Segmented control ───────────────────────────────────────────────────── */
+
+.as-seg {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--color-gold-faint);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+}
+
+.as-seg-btn {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.as-seg-btn.is-active {
+  background: var(--color-gold);
+  color: var(--color-text-on-dark);
+}
+
+.as-seg-btn:focus-visible,
+.as-step:focus-visible,
+.as-day:focus-visible,
+.as-minutes:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.as-seg--compact {
+  flex: 0 0 auto;
+}
+
+.as-seg--compact .as-seg-btn {
+  padding: var(--space-1) var(--space-3);
+}
+
+/* ── Editor ──────────────────────────────────────────────────────────────── */
+
+.as-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-3);
+}
+
+.as-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.as-field--row-end {
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.as-field-label {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.as-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.as-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.as-step {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.as-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.as-step:not(:disabled):active {
+  background: var(--color-gold-faint);
+}
+
+/* The stepper reads − … + on the physical left-to-right line in both
+   languages, like a number line, so it does not mirror. */
+.as-stepper {
+  direction: ltr;
+}
+
+.as-minutes,
+.as-minutes-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 9em;
+  height: 56px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--color-gold);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  cursor: text;
+}
+
+.as-minutes {
+  font-size: var(--text-2xl);
+}
+
+.as-minutes-input {
+  outline: none;
+}
+
+.as-preview {
+  margin: 0;
+  min-height: 1.4em;
+  text-align: center;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-gold);
+}
+
+.as-text {
+  padding: var(--space-3);
+  background: var(--color-bg-card-alt);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.as-text:focus {
+  outline: none;
+  border-color: var(--color-gold);
+}
+
+.as-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.as-day {
+  aspect-ratio: 1;
+  max-height: 44px;
+  background: none;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.as-day.is-active {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: var(--color-text-on-dark);
+}
+
+.as-switch-row {
+  border-bottom: none;
+  padding: 0;
+}
+
+.as-switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.as-primary {
+  padding: var(--space-3);
+  background: var(--color-gold);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-on-dark);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.as-primary:disabled,
+.as-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.as-danger {
+  margin-top: calc(-1 * var(--space-3));
+  padding: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--color-error, #e53935);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.as-primary:focus-visible,
+.as-danger:focus-visible,
+.as-warning-action:focus-visible,
+.as-value-btn:focus-visible,
+.as-chip:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .as-alarm,
+  .as-seg-btn,
+  .as-day {
+    transition: none;
+  }
+}
