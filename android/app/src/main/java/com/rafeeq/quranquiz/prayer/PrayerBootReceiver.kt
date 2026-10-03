@@ -20,6 +20,9 @@ import android.content.Intent
  * Granting exact alarms re-arms too, so the pending (inexact) alarm is
  * replaced by an exact one straight away.
  *
+ * The ringing prayer alarms ([PrayerAlarmClockScheduler]) are re-armed on
+ * every one of these events for the same reasons.
+ *
  * A device-language change redraws the widgets in the new language. A place
  * name cached before names were stored in both languages is looked up again
  * then, off the main thread.
@@ -29,6 +32,7 @@ class PrayerBootReceiver : BroadcastReceiver() {
         PrayerAlarmScheduler.scheduleNext(context)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
         AzkarReminderScheduler.scheduleNext(context)
+        PrayerAlarmClockScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
 
         if (intent.action == Intent.ACTION_LOCALE_CHANGED && !PrayerConfig.hasBothPlaceNames(context)) {

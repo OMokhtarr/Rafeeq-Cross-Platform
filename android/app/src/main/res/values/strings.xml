@@ -61,4 +61,15 @@
     <string name="azkar_reminder_morning_text">Time for the morning remembrances</string>
     <string name="azkar_reminder_evening_title">Evening azkar</string>
     <string name="azkar_reminder_evening_text">Time for the evening remembrances</string>
+
+    <!-- Prayer alarms (the ringing ones; reminders are separate) -->
+    <string name="alarm_stop">Stop</string>
+    <string name="alarm_snooze">Snooze</string>
+    <string name="alarm_snooze_for">Snooze · %1$d min</string>
+    <string name="alarm_ringing">Prayer alarm</string>
+    <string name="alarm_missed_title">Missed alarm</string>
+    <string name="alarm_channel_name">Prayer alarms</string>
+    <string name="alarm_channel_desc">Ringing alarms set around prayer times</string>
+    <string name="alarm_missed_channel_name">Missed prayer alarms</string>
+    <string name="alarm_fallback_channel_name">Prayer alarms (when exact alarms are off)</string>
 </resources>

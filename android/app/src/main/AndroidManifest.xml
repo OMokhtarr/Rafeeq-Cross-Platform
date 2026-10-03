@@ -58,6 +58,31 @@
             android:name=".prayer.AzkarReminderReceiver"
             android:exported="false" />
 
+        <!-- Prayer alarms: the ring/snooze broadcast from AlarmManager, the
+             service that rings, and the screen shown over the lock screen.
+             systemExempted is the service type Android reserves for apps
+             holding the exact-alarm permission that continue an alarm in the
+             background. -->
+        <receiver
+            android:name=".prayer.PrayerAlarmRingReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".prayer.AlarmRingService"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted" />
+
+        <activity
+            android:name=".prayer.AlarmRingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/AlarmRingTheme" />
+
         <receiver
             android:name=".prayer.PrayerBootReceiver"
             android:exported="false">
@@ -194,4 +219,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Alarms do not survive a reboot; the boot receiver re-arms them. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Prayer alarms: ring over the lock screen, keep ringing from a
+         foreground service, hold the CPU awake while ringing, and vibrate. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

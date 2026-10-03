@@ -87,6 +87,7 @@ class RafeeqPrayerPlugin : Plugin() {
         // something. Both no-op when their reminders are off.
         PrayerAlarmScheduler.scheduleNext(context)
         AzkarReminderScheduler.scheduleNext(context)
+        PrayerAlarmClockScheduler.scheduleNext(context)
     }
 
     /**
@@ -180,6 +181,8 @@ class RafeeqPrayerPlugin : Plugin() {
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
         // A first fix moves the azkar slots from fixed hours onto the prayers.
         AzkarReminderScheduler.scheduleNext(context)
+        // New coordinates move every prayer an alarm is measured from.
+        PrayerAlarmClockScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
 
         // The name is best-effort decoration, and Geocoder blocks on the
@@ -208,6 +211,7 @@ class RafeeqPrayerPlugin : Plugin() {
         // Both move Fajr or Asr, which the pending azkar slot was computed from.
         if (call.data.has("method") || call.data.has("madhab")) {
             AzkarReminderScheduler.scheduleNext(context)
+            PrayerAlarmClockScheduler.scheduleNext(context)
         }
         // `has` before `getBoolean`: a plain getBoolean cannot tell "absent"
         // from "false", so a call that only changes the method would quietly
