@@ -294,6 +294,46 @@ ion-content::part(scroll) {
   font-size: var(--text-md);
 }
 
+/* Marks a prayer that has an alarm switched on, and opens its alarms.
+   Small and quiet: the timetable stays the page's subject. The button is
+   larger than the glyph so it is still a comfortable tap target. */
+.pt-row-alarm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-inline-start: var(--space-1);
+  padding: 0;
+  vertical-align: middle;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-gold);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pt-row-alarm:active {
+  background: var(--color-gold-faint);
+}
+
+.pt-row-alarm:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 1px;
+}
+
+/* Inside the next prayer's chip the tap area overlaps the chip's padding
+   instead of making the chip taller than its neighbours' rows. */
+.pt-row--next .pt-row-alarm {
+  margin-block: calc(-1 * var(--space-2));
+}
+
+.pt-row-alarm-icon {
+  width: 17px;
+  height: 17px;
+}
+
 /* The next prayer: outlined, its name in a filled chip. The shape marks it
    even where the gold is hard to tell apart. */
 .pt-row--next {
