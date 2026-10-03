@@ -1,9 +1,11 @@
 /*
  * WORSHIP TRACKER
- * Outlined cards on the content background, like the More grid. One accent
- * (the app gold) marks progress: the ring, today's strip day, ticked acts and
- * the share chips. Locked acts fade rather than hide, so the day's shape
- * stays visible.
+ * Outlined cards on the content background, like the More grid. The accent
+ * is the app's green, as on Quiz, Azkar and Hifz: share chips, links, the
+ * weight buttons and today's markers. The summary card, ticked acts and the
+ * chosen calendar day keep the Home screen's forest green with gold (see
+ * "Rafeeq green" below); icons and focus rings stay gold. Locked acts fade
+ * rather than hide, so the day's shape stays visible.
  */
 
 .wt-content {
@@ -19,7 +21,8 @@
 }
 
 .wt-page {
-  --wt-accent: var(--color-gold);
+  --wt-accent: var(--color-quran);
+  --wt-accent-text: var(--color-quran-text);
   --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
   box-sizing: border-box;
   max-width: var(--max-width-mobile, 600px);
@@ -149,7 +152,7 @@
 }
 
 .wt-strip-day.is-today {
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   font-weight: 700;
 }
 
@@ -198,7 +201,7 @@
   padding: 2px 10px;
   border-radius: var(--radius-pill);
   background: var(--wt-accent-soft);
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   font-size: var(--text-xs);
   white-space: nowrap;
 }
@@ -288,7 +291,7 @@
 .wt-prayer:focus-visible,
 .wt-item:focus-visible,
 .wt-round-btn:focus-visible {
-  outline: 2px solid var(--wt-accent);
+  outline: 2px solid var(--color-gold);
   outline-offset: 2px;
 }
 
@@ -299,13 +302,14 @@
 }
 
 .wt-check {
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
 }
 
 /* ── Sheets (rendered inside AccountModal) ──────────────────────────────── */
 
 .wt-sheet {
-  --wt-accent: var(--color-gold);
+  --wt-accent: var(--color-quran);
+  --wt-accent-text: var(--color-quran-text);
   --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
   display: flex;
   flex-direction: column;
@@ -356,7 +360,7 @@
   border-radius: 50%;
   border: 1px solid var(--wt-accent-soft);
   background: transparent;
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   font-size: var(--text-base);
   line-height: 1;
   display: inline-flex;
@@ -373,39 +377,6 @@
 .wt-settings-fixed {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-}
-
-.wt-switch {
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  flex-shrink: 0;
-  width: 46px;
-  height: 26px;
-  margin: 0;
-  border-radius: 13px;
-  background: var(--color-progress-track, var(--color-border-card));
-  transition: background var(--transition-fast);
-}
-
-.wt-switch::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  inset-inline-start: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  transition: inset-inline-start var(--transition-fast);
-}
-
-.wt-switch:checked {
-  background: var(--wt-accent);
-}
-
-.wt-switch:checked::after {
-  inset-inline-start: 23px;
 }
 
 .wt-sheet-footnote {
@@ -442,7 +413,7 @@
   border: 0;
   background: none;
   font: inherit;
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -465,9 +436,7 @@
 @media (prefers-reduced-motion: reduce) {
   .wt-ring::before,
   .wt-prayer,
-  .wt-item,
-  .wt-switch,
-  .wt-switch::after {
+  .wt-item {
     transition: none;
   }
 }
@@ -487,7 +456,7 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: var(--wt-accent);
+  color: var(--color-gold);
 }
 
 .wt-icon {
@@ -539,7 +508,7 @@
 }
 
 .is-done .wt-item-title {
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   font-weight: 600;
 }
 
@@ -598,7 +567,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--wt-accent);
+  color: var(--wt-accent-text);
   font: inherit;
   font-weight: 700;
 }

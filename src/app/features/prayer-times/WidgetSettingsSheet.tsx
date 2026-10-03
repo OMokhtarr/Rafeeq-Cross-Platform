@@ -149,7 +149,7 @@ const WidgetSettingsSheet: React.FC<Props> = ({
                 copy of the same timetable. */}
             <button
               type="button"
-              className="wss-btn"
+              className="rf-btn rf-btn--primary rf-btn--block wss-btn"
               onClick={placed > 0 ? openHomeScreen : handleAdd}
             >
               <WidgetIcon />
@@ -161,7 +161,7 @@ const WidgetSettingsSheet: React.FC<Props> = ({
             {placed > 0 && (
               <button
                 type="button"
-                className="wss-btn wss-btn--secondary"
+                className="rf-btn rf-btn--secondary rf-btn--block wss-btn wss-btn--secondary"
                 onClick={handleAppearance}
               >
                 <AppearanceIcon />

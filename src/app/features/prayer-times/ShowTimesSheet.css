@@ -1,6 +1,7 @@
 /* Show-times sheet — which prayer rows appear on the page.
-   The backdrop, panel, header and row chrome come from PrayerSheet.css; only
-   the toggle and the obligatory-prayer note are this sheet's own.
+   The backdrop, panel, header and row chrome come from PrayerSheet.css and
+   the switch is the shared <Switch>; only the obligatory-prayer note is this
+   sheet's own.
 
    No `var(--token, #literal)` fallbacks here: the literal would be a day
    colour baked into a night app on the one occasion it fired. */
@@ -12,81 +13,4 @@
   font-weight: 600;
   color: var(--color-gold);
   flex-shrink: 0;
-}
-
-/* ── Toggle switch ────────────────────────────────────────────────────────── */
-
-.sts-toggle {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.sts-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.sts-toggle-slider {
-  position: absolute;
-  inset: 0;
-  background: var(--color-border-subtle);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-/* Logical inset, not `left`: under RTL the knob's resting edge has to flip
-   with the writing direction. With a physical `left` it stayed pinned to the
-   physical left edge while the checked transform pushed it the other way, so
-   the knob travelled straight out of the slider.
-
-   Centred with top/margin rather than `bottom: 3px` so the 1px border added
-   above does not push it off-centre. */
-.sts-toggle-slider::before {
-  content: "";
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  inset-inline-start: 2px;
-  top: 50%;
-  margin-top: -9px;
-  background: var(--color-text-on-dark);
-  border-radius: 50%;
-  transition: transform var(--transition-fast);
-}
-
-.sts-toggle input:checked + .sts-toggle-slider {
-  background: var(--color-gold);
-  border-color: var(--color-gold);
-}
-
-/* Travels toward the slider's end edge in both directions. */
-.sts-toggle input:checked + .sts-toggle-slider::before {
-  transform: translateX(18px);
-}
-
-[dir="rtl"] .sts-toggle input:checked + .sts-toggle-slider::before {
-  transform: translateX(-18px);
-}
-
-/* Keyboard focus has to be visible even though the input itself is hidden. */
-.sts-toggle input:focus-visible + .sts-toggle-slider {
-  outline: 2px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-/* ── Reduced motion ───────────────────────────────────────────────────────── */
-
-@media (prefers-reduced-motion: reduce) {
-  .sts-toggle-slider,
-  .sts-toggle-slider::before {
-    transition: none;
-  }
 }

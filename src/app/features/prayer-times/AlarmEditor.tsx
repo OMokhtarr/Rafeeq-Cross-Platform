@@ -19,6 +19,8 @@ import {
   WEEK_FROM_SATURDAY,
   type PrayerAlarm,
 } from "../../core/services/prayer/prayer-alarms.types";
+import { Segmented } from "../../shared/components/controls/Segmented";
+import { Switch } from "../../shared/components/controls/Switch";
 import { formatWhen } from "./alarmFormat";
 
 interface Props {
@@ -90,19 +92,17 @@ const AlarmEditor: React.FC<Props> = ({ alarm, isNew, error, saving, onSave, onD
   return (
     <div className="as-editor">
       <div className="as-field">
-        <div className="as-seg" role="group" aria-label={s.atPrayer}>
-          {(["before", "after"] as const).map((dir) => (
-            <button
-              key={dir}
-              type="button"
-              className={"as-seg-btn" + (direction === dir && minutes > 0 ? " is-active" : "")}
-              aria-pressed={direction === dir && minutes > 0}
-              onClick={() => setDirection(dir)}
-            >
-              {s[dir]}
-            </button>
-          ))}
-        </div>
+        {/* Neither is chosen at the prayer time itself, where the direction
+            has no meaning yet. */}
+        <Segmented<"before" | "after">
+          label={s.atPrayer}
+          options={[
+            { value: "before", label: s.before },
+            { value: "after", label: s.after },
+          ]}
+          value={minutes > 0 ? direction : null}
+          onChange={setDirection}
+        />
 
         <div className="as-stepper">
           {STEPS.slice(0, 2).map((d) => (
@@ -193,7 +193,7 @@ const AlarmEditor: React.FC<Props> = ({ alarm, isNew, error, saving, onSave, onD
             <button
               key={d}
               type="button"
-              className={"as-day" + (days.includes(d) ? " is-active" : "")}
+              className={"rf-chip as-day" + (days.includes(d) ? " is-active" : "")}
               aria-pressed={days.includes(d)}
               aria-label={s.dayNames[d - 1]}
               onClick={() => toggleDay(d)}
@@ -209,15 +209,7 @@ const AlarmEditor: React.FC<Props> = ({ alarm, isNew, error, saving, onSave, onD
           <span className="sts-row-label">{s.ramadanOnly}</span>
           <span className="as-hint">{s.ramadanOnlyDesc}</span>
         </span>
-        <label className="sts-toggle">
-          <input
-            type="checkbox"
-            checked={ramadanOnly}
-            onChange={() => setRamadanOnly((v) => !v)}
-            aria-label={s.ramadanOnly}
-          />
-          <span className="sts-toggle-slider" />
-        </label>
+        <Switch checked={ramadanOnly} onChange={setRamadanOnly} label={s.ramadanOnly} />
       </div>
 
       {error && (
@@ -228,7 +220,7 @@ const AlarmEditor: React.FC<Props> = ({ alarm, isNew, error, saving, onSave, onD
 
       <button
         type="button"
-        className="as-primary"
+        className="rf-btn rf-btn--primary rf-btn--block"
         disabled={saving}
         onClick={() => onSave(draft)}
       >

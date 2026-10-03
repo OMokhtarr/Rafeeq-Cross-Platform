@@ -193,6 +193,9 @@
 
   /* Category accents */
   --color-quran: #0f7a5a;
+  /* Green as text: the night green is a fill colour and too dark to read on
+     dark surfaces, so text uses the brighter brand green (also the day one). */
+  --color-quran-text: #1a9a72;
   --color-quiz: #c8773a;
   --color-azkar: #5a9fd4;
 
@@ -288,6 +291,7 @@
 
   /* Category accents */
   --color-quran: #1a9a72;
+  --color-quran-text: #1a9a72;
   --color-quiz: #c5551e;
   --color-azkar: #2a6fa5;
 

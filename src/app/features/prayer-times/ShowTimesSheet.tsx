@@ -17,6 +17,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
 import { registerOverlay } from "../../core/utils/overlay-registry";
+import { Switch } from "../../shared/components/controls/Switch";
 import {
   getVisibleTimes,
   setVisibleTimes,
@@ -142,15 +143,11 @@ const ShowTimesSheet: React.FC<Props> = ({ open, onClose, onChanged, onBack }) =
                 {obligatory ? (
                   <span className="sts-always">{t.prayerTimes.alwaysShown}</span>
                 ) : (
-                  <label className="sts-toggle">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToggle(key)}
-                      aria-label={t.prayerTimes[key]}
-                    />
-                    <span className="sts-toggle-slider" />
-                  </label>
+                  <Switch
+                    checked={checked}
+                    onChange={() => handleToggle(key)}
+                    label={t.prayerTimes[key]}
+                  />
                 )}
               </div>
             );

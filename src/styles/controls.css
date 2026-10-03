@@ -1,0 +1,230 @@
+/* ═══════════════════════════════════════════════
+   RAFEEQ CONTROLS
+   The switch, segmented choice, buttons and chips every page shares.
+
+   The rule they encode, taken from Quiz, Azkar, Hifz, Settings and Account:
+   green (--color-quran) is for what the user acts on and what is on or
+   chosen — primary buttons, switches that are on, the chosen option — and
+   text on it is white. Gold stays for structure: borders, headings, icons,
+   faint tints and the focus ring.
+
+   Pages use these instead of drawing their own, so a new page cannot drift
+   into a different look. Imported once from index.css.
+   ═══════════════════════════════════════════════ */
+
+/* ── Switch (<Switch>) ─────────────────────────────────────────────────────
+   Settings' switch, unchanged in look: 50×28 track, white knob. */
+
+.rf-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.rf-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rf-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-progress-track);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-slow);
+}
+
+.rf-switch-track::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-text-on-dark);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform var(--transition-slow);
+}
+
+.rf-switch input:checked + .rf-switch-track {
+  background: var(--color-quran);
+}
+
+/* The knob travels toward the end edge in both writing directions. */
+.rf-switch input:checked + .rf-switch-track::before {
+  transform: translateX(20px);
+}
+
+[dir="rtl"] .rf-switch input:checked + .rf-switch-track::before {
+  transform: translateX(-20px);
+}
+
+.rf-switch input:focus-visible + .rf-switch-track {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.rf-switch.is-disabled {
+  opacity: 0.5;
+}
+
+.rf-switch.is-disabled .rf-switch-track {
+  cursor: default;
+}
+
+/* ── Segmented (<Segmented>) ───────────────────────────────────────────────
+   Hifz's mode tabs: outlined pills, the chosen one filled green. */
+
+.rf-seg {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.rf-seg--compact {
+  flex: 0 0 auto;
+}
+
+.rf-seg-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.rf-seg--compact .rf-seg-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.rf-seg-btn.is-active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────
+   rf-btn + one of --primary (green, the page's main action) or --secondary
+   (outlined). --block fills the row; --sm is the pill used inside rows. */
+
+.rf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    opacity var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.rf-btn--primary {
+  background: var(--color-quran);
+  border: 1.5px solid var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+.rf-btn--primary:active {
+  opacity: 0.85;
+}
+
+.rf-btn--secondary {
+  background: transparent;
+  border: 1.5px solid var(--color-input-border);
+  color: var(--color-text-primary);
+}
+
+.rf-btn--secondary:active {
+  background: var(--color-gold-faint);
+}
+
+.rf-btn--block {
+  width: 100%;
+}
+
+.rf-btn--sm {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+}
+
+.rf-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Chips ─────────────────────────────────────────────────────────────────
+   Hifz's juz chips: an option among several that can each be on (weekdays). */
+
+.rf-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-card-alt);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.rf-chip.is-active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+/* ── Shared focus ring ─────────────────────────────────────────────────── */
+
+.rf-seg-btn:focus-visible,
+.rf-btn:focus-visible,
+.rf-chip:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-switch-track,
+  .rf-switch-track::before,
+  .rf-seg-btn,
+  .rf-btn,
+  .rf-chip {
+    transition: none;
+  }
+}

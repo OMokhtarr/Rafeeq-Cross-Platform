@@ -37,22 +37,11 @@
    the action that unblocks the page (granting location); the widget is
    optional and additive, so it takes gold on the icon and label rather than
    behind them. */
+/* Colour and shape come from the shared rf-btn classes (styles/controls.css);
+   this only sizes the buttons for the sheet. */
 .wss-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: var(--space-3);
-  width: 100%;
-  font: inherit;
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-gold);
-  background: var(--color-gold-faint);
-  border: 1.5px solid var(--color-gold-subtle);
-  border-radius: var(--radius-xl);
   padding: var(--space-4) var(--space-5);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   transition:
     background var(--transition-fast),
     opacity var(--transition-fast);
@@ -67,13 +56,10 @@
   outline-offset: 2px;
 }
 
-/* Restyling a widget is secondary to having one, so it is quieter than the
-   button above it. */
+/* Restyling a widget is secondary to having one, so it is the outlined
+   button under the green one. */
 .wss-btn--secondary {
   margin-top: var(--space-2);
-  background: none;
-  border-color: var(--color-border-subtle);
-  color: var(--color-text-secondary);
 }
 
 /* The icon is the widget itself — a filled cell in an outlined frame — so the
@@ -107,7 +93,7 @@
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-gold);
+  color: var(--color-quran-text);
   background: none;
   border: none;
   padding: var(--space-2) 0 0;
