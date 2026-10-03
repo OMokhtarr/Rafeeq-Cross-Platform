@@ -23,6 +23,27 @@ class AlarmTextTest {
         assertEquals("Isha", AlarmText.ringLine("Isha", 0, "", arabic = false))
     }
 
+    private val cairo = java.time.ZoneId.of("Africa/Cairo")
+    private fun at(day: Int, hour: Int) =
+        java.time.LocalDateTime.of(2026, 10, day, hour, 0).atZone(cairo).toInstant().toEpochMilli()
+
+    // 2026-10-09 is a Friday.
+
+    @Test
+    fun `Dhuhr on a Friday is Jumu'ah`() {
+        assertEquals(true, AlarmText.isJumuah(PrayerName.DHUHR, at(9, 12), cairo))
+    }
+
+    @Test
+    fun `Dhuhr on another day is not Jumu'ah`() {
+        assertEquals(false, AlarmText.isJumuah(PrayerName.DHUHR, at(8, 12), cairo))
+    }
+
+    @Test
+    fun `other prayers on a Friday keep their names`() {
+        assertEquals(false, AlarmText.isJumuah(PrayerName.ASR, at(9, 15), cairo))
+    }
+
     @Test
     fun `Arabic lines use Arabic-Indic digits`() {
         assertEquals("الفجر − ١:٣٠ · السحور", AlarmText.ringLine("الفجر", -90, "السحور", arabic = true))

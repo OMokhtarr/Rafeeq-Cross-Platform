@@ -74,7 +74,7 @@ class PrayerAlarmRingReceiver : BroadcastReceiver() {
             }
 
             val res = AlarmText.appResources(context)
-            val lines = AlarmText.ringLines(context, ids)
+            val lines = AlarmText.ringLines(context, ids, prayerAts)
             fun action(action: String, code: Int) = PendingIntent.getBroadcast(
                 context, code,
                 Intent(context, PrayerAlarmRingReceiver::class.java).apply {

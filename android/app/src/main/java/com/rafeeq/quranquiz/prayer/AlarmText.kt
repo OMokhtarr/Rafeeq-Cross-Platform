@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import com.rafeeq.quranquiz.R
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.math.abs
 
 /**
@@ -45,23 +48,45 @@ object AlarmText {
         return ctx.createConfigurationContext(config).resources
     }
 
-    private fun prayerName(res: Resources, prayer: PrayerName): String = res.getString(
+    /**
+     * Whether [prayer] at [prayerAt] is the Friday prayer. Judged by the
+     * prayer's own time, so an alarm after Dhuhr on a Friday still names
+     * Jumu'ah, as the timetable and widget do.
+     */
+    fun isJumuah(prayer: PrayerName, prayerAt: Long, zone: ZoneId): Boolean =
+        prayer == PrayerName.DHUHR &&
+            prayerAt > 0 &&
+            Instant.ofEpochMilli(prayerAt).atZone(zone).dayOfWeek == DayOfWeek.FRIDAY
+
+    private fun prayerName(res: Resources, prayer: PrayerName, prayerAt: Long): String = res.getString(
+        when {
+            isJumuah(prayer, prayerAt, ZoneId.systemDefault()) -> R.string.prayer_widget_name_jumuah
+            else -> nameRes(prayer)
+        },
+    )
+
+    private fun nameRes(prayer: PrayerName): Int =
         when (prayer) {
             PrayerName.FAJR -> R.string.prayer_widget_name_fajr
             PrayerName.DHUHR -> R.string.prayer_widget_name_dhuhr
             PrayerName.ASR -> R.string.prayer_widget_name_asr
             PrayerName.MAGHRIB -> R.string.prayer_widget_name_maghrib
             else -> R.string.prayer_widget_name_isha
-        },
-    )
+        }
 
-    /** One line per alarm in [ids], in the app's language; unknown ids are skipped. */
-    fun ringLines(ctx: Context, ids: List<String>): List<String> {
+    /**
+     * One line per alarm in [ids], in the app's language; unknown ids are
+     * skipped. [prayerAts] runs parallel to [ids]: each alarm's prayer time,
+     * which decides whether Dhuhr is named Jumu'ah.
+     */
+    fun ringLines(ctx: Context, ids: List<String>, prayerAts: LongArray): List<String> {
         val res = appResources(ctx)
         val arabic = PrayerConfig.appLocale(ctx).language == "ar"
         val byId = PrayerAlarmConfig.alarms(ctx).associateBy { it.id }
-        return ids.mapNotNull { byId[it] }.map {
-            ringLine(prayerName(res, it.prayer), it.offsetMinutes, it.label, arabic)
+        return ids.indices.mapNotNull { i ->
+            val alarm = byId[ids[i]] ?: return@mapNotNull null
+            val name = prayerName(res, alarm.prayer, prayerAts.getOrElse(i) { 0L })
+            ringLine(name, alarm.offsetMinutes, alarm.label, arabic)
         }
     }
 }

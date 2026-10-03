@@ -179,8 +179,8 @@ class AlarmRingActivity : AppCompatActivity() {
     }
 
     private fun render() {
-        val ids = AlarmRingService.current?.ids.orEmpty()
-        linesView.text = AlarmText.ringLines(this, ids).joinToString("\n")
+        val ringing = AlarmRingService.current ?: return
+        linesView.text = AlarmText.ringLines(this, ringing.ids, ringing.prayerAts).joinToString("\n")
         renderClock()
     }
 

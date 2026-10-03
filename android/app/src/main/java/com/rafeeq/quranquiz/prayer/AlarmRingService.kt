@@ -261,7 +261,7 @@ class AlarmRingService : Service() {
     private fun buildNotification(): Notification {
         ensureChannels()
         val res = AlarmText.appResources(this)
-        val lines = AlarmText.ringLines(this, current?.ids.orEmpty())
+        val lines = current?.let { AlarmText.ringLines(this, it.ids, it.prayerAts) }.orEmpty()
         val immutable = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
         val screen = PendingIntent.getActivity(
@@ -295,7 +295,7 @@ class AlarmRingService : Service() {
             .build()
     }
 
-    private fun postMissed(ids: List<String>) {
+    private fun postMissed(ringing: Ringing) {
         val res = AlarmText.appResources(this)
         val open = PendingIntent.getActivity(
             this, 4239,
@@ -306,7 +306,7 @@ class AlarmRingService : Service() {
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
             .setContentTitle(res.getString(R.string.alarm_missed_title))
-            .setContentText(AlarmText.ringLines(this, ids).joinToString("\n"))
+            .setContentText(AlarmText.ringLines(this, ringing.ids, ringing.prayerAts).joinToString("\n"))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(open)
             .setAutoCancel(true)
@@ -323,7 +323,7 @@ class AlarmRingService : Service() {
         runCatching { vibrator?.cancel() }
         vibrator = null
         current = null
-        if (missed && ringing != null) postMissed(ringing.ids)
+        if (missed && ringing != null) postMissed(ringing)
         listeners.forEach { it() }
         runCatching { wakeLock?.release() }
         wakeLock = null
