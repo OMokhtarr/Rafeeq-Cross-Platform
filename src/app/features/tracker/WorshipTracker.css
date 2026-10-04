@@ -1,8 +1,8 @@
 /*
  * WORSHIP TRACKER
- * Outlined cards on the content background, like the More grid. The accent
- * is the app's green, as on Quiz, Azkar and Hifz: share chips, links, the
- * weight buttons and today's markers. The summary card, ticked acts and the
+ * Outlined cards on the content background, like the More grid. Green, as on
+ * Quiz, Azkar and Hifz, only fills: switches, progress and calendar dots.
+ * Text, tints and outlines are gold. The summary card, ticked acts and the
  * chosen calendar day keep the Home screen's forest green with gold (see
  * "Rafeeq green" below); icons and focus rings stay gold. Locked acts fade
  * rather than hide, so the day's shape stays visible.
@@ -22,8 +22,8 @@
 
 .wt-page {
   --wt-accent: var(--color-quran);
-  --wt-accent-text: var(--color-quran-text);
-  --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
+  --wt-accent-text: var(--color-gold);
+  --wt-accent-soft: color-mix(in srgb, var(--color-gold) 14%, transparent);
   box-sizing: border-box;
   max-width: var(--max-width-mobile, 600px);
   margin: 0 auto;
@@ -279,7 +279,7 @@
 
 .wt-prayer.is-done,
 .wt-item.is-done {
-  border-color: var(--wt-accent);
+  border-color: var(--color-gold);
   background: var(--wt-accent-soft);
 }
 
@@ -309,8 +309,8 @@
 
 .wt-sheet {
   --wt-accent: var(--color-quran);
-  --wt-accent-text: var(--color-quran-text);
-  --wt-accent-soft: color-mix(in srgb, var(--wt-accent) 14%, transparent);
+  --wt-accent-text: var(--color-gold);
+  --wt-accent-soft: color-mix(in srgb, var(--color-gold) 14%, transparent);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -503,7 +503,7 @@
 
 .wt-prayer.is-done,
 .wt-item.is-done {
-  border-color: var(--wt-accent);
+  border-color: var(--color-gold);
   background: var(--wt-accent-fill);
 }
 
@@ -540,7 +540,7 @@
 }
 
 .wt-strip-day.is-selected {
-  border-color: var(--wt-accent);
+  border-color: var(--color-gold);
 }
 
 .wt-summary-top > div:first-child {
@@ -621,7 +621,7 @@
 }
 
 .wt-cal-day.is-today {
-  border-color: var(--wt-accent);
+  border-color: var(--color-gold);
 }
 
 .wt-cal-day.is-selected {

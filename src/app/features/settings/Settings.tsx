@@ -49,6 +49,7 @@ import { useTours } from "../onboarding/TourProvider";
 import { usePageTour } from "../onboarding/usePageTour";
 import { ONBOARDING_COPY } from "../onboarding/onboardingCopy";
 import { tourAttr } from "../onboarding/tourCatalog";
+import { Switch } from "../../shared/components/controls/Switch";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -529,14 +530,7 @@ const ToggleRow: React.FC<ToggleRowProps> = ({
           </svg>
         </button>
       )}
-      <label className="settings-toggle">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className="settings-toggle-slider" />
-      </label>
+      <Switch checked={checked} onChange={onChange} label={label} />
     </div>
   </div>
 );
