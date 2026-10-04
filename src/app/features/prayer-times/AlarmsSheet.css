@@ -1,63 +1,189 @@
-/* Alarms sheet — prayer alarms grouped under their prayers, the alarm
-   editor, and the shared alarm settings. Shell and rows come from
-   PrayerSheet.css; switches, segmented choices, buttons and chips are the
-   shared Rafeeq controls (styles/controls.css). This file adds only what is
-   the alarms' own: green where the user acts, gold for structure.
+/* Alarms sheet — the next alarm, one tab per prayer with that prayer's
+   alarms as cards, the alarm editor, and the shared alarm settings. Shell
+   and rows come from PrayerSheet.css; switches, segmented choices, buttons
+   and chips are the shared Rafeeq controls (styles/controls.css).
 
-   The ring time is the one large element: it is the number the user sets
-   and checks. Everything else stays at the sheet's body size. */
+   Green only fills (the chosen tab, switches that are on); text, outlines
+   and tints are gold, as everywhere in the app. The ring time on each card
+   is the one large element: it is the number the user sets and checks. */
 
-/* ── Prayer groups ───────────────────────────────────────────────────────── */
+/* ── Next alarm ──────────────────────────────────────────────────────────── */
 
-.as-prayer,
-.as-settings {
-  padding-top: var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
-  scroll-margin-top: var(--space-2);
-}
-
-.as-settings {
-  border-bottom: none;
-}
-
-.as-prayer-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--color-gold);
-}
-
-.as-prayer-time {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Alarm row ───────────────────────────────────────────────────────────── */
-
-.as-alarm {
+.as-next {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) 0;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-gold-faint);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.as-next-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--color-gold);
+}
+
+.as-next-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.as-next-title {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.as-next-when {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-next-name {
+  margin-inline-start: auto;
+  max-width: 40%;
+  font-size: var(--text-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Prayer tabs ─────────────────────────────────────────────────────────── */
+
+.as-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+.as-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--space-2) 2px;
+  background: transparent;
+  border: 1.5px solid var(--color-gold-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+/* A prayer with no alarms recedes, so the ones in use stand out. */
+.as-tab.is-empty {
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+.as-tab-name {
+  font-size: var(--text-md);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.as-tab-count {
+  font-size: var(--text-xs);
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+.as-tab.is-empty .as-tab-count {
+  color: var(--color-text-muted);
+}
+
+.as-tab.is-active {
+  background: var(--color-quran);
+  border-color: var(--color-quran);
+  color: var(--color-text-on-dark);
+}
+
+.as-tab.is-active .as-tab-count {
+  color: var(--color-text-on-dark);
+  opacity: 0.85;
+}
+
+.as-tab:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ── The chosen prayer ───────────────────────────────────────────────────── */
+
+.as-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.as-adhan {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.as-adhan-name {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.as-adhan-time {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-card-alt);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
   transition: opacity var(--transition-fast);
 }
 
-.as-alarm.is-off {
+.as-card.is-off {
   opacity: 0.5;
+}
+
+.as-card .rf-switch {
+  margin-top: var(--space-2);
 }
 
 .as-alarm-open {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-1) 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0;
   background: none;
   border: none;
   color: inherit;
@@ -69,46 +195,20 @@
 
 .as-alarm-open:focus-visible {
   outline: 2px solid var(--color-gold);
-  outline-offset: 2px;
+  outline-offset: 4px;
   border-radius: var(--radius-md);
 }
 
-.as-alarm-time {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex-shrink: 0;
-  min-width: 4.5em;
-}
-
-.as-alarm-clock {
-  font-size: var(--text-2xl);
+.as-card-time {
+  font-size: var(--text-3xl);
   font-weight: 600;
   line-height: 1.1;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
 
-.as-alarm-offset {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  /* "−1:30" must not reorder inside Arabic text. */
-  unicode-bidi: isolate;
-  direction: ltr;
-}
-
-[dir="rtl"] .as-alarm-offset {
-  text-align: end;
-}
-
-.as-alarm-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.as-alarm-label {
+.as-card-label {
+  max-width: 100%;
   font-size: var(--text-md);
   color: var(--color-text-primary);
   overflow: hidden;
@@ -116,36 +216,76 @@
   white-space: nowrap;
 }
 
-.as-alarm-repeat {
+.as-card-label.is-untitled {
+  color: var(--color-text-secondary);
+}
+
+.as-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Where the alarm sits relative to the adhan: the fact the whole feature
+   is built on, so it is the one marked phrase on the card. */
+.as-card-offset {
+  padding: 1px var(--space-3);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  color: var(--color-gold);
+}
+
+.as-card-days {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
-.as-add {
-  display: inline-flex;
+.as-new {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  margin: var(--space-1) 0 var(--space-3);
-  padding: var(--space-2) 0;
-  background: none;
-  border: none;
+  padding: var(--space-4);
+  background: transparent;
+  border: 1.5px dashed var(--color-gold-subtle);
+  border-radius: var(--radius-lg);
   color: var(--color-gold);
   font: inherit;
   font-size: var(--text-md);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.as-add svg {
+.as-new svg {
   width: 18px;
   height: 18px;
 }
 
-.as-add:focus-visible {
+.as-new:active {
+  background: var(--color-gold-faint);
+}
+
+.as-new:focus-visible,
+.as-next:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+}
+
+/* ── Settings ────────────────────────────────────────────────────────────── */
+
+.as-settings {
+  padding-top: var(--space-4);
+}
+
+.as-section-head {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-gold);
 }
 
 /* ── Warnings ────────────────────────────────────────────────────────────── */
@@ -388,7 +528,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .as-alarm {
+  .as-tab,
+  .as-card {
     transition: none;
   }
 }

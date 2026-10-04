@@ -4,6 +4,7 @@
  */
 
 import type { AppStrings } from "../../core/i18n/strings";
+import { toHindiNumbers } from "../../core/utils/arabic.util";
 import {
   ALL_DAYS,
   WEEK_FROM_SATURDAY,
@@ -37,6 +38,53 @@ export function formatWhen(when: Date, now: Date, lang: string, s: AlarmStrings)
     month: "short",
   });
   return s.dateAt.replace("{date}", date).replace("{time}", time);
+}
+
+const ar = (n: number) => toHindiNumbers(n);
+
+/** Arabic count of a noun: one and two are the word itself, 3–10 the plural. */
+function arabicCount(n: number, one: string, two: string, few: string, many: string): string {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  if (n >= 3 && n <= 10) return `${ar(n)} ${few}`;
+  return `${ar(n)} ${many}`;
+}
+
+/**
+ * A length of time in words: "1 h 30 min" / "ساعة و٣٠ دقيقة". The Arabic
+ * duals are in the genitive (دقيقتين, ساعتين) because the phrase always
+ * follows the preposition بـ ("by").
+ */
+export function formatDuration(minutes: number, lang: string): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (lang !== "ar") {
+    return [h ? `${h} h` : "", m || !h ? `${m} min` : ""].filter(Boolean).join(" ");
+  }
+  const hours = h ? arabicCount(h, "ساعة", "ساعتين", "ساعات", "ساعة") : "";
+  const mins = m || !h ? arabicCount(m, "دقيقة", "دقيقتين", "دقائق", "دقيقة") : "";
+  return hours && mins ? `${hours} و${mins}` : hours || mins;
+}
+
+/**
+ * Where an alarm rings relative to the adhan: "10 min before the adhan",
+ * "قبل الأذان بـ١٠ دقائق". The Arabic preposition takes a tatweel before a
+ * digit (بـ١٠) and joins a word directly (بساعة).
+ */
+export function offsetPhrase(offsetMinutes: number, s: AlarmStrings, lang: string): string {
+  if (offsetMinutes === 0) return s.atAdhan;
+  const d = formatDuration(Math.abs(offsetMinutes), lang);
+  const by = lang === "ar" ? (/^[٠-٩]/.test(d) ? `بـ${d}` : `ب${d}`) : d;
+  return (offsetMinutes < 0 ? s.beforeAdhan : s.afterAdhan).replace("{d}", by);
+}
+
+/** How many alarms a prayer has, for its tab: "None", "1 alarm", "منبّهان". */
+export function countLabel(n: number, s: AlarmStrings, lang: string): string {
+  const num = lang === "ar" ? ar(n) : String(n);
+  if (n === 0) return s.countNone;
+  if (n === 1) return s.countOne;
+  if (n === 2) return s.countTwo;
+  return (n <= 10 ? s.countFew : s.countMany).replace("{n}", num);
 }
 
 /** "Every day", "Mon, Thu", "Ramadan", or "Ramadan, Mon, Thu". */

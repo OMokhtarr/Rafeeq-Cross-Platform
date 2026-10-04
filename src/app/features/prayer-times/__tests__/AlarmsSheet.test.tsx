@@ -5,6 +5,7 @@ import AlarmsSheet from "../AlarmsSheet";
 import { LanguageProvider } from "../../../core/context/LanguageContext";
 import { STRINGS } from "../../../core/i18n/strings";
 import type {
+  AlarmPrayer,
   AlarmSettings,
   PrayerAlarmWithNext,
 } from "../../../core/services/prayer/prayer-alarms.types";
@@ -41,6 +42,7 @@ const mocked = service as unknown as Record<string, jest.Mock>;
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const s = STRINGS.en.prayerAlarms;
+const tp = STRINGS.en.prayerTimes;
 const flush = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
 
 const settings: AlarmSettings = {
@@ -59,14 +61,22 @@ const suhoor: PrayerAlarmWithNext = {
   enabled: true,
   days: [1, 2, 3, 4, 5, 6, 7],
   ramadanOnly: true,
-  nextAt: null,
+  nextAt: new Date(2026, 9, 6, 3, 0),
+};
+
+const iftar: PrayerAlarmWithNext = {
+  id: "a2",
+  prayer: "maghrib",
+  offsetMinutes: -5,
+  label: "Iftar",
+  enabled: true,
+  days: [1, 2, 3, 4, 5, 6, 7],
+  ramadanOnly: false,
+  nextAt: new Date(2026, 9, 5, 17, 55),
 };
 
 const at = (h: number) => new Date(2026, 9, 5, h, 0);
 const times = { fajr: at(4), dhuhr: at(12), asr: at(15), maghrib: at(18), isha: at(19) };
-
-let root: Root;
-let onChanged: jest.Mock;
 
 const healthy = {
   notifications: true,
@@ -75,6 +85,9 @@ const healthy = {
   batteryUnrestricted: true,
   aggressiveBattery: false,
 };
+
+let root: Root;
+let onChanged: jest.Mock;
 
 beforeEach(() => {
   mocked.saveAlarm.mockImplementation(async (a) => ({ ...a, nextAt: null }));
@@ -94,7 +107,7 @@ beforeEach(() => {
 });
 afterEach(() => act(() => root.unmount()));
 
-async function renderSheet(alarms: PrayerAlarmWithNext[]) {
+async function renderSheet(alarms: PrayerAlarmWithNext[], focusPrayer: AlarmPrayer | null = null) {
   act(() =>
     root.render(
       <LanguageProvider>
@@ -105,7 +118,7 @@ async function renderSheet(alarms: PrayerAlarmWithNext[]) {
           times={times}
           alarms={alarms}
           settings={settings}
-          focusPrayer={null}
+          focusPrayer={focusPrayer}
           onChanged={onChanged}
         />
       </LanguageProvider>,
@@ -116,16 +129,47 @@ async function renderSheet(alarms: PrayerAlarmWithNext[]) {
 
 const byText = (text: string) =>
   Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.trim() === text) as HTMLButtonElement;
+const tab = (prayer: AlarmPrayer) => document.querySelector(`[role="tab"][data-prayer="${prayer}"]`) as HTMLButtonElement;
+const cards = () => Array.from(document.querySelectorAll("[data-alarm]")).map((c) => c.getAttribute("data-alarm"));
 
-it("lists each alarm under its prayer", async () => {
-  await renderSheet([suhoor]);
-  const fajr = document.querySelector('[data-prayer="fajr"]')!;
-  expect(fajr.textContent).toContain("Suhoor");
-  expect(document.querySelector('[data-prayer="isha"]')!.textContent).not.toContain("Suhoor");
+it("shows only the chosen prayer's alarms", async () => {
+  await renderSheet([suhoor, iftar], "fajr");
+  expect(cards()).toEqual(["a1"]);
+  act(() => tab("maghrib").click());
+  expect(cards()).toEqual(["a2"]);
+  expect(tab("maghrib").getAttribute("aria-selected")).toBe("true");
+});
+
+it("opens on the prayer of the next alarm when none is asked for", async () => {
+  await renderSheet([suhoor, iftar]);
+  expect(tab("maghrib").getAttribute("aria-selected")).toBe("true");
+});
+
+it("shows the soonest alarm in the next-alarm card", async () => {
+  await renderSheet([suhoor, iftar]);
+  const next = document.querySelector(".as-next")!;
+  expect(next.textContent).toContain("Iftar");
+  expect(next.textContent).not.toContain("Suhoor");
+});
+
+it("hides the next-alarm card when nothing is due", async () => {
+  await renderSheet([{ ...suhoor, enabled: false, nextAt: null }]);
+  expect(document.querySelector(".as-next")).toBeNull();
+});
+
+it("counts each prayer's alarms on its tab", async () => {
+  await renderSheet([suhoor, iftar]);
+  expect(tab("fajr").textContent).toContain("1 alarm");
+  expect(tab("asr").textContent).toContain(s.countNone);
+});
+
+it("says how far from the adhan an alarm rings", async () => {
+  await renderSheet([suhoor], "fajr");
+  expect(document.querySelector('[data-alarm="a1"]')!.textContent).toContain("1 h 30 min before the adhan");
 });
 
 it("switching an alarm off saves it off without asking for permissions", async () => {
-  await renderSheet([suhoor]);
+  await renderSheet([suhoor], "fajr");
   const toggle = document.querySelector('[data-alarm="a1"] input[type="checkbox"]') as HTMLInputElement;
   await act(async () => toggle.click());
 
@@ -136,8 +180,8 @@ it("switching an alarm off saves it off without asking for permissions", async (
 
 it("adds an alarm before Isha with the minutes stepped up", async () => {
   await renderSheet([]);
-  const add = document.querySelector('[data-prayer="isha"] .as-add') as HTMLButtonElement;
-  act(() => add.click());
+  act(() => tab("isha").click());
+  act(() => byText(s.newTitle.replace("{prayer}", tp.isha)).click());
   await flush();
 
   act(() => byText(s.before).click());
@@ -155,7 +199,7 @@ it("adds an alarm before Isha with the minutes stepped up", async () => {
 it("does not save the first alarm when notifications are refused", async () => {
   mocked.prepareAlarmPermissions.mockResolvedValue(false);
   await renderSheet([]);
-  act(() => (document.querySelector('[data-prayer="fajr"] .as-add') as HTMLButtonElement).click());
+  act(() => byText(s.newTitle.replace("{prayer}", tp.fajr)).click());
   await flush();
   await act(async () => byText(s.save).click());
   await flush();
@@ -165,7 +209,7 @@ it("does not save the first alarm when notifications are refused", async () => {
 });
 
 it("deletes an alarm from its editor", async () => {
-  await renderSheet([suhoor]);
+  await renderSheet([suhoor], "fajr");
   act(() => (document.querySelector('[data-alarm="a1"] .as-alarm-open') as HTMLButtonElement).click());
   await flush();
   await act(async () => byText(s.delete).click());
