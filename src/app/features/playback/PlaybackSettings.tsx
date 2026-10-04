@@ -216,7 +216,6 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     pageEnd(startPageQuery),
   );
   const [activeQuick, setActiveQuick] = useState<string | null>(null);
-  const [pendingQuick, setPendingQuick] = useState<string | null>(null);
 
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [surahDownloads, setSurahDownloads] = useState<
@@ -291,7 +290,6 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     const first = verses[0];
     const page = estimatePageForVerse(first.sura, first.aya);
     const verseKey = `${first.sura}:${first.aya}`;
-    setPendingQuick(null);
     history.replace(`/viewer?page=${page}&v=${encodeURIComponent(verseKey)}`);
     await queue.start(verses);
     onClose?.();
@@ -328,13 +326,11 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setStartVerse(pageStart(p));
     setEndVerse(pageEnd(p));
     setActiveQuick("page");
-    setPendingQuick("page");
   };
   const setRangeFromPage = (p: number) => {
     setStartVerse(pageStart(p));
     setEndVerse(pageEnd(604));
     setActiveQuick("fromPage");
-    setPendingQuick("fromPage");
   };
   const setRangeToSurah = (s: number) => {
     const ch = getChapters().find((c) => c.id === s);
@@ -345,27 +341,23 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setStartVerse(getJuzStart(j));
     setEndVerse(getJuzEnd(j));
     setActiveQuick("juz");
-    setPendingQuick("juz");
   };
   const setRangeToHizb = (h: number) => {
     if (h < 1 || h > 60) return;
     setStartVerse(getHizbStart(h));
     setEndVerse(getHizbEnd(h));
     setActiveQuick("hizb");
-    setPendingQuick("hizb");
   };
   const setRangeToRub = (r: number) => {
     if (r < 1 || r > 240) return;
     setStartVerse(getRubStart(r));
     setEndVerse(getRubEnd(r));
     setActiveQuick("rub");
-    setPendingQuick("rub");
   };
   const setRangeToAll = () => {
     setStartVerse({ sura: 1, aya: 1 });
     setEndVerse({ sura: 114, aya: 6 });
     setActiveQuick("all");
-    setPendingQuick("all");
   };
 
   // Quick-select buttons live inside a scrollable sheet. On mobile webviews, a plain onClick
@@ -736,7 +728,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "page" || activeQuick === "page" ? " is-active" : ""
+                activeQuick === "page" ? " is-active" : ""
               }`}
               {...quickTap(() => setRangeToPage(currentPage))}
             >
@@ -745,7 +737,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "fromPage" || activeQuick === "fromPage" ? " is-active" : ""
+                activeQuick === "fromPage" ? " is-active" : ""
               }`}
               {...quickTap(() => setRangeFromPage(currentPage))}
             >
@@ -773,7 +765,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "juz" || activeQuick === "juz" ? " is-active" : ""
+                activeQuick === "juz" ? " is-active" : ""
               }`}
               {...quickTap(() => setRangeToJuz(currentJuz))}
             >
@@ -782,7 +774,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "hizb" || activeQuick === "hizb" ? " is-active" : ""
+                activeQuick === "hizb" ? " is-active" : ""
               }`}
               {...quickTap(() => setRangeToHizb(currentHizb))}
             >
@@ -791,7 +783,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "rub" || activeQuick === "rub" ? " is-active" : ""
+                activeQuick === "rub" ? " is-active" : ""
               }`}
               {...quickTap(() => setRangeToRub(currentRub))}
             >
@@ -802,7 +794,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             <button
               type="button"
               className={`pb-seg-btn${nightCls}${
-                pendingQuick === "all" || activeQuick === "all" ? " is-active" : ""
+                activeQuick === "all" ? " is-active" : ""
               }`}
               {...quickTap(setRangeToAll)}
             >
