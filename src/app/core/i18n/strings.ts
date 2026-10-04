@@ -169,7 +169,6 @@ export interface AppStrings {
     menuNone: string;
     title: string;
     desc: string;
-    add: string;
     rowAlarms: string;
     atPrayer: string;
     before: string;
@@ -218,6 +217,18 @@ export interface AppStrings {
     openSettings: string;
     notificationsNeeded: string;
     saveFailed: string;
+    nextAlarm: string;
+    untitled: string;
+    tabsLabel: string;
+    adhanOf: string;
+    beforeAdhan: string;
+    afterAdhan: string;
+    atAdhan: string;
+    countNone: string;
+    countOne: string;
+    countTwo: string;
+    countFew: string;
+    countMany: string;
     /** Short weekday names, ISO order: Monday first. */
     dayChips: string[];
     dayNames: string[];
@@ -838,7 +849,6 @@ const ar: AppStrings = {
     menuNone: "لا توجد منبّهات",
     title: "منبّهات الصلاة",
     desc: "منبّه يرنّ قبل الصلاة أو بعدها كل يوم، حتى والتطبيق مغلق",
-    add: "إضافة منبّه",
     rowAlarms: "منبّهات {prayer}",
     atPrayer: "عند دخول الوقت",
     before: "قبل",
@@ -887,6 +897,18 @@ const ar: AppStrings = {
     openSettings: "فتح الإعدادات",
     notificationsNeeded: "اسمح بالإشعارات لتفعيل المنبّهات.",
     saveFailed: "تعذّر حفظ المنبّه. حاول مرة أخرى.",
+    nextAlarm: "المنبّه التالي",
+    untitled: "منبّه",
+    tabsLabel: "الصلوات",
+    adhanOf: "أذان {prayer}",
+    beforeAdhan: "قبل الأذان {d}",
+    afterAdhan: "بعد الأذان {d}",
+    atAdhan: "عند الأذان",
+    countNone: "لا شيء",
+    countOne: "منبّه واحد",
+    countTwo: "منبّهان",
+    countFew: "{n} منبّهات",
+    countMany: "{n} منبّهًا",
     dayChips: ["ن", "ث", "ر", "خ", "ج", "س", "ح"],
     dayNames: ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"],
   },
@@ -1523,7 +1545,6 @@ const en: AppStrings = {
     menuNone: "None set",
     title: "Prayer alarms",
     desc: "Ring before or after a prayer every day, even with the app closed",
-    add: "Add alarm",
     rowAlarms: "Alarms for {prayer}",
     atPrayer: "At the prayer time",
     before: "Before",
@@ -1572,6 +1593,18 @@ const en: AppStrings = {
     openSettings: "Open settings",
     notificationsNeeded: "Allow notifications to turn alarms on.",
     saveFailed: "Couldn't save the alarm. Try again.",
+    nextAlarm: "Next alarm",
+    untitled: "Alarm",
+    tabsLabel: "Prayers",
+    adhanOf: "{prayer} adhan",
+    beforeAdhan: "{d} before the adhan",
+    afterAdhan: "{d} after the adhan",
+    atAdhan: "At the adhan",
+    countNone: "None",
+    countOne: "1 alarm",
+    countTwo: "2 alarms",
+    countFew: "{n} alarms",
+    countMany: "{n} alarms",
     dayChips: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     dayNames: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
   },

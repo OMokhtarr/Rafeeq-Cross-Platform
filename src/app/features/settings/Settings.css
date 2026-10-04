@@ -201,54 +201,6 @@ ion-content::part(scroll) {
   background: var(--color-gold-faint);
 }
 
-/* ── Toggle switch ────────────────────────────── */
-.settings-toggle {
-  position: relative;
-  width: 50px;
-  height: 28px;
-  flex-shrink: 0;
-}
-
-.settings-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  position: absolute;
-}
-
-.settings-toggle-slider {
-  position: absolute;
-  inset: 0;
-  background: var(--color-progress-track);
-  border-radius: 30px;
-  cursor: pointer;
-  transition: background var(--transition-slow);
-}
-
-.settings-toggle-slider::before {
-  content: "";
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: white;
-  top: 3px;
-  inset-inline-start: 3px;
-  transition: transform var(--transition-slow);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-}
-
-.settings-toggle input:checked + .settings-toggle-slider {
-  background: var(--color-quran);
-}
-
-[dir="rtl"] .settings-toggle input:checked + .settings-toggle-slider::before {
-  transform: translateX(-20px);
-}
-[dir="ltr"] .settings-toggle input:checked + .settings-toggle-slider::before {
-  transform: translateX(20px);
-}
-
 /* ── Select dropdown ──────────────────────────── */
 .settings-select {
   background: var(--color-input-bg);

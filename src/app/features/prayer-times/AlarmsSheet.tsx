@@ -4,10 +4,11 @@
  * page's ⋮ menu or from the alarm icon on a timetable row. Android only —
  * the page never mounts it elsewhere.
  *
- * The prayers are the headings and each one lists its alarms, because an
- * alarm is always thought of through its prayer ("before Fajr"). Each row
- * leads with the clock time the alarm rings at today, the one number the
- * user acts on; the offset that produced it sits beneath.
+ * It opens on the next alarm, the question the user usually comes with,
+ * then one tab per prayer, because an alarm is always thought of through
+ * its prayer ("before Fajr"). The chosen prayer's alarms are cards led by
+ * the clock time they ring at today, with where that falls against the
+ * adhan said in words beneath ("10 min before the adhan").
  *
  * The list and the alarm editor are two views of one sheet rather than two
  * sheets, so going into an alarm and back keeps the list's scroll position
@@ -17,12 +18,11 @@
  * icons); this sheet writes through the service and asks the page to reload.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLang } from "../../core/context/LanguageContext";
 import { registerOverlay } from "../../core/utils/overlay-registry";
 import {
   deleteAlarm,
-  formatOffset,
   getAlarmHealth,
   newAlarm,
   pickAlarmSound,
@@ -51,7 +51,8 @@ import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { Segmented } from "../../shared/components/controls/Segmented";
 import { Switch } from "../../shared/components/controls/Switch";
 import AlarmEditor from "./AlarmEditor";
-import { formatClock, repeatSummary } from "./alarmFormat";
+import { countLabel, formatClock, formatWhen, offsetPhrase, repeatSummary } from "./alarmFormat";
+import { AlarmIcon } from "./PrayerMenuSheet";
 import "./PrayerSheet.css";
 import "./AlarmsSheet.css";
 
@@ -63,7 +64,8 @@ interface Props {
   times: Partial<Record<PrayerKey, Date>> | null;
   alarms: PrayerAlarmWithNext[];
   settings: AlarmSettings;
-  /** Scrolls this prayer's alarms into view on open. */
+  /** The prayer whose tab opens first (the row icon tapped); otherwise the
+   *  prayer of the next alarm. */
   focusPrayer: AlarmPrayer | null;
   onChanged: () => void | Promise<void>;
 }
@@ -72,6 +74,15 @@ type Editing = { alarm: PrayerAlarm; isNew: boolean };
 
 /** The alarm as stored, without the computed next ring. */
 const stored = ({ nextAt, ...alarm }: PrayerAlarmWithNext): PrayerAlarm => alarm;
+
+/** The switched-on alarm that rings soonest, if any will. */
+function soonest(alarms: PrayerAlarmWithNext[], isOn: (a: PrayerAlarmWithNext) => boolean) {
+  return (
+    alarms
+      .filter((a) => isOn(a) && a.nextAt)
+      .sort((a, b) => a.nextAt!.getTime() - b.nextAt!.getTime())[0] ?? null
+  );
+}
 
 const BackArrow = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -107,7 +118,9 @@ const AlarmsSheet: React.FC<Props> = ({
   // Optimistic switch state, so a toggle answers the tap before the native
   // write returns; cleared whenever the page hands down a fresh list.
   const [pending, setPending] = useState<Record<string, boolean>>({});
-  const sectionRefs = useRef<Partial<Record<AlarmPrayer, HTMLElement | null>>>({});
+  const [selected, setSelected] = useState<AlarmPrayer>(
+    () => focusPrayer ?? soonest(alarms, (a) => a.enabled)?.prayer ?? "fajr"
+  );
 
   useEffect(() => setPending({}), [alarms]);
 
@@ -138,9 +151,12 @@ const AlarmsSheet: React.FC<Props> = ({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [open, refreshHealth]);
 
+  // Each opening starts on the asked-for prayer, else on the next alarm's.
+  // Keyed on the opening only: the list changing while the sheet is open
+  // must not pull the user off the tab they chose.
   useEffect(() => {
-    if (!open || !focusPrayer) return;
-    sectionRefs.current[focusPrayer]?.scrollIntoView?.({ block: "start" });
+    if (!open) return;
+    setSelected(focusPrayer ?? soonest(alarms, (a) => a.enabled)?.prayer ?? "fajr");
   }, [open, focusPrayer]);
 
   useEffect(() => {
@@ -152,6 +168,11 @@ const AlarmsSheet: React.FC<Props> = ({
   }, [open]);
 
   const isOn = (a: PrayerAlarmWithNext) => pending[a.id] ?? a.enabled;
+  const nextAlarm = soonest(alarms, isOn);
+  // Before the prayer first, then after it, as they ring.
+  const shown = alarms
+    .filter((a) => a.prayer === selected)
+    .sort((a, b) => a.offsetMinutes - b.offsetMinutes);
   const num = (n: number) => (lang === "ar" ? toHindiNumbers(n) : String(n));
 
   /**
@@ -317,6 +338,19 @@ const AlarmsSheet: React.FC<Props> = ({
             />
           ) : (
             <>
+              {/* The one question the user opens this sheet with: when do I
+                  next get woken? Tapping it shows that alarm's prayer. */}
+              {nextAlarm && nextAlarm.nextAt && (
+                <button type="button" className="as-next" onClick={() => setSelected(nextAlarm.prayer)}>
+                  <AlarmIcon className="as-next-icon" />
+                  <span className="as-next-text">
+                    <span className="as-next-title">{s.nextAlarm}</span>
+                    <span className="as-next-when">{formatWhen(nextAlarm.nextAt, new Date(), lang, s)}</span>
+                  </span>
+                  <span className="as-next-name">{nextAlarm.label || prayerName(nextAlarm.prayer)}</span>
+                </button>
+              )}
+
               {warnings.length > 0 && (
                 <ul className="as-warnings">
                   {warnings.map((w) => (
@@ -336,79 +370,78 @@ const AlarmsSheet: React.FC<Props> = ({
                 </p>
               )}
 
-              {ALARM_PRAYERS.map((prayer) => {
-                const mine = alarms.filter((a) => a.prayer === prayer);
-                const prayerAt = times?.[prayer];
-                return (
-                  <section
-                    key={prayer}
-                    className="as-prayer"
-                    data-prayer={prayer}
-                    ref={(el) => {
-                      sectionRefs.current[prayer] = el;
-                    }}
-                  >
-                    <h4 className="as-prayer-head">
-                      <span>{prayerName(prayer)}</span>
-                      {prayerAt && <span className="as-prayer-time">{formatClock(prayerAt, lang)}</span>}
-                    </h4>
-
-                    {mine.map((a) => {
-                      const on = isOn(a);
-                      const clock = ringClock(a);
-                      return (
-                        <div
-                          key={a.id}
-                          className={"as-alarm" + (on ? "" : " is-off")}
-                          data-alarm={a.id}
-                        >
-                          <button
-                            type="button"
-                            className="as-alarm-open"
-                            onClick={() => {
-                              setError(null);
-                              setEditing({ alarm: stored(a), isNew: false });
-                            }}
-                          >
-                            <span className="as-alarm-time">
-                              <span className="as-alarm-clock">{clock ?? "—"}</span>
-                              <span className="as-alarm-offset">
-                                {a.offsetMinutes === 0 ? s.atPrayer : formatOffset(a.offsetMinutes, lang)}
-                              </span>
-                            </span>
-                            <span className="as-alarm-text">
-                              {a.label && <span className="as-alarm-label">{a.label}</span>}
-                              <span className="as-alarm-repeat">
-                                {!on
-                                  ? s.off
-                                  : a.nextAt === null
-                                  ? s.neverRings
-                                  : repeatSummary(a, s, lang)}
-                              </span>
-                            </span>
-                          </button>
-                          <Switch checked={on} onChange={() => handleToggle(a)} label={s.toggle} />
-                        </div>
-                      );
-                    })}
-
+              <div role="tablist" aria-label={s.tabsLabel} className="as-tabs">
+                {ALARM_PRAYERS.map((prayer) => {
+                  const count = alarms.filter((a) => a.prayer === prayer).length;
+                  const chosen = prayer === selected;
+                  return (
                     <button
+                      key={prayer}
                       type="button"
-                      className="as-add"
-                      onClick={() => {
-                        setError(null);
-                        setEditing({ alarm: newAlarm(prayer), isNew: true });
-                      }}
+                      role="tab"
+                      data-prayer={prayer}
+                      aria-selected={chosen}
+                      className={"as-tab" + (chosen ? " is-active" : "") + (count ? "" : " is-empty")}
+                      onClick={() => setSelected(prayer)}
                     >
-                      <PlusIcon />
-                      {s.add}
+                      <span className="as-tab-name">{prayerName(prayer)}</span>
+                      <span className="as-tab-count">{countLabel(count, s, lang)}</span>
                     </button>
-                  </section>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              <section className="as-panel" role="tabpanel" aria-label={prayerName(selected)}>
+                <div className="as-adhan">
+                  <span className="as-adhan-name">{s.adhanOf.replace("{prayer}", prayerName(selected))}</span>
+                  {times?.[selected] && (
+                    <span className="as-adhan-time">{formatClock(times[selected]!, lang)}</span>
+                  )}
+                </div>
+
+                {shown.map((a) => {
+                  const on = isOn(a);
+                  return (
+                    <div key={a.id} className={"as-card" + (on ? "" : " is-off")} data-alarm={a.id}>
+                      <button
+                        type="button"
+                        className="as-alarm-open"
+                        onClick={() => {
+                          setError(null);
+                          setEditing({ alarm: stored(a), isNew: false });
+                        }}
+                      >
+                        <span className="as-card-time">{ringClock(a) ?? "—"}</span>
+                        <span className={"as-card-label" + (a.label ? "" : " is-untitled")}>
+                          {a.label || s.untitled}
+                        </span>
+                        <span className="as-card-meta">
+                          <span className="as-card-offset">{offsetPhrase(a.offsetMinutes, s, lang)}</span>
+                          <span className="as-card-days">
+                            {!on ? s.off : a.nextAt === null ? s.neverRings : repeatSummary(a, s, lang)}
+                          </span>
+                        </span>
+                      </button>
+                      <Switch checked={on} onChange={() => handleToggle(a)} label={s.toggle} />
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className="as-new"
+                  onClick={() => {
+                    setError(null);
+                    setEditing({ alarm: newAlarm(selected), isNew: true });
+                  }}
+                >
+                  <PlusIcon />
+                  {s.newTitle.replace("{prayer}", prayerName(selected))}
+                </button>
+              </section>
 
               <section className="as-settings">
-                <h4 className="as-prayer-head">{s.settingsTitle}</h4>
+                <h4 className="as-section-head">{s.settingsTitle}</h4>
 
                 <div className="sts-row">
                   <span className="sts-row-label">{s.sound}</span>

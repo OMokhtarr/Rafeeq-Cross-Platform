@@ -270,8 +270,14 @@ ion-content::part(scroll) {
   font-size: var(--text-sm);
 }
 
-.pb-seg-btn:hover {
-  background: var(--color-gold-faint);
+/* Hover only where there is a real pointer, and never over the chosen option.
+   On a phone :hover sticks to the last button tapped, and the night rule
+   below used to outrank .is-active, so a just-chosen option showed the faint
+   gold instead of green until the user tapped somewhere else. */
+@media (hover: hover) {
+  .pb-seg-btn:not(.is-active):hover {
+    background: var(--color-gold-faint);
+  }
 }
 .pb-seg-btn.is-active {
   background: var(--color-quran);
@@ -287,12 +293,9 @@ ion-content::part(scroll) {
   background: transparent;
   border: none;
 }
-[data-theme="night"] .pb-seg-btn {
+[data-theme="night"] .pb-seg-btn:not(.is-active) {
   color: var(--color-text-primary);
   border-color: var(--color-border-subtle);
-}
-[data-theme="night"] .pb-seg-btn:hover {
-  background: var(--color-gold-faint);
 }
 
 /* ── Link row ─────────────────────────────────────────────────────────────── */
