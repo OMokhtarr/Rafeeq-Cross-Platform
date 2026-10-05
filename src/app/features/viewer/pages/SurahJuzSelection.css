@@ -138,8 +138,46 @@ ion-content::part(scroll) {
   opacity: 0.7;
 }
 
-.sjs-tab-active {
-  color: var(--color-text-primary);
+/* Matches the themed .sjs-tab selectors' specificity so the active colour
+   isn't overridden in night/dark (which left every tab looking the same). */
+.sjs-tab.sjs-tab-active,
+[data-theme="night"] .sjs-tab.sjs-tab-active,
+[data-theme="dark"] .sjs-tab.sjs-tab-active {
+  color: var(--color-gold);
+}
+
+.sjs-tab-active .sjs-tab-en {
+  opacity: 1;
+}
+
+/* Gold underline under the chosen tab, sitting on the tab bar's border. */
+.sjs-tab::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.sjs-tab-active::after {
+  transform: scaleX(1);
+}
+
+.sjs-tab:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sjs-tab::after {
+    transition: none;
+  }
 }
 
 /* ── List ── */

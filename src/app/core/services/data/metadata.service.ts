@@ -1,9 +1,4 @@
-import {
-  fetchChapters,
-  fetchJuzs,
-  fetchHizbs,
-  fetchRubElHizbs,
-} from "../api/quran-data-provider";
+import { fetchChapters, fetchJuzs } from "../api/quran-data-provider";
 import { idb } from "../storage/idb.service";
 
 export interface PageStart {
@@ -626,6 +621,87 @@ export const JUZ_START_PAGES: readonly number[] = [
   342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
 ];
 
+// Start verse [sura, aya] of every rub' el-hizb 1–240 in the Madani (Hafs)
+// mushaf — one hizb (four rubs) per line. Taken from Quran.com /rub_el_hizbs
+// and cross-checked against Tanzil (the only difference, rub 106, is the
+// Madani mark at 15:49). These marks are fixed, so they are bundled rather
+// than fetched: the API list is keyed by `rub_el_hizb_number`, and reading it
+// by any other name silently collapsed every rub to its whole hizb.
+const RUB_STARTS: readonly (readonly [number, number])[] = [
+  [1, 1], [2, 26], [2, 44], [2, 60], // 1
+  [2, 75], [2, 92], [2, 106], [2, 124], // 2
+  [2, 142], [2, 158], [2, 177], [2, 189], // 3
+  [2, 203], [2, 219], [2, 233], [2, 243], // 4
+  [2, 253], [2, 263], [2, 272], [2, 283], // 5
+  [3, 15], [3, 33], [3, 52], [3, 75], // 6
+  [3, 93], [3, 113], [3, 133], [3, 153], // 7
+  [3, 171], [3, 186], [4, 1], [4, 12], // 8
+  [4, 24], [4, 36], [4, 58], [4, 74], // 9
+  [4, 88], [4, 100], [4, 114], [4, 135], // 10
+  [4, 148], [4, 163], [5, 1], [5, 12], // 11
+  [5, 27], [5, 41], [5, 51], [5, 67], // 12
+  [5, 82], [5, 97], [5, 109], [6, 13], // 13
+  [6, 36], [6, 59], [6, 74], [6, 95], // 14
+  [6, 111], [6, 127], [6, 141], [6, 151], // 15
+  [7, 1], [7, 31], [7, 47], [7, 65], // 16
+  [7, 88], [7, 117], [7, 142], [7, 156], // 17
+  [7, 171], [7, 189], [8, 1], [8, 22], // 18
+  [8, 41], [8, 61], [9, 1], [9, 19], // 19
+  [9, 34], [9, 46], [9, 60], [9, 75], // 20
+  [9, 93], [9, 111], [9, 122], [10, 11], // 21
+  [10, 26], [10, 53], [10, 71], [10, 90], // 22
+  [11, 6], [11, 24], [11, 41], [11, 61], // 23
+  [11, 84], [11, 108], [12, 7], [12, 30], // 24
+  [12, 53], [12, 77], [12, 101], [13, 5], // 25
+  [13, 19], [13, 35], [14, 10], [14, 28], // 26
+  [15, 1], [15, 49], [16, 1], [16, 30], // 27
+  [16, 51], [16, 75], [16, 90], [16, 111], // 28
+  [17, 1], [17, 23], [17, 50], [17, 70], // 29
+  [17, 99], [18, 17], [18, 32], [18, 51], // 30
+  [18, 75], [18, 99], [19, 22], [19, 59], // 31
+  [20, 1], [20, 55], [20, 83], [20, 111], // 32
+  [21, 1], [21, 29], [21, 51], [21, 83], // 33
+  [22, 1], [22, 19], [22, 38], [22, 60], // 34
+  [23, 1], [23, 36], [23, 75], [24, 1], // 35
+  [24, 21], [24, 35], [24, 53], [25, 1], // 36
+  [25, 21], [25, 53], [26, 1], [26, 52], // 37
+  [26, 111], [26, 181], [27, 1], [27, 27], // 38
+  [27, 56], [27, 82], [28, 12], [28, 29], // 39
+  [28, 51], [28, 76], [29, 1], [29, 26], // 40
+  [29, 46], [30, 1], [30, 31], [30, 54], // 41
+  [31, 22], [32, 11], [33, 1], [33, 18], // 42
+  [33, 31], [33, 51], [33, 60], [34, 10], // 43
+  [34, 24], [34, 46], [35, 15], [35, 41], // 44
+  [36, 28], [36, 60], [37, 22], [37, 83], // 45
+  [37, 145], [38, 21], [38, 52], [39, 8], // 46
+  [39, 32], [39, 53], [40, 1], [40, 21], // 47
+  [40, 41], [40, 66], [41, 9], [41, 25], // 48
+  [41, 47], [42, 13], [42, 27], [42, 51], // 49
+  [43, 24], [43, 57], [44, 17], [45, 12], // 50
+  [46, 1], [46, 21], [47, 10], [47, 33], // 51
+  [48, 18], [49, 1], [49, 14], [50, 27], // 52
+  [51, 31], [52, 24], [53, 26], [54, 9], // 53
+  [55, 1], [56, 1], [56, 75], [57, 16], // 54
+  [58, 1], [58, 14], [59, 11], [60, 7], // 55
+  [62, 1], [63, 4], [65, 1], [66, 1], // 56
+  [67, 1], [68, 1], [69, 1], [70, 19], // 57
+  [72, 1], [73, 20], [75, 1], [76, 19], // 58
+  [78, 1], [80, 1], [82, 1], [84, 1], // 59
+  [87, 1], [90, 1], [94, 1], [100, 9], // 60
+];
+
+// Verse count per surah — used to step back across a surah boundary when
+// deriving a rub's last verse. Index 0 unused.
+const SURAH_VERSE_COUNTS: readonly number[] = [
+  0,
+  7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
+  112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
+  54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
+  14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
+  29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11,
+  11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6,
+];
+
 // Static surah names — used offline when chaptersCache is empty (API/IDB unavailable).
 // Index 0 unused; index 1–114 maps sura ID → names.
 const SURAH_NAMES_AR: readonly string[] = [
@@ -663,8 +739,6 @@ const SURAH_NAMES_EN: readonly string[] = [
 // ─── In‑memory caches ────────────────────────────────────────────────────────
 let chaptersCache: any[] = [];
 let juzsCache: any[] = [];
-let hizbsCache: any[] = [];
-let rubsCache: any[] = [];
 let pageToSuraMap: Map<number, number> | null = null;
 let initPromise: Promise<void> | null = null;
 
@@ -700,49 +774,7 @@ export async function initMetadata(): Promise<void> {
     }
     juzsCache = juzs;
 
-    // 3. Hizbs (1-60)
-    const hizbsRecord = await idb.get<{ key: string; value: any[] }>(
-      "meta",
-      "hizbs",
-    );
-    let hizbs = Array.isArray(hizbsRecord?.value) ? hizbsRecord.value : [];
-    if (hizbs.length === 0) {
-      try {
-        const raw = await fetchHizbs();
-        hizbs = Array.isArray(raw) ? raw : [];
-        if (hizbs.length > 0)
-          await idb.put("meta", { key: "hizbs", value: hizbs });
-      } catch (err) {
-        console.warn(
-          "[metadata] Failed to fetch hizbs – using estimated ranges.",
-          err,
-        );
-      }
-    }
-    hizbsCache = hizbs;
-
-    // 4. Rub el‑Hizbs (1-240)
-    const rubsRecord = await idb.get<{ key: string; value: any[] }>(
-      "meta",
-      "rubs",
-    );
-    let rubs = Array.isArray(rubsRecord?.value) ? rubsRecord.value : [];
-    if (rubs.length === 0) {
-      try {
-        const raw = await fetchRubElHizbs();
-        rubs = Array.isArray(raw) ? raw : [];
-        if (rubs.length > 0)
-          await idb.put("meta", { key: "rubs", value: rubs });
-      } catch (err) {
-        console.warn(
-          "[metadata] Failed to fetch rub el‑hizbs – using estimated ranges.",
-          err,
-        );
-      }
-    }
-    rubsCache = rubs;
-
-    // 5. Page → surah mapping
+    // 3. Page → surah mapping
     const suraMap = new Map<number, number>();
     for (const ch of chaptersCache) {
       const start = ch.pages?.[0] ?? 1;
@@ -835,83 +867,38 @@ export function getJuzEnd(juzNumber: number): { sura: number; aya: number } {
   return { sura: Number(lastSuraId), aya: Number(endAya) || 6 };
 }
 
-// ─── Hizb ─────────────────────────────────────────────────────────────────────
-function getStartFromMapping(mapping: Record<string, string>): {
+// ─── Hizb / Rub el‑Hizb ──────────────────────────────────────────────────────
+// All derived from the bundled RUB_STARTS table: hizb n = rubs 4n-3 … 4n, and a
+// unit ends on the verse just before the next unit starts.
+
+/** The verse immediately before `v` (stepping back into the previous surah). */
+function verseBefore(v: { sura: number; aya: number }): {
   sura: number;
   aya: number;
 } {
-  const keys = Object.keys(mapping).sort((a, b) => Number(a) - Number(b));
-  if (!keys.length) return { sura: 1, aya: 1 };
-  const firstSura = keys[0];
-  const range = mapping[firstSura];
-  const startAya = range?.split("-")[0] ?? range;
-  return { sura: Number(firstSura), aya: Number(startAya) || 1 };
+  if (v.aya > 1) return { sura: v.sura, aya: v.aya - 1 };
+  return { sura: v.sura - 1, aya: SURAH_VERSE_COUNTS[v.sura - 1] };
 }
 
-function getEndFromMapping(mapping: Record<string, string>): {
-  sura: number;
-  aya: number;
-} {
-  const keys = Object.keys(mapping).sort((a, b) => Number(a) - Number(b));
-  if (!keys.length) return { sura: 114, aya: 6 };
-  const lastSura = keys[keys.length - 1];
-  const range = mapping[lastSura];
-  const parts = range?.split("-");
-  const endAya = parts?.length === 2 ? parts[1] : parts?.[0] ?? "1";
-  return { sura: Number(lastSura), aya: Number(endAya) || 1 };
+export function getRubStart(rubNumber: number): { sura: number; aya: number } {
+  const [sura, aya] = RUB_STARTS[Math.min(240, Math.max(1, rubNumber)) - 1];
+  return { sura, aya };
+}
+
+export function getRubEnd(rubNumber: number): { sura: number; aya: number } {
+  if (rubNumber >= 240) return { sura: 114, aya: 6 };
+  return verseBefore(getRubStart(rubNumber + 1));
 }
 
 export function getHizbStart(hizbNumber: number): {
   sura: number;
   aya: number;
 } {
-  const hizb = hizbsCache?.find((h: any) => h.hizb_number === hizbNumber);
-  if (!hizb?.verse_mapping) return getJuzStart(Math.ceil(hizbNumber / 2)); // fallback
-  return getStartFromMapping(hizb.verse_mapping);
+  return getRubStart((hizbNumber - 1) * 4 + 1);
 }
 
 export function getHizbEnd(hizbNumber: number): { sura: number; aya: number } {
-  const hizb = hizbsCache?.find((h: any) => h.hizb_number === hizbNumber);
-  if (!hizb?.verse_mapping) return getJuzEnd(Math.ceil(hizbNumber / 2));
-  return getEndFromMapping(hizb.verse_mapping);
-}
-
-// ─── Rub el‑Hizb ─────────────────────────────────────────────────────────────
-export function getRubStart(rubNumber: number): { sura: number; aya: number } {
-  const rub = rubsCache?.find((r: any) => r.rub_number === rubNumber);
-  if (!rub?.verse_mapping) return getHizbStart(Math.ceil(rubNumber / 4));
-  return getStartFromMapping(rub.verse_mapping);
-}
-
-export function getRubEnd(rubNumber: number): { sura: number; aya: number } {
-  const rub = rubsCache?.find((r: any) => r.rub_number === rubNumber);
-  if (!rub?.verse_mapping) return getHizbEnd(Math.ceil(rubNumber / 4));
-  return getEndFromMapping(rub.verse_mapping);
-}
-
-/**
- * Divide each juz' page span into `perJuz` equal parts and return the start
- * page of every part across all 30 juz. Juz boundaries come from the reliable
- * hardcoded JUZ_START_PAGES table, so this works with no network and stays
- * aligned to real juz edges (8 rubs / 2 hizbs per juz). Used as the fallback
- * when the rub/hizb verse-mapping API data isn't available.
- */
-function subdivideJuz(perJuz: number): number[] {
-  const starts: number[] = [];
-  let prev = 0;
-  for (let j = 0; j < 30; j++) {
-    const from = JUZ_START_PAGES[j];
-    const to = (j < 29 ? JUZ_START_PAGES[j + 1] : 605) - 1;
-    const span = to - from + 1;
-    for (let k = 0; k < perJuz; k++) {
-      let p = from + Math.round((k * span) / perJuz);
-      p = Math.min(604, Math.max(1, p));
-      if (p < prev) p = prev; // keep monotonic
-      starts.push(p);
-      prev = p;
-    }
-  }
-  return starts;
+  return getRubEnd(hizbNumber * 4);
 }
 
 /** A rub'/hizb boundary: the page it starts on and the exact start verse. */
@@ -921,68 +908,41 @@ export interface UnitBoundary {
   aya: number;
 }
 
-/**
- * Boundaries of every unit in `cache` (rub' or hizb), with the real start verse
- * and its page. Entries arrive from the API already ordered; we do NOT sort by
- * `*_number` because that field is often absent. Pages are kept monotonic.
- * Returns null when the real data isn't loaded (caller uses a page-only fallback).
- */
-function boundariesFromCache(cache: any[], expected: number): UnitBoundary[] | null {
-  if (cache.length < expected) return null;
+/** Start verse + page of every `rubsPerUnit`-th rub (1 = rubs, 4 = hizbs). */
+function unitBoundaries(rubsPerUnit: number): UnitBoundary[] {
   const out: UnitBoundary[] = [];
-  let prev = 1;
-  for (const u of cache) {
-    const start = getStartFromMapping(u.verse_mapping);
-    let page = estimatePageForVerse(start.sura, start.aya);
-    if (page < prev) page = prev;
-    out.push({ page, sura: start.sura, aya: start.aya });
-    prev = page;
+  for (let i = 0; i < RUB_STARTS.length; i += rubsPerUnit) {
+    const [sura, aya] = RUB_STARTS[i];
+    out.push({ page: estimatePageForVerse(sura, aya), sura, aya });
   }
   return out;
 }
 
-/** Real rub' boundaries (verse + page), or null if the rub data isn't loaded. */
-export function getRubBoundaries(): UnitBoundary[] | null {
-  return boundariesFromCache(rubsCache, 240);
+/** Rub' boundaries (verse + page), 1..240. */
+export function getRubBoundaries(): UnitBoundary[] {
+  return unitBoundaries(1);
 }
 
-/** Real hizb boundaries (verse + page), or null if the hizb data isn't loaded. */
-export function getHizbBoundaries(): UnitBoundary[] | null {
-  return boundariesFromCache(hizbsCache, 60);
+/** Hizb boundaries (verse + page), 1..60. */
+export function getHizbBoundaries(): UnitBoundary[] {
+  return unitBoundaries(4);
 }
 
-/**
- * Start page of every rub' el-hizb (1..240). Uses the real rub verse-mappings
- * when available; otherwise subdivides each juz into 8 rubs (juz-aligned).
- */
+/** Start page of every rub' el-hizb (1..240). */
 export function getRubStartPages(): number[] {
-  const b = getRubBoundaries();
-  return b ? b.map((x) => x.page) : subdivideJuz(8);
+  return getRubBoundaries().map((b) => b.page);
 }
 
-/**
- * Start page of every hizb (1..60). Prefers the real hizb mappings; otherwise
- * subdivides each juz into 2 hizbs (juz-aligned).
- */
+/** Start page of every hizb (1..60). */
 export function getHizbStartPages(): number[] {
-  const b = getHizbBoundaries();
-  return b ? b.map((x) => x.page) : subdivideJuz(2);
+  return getHizbBoundaries().map((b) => b.page);
 }
 
 export function getRubNumberForPage(page: number): number {
-  if (rubsCache.length === 0) {
-    // Fallback: each rub ≈ 2.5 pages
-    const approx = Math.round((page / 604) * 240);
-    return Math.min(240, Math.max(1, approx));
-  }
-  const pageStarts = rubsCache.map((r) => {
-    const start = getStartFromMapping(r.verse_mapping);
-    return estimatePageForVerse(start.sura, start.aya);
-  });
-  for (let i = 0; i < rubsCache.length; i++) {
-    const rubStartPage = pageStarts[i];
-    const nextStartPage = i < rubsCache.length - 1 ? pageStarts[i + 1] : 605;
-    if (page >= rubStartPage && page < nextStartPage) return i + 1;
+  const pageStarts = getRubStartPages();
+  for (let i = 0; i < pageStarts.length; i++) {
+    const nextStartPage = i < pageStarts.length - 1 ? pageStarts[i + 1] : 605;
+    if (page >= pageStarts[i] && page < nextStartPage) return i + 1;
   }
   return 1;
 }

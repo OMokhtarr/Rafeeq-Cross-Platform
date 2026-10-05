@@ -10,6 +10,8 @@ import {
   getSurahNameEnglish,
   getHizbStart,
   getHizbEnd,
+  getRubStart,
+  getRubEnd,
   estimatePageForVerse,
   getSuraForPage,
 } from "../../../core/services/data/metadata.service";
@@ -19,25 +21,16 @@ import "./SurahJuzSelection.css";
 
 type Tab = "surah" | "juz" | "hizb";
 
-// ── Rub item derived entirely from hizb data (getRubStart/getRubEnd are
-//    unreliable — they return hizb boundaries for all 4 quarters).
-//    We interpolate page ranges within each hizb instead.
 interface RubItem {
   rubNum: number;
   hizbNum: number;
   quarterInHizb: number; // 1 = ¼, 2 = ½, 3 = ¾, 4 = End
   startPage: number;
   endPage: number;
-  // Start verse is only accurate for Q1 (= hizb start)
   startSura: number;
   startAya: number;
   startSuraAr: string;
   startSuraEn: string;
-  // End verse is only accurate for Q4 (= hizb end)
-  endSura: number;
-  endAya: number;
-  endSuraAr: string;
-  endSuraEn: string;
 }
 
 const JUZ_START_PAGES: readonly number[] = [
@@ -50,6 +43,8 @@ const SurahJuzSelection: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const { t, lang, isRTL } = useLang();
+  // English captions sit under the Arabic ones only outside Arabic mode.
+  const showEn = lang !== "ar";
   const [tab, setTab] = useState<Tab>("surah");
   const [pendingJuzNum, setPendingJuzNum] = useState<number | null>(null);
   const [pendingSurahNum, setPendingSurahNum] = useState<number | null>(null);
@@ -81,11 +76,11 @@ const SurahJuzSelection: React.FC = () => {
       const juzNum = i + 1;
       const start = JUZ_START_PAGES[juzNum - 1];
       const end = juzNum < 30 ? JUZ_START_PAGES[juzNum] - 1 : totalPages;
-      return { num: juzNum, start, end };
+      const startVerse = getHizbStart(juzNum * 2 - 1);
+      return { num: juzNum, start, end, startVerse };
     });
   }, []);
 
-  // Hizbs – exact API boundaries (these ARE correct)
   const hizbs = useMemo(() => {
     return Array.from({ length: 60 }, (_, i) => {
       const hizbNum = i + 1;
@@ -111,46 +106,24 @@ const SurahJuzSelection: React.FC = () => {
     });
   }, []);
 
-  // ── Rubs derived from hizb data ──────────────────────────────────────────
-  // getRubStart / getRubEnd are broken: they return the hizb boundary for
-  // all four quarters instead of the actual quarter start/end.
-  // Fix: interpolate page ranges within each hizb and use hizb verse
-  // boundaries only where they're accurate (Q1 start, Q4 end).
   const rubs = useMemo((): RubItem[] => {
     return Array.from({ length: 240 }, (_, i) => {
       const rubNum = i + 1;
-      const hizbNum = Math.ceil(rubNum / 4);
-      const quarterInHizb = ((rubNum - 1) % 4) + 1;
-      const h = hizbs[hizbNum - 1];
-      if (!h) return null;
-
-      // Interpolate start / end page within the hizb page span
-      const span = Math.max(0, h.endPage - h.startPage);
-      const startPage =
-        h.startPage + Math.floor(((quarterInHizb - 1) * span) / 4);
-      const endPage =
-        quarterInHizb === 4
-          ? h.endPage
-          : h.startPage + Math.floor((quarterInHizb * span) / 4);
-
+      const start = getRubStart(rubNum);
+      const end = getRubEnd(rubNum);
       return {
         rubNum,
-        hizbNum,
-        quarterInHizb,
-        startPage,
-        endPage,
-        // These verse fields are only accurate for Q1 (start) and Q4 (end)
-        startSura: h.startSura,
-        startAya: h.startAya,
-        startSuraAr: h.startSuraAr,
-        startSuraEn: h.startSuraEn,
-        endSura: h.endSura,
-        endAya: h.endAya,
-        endSuraAr: h.endSuraAr,
-        endSuraEn: h.endSuraEn,
-      } as RubItem;
-    }).filter(Boolean) as RubItem[];
-  }, [hizbs]);
+        hizbNum: Math.ceil(rubNum / 4),
+        quarterInHizb: (i % 4) + 1,
+        startPage: estimatePageForVerse(start.sura, start.aya),
+        endPage: estimatePageForVerse(end.sura, end.aya),
+        startSura: start.sura,
+        startAya: start.aya,
+        startSuraAr: getSurahNameArabic(start.sura),
+        startSuraEn: getSurahNameEnglish(start.sura),
+      };
+    });
+  }, []);
 
   const rubsByHizb = useMemo(() => {
     const map = new Map<number, RubItem[]>();
@@ -168,7 +141,7 @@ const SurahJuzSelection: React.FC = () => {
     const juz = juzs.find(
       (j) => currentPage >= j.start && currentPage <= j.end,
     );
-    // Find rub by interpolated page range
+    // First rub touching this page (a rub mark often falls mid-page)
     const rub = rubs.find(
       (r) => r.startPage <= currentPage && r.endPage >= currentPage,
     );
@@ -232,7 +205,13 @@ const SurahJuzSelection: React.FC = () => {
     return () => clearTimeout(timer);
   }, [tab, relevantIds]); // re-runs every time tab changes → always scrolls to right place
 
-  const goToPage = (page: number, itemType?: "surah" | "juz") => {
+  // Opens the viewer on `page` and flashes `verse` there — the same `v` param
+  // bookmark and search navigation use.
+  const goToPage = (
+    page: number,
+    verse: { sura: number; aya: number },
+    itemType?: "surah" | "juz",
+  ) => {
     if (itemType === "surah") {
       setPendingSurahNum(getSuraForPage(page) ?? 1);
     } else if (itemType === "juz") {
@@ -244,7 +223,7 @@ const SurahJuzSelection: React.FC = () => {
     // /surah-juz, so backing out of the chosen surah would land on the picker
     // again and need a second back to reach the viewer. /viewer is a root tab
     // and must be one back away from exiting.
-    history.replace(`/viewer?page=${page}`);
+    history.replace(`/viewer?page=${page}&v=${verse.sura}:${verse.aya}`);
   };
 
   const handleBack = () => {
@@ -255,25 +234,11 @@ const SurahJuzSelection: React.FC = () => {
   const quarterLabelsAr = ["ربع", "نصف", "ثلاثة أرباع", "كمال"];
   const quarterLabelsEn = ["¼", "½", "¾", "End"];
 
-  // ── Rub verse-range helper ──────────────────────────────────────────────
-  // Only Q1 has an accurate start verse (= hizb start).
-  // Only Q4 has an accurate end verse (= hizb end).
-  // For Q2 & Q3 we cannot derive the verse from the broken API, so we
-  // show nothing in the verse column (the page badge is enough).
-  const rubVerseLabel = (r: RubItem): string => {
-    if (r.quarterInHizb === 1) {
-      return lang === "ar"
-        ? `${r.startSuraAr} : ${toHindiNumbers(r.startAya)}`
-        : `${r.startSuraEn} : ${r.startAya}`;
-    }
-    if (r.quarterInHizb === 4) {
-      return lang === "ar"
-        ? `${r.endSuraAr} : ${toHindiNumbers(r.endAya)}`
-        : `${r.endSuraEn} : ${r.endAya}`;
-    }
-    // Q2 / Q3: no reliable verse data
-    return "";
-  };
+  // Each quarter row shows the verse it starts at — where tapping it lands.
+  const rubVerseLabel = (r: RubItem): string =>
+    lang === "ar"
+      ? `${r.startSuraAr} : ${toHindiNumbers(r.startAya)}`
+      : `${r.startSuraEn} : ${r.startAya}`;
 
   return (
     <IonPage>
@@ -321,7 +286,7 @@ const SurahJuzSelection: React.FC = () => {
               onClick={() => setTab("surah")}
             >
               <span className="sjs-tab-ar">السور</span>
-              <span className="sjs-tab-en">Chapters</span>
+              {showEn && <span className="sjs-tab-en">Chapters</span>}
             </button>
             <button
               role="tab"
@@ -330,7 +295,7 @@ const SurahJuzSelection: React.FC = () => {
               onClick={() => setTab("juz")}
             >
               <span className="sjs-tab-ar">الأجزاء</span>
-              <span className="sjs-tab-en">Juz</span>
+              {showEn && <span className="sjs-tab-en">Juz</span>}
             </button>
             <button
               role="tab"
@@ -339,7 +304,7 @@ const SurahJuzSelection: React.FC = () => {
               onClick={() => setTab("hizb")}
             >
               <span className="sjs-tab-ar">الأحزاب</span>
-              <span className="sjs-tab-en">Hizb</span>
+              {showEn && <span className="sjs-tab-en">Hizb</span>}
             </button>
           </div>
 
@@ -353,7 +318,9 @@ const SurahJuzSelection: React.FC = () => {
                       className={`sjs-row sjs-row-surah${
                         highlightSurah === s.num ? " sjs-row--highlight" : ""
                       }`}
-                      onClick={() => goToPage(s.startPage, "surah")}
+                      onClick={() =>
+                        goToPage(s.startPage, { sura: s.num, aya: 1 }, "surah")
+                      }
                     >
                       <span
                         className={
@@ -369,7 +336,7 @@ const SurahJuzSelection: React.FC = () => {
                         <span className="sjs-name-ar" lang="ar">
                           {s.ar}
                         </span>
-                        <span className="sjs-name-en">{s.en}</span>
+                        {showEn && <span className="sjs-name-en">{s.en}</span>}
                       </span>
                       <span className="sjs-row-meta">
                         <span
@@ -408,7 +375,7 @@ const SurahJuzSelection: React.FC = () => {
                       className={`sjs-row sjs-row-juz${
                         highlightJuz === j.num ? " sjs-row--highlight" : ""
                       }`}
-                      onClick={() => goToPage(j.start, "juz")}
+                      onClick={() => goToPage(j.start, j.startVerse, "juz")}
                     >
                       <span className="sjs-num sjs-num-juz">
                         {lang === "ar" ? toHindiNumbers(j.num) : j.num}
@@ -417,7 +384,9 @@ const SurahJuzSelection: React.FC = () => {
                         <span className="sjs-name-ar" lang="ar">
                           {`الجزء ${toHindiNumbers(j.num)}`}
                         </span>
-                        <span className="sjs-name-en">{`Juz ${j.num}`}</span>
+                        {showEn && (
+                          <span className="sjs-name-en">{`Juz ${j.num}`}</span>
+                        )}
                       </span>
                       <span className="sjs-row-meta">
                         <span className="sjs-ayahs">
@@ -446,7 +415,12 @@ const SurahJuzSelection: React.FC = () => {
                       {/* Hizb header row */}
                       <button
                         className="sjs-row sjs-row-hizb"
-                        onClick={() => goToPage(h.startPage)}
+                        onClick={() =>
+                          goToPage(h.startPage, {
+                            sura: h.startSura,
+                            aya: h.startAya,
+                          })
+                        }
                       >
                         <span className="sjs-num sjs-num-hizb">
                           {lang === "ar" ? toHindiNumbers(h.num) : h.num}
@@ -455,7 +429,9 @@ const SurahJuzSelection: React.FC = () => {
                           <span className="sjs-name-ar" lang="ar">
                             {`الحزب ${toHindiNumbers(h.num)}`}
                           </span>
-                          <span className="sjs-name-en">{`Hizb ${h.num}`}</span>
+                          {showEn && (
+                            <span className="sjs-name-en">{`Hizb ${h.num}`}</span>
+                          )}
                           <span className="sjs-name-en-sub">
                             {lang === "ar"
                               ? `${h.startSuraAr} : ${toHindiNumbers(
@@ -493,24 +469,26 @@ const SurahJuzSelection: React.FC = () => {
                                 className={`sjs-rub-row${
                                   isHighlighted ? " sjs-rub-row--highlight" : ""
                                 }`}
-                                onClick={() => goToPage(r.startPage)}
+                                onClick={() =>
+                                  goToPage(r.startPage, {
+                                    sura: r.startSura,
+                                    aya: r.startAya,
+                                  })
+                                }
                               >
                                 <span className="sjs-rub-main">
                                   <span className="sjs-rub-label-ar" lang="ar">
                                     {quarterLabelsAr[r.quarterInHizb - 1]}
                                   </span>
-                                  <span className="sjs-rub-label-en">
-                                    {quarterLabelsEn[r.quarterInHizb - 1]}
-                                  </span>
+                                  {showEn && (
+                                    <span className="sjs-rub-label-en">
+                                      {quarterLabelsEn[r.quarterInHizb - 1]}
+                                    </span>
+                                  )}
                                 </span>
-                                {/* Verse label — only shown where data is accurate */}
-                                {verseLabel ? (
-                                  <span className="sjs-rub-verse">
-                                    {verseLabel}
-                                  </span>
-                                ) : (
-                                  <span className="sjs-rub-verse" />
-                                )}
+                                <span className="sjs-rub-verse">
+                                  {verseLabel}
+                                </span>
                                 <span className="sjs-rub-page">
                                   {lang === "ar"
                                     ? `${t.mushaf.page} ${toHindiNumbers(

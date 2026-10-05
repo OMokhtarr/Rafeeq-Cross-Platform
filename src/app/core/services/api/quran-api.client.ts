@@ -795,7 +795,7 @@ export async function fetchHizb(hizbNumber: number): Promise<ApiHizb | null> {
 // ─── Rub el‑Hizbs ─────────────────────────────────────────────────────────────
 
 interface ApiRub {
-  rub_number: number;
+  rub_el_hizb_number: number;
   verse_mapping: Record<string, string>;
 }
 
@@ -843,7 +843,7 @@ export async function fetchRubElHizb(
     return (
       (data.rub_el_hizb as ApiRub) ??
       (data.rub as ApiRub) ??
-      ((data as any).rub_number !== undefined ? (data as unknown as ApiRub) : null)
+      ((data as any).rub_el_hizb_number !== undefined ? (data as unknown as ApiRub) : null)
     );
   } catch (err) {
     if (err instanceof QuranApiNotFound) return null;
