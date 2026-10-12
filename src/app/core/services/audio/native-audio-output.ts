@@ -138,6 +138,7 @@ export async function nativeGetState(): Promise<{
   coldIndex: number;
   positionMs: number;
   playing: boolean;
+  resumable?: boolean;
 }> {
   try {
     return await DrivingMode.getNativeState();

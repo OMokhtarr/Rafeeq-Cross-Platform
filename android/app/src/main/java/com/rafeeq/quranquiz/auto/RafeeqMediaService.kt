@@ -4,7 +4,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.content.SharedPreferences
 import android.media.AudioAttributes
@@ -20,6 +23,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.rafeeq.quranquiz.MainActivity
@@ -52,6 +56,12 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // connect (see onGetRoot) — every other media browser (Bluetooth AVRCP, Assistant,
         // System UI) browses without causing a notification card to appear.
         const val ANDROID_AUTO_PKG = "com.google.android.projection.gearhead"
+        // Android Auto's car-connection provider and its change broadcast — what androidx.car.app's
+        // CarConnection reads. State 0 = not connected, 1 = automotive OS, 2 = projection.
+        private val CAR_CONNECTION_URI: Uri = Uri.parse("content://androidx.car.app.connection")
+        private const val CAR_CONNECTION_STATE = "CarConnectionState"
+        private const val ACTION_CAR_CONNECTION_UPDATED =
+            "androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"
         const val ACTION_JUMP_TO_PAGE = "com.rafeeq.quranquiz.JUMP_TO_PAGE"
         const val EXTRA_AYA = "aya"
         const val EXTRA_PAGE = "page"
@@ -133,13 +143,17 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // in-app rate), and JS pushes its rate back via updateState so the button label follows an
     // in-app change too. The cycle mirrors the in-app speed options.
     private var currentSpeed: Float = 1.0f
-    // True once Android Auto has connected as a media browser (see onGetRoot). The speed button
-    // is a CAR-ONLY control: on Android 13+ the phone's media notification no longer renders the
-    // NotificationCompat actions we add in buildNotification() and instead derives its buttons
-    // from the session's PlaybackState, so a speed custom action in slot 0 pushed the
-    // prev-page / next-page buttons out of the phone's visible slots. Gating it on this flag
-    // keeps the speed control in the car while the phone notification shows page nav again.
+    // True while the phone is projecting to a car (Android Auto's connection provider, see
+    // refreshCarConnection). The speed button is a CAR-ONLY control: on Android 13+ the phone's
+    // media notification no longer renders the NotificationCompat actions we add in
+    // buildNotification() and instead derives its buttons from the session's PlaybackState, so a
+    // speed custom action in slot 0 pushed the next-page button out of the phone's visible slots.
+    // NOT a latch on Auto's onGetRoot: the Auto app binds media services with no car attached
+    // (and stays bound), which left the speed button on the phone notification for good.
     private var carConnected = false
+    private val carConnectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = refreshCarConnection()
+    }
 
     // 1 → 1.25 → 1.5 → 1.75 → 2, then wraps back to 1 (the list starts at 1, so nextSpeedInCycle
     // returns to it after 2). Normal-and-faster only; no slow speeds.
@@ -287,6 +301,16 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         if (reciters.isEmpty()) reciters = RafeeqContentDefaults.RECITERS
         if (surahs.isEmpty()) surahs = RafeeqContentDefaults.SURAHS
 
+        // Follow the car connection so the speed button shows in the car and only there. Exported:
+        // the update broadcast comes from the Android Auto app.
+        ContextCompat.registerReceiver(
+            this,
+            carConnectionReceiver,
+            IntentFilter(ACTION_CAR_CONNECTION_UPDATED),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        refreshCarConnection()
+
         // Publish the singleton LAST — only now is the service safe to call into.
         instance = this
     }
@@ -313,6 +337,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     override fun onDestroy() {
         instance = null
+        unregisterReceiver(carConnectionReceiver)
         cancelBrainWatchdog()
         player?.release()
         player = null
@@ -570,6 +595,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      *  (repeat count reached) or was paused while the brain was frozen. */
     @androidx.media3.common.util.UnstableApi
     fun nativeIsPlaying(): Boolean = player?.isPlaying() ?: false
+
+    /** Whether a play press would resume real audio — false once the range finished (player
+     *  ended/idle). Lets the brain drop a stale mid-range verse instead of "resuming" silence. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeIsResumable(): Boolean = player?.isResumable() ?: false
 
     /** The surah native cold-start is currently playing, or 0 if native isn't driving. Used so
      *  the brain, on wake, adopts the RIGHT surah instead of defaulting to Al-Fatiha. */
@@ -1058,7 +1088,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // CAR ONLY. Android 13+ builds the phone's media notification from these custom actions
         // rather than from buildNotification()'s NotificationCompat actions, so a speed button in
         // slot 0 evicted the prev-page / next-page buttons from the phone's visible slots. Speed
-        // stays settable in-app on the phone; here it appears only once Auto has connected.
+        // stays settable in-app on the phone; here it appears only while projecting to a car.
         if (carConnected) {
             actions.add(
                 PlaybackStateCompat.CustomAction.Builder("cycleSpeed", speedLabel(currentSpeed), R.drawable.ic_speed).build()
@@ -1101,6 +1131,33 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             )
         }
         return actions
+    }
+
+    /**
+     * Re-read whether the phone is projecting to a car and, when that changed, republish the
+     * action row so the speed button appears in the car and leaves the phone notification. An
+     * unreadable provider (Auto not installed) counts as not connected.
+     */
+    private fun refreshCarConnection() {
+        val connected = try {
+            contentResolver.query(CAR_CONNECTION_URI, arrayOf(CAR_CONNECTION_STATE), null, null, null)
+                ?.use { c -> c.moveToFirst() && c.getInt(c.getColumnIndexOrThrow(CAR_CONNECTION_STATE)) != 0 }
+                ?: false
+        } catch (e: Exception) {
+            Log.w("RafeeqMedia", "car connection query failed: ${e.message}")
+            false
+        }
+        Log.d("RafeeqMedia", "refreshCarConnection: connected=$connected")
+        if (connected == carConnected) return
+        carConnected = connected
+        currentCustomActions = buildPageCustomActions()
+        session.controller.playbackState?.let { st ->
+            val sb = PlaybackStateCompat.Builder()
+                .setActions(TRANSPORT_ACTIONS)
+                .setState(st.state, st.position, st.playbackSpeed)
+            currentCustomActions.forEach { sb.addCustomAction(it) }
+            session.setPlaybackState(sb.build())
+        }
     }
 
     private fun requestAudioFocus() {
@@ -1237,20 +1294,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // Non-Auto playback is unaffected: the card appears the moment audio actually starts,
         // via promoteToForeground() from onPlayingChanged / updateState.
         if (clientPackageName == ANDROID_AUTO_PKG) {
-            // Latch the car connection so buildPageCustomActions() re-adds the speed button.
-            // Republish the state right away, otherwise the car shows the phone's speed-less
-            // action row until the next position tick.
-            if (!carConnected) {
-                carConnected = true
-                currentCustomActions = buildPageCustomActions()
-                session.controller.playbackState?.let { st ->
-                    val sb = PlaybackStateCompat.Builder()
-                        .setActions(TRANSPORT_ACTIONS)
-                        .setState(st.state, st.position, st.playbackSpeed)
-                    currentCustomActions.forEach { sb.addCustomAction(it) }
-                    session.setPlaybackState(sb.build())
-                }
-            }
+            // Re-check in case this connect beat the connection broadcast, so the car gets its
+            // speed button right away rather than at the next position tick.
+            refreshCarConnection()
             promoteToForeground(
                 session.controller.metadata
                     ?.getString(MediaMetadataCompat.METADATA_KEY_TITLE) ?: "رفيق",

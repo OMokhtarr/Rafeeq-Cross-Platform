@@ -345,7 +345,9 @@ class RafeeqAutoPlugin : Plugin() {
      * was frozen (phone locked / backgrounded) while native kept advancing the range. Returns:
      *   nativeDriving — true if native (not the brain) is currently the playback driver,
      *   coldIndex     — the cold-list/queue index native is on (== brain queue index; -1 if n/a),
-     *   positionMs    — the current verse's in-verse position (for a precise resume seek).
+     *   positionMs    — the current verse's in-verse position (for a precise resume seek),
+     *   playing       — whether the player is actually playing,
+     *   resumable     — false once the player finished (ended/idle), so play() would stay silent.
      */
     @androidx.media3.common.util.UnstableApi
     @PluginMethod
@@ -356,6 +358,7 @@ class RafeeqAutoPlugin : Plugin() {
         ret.put("coldIndex", service?.nativeCurrentColdIndex() ?: -1)
         ret.put("positionMs", service?.nativeCurrentVersePositionMs() ?: 0L)
         ret.put("playing", service?.nativeIsPlaying() ?: false)
+        ret.put("resumable", service?.nativeIsResumable() ?: false)
         call.resolve(ret)
     }
 

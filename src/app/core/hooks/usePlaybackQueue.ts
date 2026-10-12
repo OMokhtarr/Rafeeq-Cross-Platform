@@ -902,6 +902,13 @@ export function usePlaybackQueue(
 
   const resume = useCallback(async () => {
     if (isNativeOutput()) {
+      // If native already finished the range (e.g. while the phone was locked), the player has
+      // nothing to resume and play() would stay silent — replay the range from its start instead.
+      const st = await nativeOutGetState();
+      if (!st.playing && st.resumable === false && queueRef.current.length > 0) {
+        await start(queueRef.current);
+        return;
+      }
       nativeOutResume();
       setState((s) => ({ ...s, isPlaying: true }));
       try {
@@ -918,7 +925,7 @@ export function usePlaybackQueue(
           navigator.mediaSession.playbackState = "playing";
       } catch {}
     }
-  }, []);
+  }, [start]);
 
   const next = useCallback(() => {
     verseRepeatCountRef.current = 0;
@@ -1166,6 +1173,12 @@ export function usePlaybackQueue(
     // Native finished the range (repeat count reached) or was paused while we were frozen —
     // adopting would call playIndex and restart audio the user expects to be stopped.
     if (!st.playing) {
+      // Finished (nothing left to resume): end our session too. Keeping the verse we froze on
+      // made the app offer "resume" from mid-range on a player with nothing loaded — silence.
+      if (st.resumable === false) {
+        stop();
+        return;
+      }
       setState((s) => (s.isPlaying ? { ...s, isPlaying: false } : s));
       return;
     }
@@ -1187,7 +1200,7 @@ export function usePlaybackQueue(
     }));
     await playIndex(idx);
     if (st.positionMs > 0) nativeOutSeek(Math.round(st.positionMs));
-  }, [playIndex]);
+  }, [playIndex, stop]);
 
   const setRepeatPageRange = useCallback(
     (range: { first: number; last: number } | null) => {

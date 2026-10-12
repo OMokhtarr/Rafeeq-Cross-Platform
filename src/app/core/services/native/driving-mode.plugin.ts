@@ -140,6 +140,9 @@ export interface DrivingModePlugin {
     positionMs: number;
     /** Whether the native player is actually playing (false once a range stopped or paused). */
     playing: boolean;
+    /** False when the player has finished (ended/idle) and a play press would stay silent;
+     *  true when a track is loaded and merely paused. */
+    resumable?: boolean;
   }>;
 
   /** Play a one-shot intro (bismillah); a 'nativeIntroEnded' carAction follows. */

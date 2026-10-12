@@ -194,6 +194,13 @@
 
     </application>
 
+    <!-- Android Auto's connection-state provider. RafeeqMediaService reads it
+         to show the speed button only while actually projecting to a car;
+         Android 11+ hides another app's provider unless it is declared here. -->
+    <queries>
+        <provider android:authorities="androidx.car.app.connection" />
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
