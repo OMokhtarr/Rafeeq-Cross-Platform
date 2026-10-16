@@ -85,10 +85,20 @@ const MushafContextViewer: React.FC<Props> = ({
   const { hidden: globalHidden, showVerse } = useVerseVisibility();
   const mushafPageRef = useRef<HTMLDivElement>(null);
 
-  const targetVerse = useMemo(
+  const pageTargetVerse = useMemo(
     () => verses.find((v) => v.sura === verse.sura && v.aya === verse.aya),
     [verses, verse.sura, verse.aya],
   );
+  // The target verse as last seen on its own page, kept while browsing other
+  // pages so its word count (and with it the "fully revealed" gate on the
+  // reveal-next-verse button) survives paging away from the target's page.
+  const [targetVerse, setTargetVerse] = useState(pageTargetVerse);
+  useEffect(() => {
+    setTargetVerse(undefined);
+  }, [verse.sura, verse.aya]);
+  useEffect(() => {
+    if (pageTargetVerse) setTargetVerse(pageTargetVerse);
+  }, [pageTargetVerse]);
   const targetWordCount =
     targetVerse?.words?.filter((w) => w.charType === "end").length ?? 0;
 
