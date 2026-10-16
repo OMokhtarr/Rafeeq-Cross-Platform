@@ -13,6 +13,7 @@ import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -86,6 +87,9 @@ class AlarmRingActivity : AppCompatActivity() {
         setContentView(R.layout.activity_alarm_ring)
         timeView = findViewById(R.id.alarm_time)
         linesView = findViewById(R.id.alarm_lines)
+        // 150dp ring less 14dp padding on each side.
+        findViewById<ImageView>(R.id.alarm_logo)
+            .setImageBitmap(AlarmLogo.round(this, (122 * resources.displayMetrics.density).toInt()))
         paint()
 
         val root = findViewById<View>(R.id.alarm_root)

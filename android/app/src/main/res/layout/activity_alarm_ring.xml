@@ -31,11 +31,12 @@
             android:layout_gravity="center"
             android:padding="14dp">
 
+            <!-- Image set at runtime from AlarmLogo, cut to a circle. -->
             <ImageView
+                android:id="@+id/alarm_logo"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:contentDescription="@string/app_name"
-                android:src="@mipmap/ic_launcher_round" />
+                android:contentDescription="@string/app_name" />
         </FrameLayout>
     </FrameLayout>
 

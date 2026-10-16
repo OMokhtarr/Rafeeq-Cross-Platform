@@ -27,7 +27,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import com.rafeeq.quranquiz.R
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -282,7 +281,7 @@ class AlarmRingService : Service() {
         )
         val stop = PendingIntent.getService(this, 4237, commandIntent(this, ACTION_STOP), immutable)
         val snooze = PendingIntent.getService(this, 4238, commandIntent(this, ACTION_SNOOZE), immutable)
-        val largeIcon = ContextCompat.getDrawable(this, R.mipmap.ic_launcher_round)?.toBitmap(192, 192)
+        val largeIcon = AlarmLogo.round(this, 192)
 
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)

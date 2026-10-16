@@ -87,6 +87,7 @@ class PrayerAlarmRingReceiver : BroadcastReceiver() {
 
             val notification = NotificationCompat.Builder(context, FALLBACK_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
+                .setLargeIcon(AlarmLogo.round(context, 192))
                 .setColor(ContextCompat.getColor(context, R.color.colorPrimary))
                 .setContentTitle(lines.firstOrNull() ?: res.getString(R.string.app_name))
                 .setContentText(lines.drop(1).joinToString("\n"))

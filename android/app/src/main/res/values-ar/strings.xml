@@ -58,7 +58,8 @@
     <!-- منبّهات الصلاة -->
     <string name="alarm_stop">إيقاف</string>
     <string name="alarm_snooze">غفوة</string>
-    <string name="alarm_snooze_for">غفوة · %1$d د</string>
+    <!-- Brackets, not "·": beside Arabic digits the dot reads as the zero "٠". -->
+    <string name="alarm_snooze_for">غفوة (%1$d د)</string>
     <string name="alarm_ringing">منبّه الصلاة</string>
     <string name="alarm_missed_title">منبّه فائت</string>
     <string name="alarm_channel_name">منبّهات الصلاة</string>

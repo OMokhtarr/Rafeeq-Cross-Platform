@@ -27,7 +27,11 @@ object AlarmText {
     private fun localiseDigits(s: String, arabic: Boolean): String =
         if (!arabic) s else s.map { if (it in '0'..'9') ARABIC_ZERO + (it - '0') else it }.joinToString("")
 
-    /** The prayer, the signed offset when there is one, then the label. */
+    /**
+     * The prayer, the signed offset when there is one, then the label.
+     * Arabic separates with "،" rather than "·", which beside Arabic-Indic
+     * digits reads as the zero "٠" — "١:٣٠ · السحور" looks like "١:٣٠٠".
+     */
     fun ringLine(prayerName: String, offsetMinutes: Int, label: String, arabic: Boolean): String {
         val parts = mutableListOf(
             if (offsetMinutes == 0) {
@@ -38,7 +42,7 @@ object AlarmText {
             },
         )
         if (label.isNotBlank()) parts += label
-        return parts.joinToString(" · ")
+        return parts.joinToString(if (arabic) "، " else " · ")
     }
 
     /** Resources in the app's own language, which the alarm screens speak. */

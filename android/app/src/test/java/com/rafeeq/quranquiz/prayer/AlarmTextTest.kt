@@ -48,7 +48,12 @@ class AlarmTextTest {
 
     @Test
     fun `Arabic lines use Arabic-Indic digits`() {
-        assertEquals("الفجر − ١:٣٠ · السحور", AlarmText.ringLine("الفجر", -90, "السحور", arabic = true))
+        assertEquals("الفجر − ١:٣٠، السحور", AlarmText.ringLine("الفجر", -90, "السحور", arabic = true))
+    }
+
+    @Test
+    fun `Arabic lines without an offset still use the Arabic comma`() {
+        assertEquals("العشاء، Test", AlarmText.ringLine("العشاء", 0, "Test", arabic = true))
     }
 }
 
