@@ -19,6 +19,7 @@ export const RECITE_ENGINE_OPTIONS: {
   labelEn: string;
 }[] = [
   { value: "deepgram", labelAr: "Deepgram — بث فوري", labelEn: "Deepgram — live streaming" },
+  { value: "soniox", labelAr: "Soniox — بث فوري", labelEn: "Soniox — live streaming" },
 ];
 
 const SETTINGS_KEY = "rafiq_settings_v1";
