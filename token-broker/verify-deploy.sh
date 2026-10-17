@@ -63,3 +63,66 @@ case "$payload" in
     exit 1
     ;;
 esac
+
+# ── Soniox + Whisper routes ──────────────────────────────────────────────────
+# Same trap as above: an undeployed route falls through to the default handler
+# (a Quran Foundation token on 200, or a 404), so each route is checked by what
+# it actually returns, not by HTTP status alone. These two checks report and
+# continue so one run shows every broken route; the exit code is set at the end.
+failed=0
+
+echo
+echo "── /soniox/token"
+resp=$(curl -s -m 25 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" "$B/soniox/token")
+code=${resp##*$'\n'}
+body=${resp%$'\n'*}
+
+if echo "$body" | grep -q '"access_token":"snx_temp_'; then
+  echo "PASS — Soniox route is live and minting temporary keys."
+elif [ "$code" = "503" ]; then
+  echo "FAIL — SONIOX_API_KEY secret missing (503 STT not configured)."
+  echo "Fix:  cd token-broker && wrangler secret put SONIOX_API_KEY"
+  failed=1
+elif [ "$code" = "404" ] || echo "$body" | grep -q "access_token"; then
+  echo "FAIL — Soniox route not deployed (HTTP $code; got a non-Soniox response)."
+  echo "Fix:  cd token-broker && wrangler deploy"
+  failed=1
+else
+  echo "FAIL — unexpected response from /soniox/token (HTTP $code):"
+  echo "  $body"
+  failed=1
+fi
+
+echo
+echo "── /whisper/transcribe"
+# A 1-second silent 16 kHz mono 16-bit PCM WAV: a 44-byte header plus 32000
+# zero bytes = 32044 bytes. Whisper may return an empty "text" for silence; the
+# check is that the route answers with a "text" field, not what it heard.
+wav=$(mktemp)
+trap 'rm -f "$wav"' EXIT
+printf 'RIFF\x24\x7d\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80\x3e\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x7d\x00\x00' > "$wav"
+head -c 32000 /dev/zero >> "$wav"
+
+resp=$(curl -s -m 40 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" \
+  -H "content-type: audio/wav" --data-binary @"$wav" "$B/whisper/transcribe")
+code=${resp##*$'\n'}
+body=${resp%$'\n'*}
+
+if [ "$code" = "200" ] && echo "$body" | grep -q '"text"'; then
+  echo "PASS — Whisper route is live and transcribing."
+elif [ "$code" = "404" ]; then
+  echo "FAIL — Whisper route not deployed (HTTP 404)."
+  echo "Fix:  cd token-broker && wrangler deploy"
+  failed=1
+elif [ "${code:0:1}" = "5" ]; then
+  wcode=$(echo "$body" | sed -n 's/.*"code":"\([^"]*\)".*/\1/p')
+  echo "FAIL — Whisper route returned HTTP $code (code: ${wcode:-none})."
+  echo "  $body"
+  failed=1
+else
+  echo "FAIL — unexpected response from /whisper/transcribe (HTTP $code):"
+  echo "  $body"
+  failed=1
+fi
+
+exit "$failed"

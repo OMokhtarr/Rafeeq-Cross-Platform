@@ -161,6 +161,8 @@ sign-in, so there are no user OAuth scopes to audit.
 | `apis.quran.foundation` | Quran text, translations, tafsir, audio timestamps | none personal (via token broker) |
 | `verses.quran.foundation` | recitation audio files | none |
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
+| `stt-rt.soniox.com` (wss) | recite mode speech-to-text (if selected in Settings) | **live microphone audio** |
+| Cloudflare Workers AI (via the token broker) | recite mode speech-to-text (if selected in Settings) | **short microphone audio phrases** |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
 **User sign-in:** none. The app has no accounts and requests no OAuth user
@@ -174,7 +176,7 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 **Does your app collect or share any of the required user data types?** → **Yes**
 
 ### Audio → Voice or sound recordings
-- Collected: **Yes** · Shared: **Yes** (with Deepgram, the transcription provider)
+- Collected: **Yes** · Shared: **Yes** (with the transcription provider selected in Settings: Deepgram, Soniox, or Cloudflare Workers AI)
 - Processed ephemerally: **Yes** — audio streams live over a WebSocket for real-time
   transcription and is never written to disk or retained by the app.
 - Required or optional: **Optional** — only recite mode uses the mic.
