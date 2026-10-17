@@ -23,7 +23,30 @@ export async function startPcmCapture(
   onFrame: (frame: Float32Array) => void,
 ): Promise<{ stop(): void }> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const context = new AudioContext({ sampleRate: PCM_SAMPLE_RATE });
+  let context: AudioContext | undefined;
+  try {
+    context = new AudioContext({ sampleRate: PCM_SAMPLE_RATE });
+    // A context created outside a user gesture can start suspended, and a
+    // suspended context captures nothing, silently.
+    await context.resume();
+    if (context.state !== "running") {
+      throw new Error("Microphone audio could not start");
+    }
+    return connectCapture(stream, context, onFrame);
+  } catch (err) {
+    // The mic is already open: without this its indicator stays on.
+    stream.getTracks().forEach((track) => track.stop());
+    context?.close().catch(() => {});
+    throw err;
+  }
+}
+
+/** Wires the mic into a frame callback on a running context. */
+function connectCapture(
+  stream: MediaStream,
+  context: AudioContext,
+  onFrame: (frame: Float32Array) => void,
+): { stop(): void } {
   const source = context.createMediaStreamSource(stream);
   const processor = context.createScriptProcessor(PCM_FRAME_SAMPLES, 1, 1);
 
@@ -43,7 +66,7 @@ export async function startPcmCapture(
       processor.onaudioprocess = null;
       processor.disconnect();
       source.disconnect();
-      void context.close();
+      context.close().catch(() => {});
       stream.getTracks().forEach((track) => track.stop());
     },
   };
