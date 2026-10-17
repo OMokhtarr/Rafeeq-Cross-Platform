@@ -386,7 +386,7 @@ async function handleSonioxToken(
   }
 }
 
-/** A pause-cut phrase is at most 8 s of 16 kHz 16-bit mono (~256 KB of
+/** A pause-cut phrase is at most 5 s of 16 kHz 16-bit mono (~160 KB of
  *  WAV); anything near 1 MB is not a phrase from the app. */
 const WHISPER_MAX_BYTES = 1_000_000;
 
@@ -400,6 +400,45 @@ function toBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_BYTES));
   }
   return btoa(binary);
+}
+
+/**
+ * Reads a request body, giving up (null) as soon as it passes `max` bytes —
+ * so an oversized upload is never buffered whole, whatever content-length
+ * claimed.
+ */
+async function readCapped(
+  body: ReadableStream<Uint8Array> | null,
+  max: number,
+): Promise<Uint8Array | null> {
+  if (!body) return new Uint8Array(0);
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/** True when `bytes` opens with a RIFF/WAVE header. */
+function isWav(bytes: Uint8Array): boolean {
+  const ascii = (from: number, to: number) =>
+    String.fromCharCode(...bytes.subarray(from, to));
+  return bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WAVE";
 }
 
 /**
@@ -428,14 +467,23 @@ async function handleWhisperTranscribe(
     return reply(503, { error: "STT not configured" });
   }
 
-  // content-length can be absent or wrong, so the real length is checked too.
+  // Cheap checks first, so nothing that is not one of the app's WAV phrases
+  // is read in full or reaches Workers AI.
+  const contentType = (req.headers.get("content-type") ?? "").toLowerCase();
+  if (!contentType.startsWith("audio/wav")) {
+    return reply(415, { error: "expected audio/wav" });
+  }
+  // content-length can be absent or wrong, so the stream is counted too.
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > WHISPER_MAX_BYTES) {
     return reply(413, { error: "audio too large" });
   }
-  const bytes = new Uint8Array(await req.arrayBuffer());
-  if (bytes.length > WHISPER_MAX_BYTES) {
+  const bytes = await readCapped(req.body, WHISPER_MAX_BYTES);
+  if (!bytes) {
     return reply(413, { error: "audio too large" });
+  }
+  if (!isWav(bytes)) {
+    return reply(400, { error: "not a WAV file" });
   }
 
   try {
@@ -468,13 +516,16 @@ async function handleWhisperTranscribe(
       },
     });
   } catch (err) {
-    console.error("Whisper transcription threw", err);
-    // The free daily neuron allowance running out is the expected failure —
-    // named separately so the client can say so instead of "failed".
     const message = err instanceof Error ? err.message : String(err);
-    return /neuron|quota|limit/i.test(message)
+    console.error("Whisper transcription threw:", message);
+    // The free daily neuron allowance running out is the expected failure —
+    // named separately so the client can say so instead of "failed". A bare
+    // "limit" is not enough: a size or length limit is not the quota.
+    // Any other failure carries Workers AI's message (it holds no secret),
+    // so verify-deploy.sh and a live session can say what went wrong.
+    return /neuron|quota|daily|rate.?limit|exceeded/i.test(message)
       ? reply(429, { error: "transcription failed", code: "ai_quota" })
-      : reply(502, { error: "transcription failed", code: "ai_failed" });
+      : reply(502, { error: "transcription failed", code: "ai_failed", detail: message });
   }
 }
 

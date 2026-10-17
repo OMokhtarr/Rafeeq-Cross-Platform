@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies the deployed broker actually serves the Deepgram route.
+# Verifies the deployed broker actually serves the Deepgram, Soniox and Whisper routes.
 #
 # Why this exists: the /deepgram/token route was committed (c18be0b) long before
 # it was deployed. An undeployed Worker has no such route, so the request falls
@@ -14,6 +14,20 @@ B="${BROKER_URL:-https://rafeeq-token-broker.rafeeqapp.workers.dev}"
 
 echo "broker: $B"
 
+# Prints the JWT payload of the access_token in a JSON body (empty when it is
+# not a JWT). Uses base64/sed rather than node: node is not always on PATH
+# (notably when this runs from PowerShell), and a decoder that silently fails
+# used to leave the issuer empty, which the check below read as a PASS.
+jwt_payload() {
+  local b64
+  b64=$(echo "$1" | sed 's/.*"access_token":"\([^"]*\)".*/\1/' | cut -d. -f2 | tr '_-' '/+')
+  case $(( ${#b64} % 4 )) in
+    2) b64="$b64==" ;;
+    3) b64="$b64=" ;;
+  esac
+  echo "$b64" | base64 -d 2>/dev/null
+}
+
 body=$(curl -s -m 25 -X POST -H "Origin: https://localhost" "$B/deepgram/token")
 
 if ! echo "$body" | grep -q "access_token"; then
@@ -22,15 +36,7 @@ if ! echo "$body" | grep -q "access_token"; then
   exit 1
 fi
 
-# Decode the JWT payload. Uses base64/sed rather than node: node is not always
-# on PATH (notably when this runs from PowerShell), and a decoder that silently
-# fails used to leave the issuer empty, which the check below read as a PASS.
-b64=$(echo "$body" | sed 's/.*"access_token":"\([^"]*\)".*/\1/' | cut -d. -f2 | tr '_-' '/+')
-case $(( ${#b64} % 4 )) in
-  2) b64="$b64==" ;;
-  3) b64="$b64=" ;;
-esac
-payload=$(echo "$b64" | base64 -d 2>/dev/null)
+payload=$(jwt_payload "$body")
 
 if [ -z "$payload" ]; then
   echo "FAIL — could not decode the token payload; cannot tell which service"
@@ -83,9 +89,25 @@ elif [ "$code" = "503" ]; then
   echo "FAIL — SONIOX_API_KEY secret missing (503 STT not configured)."
   echo "Fix:  cd token-broker && wrangler secret put SONIOX_API_KEY"
   failed=1
-elif [ "$code" = "404" ] || echo "$body" | grep -q "access_token"; then
-  echo "FAIL — Soniox route not deployed (HTTP $code; got a non-Soniox response)."
+elif [ "$code" = "404" ]; then
+  echo "FAIL — Soniox route not deployed (HTTP 404)."
   echo "Fix:  cd token-broker && wrangler deploy"
+  failed=1
+elif echo "$body" | grep -q "access_token"; then
+  # Only a Quran Foundation token means the request fell through to the
+  # default handler; any other key is a format this script does not know.
+  case "$(jwt_payload "$body")$body" in
+    *quran.foundation*|*token_type*)
+      echo "FAIL — /soniox/token returned a Quran Foundation token."
+      echo "The deployed Worker has no Soniox route; it fell through to the"
+      echo "default QF handler."
+      echo "Fix:  cd token-broker && wrangler deploy"
+      ;;
+    *)
+      echo "FAIL — unexpected key format from /soniox/token (HTTP $code; no snx_temp_ prefix):"
+      echo "  $body"
+      ;;
+  esac
   failed=1
 else
   echo "FAIL — unexpected response from /soniox/token (HTTP $code):"
@@ -116,8 +138,12 @@ elif [ "$code" = "404" ]; then
   failed=1
 elif [ "${code:0:1}" = "5" ]; then
   wcode=$(echo "$body" | sed -n 's/.*"code":"\([^"]*\)".*/\1/p')
+  wdetail=$(echo "$body" | sed -n 's/.*"detail":"\([^"]*\)".*/\1/p')
   echo "FAIL — Whisper route returned HTTP $code (code: ${wcode:-none})."
+  echo "  detail: ${wdetail:-none}"
   echo "  $body"
+  echo "Hint: run  cd token-broker && npx wrangler tail  and repeat this check"
+  echo "to see the Worker's own log of the failure."
   failed=1
 else
   echo "FAIL — unexpected response from /whisper/transcribe (HTTP $code):"
