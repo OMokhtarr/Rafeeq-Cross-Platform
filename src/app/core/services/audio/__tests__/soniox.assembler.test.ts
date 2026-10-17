@@ -66,6 +66,14 @@ describe("soniox assembler", () => {
     ]);
   });
 
+  it("skips an interim that repeats the last one", () => {
+    const a = createSonioxAssembler();
+    expect(a.push([t("بسم", true), t(" ", true), t("الل")])).toHaveLength(1);
+    // A message with no new tokens re-sends the same guess.
+    expect(a.push([t("الل")])).toEqual([]);
+    expect(a.push([t("الله")]).map((e) => e.text)).toEqual(["بسم الله"]);
+  });
+
   it("emits no final for an empty utterance", () => {
     expect(createSonioxAssembler().push([t("<end>", true)])).toEqual([]);
   });

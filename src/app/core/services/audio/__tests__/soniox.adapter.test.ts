@@ -23,7 +23,7 @@ class FakeSocket {
   onopen: (() => void) | null = null;
   onmessage: ((msg: { data: string }) => void) | null = null;
   onerror: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: { code: number; reason: string }) => void) | null = null;
 
   constructor(public url: string, public protocols: string[]) {
     FakeSocket.last = this;
@@ -42,9 +42,9 @@ class FakeSocket {
   message(data: unknown) {
     this.onmessage?.({ data: JSON.stringify(data) });
   }
-  serverClose() {
+  serverClose(code = 1000, reason = "") {
     this.readyState = FakeSocket.CLOSED;
-    this.onclose?.();
+    this.onclose?.({ code, reason });
   }
 }
 
@@ -72,6 +72,7 @@ beforeEach(() => {
     return { stop: captureStop };
   });
   jest.spyOn(console, "log").mockImplementation(() => undefined);
+  jest.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -123,20 +124,22 @@ describe("openSonioxStream", () => {
     expect(console.log).toHaveBeenCalledWith('[recite-stream] soniox final: "الحمد"');
   });
 
-  it("reports a server error message once", async () => {
+  it("reports a server error once, generically, and logs the raw message", async () => {
     const { socket, onError } = await open();
     socket.open();
     socket.message({ error_code: 401, error_type: "unauthenticated", error_message: "Invalid API key." });
     socket.serverClose();
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith("Invalid API key.");
+    expect(onError).toHaveBeenCalledWith("Transcription stream error");
+    expect(console.error).toHaveBeenCalledWith("[recite-stream] soniox error 401: Invalid API key.");
   });
 
-  it("reports an unexpected close before stop", async () => {
+  it("reports and logs an unexpected close before stop", async () => {
     const { socket, onError } = await open();
     socket.open();
-    socket.serverClose();
+    socket.serverClose(1006, "abnormal");
     expect(onError).toHaveBeenCalledWith("Transcription stream closed");
+    expect(console.log).toHaveBeenCalledWith("[recite-stream] soniox closed: code=1006 reason=abnormal");
   });
 
   it("finalizes on stop and ignores messages and close after stop", async () => {
@@ -153,6 +156,7 @@ describe("openSonioxStream", () => {
     socket.serverClose();
     expect(onEvent).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
+    expect(console.log).not.toHaveBeenCalledWith(expect.stringContaining("soniox closed"));
   });
 
   it("closes the socket 2 s after stop if the server has not", async () => {

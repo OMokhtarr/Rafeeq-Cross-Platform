@@ -100,7 +100,10 @@ export const openSonioxStream: OpenStream = async (onEvent, onError) => {
       return;
     }
     if (data.error_code !== undefined || data.error_message !== undefined) {
-      fail(data.error_message || "Transcription stream error");
+      // Soniox's wording is for developers (and can name key state), so the
+      // user gets the generic message and the console gets the real one.
+      console.error(`[recite-stream] soniox error ${data.error_code}: ${data.error_message}`);
+      fail("Transcription stream error");
       return;
     }
     if (!Array.isArray(data.tokens)) return;
@@ -113,8 +116,11 @@ export const openSonioxStream: OpenStream = async (onEvent, onError) => {
     }
   };
   ws.onerror = () => fail("Transcription stream error");
-  ws.onclose = () => {
+  ws.onclose = (event: CloseEvent) => {
     if (closeTimer) clearTimeout(closeTimer);
+    if (!stopped) {
+      console.log(`[recite-stream] soniox closed: code=${event.code} reason=${event.reason}`);
+    }
     // A close the caller didn't ask for (auth rejection, network drop)
     // means no more words will ever arrive — the session must not sit
     // there looking alive.

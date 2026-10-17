@@ -58,9 +58,9 @@ function toEvent(tokens: SonioxToken[], isFinal: boolean): SttStreamEvent {
 export function createSonioxAssembler(): { push(tokens: SonioxToken[]): SttStreamEvent[] } {
   // Final tokens of the utterance still in progress.
   let finals: SonioxToken[] = [];
-  // Whether an interim with text went out since the last final — if so, the
-  // window needs a final to settle it even when it ended up empty.
-  let interimShown = false;
+  // The text of the last interim sent since the last final, "" for none. A
+  // shown interim needs a final to settle it even when it ended up empty.
+  let shownInterim = "";
 
   return {
     push(tokens) {
@@ -72,9 +72,9 @@ export function createSonioxAssembler(): { push(tokens: SonioxToken[]): SttStrea
         if (MARKERS.has(token.text)) {
           sawMarker = true;
           const event = toEvent(finals, true);
-          if (event.text || interimShown) events.push(event);
+          if (event.text || shownInterim) events.push(event);
           finals = [];
-          interimShown = false;
+          shownInterim = "";
         } else if (token.is_final) {
           finals.push(token);
         } else {
@@ -83,12 +83,13 @@ export function createSonioxAssembler(): { push(tokens: SonioxToken[]): SttStrea
       }
 
       const interim = toEvent([...finals, ...nonFinals], false);
-      // Without a marker the window just moved on, so report it — unless it
-      // is empty and nothing is on screen to retract (a no-op event). After
-      // a marker, only report a next window that already has words.
-      if (interim.text || (!sawMarker && interimShown)) {
+      // Report the window only when its text changed: a message with no new
+      // tokens re-sends the same guess, and an empty window with nothing on
+      // screen has nothing to retract. A marker clears what is shown, so
+      // after one only a next window that already has words is reported.
+      if (interim.text !== shownInterim) {
         events.push(interim);
-        interimShown = interim.text !== "";
+        shownInterim = interim.text;
       }
       return events;
     },

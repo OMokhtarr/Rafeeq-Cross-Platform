@@ -125,11 +125,14 @@ export const openDeepgramStream: OpenStream = async (onEvent, onError) => {
   socket.onerror = () => {
     if (!stopped) onError("Transcription stream error");
   };
-  socket.onclose = () => {
+  socket.onclose = (event: CloseEvent) => {
     // A close the caller didn't ask for (auth rejection, network drop)
     // means no more words will ever arrive — the session must not sit
     // there looking alive.
-    if (!stopped) onError("Transcription stream closed");
+    if (!stopped) {
+      console.log(`[recite-stream] deepgram closed: code=${event.code} reason=${event.reason}`);
+      onError("Transcription stream closed");
+    }
   };
 
   const stop = () => {
