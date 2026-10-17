@@ -20,6 +20,11 @@ export const RECITE_ENGINE_OPTIONS: {
 }[] = [
   { value: "deepgram", labelAr: "Deepgram — بث فوري", labelEn: "Deepgram — live streaming" },
   { value: "soniox", labelAr: "Soniox — بث فوري", labelEn: "Soniox — live streaming" },
+  {
+    value: "cloudflare-whisper",
+    labelAr: "Cloudflare Whisper — مقاطع قصيرة",
+    labelEn: "Cloudflare Whisper — short chunks",
+  },
 ];
 
 const SETTINGS_KEY = "rafiq_settings_v1";

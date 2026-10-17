@@ -11,6 +11,7 @@ import { readReciteEngine } from "./stt-engine.config";
 import { openDeepgramStream } from "./stt/deepgram.adapter";
 import { openSonioxStream } from "./stt/soniox.adapter";
 import type { OpenStream } from "./stt/types";
+import { openWhisperStream } from "./stt/whisper/whisper.adapter";
 
 export type { SttWord, SttStreamEvent, SttStreamHandle, OpenStream } from "./stt/types";
 export { parseStreamMessage } from "./stt/deepgram.adapter";
@@ -22,6 +23,6 @@ export const openSttStream: OpenStream = (onEvent, onError) => {
     case "soniox":
       return openSonioxStream(onEvent, onError);
     case "cloudflare-whisper":
-      return Promise.reject(new Error("Speech recognition is not available right now"));
+      return openWhisperStream(onEvent, onError);
   }
 };

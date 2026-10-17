@@ -9,6 +9,9 @@
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 
+/** What the user sees when the broker answers 503 (the engine is not set up). */
+export const STT_UNAVAILABLE_MESSAGE = "Speech recognition is not available right now";
+
 /** Full broker URL for `path`. TOKEN_BROKER_URL may or may not carry a
  *  trailing slash. */
 export function brokerUrl(path: string): string {
@@ -27,7 +30,7 @@ export async function fetchBrokerKey(
   if (!res.ok) {
     throw new Error(
       res.status === 503
-        ? "Speech recognition is not available right now"
+        ? STT_UNAVAILABLE_MESSAGE
         : `Could not start speech recognition (${res.status})`,
     );
   }

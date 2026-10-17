@@ -1,6 +1,7 @@
 /**
  * Quran Foundation OAuth2 & Content token broker, plus speech-to-text keys
- * (Deepgram ephemeral tokens, Soniox temporary API keys).
+ * (Deepgram ephemeral tokens, Soniox temporary API keys) and Whisper
+ * transcription through Workers AI.
  *
  * Runs as a Cloudflare Worker. Holds the client_id/secret as Worker secrets,
  * and can exchange:
@@ -8,6 +9,7 @@
  *   - Authorization code for a user access token ( /oauth2/token )
  *   - The Deepgram API key for a short‑lived JWT ( /deepgram/token )
  *   - The Soniox API key for a short‑lived temporary key ( /soniox/token )
+ *   - A WAV phrase for its Workers AI Whisper transcript ( /whisper/transcribe )
  *
  * Deploy:
  *   wrangler secret put QF_CLIENT_ID
@@ -17,7 +19,7 @@
  *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
  *   wrangler secret put SONIOX_API_KEY      # for recite mode's Soniox engine
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
- *   wrangler deploy
+ *   wrangler deploy                         # the AI binding comes from wrangler.toml
  */
 
 export interface Env {
@@ -28,6 +30,7 @@ export interface Env {
   QF_OAUTH_TOKEN_URL?: string; // defaults to QF_TOKEN_URL
   DEEPGRAM_API_KEY?: string; // recite mode STT; never shipped to the client
   SONIOX_API_KEY?: string; // recite mode Soniox engine; never shipped to the client
+  AI: Ai; // Workers AI binding (wrangler.toml [ai]) for recite mode's Whisper engine
   ALLOWED_ORIGIN: string;
 }
 
@@ -77,6 +80,11 @@ export default {
     // ── Soniox temporary API key ( /soniox/token ) ────────────────────────
     if (url.pathname === "/soniox/token") {
       return handleSonioxToken(env, corsHeaders);
+    }
+
+    // ── Whisper transcription ( /whisper/transcribe ) ─────────────────────
+    if (url.pathname === "/whisper/transcribe") {
+      return handleWhisperTranscribe(req, env, corsHeaders);
     }
 
     // ── Unknown paths ─────────────────────────────────────────────────────
@@ -375,6 +383,98 @@ async function handleSonioxToken(
         headers: { "content-type": "application/json", ...corsHeaders },
       },
     );
+  }
+}
+
+/** A pause-cut phrase is at most 8 s of 16 kHz 16-bit mono (~256 KB of
+ *  WAV); anything near 1 MB is not a phrase from the app. */
+const WHISPER_MAX_BYTES = 1_000_000;
+
+/** Bytes per String.fromCharCode call — spreading a whole upload into one
+ *  call overflows the argument limit. */
+const BASE64_CHUNK_BYTES = 32 * 1024;
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += BASE64_CHUNK_BYTES) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_BYTES));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Transcribe one recited phrase with Workers AI Whisper.
+ *
+ * The client posts a short WAV (one phrase, cut at the reciter's pause) and
+ * gets back the transcript with per-segment confidence fields, which it uses
+ * to drop hallucinated words. Workers AI runs on this account's binding, so
+ * no credential ever reaches the client. Whisper invents text over silence
+ * and loves to continue from a prompt, hence VAD on, no conditioning on
+ * previous text, no initial_prompt/prefix, and a hallucination silence
+ * threshold.
+ */
+async function handleWhisperTranscribe(
+  req: Request,
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const reply = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+
+  if (!env.AI) {
+    return reply(503, { error: "STT not configured" });
+  }
+
+  // content-length can be absent or wrong, so the real length is checked too.
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > WHISPER_MAX_BYTES) {
+    return reply(413, { error: "audio too large" });
+  }
+  const bytes = new Uint8Array(await req.arrayBuffer());
+  if (bytes.length > WHISPER_MAX_BYTES) {
+    return reply(413, { error: "audio too large" });
+  }
+
+  try {
+    const out = await env.AI.run("@cf/openai/whisper-large-v3-turbo", {
+      audio: toBase64(bytes),
+      language: "ar",
+      vad_filter: true,
+      condition_on_previous_text: false,
+      hallucination_silence_threshold: 0.5,
+    });
+
+    // Only the fields the client's filters read — not vtt, not temperature.
+    const segments = (out.segments ?? []).map((seg) => ({
+      start: seg.start,
+      end: seg.end,
+      text: seg.text,
+      avg_logprob: seg.avg_logprob,
+      no_speech_prob: seg.no_speech_prob,
+      compression_ratio: seg.compression_ratio,
+      words: seg.words,
+    }));
+
+    return new Response(JSON.stringify({ text: out.text ?? "", segments }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        // A transcript of someone's recitation is never reusable.
+        "cache-control": "no-store",
+        ...corsHeaders,
+      },
+    });
+  } catch (err) {
+    console.error("Whisper transcription threw", err);
+    // The free daily neuron allowance running out is the expected failure —
+    // named separately so the client can say so instead of "failed".
+    const message = err instanceof Error ? err.message : String(err);
+    return /neuron|quota|limit/i.test(message)
+      ? reply(429, { error: "transcription failed", code: "ai_quota" })
+      : reply(502, { error: "transcription failed", code: "ai_failed" });
   }
 }
 
