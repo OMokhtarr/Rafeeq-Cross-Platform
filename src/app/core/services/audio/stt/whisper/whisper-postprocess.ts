@@ -27,6 +27,12 @@ const NO_SPEECH_MIN_AVG_LOGPROB = -0.5;
 const MIN_AVG_LOGPROB = -1.0;
 const MAX_COMPRESSION_RATIO = 2.4;
 
+/** Whisper punctuates ("الرحيم."، "شكرا،"), and normalizeArabic keeps
+ *  punctuation, so words are compared on their letters and marks alone. */
+function comparable(text: string): string {
+  return normalizeArabic(text.replace(/[^\p{L}\p{M}\s]/gu, ""));
+}
+
 /** A word timed in seconds. */
 export interface WhisperWord {
   word: string;
@@ -65,7 +71,7 @@ const HALLUCINATION_TRIGGER_WORDS = [
   "سبسكرايب",
   "موسيقى",
   "شكرا",
-].map(normalizeArabic);
+].map(comparable);
 
 /** Strips a leading conjunction/preposition proclitic (و/ف/ب/ك/ل) and the
  *  definite article (ال) so "القناة"/"وقناة" still compare equal to the bare
@@ -82,7 +88,7 @@ function stripProclitics(word: string): string {
  * verse that mentions angels.
  */
 function containsHallucinationPhrase(text: string): boolean {
-  const words = normalizeArabic(text).split(" ").filter(Boolean);
+  const words = comparable(text).split(" ").filter(Boolean);
   return words.some((w) => {
     const bare = stripProclitics(w);
     return HALLUCINATION_TRIGGER_WORDS.some((t) => w === t || bare === t);
@@ -135,26 +141,51 @@ function overlapsSpeech(word: WhisperWord, spans: SpeechSpan[]): boolean {
   );
 }
 
+/** The kept words, and how many each filter dropped — for diagnosing a
+ *  phrase that came out empty or short. */
+export interface FilteredWords {
+  words: string[];
+  droppedHallucination: number;
+  droppedSilence: number;
+}
+
+/** Trimmed, non-empty words of a list that may hold non-strings. */
+function cleanList(words: unknown[]): string[] {
+  return words
+    .map((w) => (typeof w === "string" ? w.trim() : ""))
+    .filter(Boolean);
+}
+
 /**
  * Flattens Whisper segments into trimmed words: hallucinated segments are
  * dropped, and words Whisper timed inside silence (it will invent speech
  * there) are dropped using the speech spans the pause segmenter recorded.
  * Segments without word timings fall back to splitting their text.
  */
-export function wordsFromSegments(segments: WhisperSegment[], speechSpans: SpeechSpan[]): string[] {
-  const out: string[] = [];
+export function wordsFromSegmentsWithStats(
+  segments: WhisperSegment[],
+  speechSpans: SpeechSpan[],
+): FilteredWords {
+  const out: FilteredWords = { words: [], droppedHallucination: 0, droppedSilence: 0 };
   for (const seg of segments) {
-    if (isLikelyHallucination(seg)) continue;
     const timed = seg.words && seg.words.length > 0 ? seg.words : undefined;
-    const words = timed
-      ? timed.filter((w) => overlapsSpeech(w, speechSpans)).map((w) => w.word)
-      : (seg.text ?? "").split(/\s+/);
-    for (const w of words) {
-      const trimmed = w.trim();
-      if (trimmed) out.push(trimmed);
+    const all = cleanList(timed ? timed.map((w) => w.word) : (seg.text ?? "").split(/\s+/));
+    if (isLikelyHallucination(seg)) {
+      out.droppedHallucination += all.length;
+      continue;
     }
+    const kept = timed
+      ? cleanList(timed.filter((w) => overlapsSpeech(w, speechSpans)).map((w) => w.word))
+      : all;
+    out.droppedSilence += all.length - kept.length;
+    out.words.push(...kept);
   }
   return out;
+}
+
+/** The words of `wordsFromSegmentsWithStats`, without the counts. */
+export function wordsFromSegments(segments: WhisperSegment[], speechSpans: SpeechSpan[]): string[] {
+  return wordsFromSegmentsWithStats(segments, speechSpans).words;
 }
 
 const MAX_SEAM_OVERLAP = 8;
@@ -162,13 +193,13 @@ const MAX_SEAM_OVERLAP = 8;
 /**
  * A forced cut mid-phrase makes the next chunk re-transcribe the words that
  * straddled the cut. Drops the longest head of `next` that equals the tail
- * of `prevTail` (compared normalized), or returns `next` unchanged.
+ * of `prevTail` (compared on normalized letters), or returns `next` unchanged.
  */
 export function stitchSeam(prevTail: string[], next: string[]): string[] {
   const max = Math.min(prevTail.length, next.length, MAX_SEAM_OVERLAP);
   for (let k = max; k >= 1; k--) {
-    const tail = prevTail.slice(prevTail.length - k).map(normalizeArabic);
-    const head = next.slice(0, k).map(normalizeArabic);
+    const tail = prevTail.slice(prevTail.length - k).map(comparable);
+    const head = next.slice(0, k).map(comparable);
     if (tail.every((w, i) => w === head[i])) return next.slice(k);
   }
   return next;

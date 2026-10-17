@@ -2,6 +2,7 @@ import {
   isLikelyHallucination,
   stitchSeam,
   wordsFromSegments,
+  wordsFromSegmentsWithStats,
 } from "../stt/whisper/whisper-postprocess";
 
 describe("isLikelyHallucination", () => {
@@ -11,6 +12,10 @@ describe("isLikelyHallucination", () => {
   it("drops subtitle-credit hallucinations but not words that merely contain a trigger", () => {
     expect(isLikelyHallucination({ text: "ترجمة نانسي قنقر" })).toBe(true);
     expect(isLikelyHallucination({ text: "والملائكة" })).toBe(false);
+  });
+  it("still catches a trigger word with punctuation attached", () => {
+    expect(isLikelyHallucination({ text: "شكرا." })).toBe(true);
+    expect(isLikelyHallucination({ text: "وموسيقى،" })).toBe(true);
   });
   it("does not treat a missing avg_logprob as a pass or a fail", () => {
     expect(isLikelyHallucination({ text: "قل هو الله أحد", no_speech_prob: 0.7 })).toBe(false);
@@ -37,9 +42,24 @@ describe("wordsFromSegments", () => {
   });
 });
 
+describe("wordsFromSegmentsWithStats", () => {
+  it("counts the words each filter dropped", () => {
+    const timed = {
+      text: "قل أعوذ",
+      words: [{ word: "قل", start: 0.1, end: 0.4 }, { word: "أعوذ", start: 2.0, end: 2.4 }],
+    };
+    expect(
+      wordsFromSegmentsWithStats([{ text: "ترجمة نانسي قنقر" }, timed], [{ startMs: 0, endMs: 600 }]),
+    ).toEqual({ words: ["قل"], droppedHallucination: 3, droppedSilence: 1 });
+  });
+});
+
 describe("stitchSeam", () => {
   it("removes the overlap at a forced-cut seam", () => {
     expect(stitchSeam(["الرحمن", "الرحيم"], ["الرحيم", "مالك", "يوم"])).toEqual(["مالك", "يوم"]);
+  });
+  it("matches the seam through punctuation", () => {
+    expect(stitchSeam(["الرحمن", "الرحيم."], ["الرحيم", "مالك"])).toEqual(["مالك"]);
   });
   it("keeps everything when the head does not match the tail", () => {
     expect(stitchSeam(["تكذبان"], ["فبأي", "آلاء", "ربكما", "تكذبان"])).toEqual(["فبأي", "آلاء", "ربكما", "تكذبان"]);

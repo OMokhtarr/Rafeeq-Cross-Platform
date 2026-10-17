@@ -14,7 +14,11 @@
  * unbroken recitation still produces results; the next segment then starts
  * with the last `forcedOverlapMs` of audio so a word split at the seam is
  * heard whole. A segment with under `minSpeechMs` of loud audio — a cough,
- * a tap — is discarded.
+ * a tap — is discarded; a seed's repeated audio never counts toward that.
+ *
+ * The 5 s cap is set by the app's 10 s silence timeout, which only text
+ * resets: a hesitation before the first word, plus upload and inference,
+ * must still land the first phrase's words inside it (8 s did not).
  *
  * Pure: no Web Audio, no timers. Time comes from sample counts.
  */
@@ -53,7 +57,7 @@ export const DEFAULT_SEGMENTER_OPTIONS: SegmenterOptions = {
   preRollMs: 400,
   pauseMs: 350,
   keepTailMs: 150,
-  maxChunkMs: 8000,
+  maxChunkMs: 5000,
   forcedOverlapMs: 1000,
   minSpeechMs: 250,
 };
@@ -154,7 +158,10 @@ export function createPauseSegmenter(opts: Partial<SegmenterOptions> = {}): {
   function close(seg: OpenSegment, end: number, forced: boolean): AudioSegment | null {
     const pieces = slicePieces(seg.pieces, 0, end);
     const runs = loudRuns(pieces);
-    const speech = runs.reduce((n, [s, e]) => n + (e - s), 0);
+    // A seed is the previous segment's audio, already uploaded once: speech
+    // that only exists there must not make a repeat-only request.
+    const fresh = seg.startsWithOverlap ? overlapSamples : 0;
+    const speech = runs.reduce((n, [s, e]) => n + Math.max(e - Math.max(s, fresh), 0), 0);
     if (toMs(speech) < o.minSpeechMs) return null;
     return {
       samples: concat(pieces),

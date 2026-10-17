@@ -43,6 +43,13 @@ function seg(overrides: Partial<AudioSegment> = {}): AudioSegment {
 const texts = (onEvent: jest.Mock) => onEvent.mock.calls.map((c) => c[0].text);
 
 describe("createWhisperPipeline", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "log").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("uploads each phrase as a 16 kHz WAV as soon as it is submitted", () => {
     const transcribe = jest.fn(() => new Promise<WhisperResult>(() => undefined));
     const p = createWhisperPipeline(transcribe, jest.fn(), jest.fn());
@@ -154,6 +161,109 @@ describe("createWhisperPipeline", () => {
     await flush();
     expect(onEvent).not.toHaveBeenCalled();
   });
+
+  it("filters a text-only result like any other", async () => {
+    const onEvent = jest.fn();
+    const p = createWhisperPipeline(async () => ({ text: "ترجمة نانسي قنقر" }), onEvent, jest.fn());
+    p.submit(seg());
+    await flush();
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+
+  it("reports a throwing event handler once instead of freezing", async () => {
+    const unhandled = jest.fn();
+    process.on("unhandledRejection", unhandled);
+    const onEvent = jest.fn(() => {
+      throw new Error("handler broke");
+    });
+    const onError = jest.fn();
+    const p = createWhisperPipeline(async () => ({ text: "الرحمن" }), onEvent, onError);
+    p.submit(seg());
+    p.submit(seg());
+    await flush();
+    await flush();
+    process.off("unhandledRejection", unhandled);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("handler broke");
+    expect(unhandled).not.toHaveBeenCalled();
+  });
+
+  it("gives up on an upload after 15 s", async () => {
+    jest.useFakeTimers();
+    let signal!: AbortSignal;
+    const onError = jest.fn();
+    const p = createWhisperPipeline(
+      (_wav, s) => {
+        signal = s;
+        return new Promise<WhisperResult>(() => undefined);
+      },
+      jest.fn(),
+      onError,
+    );
+    p.submit(seg());
+    jest.advanceTimersByTime(14999);
+    expect(signal.aborted).toBe(false);
+    jest.advanceTimersByTime(1);
+    expect(signal.aborted).toBe(true);
+    jest.useRealTimers();
+    await flush();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("Speech recognition timed out");
+  });
+
+  it("aborts uploads in flight on stop, without reporting it", async () => {
+    const signals: AbortSignal[] = [];
+    const onError = jest.fn();
+    const p = createWhisperPipeline(
+      (_wav, signal) =>
+        new Promise<WhisperResult>((_, reject) => {
+          signals.push(signal);
+          signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        }),
+      jest.fn(),
+      onError,
+    );
+    p.submit(seg());
+    p.submit(seg());
+    p.stop();
+    await flush();
+    expect(signals.map((s) => s.aborted)).toEqual([true, true]);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("logs each phrase with what the filters dropped", async () => {
+    const p = createWhisperPipeline(
+      async () => ({
+        text: "قل أعوذ",
+        segments: [
+          {
+            text: "قل أعوذ",
+            words: [
+              { word: "قل", start: 0.1, end: 0.4 },
+              { word: "أعوذ", start: 2.0, end: 2.4 },
+            ],
+          },
+        ],
+      }),
+      jest.fn(),
+      jest.fn(),
+    );
+    p.submit(seg({ forced: true }));
+    await flush();
+    expect(console.log).toHaveBeenCalledWith(
+      '[recite-stream] cloudflare-whisper phrase: raw="قل أعوذ" durationMs=500 forced=true ' +
+        "startsWithOverlap=false speechMs=500 droppedHallucination=0 droppedSilence=1 " +
+        'droppedSeam=0 cleaned="قل"',
+    );
+  });
+
+  it("logs a phrase the filters emptied", async () => {
+    const p = createWhisperPipeline(async () => ({ text: "ترجمة نانسي قنقر" }), jest.fn(), jest.fn());
+    p.submit(seg());
+    await flush();
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("droppedHallucination=3"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringMatching(/cleaned=\(all filtered\)$/));
+  });
 });
 
 describe("transcribeSegment", () => {
@@ -175,22 +285,25 @@ describe("transcribeSegment", () => {
     const segments = [{ text: "الحمد", start: 0, end: 0.4 }];
     respond(200, { text: "الحمد", segments });
     const wav = new Blob([new Uint8Array(4)], { type: "audio/wav" });
-    await expect(transcribeSegment(wav)).resolves.toEqual({ text: "الحمد", segments });
+    const signal = new AbortController().signal;
+    await expect(transcribeSegment(wav, signal)).resolves.toEqual({ text: "الحمد", segments });
     expect(fetchMock).toHaveBeenCalledWith("https://broker.test/whisper/transcribe", {
       method: "POST",
       headers: { "content-type": "audio/wav" },
       body: wav,
+      signal,
     });
   });
 
   it("names the broker's unavailable and quota responses", async () => {
     const wav = new Blob([], { type: "audio/wav" });
+    const signal = new AbortController().signal;
     respond(503);
-    await expect(transcribeSegment(wav)).rejects.toThrow("Speech recognition is not available right now");
+    await expect(transcribeSegment(wav, signal)).rejects.toThrow("Speech recognition is not available right now");
     respond(429);
-    await expect(transcribeSegment(wav)).rejects.toThrow("Speech recognition limit reached for today");
+    await expect(transcribeSegment(wav, signal)).rejects.toThrow("Speech recognition limit reached for today");
     respond(502);
-    await expect(transcribeSegment(wav)).rejects.toThrow("502");
+    await expect(transcribeSegment(wav, signal)).rejects.toThrow("502");
   });
 });
 
@@ -241,6 +354,7 @@ describe("openWhisperStream", () => {
     handle.stop();
     await flush();
     expect(captureStop).toHaveBeenCalled();
+    expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
     expect(onEvent).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
   });

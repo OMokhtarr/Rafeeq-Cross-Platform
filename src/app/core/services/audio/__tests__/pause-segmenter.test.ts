@@ -43,16 +43,32 @@ describe("pause segmenter", () => {
     expect(feed([...quiet(500), ...loud(128), ...quiet(600)])).toEqual([]);
   });
 
-  it("force-cuts continuous speech by 8 s and overlaps the next segment by 1 s", () => {
-    // Review Focus 5
+  it("force-cuts continuous speech by 5 s and overlaps the next segment by 1 s", () => {
+    // Review Focus 5: the cap keeps a first event well inside the app's 10 s
+    // silence timeout even after upload and inference.
     const segs = feed([...loud(9000), ...quiet(600)]);
     expect(segs[0].forced).toBe(true);
-    expect(segs[0].samples.length / 16).toBeLessThanOrEqual(8000 + 64);
+    expect(segs[0].samples.length / 16).toBeLessThanOrEqual(5000);
     expect(segs[1].startsWithOverlap).toBe(true);
   });
 
+  it("splits the frame the cap falls in, so a forced segment is exactly the cap", () => {
+    const [first, second] = feed([...quiet(1000), ...loud(9000), ...quiet(600)]);
+    expect(first.samples.length).toBe(5000 * 16);
+    const overlap = first.samples.subarray(first.samples.length - 16000);
+    expect(Array.from(second.samples.subarray(0, 16000))).toEqual(Array.from(overlap));
+  });
+
+  it("does not count the overlap seed as speech", () => {
+    // Recitation ending 56 ms after a forced cut: the next segment is the
+    // repeated second of audio plus a sliver, not a phrase worth uploading.
+    const segs = feed([...loud(79 * 64), ...quiet(600)]);
+    expect(segs).toHaveLength(1);
+    expect(segs[0].forced).toBe(true);
+  });
+
   it("seeds the next segment with the last second of the forced segment", () => {
-    const [first, second] = feed([...loud(9000), ...quiet(600)]);
+    const [first, second] = feed([...loud(6000), ...quiet(600)]);
     const overlap = first.samples.subarray(first.samples.length - 16000);
     expect(Array.from(second.samples.subarray(0, 16000))).toEqual(Array.from(overlap));
     expect(second.forced).toBe(false);
