@@ -223,7 +223,8 @@ rated Everyone. Do not answer Yes to the violence question on that basis.
 - **Contains ads:** No.
 
 > If you *do* want a younger target audience, note that Recite Mode streams
-> microphone audio to a third-party processor (Deepgram), which triggers extra
+> microphone audio to a third-party processor (Deepgram, Soniox, or Cloudflare
+> Workers AI, according to the user's choice in Settings), which triggers extra
 > scrutiny under the Families policy and COPPA. Recommend staying 13+.
 >
 > Expect Play to occasionally challenge "appeals to children" for educational

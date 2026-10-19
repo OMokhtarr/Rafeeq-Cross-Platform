@@ -50,7 +50,10 @@
   - pre-roll 400 ms;
   - pause 350 ms;
   - silent tail kept 150 ms;
-  - hard cap 8000 ms, with a forced-cut overlap of 1000 ms;
+  - hard cap 5000 ms, with a forced-cut overlap of 1000 ms;
+    (Lowered from 8000 ms after the final review: the app's 10 s silence timeout
+    starts with the session and only text resets it, so a hesitation plus upload
+    and inference could push the first words of an 8 s phrase past it.)
   - minimum speech 250 ms;
   - analysis frame 1024 samples at 16 kHz (64 ms).
 
@@ -72,7 +75,7 @@
 2. **Stopping mid-upload.** A Whisper phrase still uploading, or Soniox messages arriving after `stop()`, must produce no events and no `onError`. Tests: Task 6 "stop drops pending", and Task 3 "messages after stop are ignored".
 3. **A cough or tap mistaken for speech.** Without a guard, a short noise burst becomes a chunk Whisper fills with invented verse. Segments with less than 250 ms of above-threshold audio are discarded. Test: the Task 4 short-burst test.
 4. **A word that really repeats at a forced-cut seam** (e.g. "فبأي آلاء ربكما تكذبان" across a cut). Stitching removes overlap only for segments marked `startsWithOverlap`, and only words that match the previous tail. A pause-cut segment repeating the previous phrase keeps every word. Test: in Task 5.
-5. **Long unbroken recitation (>8 s) against the 10 s silence timeout.** The forced cut at 8 s keeps events flowing well within `SILENCE_TIMEOUT_MS = 10000`. Test: the Task 4 test that a 9 s continuous tone yields a forced segment by 8 s.
+5. **Long unbroken recitation (>5 s) against the 10 s silence timeout.** The forced cut at 5 s keeps events flowing well within `SILENCE_TIMEOUT_MS = 10000`. Test: the Task 4 test that a 9 s continuous tone yields a forced segment by 5 s. (The cap was 8 s until the final review lowered it for this timeout.)
 
 ---
 
@@ -311,7 +314,7 @@ it("emits no final for an empty utterance", () => { expect(createSonioxAssembler
 - Produces:
   - `SpeechSpan { startMs: number; endMs: number }`
   - `AudioSegment { samples: Float32Array; speechSpans: SpeechSpan[]; forced: boolean; startsWithOverlap: boolean }` — spans are relative to the segment's first sample.
-  - `SegmenterOptions` with the defaults from Global Constraints: `sampleRate 16000, rmsThreshold 0.02, openFrames 2, preRollMs 400, pauseMs 350, keepTailMs 150, maxChunkMs 8000, forcedOverlapMs 1000, minSpeechMs 250`.
+  - `SegmenterOptions` with the defaults from Global Constraints: `sampleRate 16000, rmsThreshold 0.02, openFrames 2, preRollMs 400, pauseMs 350, keepTailMs 150, maxChunkMs 5000, forcedOverlapMs 1000, minSpeechMs 250`.
   - `createPauseSegmenter(opts?: Partial<SegmenterOptions>): { push(frame: Float32Array): AudioSegment[] }`
 
 How it works:
@@ -343,10 +346,10 @@ it("does not cut on a pause shorter than 350 ms", () => {
   expect(feed([...loud(1000), ...quiet(200), ...loud(1000), ...quiet(600)])).toHaveLength(1);
 });
 it("drops a cough-length burst", () => { expect(feed([...quiet(500), ...loud(128), ...quiet(600)])).toEqual([]); }); // Review Focus 3
-it("force-cuts continuous speech by 8 s and overlaps the next segment by 1 s", () => { // Review Focus 5
+it("force-cuts continuous speech by 5 s and overlaps the next segment by 1 s", () => { // Review Focus 5
   const segs = feed([...loud(9000), ...quiet(600)]);
   expect(segs[0].forced).toBe(true);
-  expect(segs[0].samples.length / 16).toBeLessThanOrEqual(8000 + 64);
+  expect(segs[0].samples.length / 16).toBeLessThanOrEqual(5000);
   expect(segs[1].startsWithOverlap).toBe(true);
 });
 ```

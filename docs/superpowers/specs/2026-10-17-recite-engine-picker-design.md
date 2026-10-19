@@ -200,8 +200,11 @@ request.
      level stays below the threshold for a short pause (start at ~350 ms; the
      builder tunes this). Quran recitation pauses naturally at waqf points and
      between breaths, so chunks follow the phrases. A **hard cap** (start at
-     ~8 s) stops a chunk if no pause comes. Only those forced cuts overlap the
-     next chunk, by ~1 s, so a word split at the cut isn't lost.
+     ~5 s) stops a chunk if no pause comes. Only those forced cuts overlap the
+     next chunk, by ~1 s, so a word split at the cut isn't lost. (The cap was
+     ~8 s until the final review lowered it: the app's 10 s silence timeout
+     starts with the session and only text resets it, so a hesitation plus
+     upload and inference could push an 8 s phrase's first words past it.)
   2. **Trim the silence before sending.** The trailing pause that ended the
      chunk is cut off the audio before upload, keeping ~150 ms of tail so the
      last letter isn't clipped. Whisper never gets the empty stretch it would
@@ -235,8 +238,9 @@ request.
   independently decodable file.
 - **Expected speed:** a phrase's words appear about 1 s after the reciter
   pauses (pause detection plus one Workers AI request). They no longer appear
-  3–5 s behind on a fixed timer. During a long unbroken phrase, the 8 s cap
-  sets the delay.
+  3–5 s behind on a fixed timer. During a long unbroken phrase, the 5 s cap
+  sets the delay (lowered from 8 s after the final review, to stay inside the
+  app's 10 s silence timeout).
 - **Whisper prompt:** none. The Groq experience showed that a prompt makes
   Whisper echo words over silence.
 - **Rate and cost:** one request per chunk (roughly one per phrase, ~8–15 a minute) per

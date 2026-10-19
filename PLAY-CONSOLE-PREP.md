@@ -177,8 +177,10 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 
 ### Audio → Voice or sound recordings
 - Collected: **Yes** · Shared: **Yes** (with the transcription provider selected in Settings: Deepgram, Soniox, or Cloudflare Workers AI)
-- Processed ephemerally: **Yes** — audio streams live over a WebSocket for real-time
-  transcription and is never written to disk or retained by the app.
+- Processed ephemerally: **Yes** — with Deepgram or Soniox, audio streams live over
+  a WebSocket for real-time transcription; with Cloudflare Whisper, short phrases are
+  uploaded over HTTPS through the token broker to Workers AI. Either way it is never
+  written to disk or retained by the app.
 - Required or optional: **Optional** — only recite mode uses the mic.
 - Purpose: **App functionality**
 
@@ -189,6 +191,13 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 > safety form must be corrected to disclose retention. Verify it in the Deepgram
 > dashboard; an incorrect Data safety declaration is an enforcement risk, not a
 > cosmetic one.
+>
+> - [ ] **Also confirm Soniox and Cloudflare Workers AI** process the audio without
+>       retaining it (their data-retention / AI terms), now that either can be
+>       selected in Settings. The same declaration covers all three providers.
+> - [ ] **The hosted privacy policy still names only Deepgram.** `privacy.html`
+>       (on the `gh-pages` branch, not in this repo) must add Soniox and
+>       Cloudflare Workers AI as speech-to-text processors before this ships.
 
 ### Personal info → Name / Email
 - Collected: **No** — the app has no sign-in and never asks for a name or email.
