@@ -19,6 +19,7 @@
 import { registerAdapter } from "../content-sync.service";
 import { readResourceRows } from "../sync-store.service";
 import { SyncRow } from "../content-sync.types";
+import { htmlToText } from "../../../utils/html-text.util";
 
 interface TafsirRecord {
   verse_key?: string;
@@ -137,6 +138,11 @@ export function tafsirRowsFrom(
   }));
 }
 
+/**
+ * Rows keep the snapshot's HTML as stored, so it is converted on the way out —
+ * the same conversion the online fetch applies, and it covers tafsirs saved
+ * before it existed without a re-download.
+ */
 export async function readCachedTafsir(
   resourceId: number,
   verseKey: string,
@@ -144,7 +150,7 @@ export async function readCachedTafsir(
   const rows = await readResourceRows("tafsirs", resourceId);
   const hit = rows.find((r) => r.recordKey === verseKey);
   const text = (hit?.data as { text?: string } | undefined)?.text;
-  return text ?? null;
+  return text == null ? null : htmlToText(text);
 }
 
 export async function hasCachedTafsir(resourceId: number): Promise<boolean> {
