@@ -166,7 +166,11 @@ const TafsirSettings: React.FC = () => {
             <button
               className={`tfs-back-btn${nightCls}`}
               onClick={() =>
-                returnVerseKey
+                // Back to whichever page opened this (viewer or search
+                // results): it is cached with its tafsir sheet still open.
+                // Without history to return to, land on the viewer and
+                // reopen the sheet there.
+                history.length <= 1 && returnVerseKey
                   ? history.replace("/viewer", { openVerseKey: returnVerseKey })
                   : history.goBack()
               }

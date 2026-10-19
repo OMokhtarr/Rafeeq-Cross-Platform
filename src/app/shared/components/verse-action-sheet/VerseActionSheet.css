@@ -451,6 +451,8 @@
   font-size: var(--text-md, 1rem);
   line-height: var(--leading-arabic, 2.1);
   color: var(--color-text-primary, #111111);
+  /* Tafsir text keeps its paragraph breaks as "\n" (htmlToText). */
+  white-space: pre-line;
 }
 
 .vas-sheet--night .vas-tafsir {

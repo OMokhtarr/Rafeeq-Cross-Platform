@@ -2,16 +2,17 @@
  * SEARCH RESULTS
  *
  * Renders the result list for `?q=...`. The first result is "expanded" by
- * default — surah name + Arabic text + action row (share, copy, continue
- * reading, mushaf). Tapping any other row expands it (and collapses the
- * previous one). "Continue Reading" / mushaf icon navigate to the page in
- * the viewer with the verse highlighted.
+ * default — surah name + Arabic text + action row (share, copy, tafsir,
+ * continue reading, mushaf). Tapping any other row expands it (and collapses
+ * the previous one). Tafsir opens the verse sheet in place, so the results
+ * stay where they were. "Continue Reading" / mushaf icon navigate to the page
+ * in the viewer with the verse highlighted.
  *
  * Mirrors the reference layout: top header, query echo, result cards,
  * total count badge pinned at the bottom.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useLocation } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
@@ -26,7 +27,20 @@ import {
 } from "../../../core/services/data/metadata.service";
 import { pushRecent } from "./Search";
 import BottomNavBar from "../../../shared/components/bottom-nav/BottomNavBar";
+import VerseActionSheet from "../../../shared/components/verse-action-sheet/VerseActionSheet";
 import "./SearchResults.css";
+
+const SETTINGS_KEY = "rafiq_settings_v1";
+
+/** The reader's chosen reciter, so the tafsir sheet's play button matches the viewer's. */
+function readReciter(): string | undefined {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw).reciter : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const SearchResults: React.FC = () => {
   const history = useHistory();
@@ -53,6 +67,9 @@ const SearchResults: React.FC = () => {
   const [expandedIdx, setExpandedIdx] = useState(0);
   // Lightweight feedback flag for the copy-to-clipboard action.
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  // Verse whose tafsir sheet is open over the results, if any.
+  const [tafsirKey, setTafsirKey] = useState<string | null>(null);
+  const closeTafsir = useCallback(() => setTafsirKey(null), []);
 
   useEffect(() => {
     if (!query) {
@@ -295,6 +312,31 @@ const SearchResults: React.FC = () => {
                             </svg>
                           )}
                         </button>
+                        <button
+                          type="button"
+                          className="result-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTafsirKey(r.verseKey);
+                          }}
+                          aria-label={t.mushaf.tafsir}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M4 19.5A2.5 2.5 0 016.5 17H20V2H6.5A2.5 2.5 0 004 4.5z" />
+                            <path d="M20 17v5H6.5A2.5 2.5 0 014 19.5" />
+                            <line x1="9" y1="7" x2="16" y2="7" />
+                            <line x1="9" y1="11" x2="16" y2="11" />
+                          </svg>
+                        </button>
 
                         <span className="result-actions-spacer" />
 
@@ -354,6 +396,12 @@ const SearchResults: React.FC = () => {
         </div>
       </IonContent>
       <BottomNavBar active="quran" fixed />
+      <VerseActionSheet
+        open={!!tafsirKey}
+        verseKey={tafsirKey}
+        reciter={readReciter()}
+        onClose={closeTafsir}
+      />
     </IonPage>
   );
 };

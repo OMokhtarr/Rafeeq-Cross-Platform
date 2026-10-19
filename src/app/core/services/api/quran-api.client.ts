@@ -17,6 +17,7 @@
 import type { VerseWord } from "../../../shared/models/verse.model";
 import { idb } from "../storage/idb.service";
 import { streamRecords } from "../sync/stream-records";
+import { htmlToText } from "../../utils/html-text.util";
 
 const TOKEN_BROKER_URL = process.env.REACT_APP_TOKEN_BROKER_URL ?? "";
 const CONTENT_API_BASE =
@@ -632,16 +633,6 @@ export async function fetchAudioTimestamp(
   return { timestampFrom: from, timestampTo: to };
 }
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-function stripHtml(s: string): string {
-  return s
-    .replace(/<sup[^>]*>.*?<\/sup>/gi, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 // ─── Tafsir ───────────────────────────────────────────────────────────────────
 
 export interface TafsirResource {
@@ -702,7 +693,7 @@ export async function fetchTafsirForAyah(
     {},
   );
   const raw = data.tafsir?.text ?? "";
-  return { verseKey, text: stripHtml(raw) };
+  return { verseKey, text: htmlToText(raw) };
 }
 
 // ─── Recitations (dynamic, cached in IDB) ────────────────────────────────────

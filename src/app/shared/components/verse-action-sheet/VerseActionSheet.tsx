@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
+import { useIonViewWillEnter, useIonViewWillLeave } from "@ionic/react";
 import {
   fetchTafsirForAyah,
   getTafsirResources,
@@ -64,11 +65,19 @@ const VerseActionSheet: React.FC<Props> = ({
   });
 
   // Let the app-level edge-swipe gate close this sheet instead of treating the
-  // swipe as a back/exit. Only while actually open.
+  // swipe as a back/exit. Only while actually open — and only while its page
+  // is the one showing. The page stays cached under Tafsir Settings with the
+  // sheet still open, so the reader comes back to it; left registered there,
+  // the first back press would silently close this hidden sheet instead of
+  // leaving Tafsir Settings. Mount counts as shown (willEnter does not reach
+  // a hook on the page showing at launch).
+  const [pageHidden, setPageHidden] = useState(false);
+  useIonViewWillLeave(() => setPageHidden(true));
+  useIonViewWillEnter(() => setPageHidden(false));
   useEffect(() => {
-    if (!open) return;
+    if (!open || pageHidden) return;
     return registerOverlay(onClose);
-  }, [open, onClose]);
+  }, [open, pageHidden, onClose]);
 
   // ── Tafsir navigation ──────────────────────────────────────────────────────
   // currentKey tracks which verse is shown in the tafsir panel (can differ from

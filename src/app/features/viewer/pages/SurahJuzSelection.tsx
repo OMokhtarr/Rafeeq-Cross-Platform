@@ -33,11 +33,6 @@ interface RubItem {
   startSuraEn: string;
 }
 
-const JUZ_START_PAGES: readonly number[] = [
-  1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 201, 222, 242, 262, 282, 302, 322,
-  342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
-];
-
 const SurahJuzSelection: React.FC = () => {
   usePageTour(["surahJuz"]);
   const history = useHistory();
@@ -74,9 +69,12 @@ const SurahJuzSelection: React.FC = () => {
   const juzs = useMemo(() => {
     return Array.from({ length: 30 }, (_, i) => {
       const juzNum = i + 1;
-      const start = JUZ_START_PAGES[juzNum - 1];
-      const end = juzNum < 30 ? JUZ_START_PAGES[juzNum] - 1 : totalPages;
+      // Pages from the juz's own first and last verse, as the hizb list does —
+      // juz 7 starts mid-page, so it shares page 121 with juz 6.
       const startVerse = getHizbStart(juzNum * 2 - 1);
+      const endVerse = getHizbEnd(juzNum * 2);
+      const start = estimatePageForVerse(startVerse.sura, startVerse.aya);
+      const end = estimatePageForVerse(endVerse.sura, endVerse.aya);
       return { num: juzNum, start, end, startVerse };
     });
   }, []);
@@ -212,10 +210,14 @@ const SurahJuzSelection: React.FC = () => {
     verse: { sura: number; aya: number },
     itemType?: "surah" | "juz",
   ) => {
+    // Highlight the item tapped, found by its start verse: a page can hold
+    // several surahs, and two juz share the page where one starts mid-page.
     if (itemType === "surah") {
-      setPendingSurahNum(getSuraForPage(page) ?? 1);
+      setPendingSurahNum(verse.sura);
     } else if (itemType === "juz") {
-      const juz = juzs.find((j) => page >= j.start && page <= j.end);
+      const juz = juzs.find(
+        (j) => j.startVerse.sura === verse.sura && j.startVerse.aya === verse.aya,
+      );
       if (juz) setPendingJuzNum(juz.num);
     }
     // Replace, don't push: this screen is a picker the reader passes through,
