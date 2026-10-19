@@ -113,7 +113,7 @@ Rafeeq has no accounts and no sign-in. Your notes, bookmarks, memorisation progr
 
 Moving to a new phone? Account → Backup exports everything to a single file you control, and restores it on the new device.
 
-The only feature that sends anything off your device is Recite Mode, which streams microphone audio to a speech-recognition provider purely to turn your recitation into text. It is never on by default, the audio is never recorded or stored, and the rest of the app works normally if you decline the microphone permission.
+The only feature that sends anything off your device is Recite Mode, which streams microphone audio to the speech-recognition provider you choose in Settings purely to turn your recitation into text. It is never on by default, the audio is never recorded or stored, and the rest of the app works normally if you decline the microphone permission.
 
 Quran text, translations, tafsir, and recitation audio are provided by the Quran Foundation. Rafeeq is an independent application and is not an official Quran Foundation app.
 ```
@@ -223,7 +223,8 @@ rated Everyone. Do not answer Yes to the violence question on that basis.
 - **Contains ads:** No.
 
 > If you *do* want a younger target audience, note that Recite Mode streams
-> microphone audio to a third-party processor (Deepgram), which triggers extra
+> microphone audio to a third-party processor (Deepgram, Soniox, or Cloudflare
+> Workers AI, according to the user's choice in Settings), which triggers extra
 > scrutiny under the Families policy and COPPA. Recommend staying 13+.
 >
 > Expect Play to occasionally challenge "appeals to children" for educational

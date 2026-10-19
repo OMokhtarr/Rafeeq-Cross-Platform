@@ -134,10 +134,23 @@ export async function isTracked(
 }
 
 /**
- * The API's `resources` parameter, e.g. "tafsirs:169;recitations:7".
+ * The API's `resources` parameter, e.g. "tafsirs:169,170;recitations:7".
  * Required by the endpoint — it returns 422 without it. An empty string means
  * the caller must skip the run, never "sync everything".
+ *
+ * Each group appears once with its ids comma-separated: repeating a group
+ * ("tafsirs:169;tafsirs:170") is a 422 duplicate_resource_group (verified
+ * against the live API).
  */
 export function resourcesFilter(tracked: TrackedResource[]): string {
-  return tracked.map((r) => `${r.group}:${r.resourceId}`).join(";");
+  const idsByGroup = new Map<string, number[]>();
+  for (const r of tracked) {
+    const ids = idsByGroup.get(r.group) ?? [];
+    ids.push(r.resourceId);
+    idsByGroup.set(r.group, ids);
+  }
+  return Array.from(
+    idsByGroup,
+    ([group, ids]) => `${group}:${ids.join(",")}`,
+  ).join(";");
 }

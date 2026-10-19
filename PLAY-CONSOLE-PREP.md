@@ -161,6 +161,8 @@ sign-in, so there are no user OAuth scopes to audit.
 | `apis.quran.foundation` | Quran text, translations, tafsir, audio timestamps | none personal (via token broker) |
 | `verses.quran.foundation` | recitation audio files | none |
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
+| `stt-rt.soniox.com` (wss) | recite mode speech-to-text (if selected in Settings) | **live microphone audio** |
+| Cloudflare Workers AI (via the token broker) | recite mode speech-to-text (if selected in Settings) | **short microphone audio phrases** |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
 **User sign-in:** none. The app has no accounts and requests no OAuth user
@@ -174,9 +176,11 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 **Does your app collect or share any of the required user data types?** → **Yes**
 
 ### Audio → Voice or sound recordings
-- Collected: **Yes** · Shared: **Yes** (with Deepgram, the transcription provider)
-- Processed ephemerally: **Yes** — audio streams live over a WebSocket for real-time
-  transcription and is never written to disk or retained by the app.
+- Collected: **Yes** · Shared: **Yes** (with the transcription provider selected in Settings: Deepgram, Soniox, or Cloudflare Workers AI)
+- Processed ephemerally: **Yes** — with Deepgram or Soniox, audio streams live over
+  a WebSocket for real-time transcription; with Cloudflare Whisper, short phrases are
+  uploaded over HTTPS through the token broker to Workers AI. Either way it is never
+  written to disk or retained by the app.
 - Required or optional: **Optional** — only recite mode uses the mic.
 - Purpose: **App functionality**
 
@@ -187,6 +191,13 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 > safety form must be corrected to disclose retention. Verify it in the Deepgram
 > dashboard; an incorrect Data safety declaration is an enforcement risk, not a
 > cosmetic one.
+>
+> - [ ] **Also confirm Soniox and Cloudflare Workers AI** process the audio without
+>       retaining it (their data-retention / AI terms), now that either can be
+>       selected in Settings. The same declaration covers all three providers.
+> - [ ] **The hosted privacy policy still names only Deepgram.** `privacy.html`
+>       (on the `gh-pages` branch, not in this repo) must add Soniox and
+>       Cloudflare Workers AI as speech-to-text processors before this ships.
 
 ### Personal info → Name / Email
 - Collected: **No** — the app has no sign-in and never asks for a name or email.

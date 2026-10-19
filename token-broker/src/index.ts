@@ -1,11 +1,15 @@
 /**
- * Quran Foundation OAuth2 & Content token broker, plus Deepgram ephemeral tokens.
+ * Quran Foundation OAuth2 & Content token broker, plus speech-to-text keys
+ * (Deepgram ephemeral tokens, Soniox temporary API keys) and Whisper
+ * transcription through Workers AI.
  *
  * Runs as a Cloudflare Worker. Holds the client_id/secret as Worker secrets,
  * and can exchange:
  *   - Client credentials for a machine‑to‑machine content token (default)
  *   - Authorization code for a user access token ( /oauth2/token )
  *   - The Deepgram API key for a short‑lived JWT ( /deepgram/token )
+ *   - The Soniox API key for a short‑lived temporary key ( /soniox/token )
+ *   - A WAV phrase for its Workers AI Whisper transcript ( /whisper/transcribe )
  *
  * Deploy:
  *   wrangler secret put QF_CLIENT_ID
@@ -13,8 +17,9 @@
  *   wrangler secret put QF_TOKEN_URL        # e.g. https://oauth2.quran.foundation/oauth2/token
  *   wrangler secret put QF_OAUTH_CLIENT_ID  # (optional) same as QF_CLIENT_ID for OAuth2
  *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
+ *   wrangler secret put SONIOX_API_KEY      # for recite mode's Soniox engine
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
- *   wrangler deploy
+ *   wrangler deploy                         # the AI binding comes from wrangler.toml
  */
 
 export interface Env {
@@ -24,6 +29,8 @@ export interface Env {
   QF_OAUTH_CLIENT_ID?: string; // for OAuth2 user login (defaults to QF_CLIENT_ID)
   QF_OAUTH_TOKEN_URL?: string; // defaults to QF_TOKEN_URL
   DEEPGRAM_API_KEY?: string; // recite mode STT; never shipped to the client
+  SONIOX_API_KEY?: string; // recite mode Soniox engine; never shipped to the client
+  AI: Ai; // Workers AI binding (wrangler.toml [ai]) for recite mode's Whisper engine
   ALLOWED_ORIGIN: string;
 }
 
@@ -68,6 +75,16 @@ export default {
     // ── Deepgram ephemeral token ( /deepgram/token ) ──────────────────────
     if (url.pathname === "/deepgram/token") {
       return handleDeepgramToken(env, corsHeaders);
+    }
+
+    // ── Soniox temporary API key ( /soniox/token ) ────────────────────────
+    if (url.pathname === "/soniox/token") {
+      return handleSonioxToken(env, corsHeaders);
+    }
+
+    // ── Whisper transcription ( /whisper/transcribe ) ─────────────────────
+    if (url.pathname === "/whisper/transcribe") {
+      return handleWhisperTranscribe(req, env, corsHeaders);
     }
 
     // ── Unknown paths ─────────────────────────────────────────────────────
@@ -288,6 +305,227 @@ async function handleDeepgramToken(
         headers: { "content-type": "application/json", ...corsHeaders },
       },
     );
+  }
+}
+
+/**
+ * Mint a temporary Soniox API key for recite mode.
+ *
+ * Same reasoning as handleDeepgramToken: the real SONIOX_API_KEY stays a
+ * Worker secret. The temporary key is scoped to one websocket transcription,
+ * single-use, and expires in 60s — it is only needed for the handshake, after
+ * which the socket stays open as normal. Not cached, for the same reason.
+ */
+async function handleSonioxToken(
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  if (!env.SONIOX_API_KEY) {
+    return new Response(JSON.stringify({ error: "STT not configured" }), {
+      status: 503,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+  }
+
+  try {
+    const res = await fetch("https://api.soniox.com/v1/auth/temporary-api-key", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.SONIOX_API_KEY}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        usage_type: "transcribe_websocket",
+        expires_in_seconds: 60,
+        single_use: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Soniox temporary key error", res.status, text);
+      // Upstream body withheld from the client, status named — see
+      // handleDeepgramToken.
+      return new Response(
+        JSON.stringify({
+          error: "token grant failed",
+          code: `upstream_${res.status}`,
+        }),
+        {
+          status: 502,
+          headers: { "content-type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
+    const tok = (await res.json()) as { api_key: string; expires_at?: string };
+
+    // Renamed to access_token so the client reads every engine's credential
+    // the same way (stt/broker.ts fetchBrokerKey).
+    return new Response(
+      JSON.stringify({ access_token: tok.api_key, expires_in: 60 }),
+      {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          // Never let a CDN or the browser reuse a one-shot credential.
+          "cache-control": "no-store",
+          ...corsHeaders,
+        },
+      },
+    );
+  } catch (err) {
+    console.error("Soniox temporary key threw", err);
+    return new Response(
+      JSON.stringify({ error: "token grant failed", code: "grant_threw" }),
+      {
+        status: 502,
+        headers: { "content-type": "application/json", ...corsHeaders },
+      },
+    );
+  }
+}
+
+/** A pause-cut phrase is at most 5 s of 16 kHz 16-bit mono (~160 KB of
+ *  WAV); anything near 1 MB is not a phrase from the app. */
+const WHISPER_MAX_BYTES = 1_000_000;
+
+/** Bytes per String.fromCharCode call — spreading a whole upload into one
+ *  call overflows the argument limit. */
+const BASE64_CHUNK_BYTES = 32 * 1024;
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += BASE64_CHUNK_BYTES) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_BYTES));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Reads a request body, giving up (null) as soon as it passes `max` bytes —
+ * so an oversized upload is never buffered whole, whatever content-length
+ * claimed.
+ */
+async function readCapped(
+  body: ReadableStream<Uint8Array> | null,
+  max: number,
+): Promise<Uint8Array | null> {
+  if (!body) return new Uint8Array(0);
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/** True when `bytes` opens with a RIFF/WAVE header. */
+function isWav(bytes: Uint8Array): boolean {
+  const ascii = (from: number, to: number) =>
+    String.fromCharCode(...bytes.subarray(from, to));
+  return bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WAVE";
+}
+
+/**
+ * Transcribe one recited phrase with Workers AI Whisper.
+ *
+ * The client posts a short WAV (one phrase, cut at the reciter's pause) and
+ * gets back the transcript with per-segment confidence fields, which it uses
+ * to drop hallucinated words. Workers AI runs on this account's binding, so
+ * no credential ever reaches the client. Whisper invents text over silence
+ * and loves to continue from a prompt, hence VAD on, no conditioning on
+ * previous text, no initial_prompt/prefix, and a hallucination silence
+ * threshold.
+ */
+async function handleWhisperTranscribe(
+  req: Request,
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const reply = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+
+  if (!env.AI) {
+    return reply(503, { error: "STT not configured" });
+  }
+
+  // Cheap checks first, so nothing that is not one of the app's WAV phrases
+  // is read in full or reaches Workers AI.
+  const contentType = (req.headers.get("content-type") ?? "").toLowerCase();
+  if (!contentType.startsWith("audio/wav")) {
+    return reply(415, { error: "expected audio/wav" });
+  }
+  // content-length can be absent or wrong, so the stream is counted too.
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > WHISPER_MAX_BYTES) {
+    return reply(413, { error: "audio too large" });
+  }
+  const bytes = await readCapped(req.body, WHISPER_MAX_BYTES);
+  if (!bytes) {
+    return reply(413, { error: "audio too large" });
+  }
+  if (!isWav(bytes)) {
+    return reply(400, { error: "not a WAV file" });
+  }
+
+  try {
+    const out = await env.AI.run("@cf/openai/whisper-large-v3-turbo", {
+      audio: toBase64(bytes),
+      language: "ar",
+      vad_filter: true,
+      condition_on_previous_text: false,
+      hallucination_silence_threshold: 0.5,
+    });
+
+    // Only the fields the client's filters read — not vtt, not temperature.
+    const segments = (out.segments ?? []).map((seg) => ({
+      start: seg.start,
+      end: seg.end,
+      text: seg.text,
+      avg_logprob: seg.avg_logprob,
+      no_speech_prob: seg.no_speech_prob,
+      compression_ratio: seg.compression_ratio,
+      words: seg.words,
+    }));
+
+    return new Response(JSON.stringify({ text: out.text ?? "", segments }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        // A transcript of someone's recitation is never reusable.
+        "cache-control": "no-store",
+        ...corsHeaders,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Whisper transcription threw:", message);
+    // The free daily neuron allowance running out is the expected failure —
+    // named separately so the client can say so instead of "failed". A bare
+    // "limit" is not enough: a size or length limit is not the quota.
+    // Any other failure carries Workers AI's message (it holds no secret),
+    // so verify-deploy.sh and a live session can say what went wrong.
+    return /neuron|quota|daily|rate.?limit|exceeded/i.test(message)
+      ? reply(429, { error: "transcription failed", code: "ai_quota" })
+      : reply(502, { error: "transcription failed", code: "ai_failed", detail: message });
   }
 }
 

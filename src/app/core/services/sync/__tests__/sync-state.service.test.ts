@@ -145,6 +145,19 @@ describe("resourcesFilter", () => {
     ).toBe("tafsirs:169;recitations:7");
   });
 
+  it("lists every id of a group once, comma-separated", () => {
+    // The live API 422s on a repeated group ("duplicate_resource_group").
+    expect(
+      resourcesFilter([
+        { group: "tafsirs", resourceId: 169, bootstrappedAt: null },
+        { group: "recitations", resourceId: 7, bootstrappedAt: null },
+        { group: "tafsirs", resourceId: 170, bootstrappedAt: null },
+        { group: "mushafs", resourceId: 19, bootstrappedAt: null },
+        { group: "recitations", resourceId: 2, bootstrappedAt: null },
+      ]),
+    ).toBe("tafsirs:169,170;recitations:7,2;mushafs:19");
+  });
+
   it("returns an empty string for no tracked resources", () => {
     // The caller must skip the run — the API 422s on a missing filter, and an
     // empty filter must never be read as "sync everything".
