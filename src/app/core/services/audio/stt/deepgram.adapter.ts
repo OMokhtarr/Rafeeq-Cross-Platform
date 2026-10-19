@@ -8,6 +8,7 @@
  */
 
 import { fetchBrokerKey } from "./broker";
+import { logText } from "./log-text";
 import type { OpenStream, SttStreamEvent } from "./types";
 
 const STREAM_URL = "wss://api.deepgram.com/v1/listen";
@@ -130,7 +131,7 @@ export const openDeepgramStream: OpenStream = async (onEvent, onError) => {
     // means no more words will ever arrive — the session must not sit
     // there looking alive.
     if (!stopped) {
-      console.log(`[recite-stream] deepgram closed: code=${event.code} reason=${event.reason}`);
+      console.log(`[recite-stream] deepgram closed: code=${event.code} reason=${logText(event.reason)}`);
       onError("Transcription stream closed");
     }
   };

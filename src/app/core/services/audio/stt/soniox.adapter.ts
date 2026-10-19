@@ -8,6 +8,7 @@
  */
 
 import { fetchBrokerKey } from "./broker";
+import { logText } from "./log-text";
 import { floatToPcm16, PCM_SAMPLE_RATE, startPcmCapture } from "./pcm-capture";
 import { createSonioxAssembler } from "./soniox.assembler";
 import type { SonioxToken } from "./soniox.assembler";
@@ -102,7 +103,9 @@ export const openSonioxStream: OpenStream = async (onEvent, onError) => {
     if (data.error_code !== undefined || data.error_message !== undefined) {
       // Soniox's wording is for developers (and can name key state), so the
       // user gets the generic message and the console gets the real one.
-      console.error(`[recite-stream] soniox error ${data.error_code}: ${data.error_message}`);
+      console.error(
+        `[recite-stream] soniox error ${logText(data.error_code)}: ${logText(data.error_message)}`,
+      );
       fail("Transcription stream error");
       return;
     }
@@ -119,7 +122,7 @@ export const openSonioxStream: OpenStream = async (onEvent, onError) => {
   ws.onclose = (event: CloseEvent) => {
     if (closeTimer) clearTimeout(closeTimer);
     if (!stopped) {
-      console.log(`[recite-stream] soniox closed: code=${event.code} reason=${event.reason}`);
+      console.log(`[recite-stream] soniox closed: code=${event.code} reason=${logText(event.reason)}`);
     }
     // A close the caller didn't ask for (auth rejection, network drop)
     // means no more words will ever arrive — the session must not sit

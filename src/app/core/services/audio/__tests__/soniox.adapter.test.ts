@@ -142,6 +142,17 @@ describe("openSonioxStream", () => {
     expect(console.log).toHaveBeenCalledWith("[recite-stream] soniox closed: code=1006 reason=abnormal");
   });
 
+  it("logs server-sent reasons and errors on one line, at most 120 chars", async () => {
+    const { socket } = await open();
+    socket.open();
+    socket.message({ error_code: 500, error_message: `bad\r\n[recite-stream] forged ${"x".repeat(200)}` });
+    socket.serverClose(4000, "spoof\nline");
+    expect(console.error).toHaveBeenCalledWith(
+      `[recite-stream] soniox error 500: bad [recite-stream] forged ${"x".repeat(93)}`,
+    );
+    expect(console.log).toHaveBeenCalledWith("[recite-stream] soniox closed: code=4000 reason=spoof line");
+  });
+
   it("finalizes on stop and ignores messages and close after stop", async () => {
     jest.useFakeTimers();
     const { socket, onEvent, onError, handle } = await open();
