@@ -382,9 +382,9 @@ export async function getTafsirResources() {
  * per (scope, mushaf) so it works offline after the first call.
  *
  * Relationship to `estimatePageForVerse`: that helper binary-searches the
- * static PAGE_STARTS table, which was verified against this endpoint for the
- * 604-page Madani layout and matched on every sampled surah — so it is exact
- * there despite its name, and remains the synchronous fast path used across
+ * static PAGE_STARTS table, which was checked against this endpoint on all
+ * 604 pages for every selectable mushaf (they share one set of page breaks) —
+ * so it is exact despite its name, and remains the synchronous fast path used across
  * the UI. Lookup matters when the answer must come from the API rather than a
  * bundled table: a mushaf whose layout differs from PAGE_STARTS, or verifying
  * the table still agrees after an API-side layout change.

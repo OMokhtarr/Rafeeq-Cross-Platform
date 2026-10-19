@@ -487,8 +487,11 @@ const PageViewer: React.FC = () => {
       return;
     }
     // Hide from the start of the current page through the end of the Quran,
-    // leaving all previous pages visible.
-    const pageStart = getPageStart(currentPage);
+    // leaving all previous pages visible. The start is the first verse the
+    // page actually rendered, so the hidden range always matches the screen
+    // even if the bundled page table drifts from the API's layout (it once
+    // put page 596 at 92:15, leaving 92:10-14 at the top showing).
+    const pageStart = verses[0] ?? getPageStart(currentPage);
     if (!pageStart) return;
     const keys: string[] = [];
     for (const ch of getChapters()) {
@@ -498,7 +501,7 @@ const PageViewer: React.FC = () => {
       for (let a = fromAya; a <= count; a++) keys.push(`${ch.id}:${a}`);
     }
     if (keys.length > 0) hideMany(keys);
-  }, [anyPageHidden, hiddenCount, hideMany, showAll, currentPage]);
+  }, [anyPageHidden, hiddenCount, hideMany, showAll, currentPage, verses]);
 
   // Index into hiddenOnPage: which hidden verse we're currently revealing word-by-word.
   // hintCount: how many words revealed in that verse.
@@ -655,17 +658,18 @@ const PageViewer: React.FC = () => {
   // the reveal controls (e.g. page-flip arrows), those verses are still in
   // `hidden` with no way to reach them from the current page. Sweep them
   // into view first so pressing reveal here also catches up everything
-  // before this page.
+  // before this page. "Before" is measured against the page's own first
+  // verse, not the bundled page table — see togglePageHidden.
   const revealSkippedPriorPages = useCallback(() => {
-    if (hidden.size === 0) return;
+    const first = verses[0];
+    if (hidden.size === 0 || !first) return;
     const keys: string[] = [];
     for (const k of hidden) {
-      const [s, a] = k.split(":");
-      const page = estimatePageForVerse(parseInt(s, 10), parseInt(a, 10));
-      if (page < currentPage) keys.push(k);
+      const [s, a] = k.split(":").map((n) => parseInt(n, 10));
+      if (s < first.sura || (s === first.sura && a < first.aya)) keys.push(k);
     }
     if (keys.length > 0) showMany(keys);
-  }, [hidden, currentPage, showMany]);
+  }, [hidden, verses, showMany]);
 
   const handleRevealNextWord = useCallback(() => {
     if (!anyPageHidden) return;
