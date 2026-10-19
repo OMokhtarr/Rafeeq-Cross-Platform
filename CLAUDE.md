@@ -21,3 +21,7 @@ All page/view containers must cap their width at `var(--max-width-mobile, 600px)
 
 ### Fixed BottomNavBar — always account for its height
 `BottomNavBar` with `fixed` prop is `position: absolute; bottom: 0` on `IonPage`, overlaying the bottom of `IonContent` at all times. Every page/view container that scrolls inside `IonContent` **must** have `padding-bottom: calc(var(--bottom-nav-height) + var(--space-6))` (or similar) so content is never hidden under the nav bar. Do NOT rely on a spacer `<div>` after the content container — that only clears space at the very end of the scroll, not while scrolling through the content.
+
+## Release notes — update on every build
+
+`RELEASE-NOTES.md` holds the Play Console "What's new" text (`<en-US>` + `<ar>` blocks). Whenever `versionCode` in `android/app/build.gradle` is bumped (or the user says they're making a build), add a new section at the top for that versionCode, with a release name in Play's `versionCode (versionName)` format (e.g. `14 (1.1.0)`) and notes covering the user-visible changes in `git log` since the commit of the previous bump. Keep each language block ≤ 500 characters (Play's limit), use the app's own Arabic terms (e.g. وضع التسميع), and leave out internal-only changes (refactors, docs, tests, broker plumbing).
