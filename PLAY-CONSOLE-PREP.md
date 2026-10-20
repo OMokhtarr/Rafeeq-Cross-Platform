@@ -209,7 +209,8 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 
 ### Not collected
 No location, contacts, photos, files, financial info, health data, or advertising
-identifiers. No analytics or ad SDKs are present. All reading progress, bookmarks,
+identifiers. No analytics or ad SDKs are present. (Financial info changes when
+Rafeeq Pro ships: purchase history goes through Google Play and RevenueCat — see §9.) All reading progress, bookmarks,
 and cached audio for signed-out users stay on-device (IndexedDB + Capacitor
 Preferences).
 
@@ -552,3 +553,51 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 7. Create the Play listing, complete Data safety + foreground service declarations
 8. Start the closed test — ~12 testers × 14 continuous days (personal accounts)
 9. Apply for production access
+
+---
+
+## 9. Rafeeq Pro subscription — launch checklist
+
+Recite mode becomes a paid "Rafeeq Pro" feature (branch `subscription-pro`,
+spec `docs/superpowers/specs/2026-10-20-subscription-pro-design.md`). The code
+ships dark: the paywall only appears when the app is built with
+`REACT_APP_PRO_GATE=on`, and the broker only refuses non-subscribers when
+`REQUIRE_PRO = "true"` in `token-broker/wrangler.toml`.
+
+### Setup (owner)
+1. **RevenueCat:** project with the Android app (and iOS later); entitlement
+   **`pro`**; offering "default" with monthly + yearly packages. Copy the public
+   SDK key into `.env.local` / `.env.production` as
+   `REACT_APP_REVENUECAT_ANDROID_KEY` (and `REACT_APP_REVENUECAT_IOS_KEY` later).
+2. **Play Console:** create the monthly and yearly subscription products (free
+   trial optional), link Play's service account in RevenueCat, and add a
+   license-tester account for test purchases.
+3. **Broker:** `npx wrangler secret put REVENUECAT_SECRET_KEY`, deploy with
+   `REQUIRE_PRO` still `"false"`. For browser development, deploy the dev copy
+   (`npx wrangler deploy --env dev`, its own secrets via `--env dev`, its
+   `ALLOWED_ORIGIN` including `http://localhost:3000`) and point `npm start` at
+   it through `.env.development.local`.
+4. `npx cap sync`, build, and test purchases from Account → Subscription
+   (works while the paywall is off): buy → status "active"; reinstall →
+   Restore; Manage opens Play's subscription page.
+
+### Store declarations — redo before the paid build ships
+- **Content rating:** digital purchases becomes **Yes** — re-run the
+  questionnaire (see the tripwire in §0).
+- **Data safety → Financial info → Purchase history:** collected through Google
+  Play billing and RevenueCat (a service provider processing it for the app),
+  for app functionality (subscription status). Confirm the exact "shared"
+  answer against Play's service-provider rule when filling the form.
+- **Privacy policy:** add RevenueCat as a processor (purchase history and an
+  anonymous app-user id) next to the speech providers.
+
+### Release order
+1. Ship a build with `REACT_APP_PRO_GATE=on` in `.env.production`.
+2. Then set `REQUIRE_PRO = "true"` in `wrangler.toml` and `npx wrangler deploy`.
+3. `PRO_USER_ID=<a subscriber's Support ID> bash token-broker/verify-deploy.sh`
+   — expect "PASS (enforcement on)" and every route PASS.
+
+### iPhone (later, needs a Mac)
+`npx cap add ios`; add `NSMicrophoneUsageDescription` (Arabic + English) to
+`Info.plist`; create the subscription products in App Store Connect and link
+them in RevenueCat; set `REACT_APP_REVENUECAT_IOS_KEY`.

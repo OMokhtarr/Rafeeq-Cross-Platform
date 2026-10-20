@@ -18,6 +18,7 @@
  *   wrangler secret put QF_OAUTH_CLIENT_ID  # (optional) same as QF_CLIENT_ID for OAuth2
  *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
  *   wrangler secret put SONIOX_API_KEY      # for recite mode's Soniox engine
+ *   wrangler secret put REVENUECAT_SECRET_KEY # Rafeeq Pro check (REQUIRE_PRO="true")
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
  *   wrangler deploy                         # the AI binding comes from wrangler.toml
  */
@@ -32,6 +33,8 @@ export interface Env {
   SONIOX_API_KEY?: string; // recite mode Soniox engine; never shipped to the client
   AI: Ai; // Workers AI binding (wrangler.toml [ai]) for recite mode's Whisper engine
   ALLOWED_ORIGIN: string;
+  REQUIRE_PRO?: string; // "true" = speech routes are Rafeeq Pro only (wrangler.toml [vars])
+  REVENUECAT_SECRET_KEY?: string; // RevenueCat REST secret, for the Pro check
 }
 
 interface CachedToken {
@@ -50,7 +53,7 @@ export default {
     const corsHeaders = {
       "access-control-allow-origin": corsOrigin,
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type, x-rafeeq-user",
       "access-control-max-age": "86400",
     };
 
@@ -70,6 +73,12 @@ export default {
     // ── OAuth2 User Token Exchange ( /oauth2/token ) ──────────────────────
     if (url.pathname === "/oauth2/token") {
       return handleOAuthToken(req, env, corsHeaders);
+    }
+
+    // ── Speech routes: Rafeeq Pro only when REQUIRE_PRO is "true" ─────────
+    if (SPEECH_ROUTES.has(url.pathname)) {
+      const refused = await requirePro(req, env, corsHeaders);
+      if (refused) return refused;
     }
 
     // ── Deepgram ephemeral token ( /deepgram/token ) ──────────────────────
@@ -152,6 +161,86 @@ export default {
     );
   },
 };
+
+// ─── Rafeeq Pro check ────────────────────────────────────────────────────────
+
+/** Routes that spend paid speech-engine time. */
+const SPEECH_ROUTES = new Set(["/deepgram/token", "/soniox/token", "/whisper/transcribe"]);
+
+/** How long a "yes, subscribed" answer is trusted before asking RevenueCat
+ *  again. Whisper sends a request per phrase, so this keeps RevenueCat calls
+ *  to about one per subscriber every few minutes. */
+const PRO_CACHE_MS = 5 * 60 * 1000;
+
+/** app-user id → time (ms) its Pro answer stops being trusted. Only Pro
+ *  answers are cached: a "not Pro" answer from a minute ago must never block
+ *  someone who has just bought. Per isolate — a cold isolate just asks again. */
+const proCache = new Map<string, number>();
+
+/**
+ * True when a RevenueCat `GET /v1/subscribers/{id}` body shows an active
+ * "pro" entitlement: present, and either never expiring (lifetime/promo) or
+ * expiring after `nowMs`.
+ */
+function isProSubscriber(body: unknown, nowMs: number): boolean {
+  const pro = (body as { subscriber?: { entitlements?: Record<string, { expires_date?: string | null }> } })
+    ?.subscriber?.entitlements?.pro;
+  if (!pro) return false;
+  if (pro.expires_date == null) return true;
+  return Date.parse(pro.expires_date) > nowMs;
+}
+
+/**
+ * Null when the request may use a speech route; otherwise the 402 to send.
+ *
+ * Off unless REQUIRE_PRO is exactly "true", so the owner turns enforcement
+ * on only once store purchases work. The app sends its RevenueCat app-user id
+ * as `x-rafeeq-user`. If RevenueCat itself can't be reached, the request is
+ * allowed (and logged): an outage there must not lock out paying users.
+ */
+async function requirePro(
+  req: Request,
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (env.REQUIRE_PRO !== "true") return null;
+
+  const refuse = () =>
+    new Response(JSON.stringify({ error: "subscription required", code: "not_subscribed" }), {
+      status: 402,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+
+  const id = req.headers.get("x-rafeeq-user");
+  if (!id) return refuse();
+
+  const now = Date.now();
+  const trustedUntil = proCache.get(id);
+  if (trustedUntil !== undefined && trustedUntil > now) return null;
+
+  if (!env.REVENUECAT_SECRET_KEY) {
+    console.error("REQUIRE_PRO is on but REVENUECAT_SECRET_KEY is not set; allowing");
+    return null;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(id)}`, {
+      headers: { authorization: `Bearer ${env.REVENUECAT_SECRET_KEY}` },
+    });
+  } catch (err) {
+    console.error("RevenueCat check threw; allowing", err);
+    return null;
+  }
+  if (!res.ok) {
+    console.error("RevenueCat check failed; allowing", res.status);
+    return null;
+  }
+
+  if (!isProSubscriber(await res.json(), now)) return refuse();
+  proCache.set(id, now + PRO_CACHE_MS);
+  return null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -8,11 +8,37 @@
 # mode is broken — the token is only rejected later, by Deepgram.
 #
 # Usage:  bash token-broker/verify-deploy.sh
+#
+#   BROKER_URL=<url>       check another deployment, e.g. the dev copy
+#                          (npx wrangler deploy --env dev)
+#   PRO_USER_ID=<id>       a subscriber's Support ID (Account -> Subscription).
+#                          Needed once REQUIRE_PRO is "true": the speech routes
+#                          then refuse requests that don't carry a Pro id.
 
 set -uo pipefail
 B="${BROKER_URL:-https://rafeeq-token-broker.rafeeqapp.workers.dev}"
 
+# Identity header for the speech-route checks below.
+UH=()
+if [ -n "${PRO_USER_ID:-}" ]; then
+  UH=(-H "x-rafeeq-user: $PRO_USER_ID")
+fi
+
 echo "broker: $B"
+
+# Rafeeq Pro enforcement: with REQUIRE_PRO="true" a speech route refuses a
+# request without a subscriber id. Informational either way - the switch is
+# the owner's to set.
+pro_resp=$(curl -s -m 25 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" "$B/deepgram/token")
+pro_code=${pro_resp##*$'\n'}
+if [ "$pro_code" = "402" ] && echo "$pro_resp" | grep -q 'not_subscribed'; then
+  echo "PASS (enforcement on) — speech routes refuse requests without a subscriber id."
+  if [ ${#UH[@]} -eq 0 ]; then
+    echo "  The route checks below will be refused too; rerun with PRO_USER_ID=<a subscriber's Support ID>."
+  fi
+else
+  echo "INFO (enforcement off) — REQUIRE_PRO is not \"true\"; speech routes are open (HTTP $pro_code)."
+fi
 
 # Prints the JWT payload of the access_token in a JSON body (empty when it is
 # not a JWT). Uses base64/sed rather than node: node is not always on PATH
@@ -28,7 +54,7 @@ jwt_payload() {
   echo "$b64" | base64 -d 2>/dev/null
 }
 
-body=$(curl -s -m 25 -X POST -H "Origin: https://localhost" "$B/deepgram/token")
+body=$(curl -s -m 25 -X POST -H "Origin: https://localhost" ${UH[@]+"${UH[@]}"} "$B/deepgram/token")
 
 if ! echo "$body" | grep -q "access_token"; then
   echo "FAIL — no access_token in response:"
@@ -79,7 +105,7 @@ failed=0
 
 echo
 echo "── /soniox/token"
-resp=$(curl -s -m 25 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" "$B/soniox/token")
+resp=$(curl -s -m 25 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" ${UH[@]+"${UH[@]}"} "$B/soniox/token")
 code=${resp##*$'\n'}
 body=${resp%$'\n'*}
 
@@ -125,7 +151,7 @@ trap 'rm -f "$wav"' EXIT
 printf 'RIFF\x24\x7d\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80\x3e\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x7d\x00\x00' > "$wav"
 head -c 32000 /dev/zero >> "$wav"
 
-resp=$(curl -s -m 40 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" \
+resp=$(curl -s -m 40 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" ${UH[@]+"${UH[@]}"} \
   -H "content-type: audio/wav" --data-binary @"$wav" "$B/whisper/transcribe")
 code=${resp##*$'\n'}
 body=${resp%$'\n'*}
