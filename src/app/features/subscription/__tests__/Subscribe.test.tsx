@@ -27,6 +27,7 @@ const monthly = {
 
 const purchase = jest.fn();
 const restore = jest.fn();
+const refreshPackages = jest.fn();
 let path = "";
 let host: HTMLDivElement;
 let root: Root;
@@ -36,7 +37,7 @@ const flush = () => act(async () => {
 });
 
 function mount(packages: unknown[]) {
-  (useSubscription as jest.Mock).mockReturnValue({ packages, purchase, restore, isPro: false });
+  (useSubscription as jest.Mock).mockReturnValue({ packages, purchase, restore, refreshPackages, isPro: false });
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
@@ -145,4 +146,14 @@ it("disables Subscribe when there are no packages", () => {
   mount([]);
   expect(button("اشترك الآن")!.disabled).toBe(true);
   expect(host.textContent).toContain("خطط الاشتراك غير متاحة الآن");
+});
+
+it("asks for the plans again when it opens without any", () => {
+  mount([]);
+  expect(refreshPackages).toHaveBeenCalledTimes(1);
+});
+
+it("does not refetch plans it already has", () => {
+  mount([monthly, annual]);
+  expect(refreshPackages).not.toHaveBeenCalled();
 });

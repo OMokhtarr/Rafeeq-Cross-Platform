@@ -8,16 +8,32 @@
  * lives. "View subscription" leads to the full /subscribe page.
  */
 
-import React from "react";
-import { useHistory } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import { useHistory, useLocation } from "react-router-dom";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useLang } from "../../core/context/LanguageContext";
+import { registerOverlay } from "../../core/utils/overlay-registry";
 import "./ProNote.css";
 
 const ProNote: React.FC = () => {
   const { noteOpen, closeNote } = useSubscription();
   const { t } = useLang();
   const history = useHistory();
+  const { pathname } = useLocation();
+
+  // Android Back and the edge swipe close the topmost registered overlay
+  // first (App.tsx); without this the note would outlive the page under it.
+  useEffect(() => (noteOpen ? registerOverlay(closeNote) : undefined), [noteOpen, closeNote]);
+
+  // The note belongs to the page that raised it: leaving that page closes it.
+  const openedOnRef = useRef(pathname);
+  useEffect(() => {
+    if (!noteOpen) {
+      openedOnRef.current = pathname;
+      return;
+    }
+    if (pathname !== openedOnRef.current) closeNote();
+  }, [noteOpen, pathname, closeNote]);
 
   if (!noteOpen) return null;
   const ts = t.subscription;

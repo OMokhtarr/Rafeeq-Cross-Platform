@@ -1014,3 +1014,10 @@ ion-content::part(scroll) {
     margin-left: auto;
   }
 }
+
+/* PRO badge sits inside the mic button here: the actions row clips
+   overflow, so the default above-the-corner placement would be cut off. */
+.mst-recite .pro-badge {
+  top: 2px;
+  inset-inline-end: 2px;
+}

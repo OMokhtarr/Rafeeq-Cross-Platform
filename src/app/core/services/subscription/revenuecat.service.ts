@@ -25,14 +25,18 @@ const PRO_ENTITLEMENT = "pro";
 
 let configured: Promise<void> | null = null;
 
-/** Configures the SDK once, with the platform's public key. */
+/** Configures the SDK once, with the platform's public key. A build without
+ *  a key never starts RevenueCat, so it sends nothing to it (the privacy
+ *  declarations change only for builds that carry a key). */
 export function configureRevenueCat(): Promise<void> {
   if (!configured) {
     const apiKey =
       Capacitor.getPlatform() === "ios"
         ? process.env.REACT_APP_REVENUECAT_IOS_KEY ?? ""
         : process.env.REACT_APP_REVENUECAT_ANDROID_KEY ?? "";
-    configured = Purchases.configure({ apiKey });
+    configured = apiKey
+      ? Purchases.configure({ apiKey })
+      : Promise.reject(new Error("RevenueCat is not configured for this build"));
   }
   return configured;
 }

@@ -8,7 +8,7 @@
  * taps the mic again to recite. A cancelled store sheet is silent.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IonContent, IonPage, useIonToast } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
@@ -23,9 +23,16 @@ const Subscribe: React.FC = () => {
   const { t } = useLang();
   const ts = t.subscription;
   const history = useHistory();
-  const { packages, purchase, restore } = useSubscription();
+  const { packages, refreshPackages, purchase, restore } = useSubscription();
   const [presentToast] = useIonToast();
   const [busy, setBusy] = useState(false);
+
+  // Plans fetched at startup are missing when the app opened offline; ask
+  // again whenever the page opens without any.
+  const hasPlans = packages.length > 0;
+  useEffect(() => {
+    if (!hasPlans) void refreshPackages();
+  }, [hasPlans, refreshPackages]);
 
   const plans = useMemo(
     () =>

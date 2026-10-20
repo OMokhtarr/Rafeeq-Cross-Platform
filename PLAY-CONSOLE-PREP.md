@@ -209,15 +209,18 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 
 ### Not collected
 No location, contacts, photos, files, financial info, health data, or advertising
-identifiers. No analytics or ad SDKs are present. (Financial info changes when
-Rafeeq Pro ships: purchase history goes through Google Play and RevenueCat — see §9.) All reading progress, bookmarks,
+identifiers. No analytics or ad SDKs are present. (This changes with the first
+build that carries a RevenueCat key: purchase history and an anonymous app-user
+id go to RevenueCat — see §9.) All reading progress, bookmarks,
 and cached audio for signed-out users stay on-device (IndexedDB + Capacitor
 Preferences).
 
 ### Security practices
 - Data encrypted in transit: **Yes** (all endpoints HTTPS/WSS)
 - Users can request data deletion: **Yes** — uninstall or clear storage removes
-  everything; nothing is stored off-device. See section 4.
+  everything; nothing is stored off-device. See section 4. (Once a build carries
+  a RevenueCat key, RevenueCat holds purchase records for an anonymous id —
+  revisit this answer then; see §9.)
 
 ---
 
@@ -581,7 +584,12 @@ ships dark: the paywall only appears when the app is built with
    (works while the paywall is off): buy → status "active"; reinstall →
    Restore; Manage opens Play's subscription page.
 
-### Store declarations — redo before the paid build ships
+### Store declarations — redo before the first build that carries a RevenueCat key
+
+The app starts RevenueCat on every launch of any build whose `.env` has
+`REACT_APP_REVENUECAT_ANDROID_KEY` set — even with the paywall switch off —
+so that build already sends an anonymous app-user id and purchase data to
+RevenueCat. Builds without the key send nothing.
 - **Content rating:** digital purchases becomes **Yes** — re-run the
   questionnaire (see the tripwire in §0).
 - **Data safety → Financial info → Purchase history:** collected through Google

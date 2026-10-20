@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { MemoryRouter, Route } from "react-router-dom";
 import ProNote from "../ProNote";
 import { useSubscription } from "../../../core/context/SubscriptionContext";
+import { closeTopOverlay } from "../../../core/utils/overlay-registry";
 
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
 
@@ -10,6 +11,7 @@ jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription:
 
 const closeNote = jest.fn();
 let path = "";
+let historyRef: { push: (p: string) => void } | null = null;
 let host: HTMLDivElement;
 let root: Root;
 
@@ -24,8 +26,9 @@ function mount(noteOpen: boolean) {
         <ProNote />
         <Route
           path="*"
-          render={({ location }) => {
+          render={({ location, history }) => {
             path = location.pathname;
+            historyRef = history;
             return null;
           }}
         />
@@ -58,6 +61,25 @@ it("navigates to /subscribe and closes", () => {
   );
   act(() => cta!.click());
   expect(path).toBe("/subscribe");
+  // The mocked note stays "open", so the leave-the-page close fires as well;
+  // in the app the first close already hides it.
+  expect(closeNote).toHaveBeenCalled();
+});
+
+it("registers with the overlay registry so Android Back closes it", () => {
+  mount(true);
+  expect(closeTopOverlay()).toBe(true);
+  expect(closeNote).toHaveBeenCalledTimes(1);
+});
+
+it("does not register while closed", () => {
+  mount(false);
+  expect(closeTopOverlay()).toBe(false);
+});
+
+it("closes when the page changes underneath it", () => {
+  mount(true);
+  act(() => historyRef!.push("/quiz-list"));
   expect(closeNote).toHaveBeenCalledTimes(1);
 });
 

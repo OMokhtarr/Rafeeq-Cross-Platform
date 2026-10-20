@@ -52,6 +52,9 @@ interface SubscriptionCtx {
   appUserId: string | null;
   managementUrl: string | null;
   packages: PurchasesPackage[];
+  /** Fetches the store plans again — the startup fetch fails when the app
+   *  opens offline, and the subscribe page must not stay empty after that. */
+  refreshPackages: () => Promise<void>;
   /** Resolves "cancelled" when the user backs out; throws on other failures. */
   purchase: (pkg: PurchasesPackage) => Promise<PurchaseOutcome>;
   /** Resolves to whether the restore found an active Pro subscription. */
@@ -159,6 +162,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const restore = useCallback(async () => apply(await restorePurchases()), [apply]);
 
+  const refreshPackages = useCallback(async () => {
+    if (!native) return;
+    try {
+      await configureRevenueCat();
+      setPackages(await fetchOfferingPackages());
+    } catch (err) {
+      console.error("[pro] offerings failed", err);
+    }
+  }, [native]);
+
   const markNotPro = useCallback(() => setIsPro(false), []);
   const openNote = useCallback(() => setNoteOpen(true), []);
   const closeNote = useCallback(() => setNoteOpen(false), []);
@@ -170,6 +183,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       appUserId,
       managementUrl,
       packages,
+      refreshPackages,
       purchase,
       restore,
       markNotPro,
@@ -177,7 +191,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       openNote,
       closeNote,
     }),
-    [isPro, ready, appUserId, managementUrl, packages, purchase, restore, markNotPro, noteOpen, openNote, closeNote],
+    [isPro, ready, appUserId, managementUrl, packages, refreshPackages, purchase, restore, markNotPro, noteOpen, openNote, closeNote],
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

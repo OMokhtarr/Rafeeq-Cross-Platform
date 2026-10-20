@@ -21,6 +21,9 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// A build with a RevenueCat key; without one the SDK is never started.
+process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_test_key";
+
 const platform = Capacitor.getPlatform as jest.Mock;
 const rc = Purchases as unknown as Record<string, jest.Mock>;
 
@@ -164,4 +167,23 @@ it("opens and closes the note", async () => {
   expect(sub.noteOpen).toBe(true);
   act(() => sub.closeNote());
   expect(sub.noteOpen).toBe(false);
+});
+
+it("loads the plans again on demand after an offline start", async () => {
+  rc.getOfferings.mockRejectedValue(new Error("offline"));
+  await mount();
+  expect(sub.packages).toEqual([]);
+  rc.getOfferings.mockResolvedValue({ current: { availablePackages: [{ identifier: "$rc_annual" }] } });
+  await act(async () => {
+    await sub.refreshPackages();
+  });
+  expect(sub.packages).toEqual([{ identifier: "$rc_annual" }]);
+});
+
+it("keeps the cached Pro flag when the live check fails offline", async () => {
+  localStorage.setItem("rafiq_pro_v1", "1");
+  rc.getCustomerInfo.mockRejectedValue(new Error("offline"));
+  await mount();
+  expect(sub.isPro).toBe(true);
+  expect(localStorage.getItem("rafiq_pro_v1")).toBe("1");
 });
