@@ -35,6 +35,9 @@ import QuizExitModal from "../../../../components/QuizExitModal";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import { hiddenCardTokens } from "../../../../hooks/quizReciteProgress";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
+import { useProGate } from "../../../../../subscription/useProGate";
+import { useReciteMicError } from "../../../../../subscription/useReciteMicError";
+import ProBadge from "../../../../../subscription/ProBadge";
 import "./MutashabihatTest.css";
 
 interface ReciteStatusProps {
@@ -218,15 +221,13 @@ const MutashabihatTest: React.FC = () => {
     if (isSoundOn()) beep(isCorrect ? "correct" : "wrong");
   }, [userAnswer, answered, q, beep, recite]);
 
-  useEffect(() => {
-    if (recite.micError) {
-      presentToast({
-        message: tt.reciteMicError,
-        duration: 2500,
-        position: "bottom",
-      });
-    }
-  }, [recite.micError, presentToast, tt.reciteMicError]);
+  // A not-subscribed refusal from the broker opens the subscriber note;
+  // any other recite failure gets this quiz's own message.
+  useReciteMicError(recite.micError, () =>
+    presentToast({ message: tt.reciteMicError, duration: 2500, position: "bottom" }),
+  );
+
+  const { locked: reciteLocked, requirePro } = useProGate();
 
   const handleReciteToggle = useCallback(() => {
     if (!q) return;
@@ -247,10 +248,13 @@ const MutashabihatTest: React.FC = () => {
       const displayedPortion = showContext
         ? q.sharedPhraseRaw ?? q.displayedPortion ?? ""
         : q.displayedPortion ?? "";
-      recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
-      if (isSoundOn()) beep("start"); // "we started listening"
+      // Starting to listen is Rafeeq Pro; stopping is never gated.
+      requirePro(() => {
+        recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
+        if (isSoundOn()) beep("start"); // "we started listening"
+      });
     }
-  }, [q, answered, recite, showContext, settleReciteCorrect, beep]);
+  }, [q, answered, recite, showContext, settleReciteCorrect, beep, requirePro]);
 
   // Closing the context: if reciting and the target verse was recited
   // correctly, settle it correct (stops + shows result). Otherwise stop and
@@ -571,6 +575,7 @@ const MutashabihatTest: React.FC = () => {
                       {recite.isArmed && (
                         <span className="mst-recite-dot" aria-hidden="true" />
                       )}
+                      {reciteLocked && !recite.isArmed && <ProBadge />}
                       <svg
                         viewBox="0 0 24 24"
                         width="18"

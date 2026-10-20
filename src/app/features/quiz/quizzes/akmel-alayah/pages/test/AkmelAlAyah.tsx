@@ -31,6 +31,9 @@ import type {
   QuizConfig,
   QuizQuestion,
 } from "../../../../../../shared/models/verse.model";
+import { useProGate } from "../../../../../subscription/useProGate";
+import { useReciteMicError } from "../../../../../subscription/useReciteMicError";
+import ProBadge from "../../../../../subscription/ProBadge";
 import "./AkmelAlAyah.css";
 
 interface ReciteStatusProps {
@@ -256,6 +259,8 @@ const AkmelAlAyah: React.FC = () => {
     if (isSoundOn()) beep(isCorrect ? "correct" : "wrong");
   }, [userAnswer, answered, q, beep, recite]);
 
+  const { locked: reciteLocked, requirePro } = useProGate();
+
   const handleReciteToggle = useCallback(() => {
     if (!q) return;
     if (recite.isArmed) {
@@ -274,10 +279,13 @@ const AkmelAlAyah: React.FC = () => {
       // context is open or closed): recite the whole verse or just the
       // hidden continuation being tested.
       const displayedPortion = q.versePart ?? q.displayedPortion ?? "";
-      recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
-      if (isSoundOn()) beep("start"); // "we started listening"
+      // Starting to listen is Rafeeq Pro; stopping is never gated.
+      requirePro(() => {
+        recite.startVerseMode({ sura: q.sura, aya: q.aya, page: q.page, displayedPortion });
+        if (isSoundOn()) beep("start"); // "we started listening"
+      });
     }
-  }, [q, answered, recite, settleReciteCorrect, beep]);
+  }, [q, answered, recite, settleReciteCorrect, beep, requirePro]);
 
   const handleSkip = () => {
     if (answered || !q) return;
@@ -313,15 +321,11 @@ const AkmelAlAyah: React.FC = () => {
     if (hintLevel < words.length) setHintLevel((l) => l + 1);
   };
 
-  useEffect(() => {
-    if (recite.micError) {
-      presentToast({
-        message: tt.reciteMicError,
-        duration: 2500,
-        position: "bottom",
-      });
-    }
-  }, [recite.micError, presentToast, tt.reciteMicError]);
+  // A not-subscribed refusal from the broker opens the subscriber note;
+  // any other recite failure gets this quiz's own message.
+  useReciteMicError(recite.micError, () =>
+    presentToast({ message: tt.reciteMicError, duration: 2500, position: "bottom" }),
+  );
 
   const handleExit = () => setShowExitModal(true);
 
@@ -544,6 +548,7 @@ const AkmelAlAyah: React.FC = () => {
                       {recite.isArmed && (
                         <span className="aa-recite-dot" aria-hidden="true" />
                       )}
+                      {reciteLocked && !recite.isArmed && <ProBadge />}
                       <svg
                         viewBox="0 0 24 24"
                         width="18"
