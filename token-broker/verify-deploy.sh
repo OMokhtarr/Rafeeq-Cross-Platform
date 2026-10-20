@@ -59,6 +59,15 @@ body=$(curl -s -m 25 -X POST -H "Origin: https://localhost" ${UH[@]+"${UH[@]}"} 
 if ! echo "$body" | grep -q "access_token"; then
   echo "FAIL — no access_token in response:"
   echo "  $body"
+  if echo "$body" | grep -q 'not_subscribed'; then
+    if [ -n "${PRO_USER_ID:-}" ]; then
+      echo "The broker refused PRO_USER_ID as not subscribed. Check that the id is a"
+      echo "current subscriber's Support ID and that REVENUECAT_SECRET_KEY is set and"
+      echo "correct: with REQUIRE_PRO on, a missing or wrong secret refuses everyone."
+    else
+      echo "Enforcement is on; rerun with PRO_USER_ID=<a subscriber's Support ID>."
+    fi
+  fi
   exit 1
 fi
 

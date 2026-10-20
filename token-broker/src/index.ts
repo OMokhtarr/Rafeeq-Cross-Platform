@@ -190,13 +190,24 @@ function isProSubscriber(body: unknown, nowMs: number): boolean {
   return Date.parse(pro.expires_date) > nowMs;
 }
 
+/** RevenueCat app-user ids — anonymous ("$RCAnonymousID:<hex>") or custom —
+ *  use these characters. Anything else, or "." / "..", is refused before it
+ *  can shape the RevenueCat URL. */
+function isPlausibleAppUserId(id: string): boolean {
+  return /^[A-Za-z0-9_$:.-]{1,100}$/.test(id) && id !== "." && id !== "..";
+}
+
 /**
  * Null when the request may use a speech route; otherwise the 402 to send.
  *
  * Off unless REQUIRE_PRO is exactly "true", so the owner turns enforcement
  * on only once store purchases work. The app sends its RevenueCat app-user id
- * as `x-rafeeq-user`. If RevenueCat itself can't be reached, the request is
- * allowed (and logged): an outage there must not lock out paying users.
+ * as `x-rafeeq-user`. Only a real RevenueCat outage — the request throwing
+ * or a 5xx — lets the request through (logged), so an outage there doesn't
+ * lock out paying users. Everything else refuses: a malformed id, a missing
+ * or wrong secret (401), a crafted id RevenueCat rejects (4xx), or its rate
+ * limit (429), so neither a crafted header nor a misconfigured deploy can
+ * quietly turn enforcement off.
  */
 async function requirePro(
   req: Request,
@@ -212,15 +223,15 @@ async function requirePro(
     });
 
   const id = req.headers.get("x-rafeeq-user");
-  if (!id) return refuse();
+  if (!id || !isPlausibleAppUserId(id)) return refuse();
 
   const now = Date.now();
   const trustedUntil = proCache.get(id);
   if (trustedUntil !== undefined && trustedUntil > now) return null;
 
   if (!env.REVENUECAT_SECRET_KEY) {
-    console.error("REQUIRE_PRO is on but REVENUECAT_SECRET_KEY is not set; allowing");
-    return null;
+    console.error("REQUIRE_PRO is on but REVENUECAT_SECRET_KEY is not set; refusing");
+    return refuse();
   }
 
   let res: Response;
@@ -232,9 +243,13 @@ async function requirePro(
     console.error("RevenueCat check threw; allowing", err);
     return null;
   }
-  if (!res.ok) {
+  if (res.status >= 500) {
     console.error("RevenueCat check failed; allowing", res.status);
     return null;
+  }
+  if (!res.ok) {
+    console.error("RevenueCat check refused the request; refusing", res.status);
+    return refuse();
   }
 
   if (!isProSubscriber(await res.json(), now)) return refuse();
