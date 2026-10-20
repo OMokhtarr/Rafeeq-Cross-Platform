@@ -24,6 +24,7 @@ import {
   type BackupSummary,
 } from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
+import SubscriptionRow from "./SubscriptionRow";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
 import "./Account.css";
@@ -278,6 +279,9 @@ const Account: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* ── Rafeeq Pro subscription ── */}
+            <SubscriptionRow />
 
             {/* ── Notes card ── */}
             <div className="ac-card ac-notes-card" {...tourAttr("account.notes")}>
