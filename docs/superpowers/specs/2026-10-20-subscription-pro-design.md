@@ -117,8 +117,11 @@ How it behaves:
 
 ### 2a. The app-side switch (owner decision, 2026-10-20)
 
-The app is still in its Google Play closed test, so testers must keep free
-recite until the store release. The owner chose an app-side switch:
+The owner chose an app-side switch. It was first proposed so closed-test
+testers could keep free recite. The owner then confirmed the closed test is
+finished (2026-10-20). The switch stays anyway, because it lets this code
+merge and ship before the RevenueCat and Play products are live. The gate is
+turned on only once purchases actually work.
 
 - A build-time env var **`REACT_APP_PRO_GATE`**. Only the value `"on"`
   enables the gate.
