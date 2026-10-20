@@ -125,7 +125,7 @@ turned on only once purchases actually work.
 
 - A build-time env var **`REACT_APP_PRO_GATE`**. Only the value `"on"`
   enables the gate.
-- **While it's off** (the default, including every closed-test build):
+- **While it's off** (the default):
   - no PRO badge;
   - no note;
   - recite starts for everyone, exactly as today.
