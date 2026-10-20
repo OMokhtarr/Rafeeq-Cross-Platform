@@ -56,6 +56,7 @@ import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
+import ProNote from "./app/features/subscription/ProNote";
 
 // `hardwareBackButton: false` is load-bearing, not cosmetic.
 //
@@ -299,6 +300,7 @@ const App: React.FC = () => {
                 <TourProvider initial={onboarding}>
                   <MainRouterOutlet />
                 </TourProvider>
+                <ProNote />
               </IonReactRouter>
             </IonApp>
             </SubscriptionProvider>

@@ -590,6 +590,34 @@ export interface AppStrings {
     languageGroup: (lang: string) => string;
   };
 
+  subscription: {
+    noteTitle: string;
+    noteLine: string;
+    noteCta: string;
+    title: string;
+    pitch: string;
+    point1: string;
+    point2: string;
+    point3: string;
+    subscribe: string;
+    restore: string;
+    restoreNone: string;
+    purchaseFailed: string;
+    legal: string;
+    yearly: string;
+    monthly: string;
+    save: string;
+    noPlans: string;
+    close: string;
+    accountTitle: string;
+    accountActive: string;
+    accountFree: string;
+    manage: string;
+    view: string;
+    supportId: string;
+    copied: string;
+  };
+
   hifz: {
     tabLabel: string;
     title: string;
@@ -1281,6 +1309,34 @@ const ar: AppStrings = {
     downloading: "جارٍ الحفظ…",
     downloaded: "محفوظ",
     languageGroup: (lang: string) => lang,
+  },
+
+  subscription: {
+    noteTitle: "التسميع متاح للمشتركين",
+    noteLine: "سمّع وسيتابعك رفيق ويُظهر أخطاءك",
+    noteCta: "عرض الاشتراك",
+    title: "رفيق برو",
+    pitch: "اشترك لتستمتع بالتسميع مع التصحيح",
+    point1: "سمّع وتتبّع القراءة كلمة بكلمة",
+    point2: "كشف الأخطاء والكلمات الناقصة",
+    point3: "التسميع في الاختبارات",
+    subscribe: "اشترك الآن",
+    restore: "استعادة المشتريات",
+    restoreNone: "لم يُعثر على اشتراك سابق",
+    purchaseFailed: "تعذّر إتمام الاشتراك، حاول مرة أخرى",
+    legal: "يتجدد الاشتراك تلقائيًا، ويمكنك إلغاؤه في أي وقت من المتجر",
+    yearly: "سنوي",
+    monthly: "شهري",
+    save: "وفّر",
+    noPlans: "خطط الاشتراك غير متاحة الآن",
+    close: "إغلاق",
+    accountTitle: "الاشتراك",
+    accountActive: "رفيق برو — مفعّل",
+    accountFree: "مجاني",
+    manage: "إدارة الاشتراك",
+    view: "عرض الاشتراك",
+    supportId: "معرّف الدعم",
+    copied: "تم النسخ",
   },
 
   hifz: {
@@ -1981,6 +2037,34 @@ const en: AppStrings = {
     downloading: "Saving…",
     downloaded: "Saved",
     languageGroup: (lang: string) => lang,
+  },
+
+  subscription: {
+    noteTitle: "Recite is for subscribers",
+    noteLine: "Recite and Rafeeq follows along and shows your mistakes",
+    noteCta: "View subscription",
+    title: "Rafeeq Pro",
+    pitch: "Subscribe to enjoy reciting with correction",
+    point1: "Recite and follow along word by word",
+    point2: "Mistakes and skipped words shown",
+    point3: "Recite in the quizzes",
+    subscribe: "Subscribe now",
+    restore: "Restore purchases",
+    restoreNone: "No previous subscription found",
+    purchaseFailed: "The subscription couldn't be completed. Please try again.",
+    legal: "Auto-renews; cancel anytime in the store",
+    yearly: "Yearly",
+    monthly: "Monthly",
+    save: "Save",
+    noPlans: "Subscription plans aren't available right now",
+    close: "Close",
+    accountTitle: "Subscription",
+    accountActive: "Rafeeq Pro — active",
+    accountFree: "Free",
+    manage: "Manage subscription",
+    view: "View subscription",
+    supportId: "Support ID",
+    copied: "Copied",
   },
 
   hifz: {
