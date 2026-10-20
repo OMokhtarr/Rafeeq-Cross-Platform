@@ -4,7 +4,7 @@ import {
   transcribeSegment,
   WhisperResult,
 } from "../stt/whisper/whisper.adapter";
-import { brokerUrl } from "../stt/broker";
+import { NOT_SUBSCRIBED_MESSAGE, brokerUrl, setBrokerUserId } from "../stt/broker";
 import { startPcmCapture } from "../stt/pcm-capture";
 import type { AudioSegment } from "../stt/whisper/pause-segmenter";
 
@@ -304,6 +304,21 @@ describe("transcribeSegment", () => {
     await expect(transcribeSegment(wav, signal)).rejects.toThrow("Speech recognition limit reached for today");
     respond(502);
     await expect(transcribeSegment(wav, signal)).rejects.toThrow("502");
+  });
+
+  it("sends the subscriber id and names a not-subscribed refusal", async () => {
+    setBrokerUserId("$RCAnonymousID:abc");
+    const wav = new Blob([], { type: "audio/wav" });
+    const signal = new AbortController().signal;
+    respond(402, { error: "subscription required", code: "not_subscribed" });
+    await expect(transcribeSegment(wav, signal)).rejects.toThrow(NOT_SUBSCRIBED_MESSAGE);
+    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/whisper/transcribe", {
+      method: "POST",
+      headers: { "content-type": "audio/wav", "x-rafeeq-user": "$RCAnonymousID:abc" },
+      body: wav,
+      signal,
+    });
+    setBrokerUserId(null);
   });
 });
 

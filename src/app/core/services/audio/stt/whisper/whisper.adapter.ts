@@ -13,7 +13,12 @@
  * credential reaches the client.
  */
 
-import { brokerUrl, STT_UNAVAILABLE_MESSAGE } from "../broker";
+import {
+  brokerHeaders,
+  brokerUrl,
+  NOT_SUBSCRIBED_MESSAGE,
+  STT_UNAVAILABLE_MESSAGE,
+} from "../broker";
 import { PCM_SAMPLE_RATE, startPcmCapture } from "../pcm-capture";
 import type { OpenStream, SttStreamEvent } from "../types";
 import { encodeWav } from "../wav";
@@ -46,7 +51,7 @@ export type Transcribe = (wav: Blob, signal: AbortSignal) => Promise<WhisperResu
 export const transcribeSegment: Transcribe = async (wav, signal) => {
   const res = await fetch(brokerUrl(TRANSCRIBE_PATH), {
     method: "POST",
-    headers: { "content-type": "audio/wav" },
+    headers: { "content-type": "audio/wav", ...brokerHeaders() },
     body: wav,
     signal,
   });
@@ -54,7 +59,9 @@ export const transcribeSegment: Transcribe = async (wav, signal) => {
     throw new Error(
       res.status === 503
         ? STT_UNAVAILABLE_MESSAGE
-        : res.status === 429
+        : res.status === 402
+          ? NOT_SUBSCRIBED_MESSAGE
+          : res.status === 429
           ? "Speech recognition limit reached for today"
           : `Speech recognition failed (${res.status})`,
     );

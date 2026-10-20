@@ -55,6 +55,7 @@ import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
+import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 
 // `hardwareBackButton: false` is load-bearing, not cosmetic.
 //
@@ -280,6 +281,7 @@ const App: React.FC = () => {
       <LanguageProvider>
         <VerseVisibilityProvider>
           <PlaybackProvider>
+            <SubscriptionProvider>
             <IonApp>
               {preloading && preloadProgress.done < preloadProgress.total && (
                 <div className="global-preload-bar">
@@ -299,6 +301,7 @@ const App: React.FC = () => {
                 </TourProvider>
               </IonReactRouter>
             </IonApp>
+            </SubscriptionProvider>
           </PlaybackProvider>
         </VerseVisibilityProvider>
       </LanguageProvider>
