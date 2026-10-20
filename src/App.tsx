@@ -57,6 +57,7 @@ import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityConte
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 import ProNote from "./app/features/subscription/ProNote";
+import Subscribe from "./app/features/subscription/Subscribe";
 
 // `hardwareBackButton: false` is load-bearing, not cosmetic.
 //
@@ -221,6 +222,7 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/settings" component={Settings} />
       <Route exact path="/playback" component={PlaybackSettings} />
       <Route exact path="/tafsir-settings" component={TafsirSettings} />
+      <Route exact path="/subscribe" component={Subscribe} />
       <Redirect exact from="/home" to="/" />
     </IonRouterOutlet>
   );
