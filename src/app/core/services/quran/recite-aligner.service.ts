@@ -25,6 +25,7 @@ import {
   type Skeleton,
   type WordVerdict,
 } from "./recite-spelling.service";
+import { MUQATTAAT_OPENERS, spelledLetters } from "./recite-muqattaat";
 
 // ─── Tuning (starting values from the design spec) ───────────────────────────
 
@@ -133,6 +134,7 @@ export type StepKind =
   | "merged"
   | "split"
   | "lenient"
+  | "letters"
   | "kept";
 
 export interface AlignStep {
@@ -259,8 +261,21 @@ function verdictCost(v: WordVerdict): number {
   return v === "said" ? 0 : v === "soundAlike" ? SOUND_ALIKE_COST : WRONG_COST;
 }
 
+/** True when the tokens a lenient word absorbed say its muqatta'at opener:
+ *  the letter names spell it, or one token carries exactly its letters. */
+function spellsOpener(word: ExpectedWord, tokens: SpokenWord[]): boolean {
+  const opener = plainLetters(word.skeleton);
+  if (tokens.length === 0 || !MUQATTAAT_OPENERS.includes(opener)) return false;
+  const texts = tokens.map((t) => t.text);
+  return (
+    spelledLetters(texts) === opener || (tokens.length === 1 && spokenLetters(texts[0]) === opener)
+  );
+}
+
 function isCorrect(kind: StepKind): boolean {
-  return kind === "said" || kind === "soundAlike" || kind === "merged" || kind === "split";
+  return (
+    kind === "said" || kind === "soundAlike" || kind === "merged" || kind === "split" || kind === "letters"
+  );
 }
 
 /**
@@ -396,7 +411,12 @@ export function alignPhrase(
       j -= 1;
     } else if (o === OP_LENIENT) {
       const k = opK[at(i, j)];
-      steps.push({ kind: "lenient", expected: [E[j - 1]], spoken: S.slice(i - k, i) });
+      const absorbed = S.slice(i - k, i);
+      steps.push({
+        kind: spellsOpener(E[j - 1], absorbed) ? "letters" : "lenient",
+        expected: [E[j - 1]],
+        spoken: absorbed,
+      });
       stepWindow.push(j - 1);
       i -= k;
       j -= 1;
@@ -416,6 +436,7 @@ export function alignPhrase(
   // ─── Result rules ───
   // One outcome per verse word, in reading order. Lenient words are
   // transparent: they neither count as said nor confirm or break a gap. A
+  // letters step (a muqatta'at opener spelled out) counts as said. A
   // kept word has the outcome the earlier phrase found for it.
   type Outcome = { idx: number; ok: boolean; kind: StepKind };
   const outcomes: Outcome[] = [];

@@ -91,6 +91,12 @@ const FIXTURE: Record<string, { uthmani: string; standard: string }> = {
     uthmani: "قَالَ|يَبْنَؤُمَّ|لَا|تَأْخُذْ|بِلِحْيَتِى|وَلَا|بِرَأْسِىٓ ۖ|إِنِّى|خَشِيتُ|أَن|تَقُولَ|فَرَّقْتَ|بَيْنَ|بَنِىٓ|إِسْرَٰٓءِيلَ|وَلَمْ|تَرْقُبْ|قَوْلِى",
     standard: "قَالَ|يَا ابْنَ أُمَّ|لَا|تَأْخُذْ|بِلِحْيَتِي|وَلَا|بِرَأْسِي ۖ|إِنِّي|خَشِيتُ|أَن|تَقُولَ|فَرَّقْتَ|بَيْنَ|بَنِي|إِسْرَائِيلَ|وَلَمْ|تَرْقُبْ|قَوْلِي",
   },
+  "36:1": { uthmani: "يسٓ", standard: "يس" },
+  "42:2": { uthmani: "عٓسٓقٓ", standard: "عسق" },
+  "94:1": {
+    uthmani: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
+    standard: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
+  },
 };
 
 function verse(key: string): Verse {
@@ -298,6 +304,29 @@ describe("recite aligner: spelling and tajweed joins", () => {
     const s = recite(verses("2:1", "2:2", "2:3"), at(2, 1), ["الف لام ميم ذلك الكتاب لا ريب فيه هدى للمتقين"]);
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("2:2:7");
+  });
+
+  it("counts الم as said when it is the whole verse (2:1)", () => {
+    const s = recite(verses("2:1", "2:2"), at(2, 1), ["الف لام ميم"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:1:1");
+  });
+
+  it("counts ياسين as said (36:1)", () => {
+    const s = recite(verses("36:1"), at(36, 1), ["ياسين"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("36:1:1");
+  });
+
+  it("counts عسق spelled out (42:2)", () => {
+    const s = recite(verses("42:2"), at(42, 2), ["عين سين قاف"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("42:2:1");
+  });
+
+  it("keeps أَلَمْ an ordinary, markable word (94:1)", () => {
+    const s = recite(verses("94:1"), at(94, 1), ["الف لام ميم نشرح لك صدرك"]);
+    expect(marked(s)).toEqual(["94:1:0"]);
   });
 
   it("does not let a muqatta'at word swallow the rest of its verse", () => {
