@@ -26,6 +26,7 @@ import {
 import { normalizeArabic } from "../../../services/quran/recite-matcher.service";
 import {
   RESUME_MIN_SAID,
+  acceptedWords,
   createReciteTracker,
   formatAlignLog,
   spokenWordsFrom,
@@ -137,6 +138,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
       if (probe.newSaid < RESUME_MIN_SAID) return 0;
       const result = isFinal ? tracker.onFinal(spoken, verses) : probe;
       showState(result.state);
+      deps.glowWords(acceptedWords(result), isFinal);
       if (isFinal) deps.reveal.confirm(result.state.cursor);
       return result.newSaid;
     },
@@ -195,6 +197,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
       // Also on an empty final: it settles the window at the committed
       // state, retracting anything an interim showed that the final dropped.
       showState(result.state);
+      deps.glowWords(acceptedWords(result), event.isFinal);
 
       if (event.isFinal) {
         // The window settled: its words are confirmed speech — release them
