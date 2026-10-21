@@ -74,6 +74,9 @@ interface Props {
   /** Recite mode's red words — skipped or said wrongly — as
    *  `sura:aya:position` keys. A hidden word stays hidden. */
   mistakes?: Set<string>;
+  /** Recite mode's green glow: `sura:aya:position` key -> generation. A new
+   *  generation re-keys the overlay, restarting its fade. */
+  glow?: ReadonlyMap<string, number>;
   onVerseTap?: (verseKey: string) => void;
   onVerseLongPress?: (verseKey: string) => void;
   /**
@@ -97,6 +100,7 @@ const MushafPage: React.FC<Props> = ({
   grey,
   partialTarget,
   mistakes,
+  glow,
   onVerseTap,
   onVerseLongPress,
   bigTextMode = false,
@@ -568,6 +572,14 @@ const MushafPage: React.FC<Props> = ({
       !isWordPastReveal &&
       !!mistakes?.has(`${key}:${tw.word.position}`);
 
+    // Glow: a green copy of the word laid over it, fading out. Hidden words
+    // never get one.
+    const glowGeneration =
+      tw.word.charType === "end" && !isHidden && !isWordPastReveal
+        ? glow?.get(`${key}:${tw.word.position}`)
+        : undefined;
+    const isGlowing = glowGeneration !== undefined;
+
     const isEndMarker =
       tw.word.charType === "end" &&
       tw.word.position ===
@@ -591,6 +603,7 @@ const MushafPage: React.FC<Props> = ({
       isWordHinted ? "mushaf-word-hinted" : "",
       isWordRecited && !isMistake ? "mushaf-word-recited" : "",
       isMistake ? "mushaf-word-mistake" : "",
+      isGlowing ? "mushaf-word--glowing" : "",
       isEndMarker ? "mushaf-verse-end-marker" : "",
     ]
       .filter(Boolean)
@@ -656,6 +669,23 @@ const MushafPage: React.FC<Props> = ({
         }
       >
         {tw.word.codeV2 || tw.word.text_uthmani}
+        {isGlowing && (
+          // Own palette: CSS `color` only reaches the font's foreground layer,
+          // so the tajweed glyph layers need the all-green palette instead.
+          <span
+            className="mushaf-word-glow"
+            aria-hidden="true"
+            key={glowGeneration}
+            style={{
+              fontPalette: paletteNameForPage(
+                page,
+                theme === "night" ? "glow-night" : "glow-day",
+              ),
+            }}
+          >
+            {tw.word.codeV2 || tw.word.text_uthmani}
+          </span>
+        )}
       </span>
     );
   };
