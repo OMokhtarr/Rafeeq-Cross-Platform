@@ -5,14 +5,15 @@
 //   npx ts-node --transpile-only -O '{"module":"commonjs"}' tools/recite-harness/identify-check.ts
 import * as fs from "fs";
 import * as path from "path";
-import { normalizeArabic, type CorpusToken } from "../../src/app/core/services/quran/recite-matcher.service";
-import { decideIdentify, type IdentifyCorpus } from "../../src/app/core/services/quran/recite-identify.service";
+import { normalizeArabic } from "../../src/app/core/services/quran/recite-matcher.service";
+import { buildIdentifyCorpus, decideIdentify, type IdentifyCorpus } from "../../src/app/core/services/quran/recite-identify.service";
 import { SOUND_ALIKE_PAIRS } from "../../src/app/core/services/quran/recite-spelling.service";
 
 const SEED = 1;
 const PASSAGES = 300;
 const PASSAGE_WORDS = 12;
 const MIN_MATCHED = 4; // the Deepgram value
+const IDENTIFY_WINDOW = 30; // the scorer's window, in words
 const SWAP_RATE = 0.15;
 const DROP_RATE = 0.1;
 
@@ -30,30 +31,40 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function buildCorpus(): IdentifyCorpus {
+/** The app's own corpus: normalizeArabic over the bundled Uthmani text. */
+function buildAppCorpus(): IdentifyCorpus {
+  const file = path.join(__dirname, "../../public/data/quran-text.json");
+  return buildIdentifyCorpus(JSON.parse(fs.readFileSync(file, "utf8")).verses);
+}
+
+interface SpokenWord {
+  key: string;
+  /** Index within the verse's imlaei words. */
+  offset: number;
+  token: string;
+}
+
+/** The spoken side: Quran.com imlaei words in canonical order, normalized,
+ *  with the stray hizb mark and anything without an Arabic letter dropped. */
+function buildSpoken(): SpokenWord[] {
   const rows: Row[] = JSON.parse(fs.readFileSync(path.join(__dirname, "qf-words.json"), "utf8"));
   const byVerse = new Map<string, string[]>();
   for (const [key, , type, , imlaei] of rows) {
     if (type !== "word") continue;
     const words = byVerse.get(key) ?? [];
-    for (const w of normalizeArabic(imlaei).split(" ").filter(Boolean)) words.push(w);
+    for (const w of normalizeArabic(imlaei).split(" ")) {
+      if (/[ء-ي]/.test(w)) words.push(w);
+    }
     byVerse.set(key, words);
   }
   const keys = [...byVerse.keys()]
     .map((k) => k.split(":").map(Number) as [number, number])
     .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-
-  const tokens: CorpusToken[] = [];
-  const verseStarts: number[] = [];
-  const startIndexByVerse = new Map<string, number>();
+  const out: SpokenWord[] = [];
   for (const [sura, aya] of keys) {
-    const words = byVerse.get(`${sura}:${aya}`)!;
-    if (!words.length) continue;
-    startIndexByVerse.set(`${sura}:${aya}`, tokens.length);
-    verseStarts.push(tokens.length);
-    words.forEach((token, wordIndex) => tokens.push({ sura, aya, wordIndex, token }));
+    byVerse.get(`${sura}:${aya}`)!.forEach((token, offset) => out.push({ key: `${sura}:${aya}`, offset, token }));
   }
-  return { tokens, verseStarts, startIndexByVerse };
+  return out;
 }
 
 // Letter -> sound-alike letters, from the spelling check's own pairs.
@@ -85,24 +96,34 @@ function addNoise(words: string[], rand: () => number): string[] {
 
 interface Passage {
   words: string[];
-  sura: number;
-  aya: number;
+  /** Verse of the first word, and the verses the passage spans. */
+  key: string;
+  spans: Set<string>;
+  /** Corpus index of the passage's first word (verse start + offset, clamped). */
+  startToken: number;
 }
 
-function samplePassages(corpus: IdentifyCorpus, kind: "start" | "mid", rand: () => number): Passage[] {
-  const { tokens, verseStarts } = corpus;
+function samplePassages(
+  spoken: SpokenWord[],
+  corpus: IdentifyCorpus,
+  kind: "start" | "mid",
+  rand: () => number,
+): Passage[] {
   const out: Passage[] = [];
   while (out.length < PASSAGES) {
-    const idx =
-      kind === "start"
-        ? verseStarts[Math.floor(rand() * verseStarts.length)]
-        : Math.floor(rand() * tokens.length);
-    if (idx + PASSAGE_WORDS > tokens.length) continue;
-    if (kind === "mid" && tokens[idx].wordIndex === 0) continue;
+    const idx = Math.floor(rand() * spoken.length);
+    const first = spoken[idx];
+    if (idx + PASSAGE_WORDS > spoken.length) continue;
+    if (kind === "start" ? first.offset !== 0 : first.offset === 0) continue;
+    const verseStart = corpus.startIndexByVerse.get(first.key);
+    if (verseStart === undefined) continue;
+    const next = corpus.verseStarts.find((v) => v > verseStart) ?? corpus.tokens.length;
+    const slice = spoken.slice(idx, idx + PASSAGE_WORDS);
     out.push({
-      words: tokens.slice(idx, idx + PASSAGE_WORDS).map((t) => t.token),
-      sura: tokens[idx].sura,
-      aya: tokens[idx].aya,
+      words: slice.map((w) => w.token),
+      key: first.key,
+      spans: new Set(slice.map((w) => w.key)),
+      startToken: Math.min(verseStart + first.offset, next - 1),
     });
   }
   return out;
@@ -117,13 +138,14 @@ function measure(corpus: IdentifyCorpus, passages: Passage[], noisy: boolean, ra
   const needed: number[] = [];
   let never = 0;
   let wrong = 0;
+  let adjacent = 0;
   for (const p of passages) {
     const words = noisy ? addNoise(p.words, rand) : p.words;
-    let hit: { sura: number; aya: number; at: number } | null = null;
+    let hit: { key: string; at: number } | null = null;
     for (let n = 1; n <= words.length; n++) {
       const d = decideIdentify(words.slice(0, n).join(" "), corpus, { minMatched: MIN_MATCHED });
       if (d.status === "found") {
-        hit = { sura: d.sura, aya: d.aya, at: n };
+        hit = { key: `${d.sura}:${d.aya}`, at: n };
         break;
       }
     }
@@ -132,7 +154,12 @@ function measure(corpus: IdentifyCorpus, passages: Passage[], noisy: boolean, ra
       continue;
     }
     needed.push(hit.at);
-    if (hit.sura !== p.sura || hit.aya !== p.aya) wrong++;
+    if (hit.key === p.key) continue;
+    // Wrong: more than a scoring window from where the passage began, or a
+    // verse the passage never reached. Otherwise a benign adjacent landing.
+    const at = corpus.startIndexByVerse.get(hit.key) ?? Infinity;
+    if (Math.abs(at - p.startToken) > IDENTIFY_WINDOW || !p.spans.has(hit.key)) wrong++;
+    else adjacent++;
   }
   needed.sort((a, b) => a - b);
   const pct = (n: number) => `${((100 * n) / passages.length).toFixed(1)}%`;
@@ -141,21 +168,28 @@ function measure(corpus: IdentifyCorpus, passages: Passage[], noisy: boolean, ra
     p90: percentile(needed, 0.9),
     never: pct(never),
     wrong: pct(wrong),
+    adjacent: pct(adjacent),
   };
 }
 
 const t0 = Date.now();
-const corpus = buildCorpus();
-console.log(`corpus: ${corpus.tokens.length} words, ${corpus.verseStarts.length} verses`);
+const corpus = buildAppCorpus();
+const spoken = buildSpoken();
+console.log(
+  `corpus (app, Uthmani): ${corpus.tokens.length} words, ${corpus.verseStarts.length} verses; ` +
+    `spoken (imlaei): ${spoken.length} words`,
+);
 const rand = mulberry32(SEED);
-const startPassages = samplePassages(corpus, "start", rand);
-const midPassages = samplePassages(corpus, "mid", rand);
+const startPassages = samplePassages(spoken, corpus, "start", rand);
+const midPassages = samplePassages(spoken, corpus, "mid", rand);
 
 console.log(
   `seed ${SEED}, ${PASSAGES} passages per kind, ${PASSAGE_WORDS} words, minMatched ${MIN_MATCHED}; ` +
     `noise: ${SWAP_RATE * 100}% sound-alike swaps, ${DROP_RATE * 100}% drops`,
 );
-console.log("median/p90 are words until found, over passages that were found; wrong% and never% are of all passages");
+console.log("median/p90 are words until found, over passages that were found; the % columns are of all passages");
+console.log("wrong: landed over 30 words from the passage start or on a verse it never reached; adjacent: found a neighbouring verse (benign)");
+console.log("noisy counts are in heard words (after drops)");
 const table: Record<string, unknown>[] = [];
 for (const [label, passages] of [["start", startPassages], ["mid", midPassages]] as const) {
   for (const noisy of [false, true]) {

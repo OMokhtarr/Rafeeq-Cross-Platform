@@ -30,8 +30,11 @@ import { onDerivedPageCacheCleared } from "./page-cache";
 import { shouldRefetchPage } from "./page-refresh";
 import { isLikelyOffline } from "../api/quran-api.client";
 import { removeDiacritics } from "../../utils/arabic.util";
-import { normalizeArabic, type CorpusToken } from "../quran/recite-matcher.service";
-import { decideIdentify, type IdentifyCorpus } from "../quran/recite-identify.service";
+import {
+  buildIdentifyCorpus,
+  decideIdentify,
+  type IdentifyCorpus,
+} from "../quran/recite-identify.service";
 
 /**
  * Aggressive normalization for substring search — strips tashkeel AND
@@ -655,27 +658,7 @@ let corpusSequenceCache: IdentifyCorpus | null = null;
 
 async function getCorpusSequence(): Promise<IdentifyCorpus> {
   if (corpusSequenceCache) return corpusSequenceCache;
-  const rows = await getNormalizedCorpus();
-  // IDB returns rows in string-key order ("10:1" < "2:1"), so sort into true
-  // canonical order before flattening — sequence matching depends on it.
-  const sorted = [...rows].sort((a, b) => a.sura - b.sura || a.aya - b.aya);
-
-  const tokens: CorpusToken[] = [];
-  const verseStarts: number[] = [];
-  const startIndexByVerse = new Map<string, number>();
-  for (const r of sorted) {
-    const words = normalizeArabic(r.text || "")
-      .split(" ")
-      .filter(Boolean);
-    if (!words.length) continue;
-    startIndexByVerse.set(`${r.sura}:${r.aya}`, tokens.length);
-    verseStarts.push(tokens.length);
-    words.forEach((token, wordIndex) => {
-      tokens.push({ sura: r.sura, aya: r.aya, wordIndex, token });
-    });
-  }
-
-  corpusSequenceCache = { tokens, verseStarts, startIndexByVerse };
+  corpusSequenceCache = buildIdentifyCorpus(await getNormalizedCorpus());
   return corpusSequenceCache;
 }
 

@@ -1,5 +1,5 @@
 import { normalizeArabic, type CorpusToken } from "../recite-matcher.service";
-import { decideIdentify, type IdentifyCorpus } from "../recite-identify.service";
+import { buildIdentifyCorpus, decideIdentify, type IdentifyCorpus } from "../recite-identify.service";
 
 // Verse text as the app carries it (Quran.com text_uthmani), "|" between words.
 const FIXTURE: Record<string, string> = {
@@ -63,5 +63,25 @@ describe("decideIdentify", () => {
       sura: 2,
       aya: 3,
     });
+  });
+});
+
+describe("buildIdentifyCorpus", () => {
+  it("sorts rows canonically and tokenizes with normalizeArabic", () => {
+    const corpus = buildIdentifyCorpus([
+      { sura: 10, aya: 1, text: "الٓر" },
+      { sura: 2, aya: 2, text: "ذَٰلِكَ ٱلْكِتَـٰبُ" },
+      { sura: 2, aya: 1, text: "الٓمٓ" },
+      { sura: 3, aya: 1, text: "" },
+    ]);
+    expect(corpus.tokens.map((t) => `${t.sura}:${t.aya}:${t.wordIndex}:${t.token}`)).toEqual([
+      `2:1:0:${normalizeArabic("الٓمٓ")}`,
+      `2:2:0:${normalizeArabic("ذَٰلِكَ")}`,
+      `2:2:1:${normalizeArabic("ٱلْكِتَـٰبُ")}`,
+      `10:1:0:${normalizeArabic("الٓر")}`,
+    ]);
+    expect(corpus.verseStarts).toEqual([0, 1, 3]);
+    expect(corpus.startIndexByVerse.get("10:1")).toBe(3);
+    expect(corpus.startIndexByVerse.has("3:1")).toBe(false);
   });
 });
