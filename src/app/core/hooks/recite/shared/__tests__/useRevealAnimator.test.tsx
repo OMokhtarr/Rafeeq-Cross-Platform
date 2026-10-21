@@ -48,12 +48,43 @@ afterEach(() => {
 const lastWordIndex = () => applyPosition.mock.calls[applyPosition.mock.calls.length - 1][1].wordIndex;
 
 it("reveals the held-back last word when the phrase is confirmed", () => {
-  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0)));
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
   act(() => animator.advanceTo(at(1, 1, 4), 1));
   act(() => jest.advanceTimersByTime(2000));
   expect(lastWordIndex()).toBe(3);
 
   act(() => animator.confirm(at(1, 1, 4)));
   act(() => jest.advanceTimersByTime(2000));
+  expect(lastWordIndex()).toBe(4);
+});
+
+it("keeps confirmed words revealed when the cursor restarts behind them", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 4), false));
+  act(() => animator.confirm(at(1, 1, 4)));
+  applyPosition.mockClear();
+
+  act(() => animator.advanceTo(at(1, 1, 1), 1));
+  act(() => jest.advanceTimersByTime(2000));
+
+  const below = applyPosition.mock.calls.filter((c) => c[1].wordIndex < 4);
+  expect(below).toHaveLength(0);
+  expect(animator.getConfirmedPosition()).toEqual(at(1, 1, 4));
+});
+
+it("still retracts unconfirmed words a revised interim dropped", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
+  act(() => animator.confirm(at(1, 1, 1)));
+  act(() => animator.advanceTo(at(1, 1, 4), 0));
+  act(() => jest.advanceTimersByTime(2000));
+
+  act(() => animator.advanceTo(at(1, 1, 2), 0));
+  expect(lastWordIndex()).toBe(2);
+});
+
+it("a same-page landing behind the display keeps the page revealed", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 4), false));
+  act(() => animator.confirm(at(1, 1, 4)));
+
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 1), true));
   expect(lastWordIndex()).toBe(4);
 });

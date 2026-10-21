@@ -62,7 +62,9 @@ export interface RevealAnimator {
    *  wait for the animation) and lets the display catch up word by word,
    *  respecting `holdbackWords` until `confirm` releases it. A rewind
    *  (correction, true position moves backward) renders instantly instead
-   *  of trickling. */
+   *  of trickling, but never below the confirmed position: words the reciter
+   *  truly said stay on screen when they restart, and only words beyond it
+   *  (an interim retracting unconfirmed ones) are hidden. */
   advanceTo: (pos: RecitePosition, holdbackWords: number) => void;
   /** Marks everything up to `pos` as corroborated — the animator may reveal
    *  up to that point with no holdback margin. Called by each driver on its
@@ -73,8 +75,15 @@ export interface RevealAnimator {
    *  recited (it's what identified the page), so it's revealed instantly as
    *  one batch rather than trickled word-by-word — a word-by-word crawl
    *  through text the reciter already spoke reads as lag and is misleading.
-   *  Normal word-by-word flow resumes from `pos` on the next `advanceTo`. */
-  landOnPage: (verses: Verse[], landing: RecitePosition, pos: RecitePosition) => void;
+   *  Normal word-by-word flow resumes from `pos` on the next `advanceTo`.
+   *  When `samePage` is true (re-landing on the page already shown) the
+   *  display never moves below the current confirmed position. */
+  landOnPage: (
+    verses: Verse[],
+    landing: RecitePosition,
+    pos: RecitePosition,
+    samePage: boolean,
+  ) => void;
   stop: () => void;
 }
 
@@ -159,15 +168,14 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
         ensureTimer();
         return;
       }
-      // Rewinding: anything corroborated beyond the rewind point no longer
-      // holds — the correction just re-hid those words, and they must not
-      // resurface without fresh evidence.
-      if (confirmedPosRef.current && cmpPos(confirmedPosRef.current, pos) > 0) {
-        confirmedPosRef.current = pos;
-      }
+      // Rewinding: words corroborated by a final were truly said, so a
+      // restart behind them hides nothing and leaves confirmed alone. Only
+      // words beyond confirmed (an interim that retracted) are hidden.
+      const confirmed = confirmedPosRef.current;
+      const shown = confirmed && cmpPos(confirmed, pos) > 0 ? confirmed : pos;
       stop();
-      displayPosRef.current = pos;
-      deps.applyPosition(deps.getPageVerses(), pos);
+      displayPosRef.current = shown;
+      deps.applyPosition(deps.getPageVerses(), shown);
     },
     [deps, ensureTimer, stop],
   );
@@ -186,7 +194,7 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
   );
 
   const landOnPage = useCallback(
-    (verses: Verse[], landing: RecitePosition, pos: RecitePosition) => {
+    (verses: Verse[], landing: RecitePosition, pos: RecitePosition, samePage: boolean) => {
       stop();
       // Everything between landing and pos was already recited (it's what
       // identified this page), so reveal the whole span at once by rendering
@@ -196,10 +204,14 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
       // words. The gap is never negative (pos >= landing always), but guard
       // anyway and fall back to landing if it somehow is.
       const target = cmpPos(pos, landing) >= 0 ? pos : landing;
-      displayPosRef.current = target;
+      // Re-landing on the page already shown (the reciter went back): what
+      // was confirmed there stays revealed instead of vanishing.
+      const confirmed = confirmedPosRef.current;
+      const shown = samePage && confirmed && cmpPos(confirmed, target) > 0 ? confirmed : target;
+      displayPosRef.current = shown;
       positionRef.current = target;
-      confirmedPosRef.current = target;
-      deps.applyPosition(verses, target);
+      confirmedPosRef.current = shown;
+      deps.applyPosition(verses, shown);
     },
     [deps, stop],
   );
