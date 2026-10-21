@@ -39,10 +39,19 @@ export const EXTRA_COST = 0.7;
  *  than MISSED_COST, and less than WRONG_COST so a stray last word is not
  *  forced onto the next verse word. */
 const LAST_EXTRA_COST = 0.9;
-/** Cost per word of starting a phrase behind the committed position. */
-export const RESTART_COST_PER_WORD = 0.15;
-/** How far behind the committed position a phrase may restart (anywhere, at
- *  this distance's cost, with AlignOptions.restartAnywhere). */
+/** Starting a phrase behind the committed position (re-reciting). More than
+ *  moving on over the CONFIRM_AFTER words a lagging cursor may still have to
+ *  pass (2 × MISSED_COST = 1.6), so a phrase that fits both the next verse and
+ *  an earlier one with the same opening moves on. Less than a three-word
+ *  phrase of extras (2 × EXTRA_COST + LAST_EXTRA_COST = 2.3), so three
+ *  re-recited words are taken as a restart. */
+export const RESTART_COST = 1.7;
+/** Added per word gone back, so the nearer of two identical passages wins
+ *  (109:3 and 109:5). Two consecutive pages hold at most 313 words, so a
+ *  restart stays under 2.1. */
+export const RESTART_COST_PER_WORD = 0.001;
+/** How far behind the committed position a phrase may restart (anywhere with
+ *  AlignOptions.restartAnywhere). */
 export const RESTART_WINDOW = 10;
 /** How far ahead of the committed position a phrase is aligned — room for a
  *  long phrase Deepgram has not finalized yet. */
@@ -169,9 +178,8 @@ export interface AlignOptions {
   /** Words before this position are never marked (a quiz's shown snippet). */
   protectBefore?: RecitePosition;
   /** A phrase may restart anywhere in `verses`, not only RESTART_WINDOW words
-   *  back — the quiz, whose reciter goes back over its one verse to fix red
-   *  words. Going back further costs the same as going back RESTART_WINDOW
-   *  words. */
+   *  back — a reciter going back over a long verse to recite it again or fix
+   *  red words (the page viewer and the quiz). */
   restartAnywhere?: boolean;
 }
 
@@ -374,7 +382,7 @@ export function alignPhrase(
       }
       if (i > 0) consider(cost[at(i - 1, j)] + (i === n ? LAST_EXTRA_COST : EXTRA_COST), OP_EXTRA);
       if (i === 0 && j <= f) {
-        consider(j <= r ? RESTART_COST_PER_WORD * Math.min(r - j, RESTART_WINDOW) : 0, OP_START);
+        consider(j < r ? RESTART_COST + RESTART_COST_PER_WORD * (r - j) : 0, OP_START);
       }
       cost[at(i, j)] = best;
       op[at(i, j)] = bestOp;

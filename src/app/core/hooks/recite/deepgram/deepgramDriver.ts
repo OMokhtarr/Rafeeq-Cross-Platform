@@ -29,6 +29,7 @@ import {
   createReciteTracker,
   formatAlignLog,
   spokenWordsFrom,
+  type AlignOptions,
   type ReciteTracker,
   type TrackerState,
 } from "../../../services/quran/recite-aligner.service";
@@ -66,6 +67,10 @@ const IDENTIFY_INTERIM_THROTTLE_MS = 400;
 /** Same throttle, applied to interim-driven wrong-page detection — see
  *  handleStreamEvent's mismatch counting below. */
 const MISMATCH_INTERIM_THROTTLE_MS = 400;
+
+/** A reciter may go back to any verse on the page and recite it again —
+ *  a long one too — without the tracker losing its place and re-searching. */
+const TRACKER_OPTIONS: AlignOptions = { restartAnywhere: true };
 
 export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
   const [micError, setMicError] = useState<string | null>(null);
@@ -137,7 +142,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
     },
     getTrackerState: () => trackerRef.current?.committed() ?? null,
     onLanded: (state) => {
-      trackerRef.current = state ? createReciteTracker(state) : null;
+      trackerRef.current = state ? createReciteTracker(state, TRACKER_OPTIONS) : null;
       if (state) deps.setMarks(state.marks);
     },
     resetMismatchStreak: () => {
@@ -287,7 +292,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
 
   const moveCursor = useCallback((pos: RecitePosition) => {
     const tracker = trackerRef.current;
-    if (tracker) tracker.reset({ cursor: pos, marks: tracker.committed().marks });
+    if (tracker) tracker.reset({ cursor: pos, marks: tracker.committed().marks }, TRACKER_OPTIONS);
   }, []);
 
   return { micError, start, stop, moveCursor };

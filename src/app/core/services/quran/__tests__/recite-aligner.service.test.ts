@@ -97,6 +97,58 @@ const FIXTURE: Record<string, { uthmani: string; standard: string }> = {
     uthmani: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
     standard: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
   },
+  "94:5": {
+    uthmani: "فَإِنَّ|مَعَ|ٱلْعُسْرِ|يُسْرًا",
+    standard: "فَإِنَّ|مَعَ|الْعُسْرِ|يُسْرًا",
+  },
+  "94:6": {
+    uthmani: "إِنَّ|مَعَ|ٱلْعُسْرِ|يُسْرًۭا",
+    standard: "إِنَّ|مَعَ|الْعُسْرِ|يُسْرًا",
+  },
+  "82:17": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|يَوْمُ|ٱلدِّينِ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|يَوْمُ|الدِّينِ",
+  },
+  "82:18": {
+    uthmani: "ثُمَّ|مَآ|أَدْرَىٰكَ|مَا|يَوْمُ|ٱلدِّينِ",
+    standard: "ثُمَّ|مَا|أَدْرَاكَ|مَا|يَوْمُ|الدِّينِ",
+  },
+  "97:2": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|لَيْلَةُ|ٱلْقَدْرِ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|لَيْلَةُ|الْقَدْرِ",
+  },
+  "97:3": {
+    uthmani: "لَيْلَةُ|ٱلْقَدْرِ|خَيْرٌۭ|مِّنْ|أَلْفِ|شَهْرٍۢ",
+    standard: "لَيْلَةُ|الْقَدْرِ|خَيْرٌ|مِّنْ|أَلْفِ|شَهْرٍ",
+  },
+  "109:2": {
+    uthmani: "لَآ|أَعْبُدُ|مَا|تَعْبُدُونَ",
+    standard: "لَا|أَعْبُدُ|مَا|تَعْبُدُونَ",
+  },
+  "109:3": {
+    uthmani: "وَلَآ|أَنتُمْ|عَـٰبِدُونَ|مَآ|أَعْبُدُ",
+    standard: "وَلَا|أَنتُمْ|عَابِدُونَ|مَا|أَعْبُدُ",
+  },
+  "109:4": {
+    uthmani: "وَلَآ|أَنَا۠|عَابِدٌۭ|مَّا|عَبَدتُّمْ",
+    standard: "وَلَا|أَنَا|عَابِدٌ|مَّا|عَبَدتُّمْ",
+  },
+  "109:5": {
+    uthmani: "وَلَآ|أَنتُمْ|عَـٰبِدُونَ|مَآ|أَعْبُدُ",
+    standard: "وَلَا|أَنتُمْ|عَابِدُونَ|مَا|أَعْبُدُ",
+  },
+  "101:1": {
+    uthmani: "ٱلْقَارِعَةُ",
+    standard: "الْقَارِعَةُ",
+  },
+  "101:2": {
+    uthmani: "مَا|ٱلْقَارِعَةُ",
+    standard: "مَا|الْقَارِعَةُ",
+  },
+  "101:3": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|ٱلْقَارِعَةُ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|الْقَارِعَةُ",
+  },
 };
 
 function verse(key: string): Verse {
@@ -380,6 +432,80 @@ describe("recite aligner: spelling and tajweed joins", () => {
       expect({ key, marks: marked(s) }).toEqual({ key, marks: [] });
       expect({ key, cursor: pos(s.cursor) }).toEqual({ key, cursor: `${key}:${v.words!.length - 1}` });
     }
+  });
+});
+
+describe("recite aligner: repeated openings", () => {
+  const end = (key: string) => `${key}:${FIXTURE[key].uthmani.split("|").length}`;
+
+  it("moves on to 94:6 when the cursor lags one word behind 94:5", () => {
+    // يسرا was said but is unconfirmed: pending, the cursor still before it.
+    const lagging: TrackerState = { cursor: at(94, 5, 3), marks: new Map(), pending: new Map([["94:5:3", "said"]]) };
+    const tracker = createReciteTracker(lagging);
+    tracker.onFinal(spokenWordsFrom(standard("94:6")), verses("94:5", "94:6"));
+    expect(pos(tracker.committed().cursor)).toBe("94:6:4");
+    expect(marked(tracker.committed())).toEqual([]);
+  });
+
+  it("moves on to 109:5 when the last two words of 109:4 were never heard, not back to 109:3", () => {
+    const s = recite(verses("109:2", "109:3", "109:4", "109:5"), at(109, 4, 3), [standard("109:5")]);
+    expect(pos(s.cursor)).toBe(end("109:5"));
+    expect(marked(s)).toEqual(["109:4:3", "109:4:4"]);
+  });
+
+  it("moves on through 109:3 → 109:5 (identical verses)", () => {
+    const keys = ["109:2", "109:3", "109:4", "109:5"];
+    const s = recite(verses(...keys), at(109, 2), keys.map(standard));
+    expect(pos(s.cursor)).toBe(end("109:5"));
+  });
+
+  it("moves on from 97:2 into 97:3, whose opening repeats 97:2's ending", () => {
+    const s = recite(verses("97:2", "97:3"), at(97, 2), [standard("97:2"), standard("97:3")]);
+    expect(pos(s.cursor)).toBe(end("97:3"));
+  });
+
+  it("moves on from 82:17 into 82:18, which repeats 82:17 after ثم", () => {
+    const s = recite(verses("82:17", "82:18"), at(82, 17), [standard("82:17"), standard("82:18")]);
+    expect(pos(s.cursor)).toBe(end("82:18"));
+  });
+
+  it("moves on from 101:2 into 101:3, which repeats 101:2's words", () => {
+    const s = recite(verses("101:1", "101:2", "101:3"), at(101, 2), [standard("101:2"), standard("101:3")]);
+    expect(pos(s.cursor)).toBe(end("101:3"));
+  });
+
+  it("re-reciting 109:5 clears its red word, not the identical 109:3", () => {
+    const keys = ["109:2", "109:3", "109:4", "109:5"];
+    const phrases = [...keys.slice(0, 3).map(standard), "ولا عابدون ما أعبد"];
+    const viewer = { restartAnywhere: true };
+    expect(marked(recite(verses(...keys), at(109, 2), phrases, viewer))).toEqual(["109:5:1"]);
+    const s = recite(verses(...keys), at(109, 2), [...phrases, standard("109:5")], viewer);
+    expect(marked(s)).toEqual([]);
+  });
+
+  // Standard words with the separate pause-mark tokens dropped, so index k is
+  // verse word k.
+  const kursi = standard("2:255")
+    .split(" ")
+    .filter((w) => !["ۚ", "ۗ", "ۖ"].includes(w));
+
+  it("re-reciting a long verse from its start restarts in place (2:255)", () => {
+    const tracker = createReciteTracker({ cursor: at(2, 255), marks: new Map() }, { restartAnywhere: true });
+    tracker.onFinal(spokenWordsFrom(standard("2:255")), verses("2:255"));
+    const again = tracker.onFinal(spokenWordsFrom(kursi.slice(0, 8).join(" ")), verses("2:255"));
+    // In place: the eight words are said again, and the cursor keeps its place.
+    expect(again.saidTotal).toBe(8);
+    expect(pos(again.state.cursor)).toBe("2:255:50");
+  });
+
+  it("going back over a red word clears it, past the old 10-word window", () => {
+    const skipped = [...kursi.slice(0, 3), ...kursi.slice(4)];
+    const phrases: string[] = [];
+    for (let k = 0; k < skipped.length; k += 12) phrases.push(skipped.slice(k, k + 12).join(" "));
+    const viewer = { restartAnywhere: true };
+    expect(marked(recite(verses("2:255"), at(2, 255), phrases, viewer))).toEqual(["2:255:3"]);
+    const s = recite(verses("2:255"), at(2, 255), [...phrases, kursi.slice(0, 8).join(" ")], viewer);
+    expect(marked(s)).toEqual([]);
   });
 });
 
