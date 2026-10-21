@@ -55,3 +55,6 @@ coverage/
 
 # Playwright run output
 test-results/
+
+# Recite harness word dump (fetched by tools/recite-harness/fetch-words.js)
+tools/recite-harness/qf-words.json

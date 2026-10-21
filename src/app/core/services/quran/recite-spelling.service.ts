@@ -60,7 +60,7 @@ const NOON_JOIN_LETTERS = new Set(["ي", "ر", "م", "ل", "و", "ن", "ب"]);
 
 /** Letter pairs the recognizer mixes up on correct recitation — forgiven as
  *  sound-alike (see the Balanced strictness decision in the design spec). */
-const SOUND_ALIKE_PAIRS = [
+export const SOUND_ALIKE_PAIRS = [
   "صس", "ثس", "ضد", "ضظ", "دظ", "طت", "ذز", "قك", "حه",
   "عء", "عا", "ءا", "ءو", "ءي", "ته",
 ];
