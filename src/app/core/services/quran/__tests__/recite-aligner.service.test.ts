@@ -507,6 +507,19 @@ describe("recite aligner: repeated openings", () => {
     const s = recite(verses("2:255"), at(2, 255), [...phrases, kursi.slice(0, 8).join(" ")], viewer);
     expect(marked(s)).toEqual([]);
   });
+
+  it.each([
+    ["the red word and the next", 2],
+    ["just the red word", 1],
+  ])("re-saying %s clears it, far behind the cursor", (_, count) => {
+    const skipped = [...kursi.slice(0, 3), ...kursi.slice(4)];
+    const phrases: string[] = [];
+    for (let k = 0; k < skipped.length; k += 12) phrases.push(skipped.slice(k, k + 12).join(" "));
+    const reSay = kursi.slice(3, 3 + count).join(" ");
+    const s = recite(verses("2:255"), at(2, 255), [...phrases, reSay], { restartAnywhere: true });
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:255:50");
+  });
 });
 
 describe("recite aligner: quiz options", () => {
@@ -543,6 +556,18 @@ describe("recite aligner: quiz options", () => {
     expect(marked(recite(ayatAlKursi, at(2, 255), phrases, quiz))).toEqual(["2:255:8"]);
     // Then go back and say words 7–9.
     const s = recite(ayatAlKursi, at(2, 255), [...phrases, words.slice(7, 10).join(" ")], quiz);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:255:50");
+  });
+
+  it.each([
+    ["the red word and the next", 2],
+    ["just the red word", 1],
+  ])("clears a red word when the reciter goes back and says %s", (_, count) => {
+    const hidden = [...words.slice(6, 8), ...words.slice(9)];
+    const phrases: string[] = [];
+    for (let k = 0; k < hidden.length; k += 12) phrases.push(hidden.slice(k, k + 12).join(" "));
+    const s = recite(ayatAlKursi, at(2, 255), [...phrases, words.slice(8, 8 + count).join(" ")], quiz);
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("2:255:50");
   });

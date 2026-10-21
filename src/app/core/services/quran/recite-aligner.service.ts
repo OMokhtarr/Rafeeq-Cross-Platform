@@ -39,17 +39,25 @@ export const EXTRA_COST = 0.7;
  *  than MISSED_COST, and less than WRONG_COST so a stray last word is not
  *  forced onto the next verse word. */
 const LAST_EXTRA_COST = 0.9;
-/** Starting a phrase behind the committed position (re-reciting). More than
- *  moving on over the CONFIRM_AFTER words a lagging cursor may still have to
- *  pass (2 × MISSED_COST = 1.6), so a phrase that fits both the next verse and
- *  an earlier one with the same opening moves on. Less than a three-word
- *  phrase of extras (2 × EXTRA_COST + LAST_EXTRA_COST = 2.3), so three
- *  re-recited words are taken as a restart. */
+/** Starting a phrase behind the committed position (re-reciting) at a word
+ *  that is not red (see MARKED_RESTART_COST). More than moving on over the
+ *  CONFIRM_AFTER words a lagging cursor may still have to pass
+ *  (2 × MISSED_COST = 1.6), so a phrase that fits both the next verse and an
+ *  earlier one with the same opening moves on. Less than a three-word phrase
+ *  of extras (2 × EXTRA_COST + LAST_EXTRA_COST = 2.3), so three re-recited
+ *  words are taken as a restart. */
 export const RESTART_COST = 1.7;
 /** Added per word gone back, so the nearer of two identical passages wins
  *  (109:3 and 109:5). Two consecutive pages hold at most 313 words, so a
  *  restart stays under 2.1. */
 export const RESTART_COST_PER_WORD = 0.001;
+/** Starting a phrase behind the cursor at a red word, instead of RESTART_COST
+ *  — the reciter going back to fix it. With the furthest per-word cost
+ *  (0.313) and SOUND_ALIKE_COST it stays under LAST_EXTRA_COST (0.9), so the
+ *  red word said alone, even as a sound-alike, is a restart that clears it
+ *  rather than an extra. More than 0, so a phrase that carries on freely from
+ *  the cursor still does. */
+export const MARKED_RESTART_COST = 0.3;
 /** How far behind the committed position a phrase may restart (anywhere with
  *  AlignOptions.restartAnywhere). */
 export const RESTART_WINDOW = 10;
@@ -315,6 +323,7 @@ export function alignPhrase(
   }
   // What an earlier phrase found for words past the cursor (TrackerState.pending).
   const pendingAt = E.map((w) => state.pending?.get(wordKey(w)));
+  const markedAt = E.map((w) => state.marks.has(wordKey(w)));
 
   const width = m + 1;
   const cost = new Float64Array((n + 1) * width).fill(Infinity);
@@ -382,7 +391,8 @@ export function alignPhrase(
       }
       if (i > 0) consider(cost[at(i - 1, j)] + (i === n ? LAST_EXTRA_COST : EXTRA_COST), OP_EXTRA);
       if (i === 0 && j <= f) {
-        consider(j < r ? RESTART_COST + RESTART_COST_PER_WORD * (r - j) : 0, OP_START);
+        const restart = markedAt[j] ? MARKED_RESTART_COST : RESTART_COST;
+        consider(j < r ? restart + RESTART_COST_PER_WORD * (r - j) : 0, OP_START);
       }
       cost[at(i, j)] = best;
       op[at(i, j)] = bestOp;
