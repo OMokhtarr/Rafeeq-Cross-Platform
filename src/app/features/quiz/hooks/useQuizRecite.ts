@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   openSttStream,
   type SttStreamHandle,
@@ -13,11 +13,16 @@ import {
 } from "../../../core/services/quran/recite-matcher.service";
 import {
   createReciteTracker,
+  acceptedWords,
+  type AlignResult,
+  glowKey,
   markPositionKeys,
   spokenWordsFrom,
   type ReciteTracker,
   type TrackerState,
 } from "../../../core/services/quran/recite-aligner.service";
+import { createGlowQueue } from "../../../core/hooks/recite/shared/glowQueue";
+import { useWordGlow } from "../../../core/hooks/recite/shared/useWordGlow";
 import { useLang } from "../../../core/context/LanguageContext";
 import { isNetworkReachable } from "../../../core/services/api/network.service";
 import type { Verse } from "../../../shared/models/verse.model";
@@ -70,6 +75,12 @@ export interface UseQuizReciteResult {
   /** The same red words as `sura:aya:position` keys, for the Mushaf context
    *  viewer. */
   mistakePositions: Set<string>;
+  /** Words just recited, glowing on the Mushaf context viewer:
+   *  `sura:aya:position` key -> generation. */
+  glow: ReadonlyMap<string, number>;
+  /** The same glowing words on the question card, as indexes counted like
+   *  `revealedWordCount` -> generation. */
+  cardGlow: ReadonlyMap<number, number>;
   /** The matcher's live position within the target verse; null when idle.
    *  Used to drive the green "you said this" highlight. */
   livePosition: RecitePosition | null;
@@ -147,6 +158,13 @@ export function useQuizRecite(
   const [revealedWordCount, setRevealedWordCount] = useState(0);
   const [mistakeWordIndexes, setMistakeWordIndexes] = useState<Set<number>>(new Set());
   const [mistakePositions, setMistakePositions] = useState<Set<string>>(new Set());
+  const { glow, light: lightGlow, clear: clearGlow } = useWordGlow();
+  const { glow: cardGlowKeys, light: lightCardGlow, clear: clearCardGlow } = useWordGlow();
+  const cardGlow = useMemo(
+    () => new Map([...cardGlowKeys].map(([k, gen]) => [Number(k), gen] as const)),
+    [cardGlowKeys],
+  );
+  const glowQueueRef = useRef(createGlowQueue());
   const [livePosition, setLivePosition] = useState<RecitePosition | null>(null);
   const [isVerseComplete, setIsVerseComplete] = useState(false);
 
@@ -180,20 +198,31 @@ export function useQuizRecite(
   // Shows a tracker state. Interims show immediately, with no holdback: in a
   // quiz the user recites known text and wants each word the instant it
   // matches — the aligner itself never reveals past the last word said.
-  const showState = useCallback((state: TrackerState) => {
-    const target = targetRef.current;
-    if (!target) return;
-    const progress = quizProgress(state, target, snippetWordsRef.current);
-    setRevealedWordCount(progress.revealedWordCount);
-    setMistakeWordIndexes(progress.mistakeWordIndexes);
-    setMistakePositions(markPositionKeys(state.marks));
-    setLivePosition(state.cursor);
-    if (progress.complete !== verseCompletedRef.current) {
-      verseCompletedRef.current = progress.complete;
-      setIsVerseComplete(progress.complete);
-      if (progress.complete) onVerseCompleteRef.current();
-    }
-  }, []);
+  const showState = useCallback(
+    (result: AlignResult, isFinal: boolean) => {
+      const { state } = result;
+      const target = targetRef.current;
+      if (!target) return;
+      const progress = quizProgress(state, target, snippetWordsRef.current);
+      setRevealedWordCount(progress.revealedWordCount);
+      setMistakeWordIndexes(progress.mistakeWordIndexes);
+      setMistakePositions(markPositionKeys(state.marks));
+      setLivePosition(state.cursor);
+      const fresh = glowQueueRef.current.phraseAccepted(acceptedWords(result), isFinal);
+      lightGlow(fresh.map(glowKey));
+      // The card counts words from the start of the hidden part.
+      const cardIndexes = fresh
+        .map((w) => w.wordIndex - snippetWordsRef.current)
+        .filter((i) => i >= 0);
+      lightCardGlow(cardIndexes.map(String));
+      if (progress.complete !== verseCompletedRef.current) {
+        verseCompletedRef.current = progress.complete;
+        setIsVerseComplete(progress.complete);
+        if (progress.complete) onVerseCompleteRef.current();
+      }
+    },
+    [lightGlow, lightCardGlow],
+  );
 
   const clearDurationTimer = useCallback(() => {
     if (durationTimerRef.current !== null) {
@@ -232,7 +261,10 @@ export function useQuizRecite(
     setMistakeWordIndexes(new Set());
     setMistakePositions(new Set());
     setLivePosition(null);
-  }, [stop]);
+    glowQueueRef.current.reset();
+    clearGlow();
+    clearCardGlow();
+  }, [stop, clearGlow, clearCardGlow]);
 
   /** Shared session bring-up once the target verse is set: opens the
    *  Deepgram stream and wires it to `handleEvent`. */
@@ -338,7 +370,7 @@ export function useQuizRecite(
         const result = isFinal
           ? tracker.onFinal(spoken, verseRef.current)
           : tracker.onPartial(spoken, verseRef.current);
-        showState(result.state);
+        showState(result, isFinal);
         if (result.saidTotal > 0) {
           noMatchStreakRef.current = 0;
           setNoMatchHint(false);
@@ -373,6 +405,8 @@ export function useQuizRecite(
     revealedWordCount,
     mistakeWordIndexes,
     mistakePositions,
+    glow,
+    cardGlow,
     livePosition,
     startVerseMode,
     stop,

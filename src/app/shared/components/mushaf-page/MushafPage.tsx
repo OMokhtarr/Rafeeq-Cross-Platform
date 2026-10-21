@@ -67,9 +67,6 @@ interface Props {
     revealedWordCount: number;
     hiddenPositions?: Set<number>;
     hintedPositions?: Set<number>;
-    /** Word positions currently being recited correctly — highlighted green
-     *  as live "you said this" feedback during recite mode. */
-    recitedPositions?: Set<number>;
   };
   /** Recite mode's red words — skipped or said wrongly — as
    *  `sura:aya:position` keys. A hidden word stays hidden. */
@@ -553,19 +550,7 @@ const MushafPage: React.FC<Props> = ({
       tw.word.charType !== "end" &&
       !!partialTarget!.hintedPositions?.has(tw.word.position);
 
-    // Live recite highlight: a word the reciter has just said correctly.
-    // NB: in this codebase's (inverted) model, actual recitable words are
-    // charType === "end" and the ayah-number marker is charType === "word"
-    // (see quran.service mapping) — so this matches the same glyphs the
-    // reveal/hide logic above does. recitedPositions only holds already-
-    // revealed words, so it never overlaps hiddenPositions.
-    const isWordRecited =
-      isPartialTargetVerse &&
-      tw.word.charType === "end" &&
-      !!partialTarget!.recitedPositions?.has(tw.word.position);
-
-    // Recite mistake: skipped or said wrongly — red once revealed, and red
-    // wins over the green "recited" highlight.
+    // Recite mistake: skipped or said wrongly — red once revealed.
     const isMistake =
       tw.word.charType === "end" &&
       !isHidden &&
@@ -601,7 +586,6 @@ const MushafPage: React.FC<Props> = ({
       isGrey ? "mushaf-verse-grey" : "",
       isWordPastReveal ? "mushaf-verse-hidden" : "",
       isWordHinted ? "mushaf-word-hinted" : "",
-      isWordRecited && !isMistake ? "mushaf-word-recited" : "",
       isMistake ? "mushaf-word-mistake" : "",
       isGlowing ? "mushaf-word--glowing" : "",
       isEndMarker ? "mushaf-verse-end-marker" : "",

@@ -53,6 +53,8 @@ interface Props {
   /** Recite mistakes on the target verse (`sura:aya:position` keys), shown
    *  red once revealed. */
   reciteMistakes?: Set<string>;
+  /** Words just recited, glowing green: `sura:aya:position` key -> generation. */
+  glow?: ReadonlyMap<string, number>;
 }
 
 const MushafContextViewer: React.FC<Props> = ({
@@ -64,6 +66,7 @@ const MushafContextViewer: React.FC<Props> = ({
   onClose,
   liveRecitePosition,
   reciteMistakes,
+  glow,
 }) => {
   const { t } = useLang();
   const [currentPage, setCurrentPage] = useState(verse.page);
@@ -322,27 +325,19 @@ const MushafContextViewer: React.FC<Props> = ({
       (w) => w.charType === "end",
     );
     const hiddenPositions = new Set<number>();
-    // Green highlight for recited words (words 0..recitedWordCount-1). Uses
-    // the persistent high-water so the last recited word stays green after
-    // the mic stops. Distinct from the hint reveal — recited words are green,
-    // hinted-only words use the hint style.
-    const recitedPositions = new Set<number>();
     for (let i = 0; i < wordEntries.length; i++) {
       if (i >= effectiveReveal) hiddenPositions.add(wordEntries[i].position);
-      if (i < recitedWordCount) recitedPositions.add(wordEntries[i].position);
     }
     return {
       sura: verse.sura,
       aya: verse.aya,
       revealedWordCount: effectiveReveal,
       hiddenPositions,
-      recitedPositions,
     };
   }, [
     targetOnPage,
     targetVerse,
     effectiveReveal,
-    recitedWordCount,
     verse.sura,
     verse.aya,
   ]);
@@ -447,6 +442,7 @@ const MushafContextViewer: React.FC<Props> = ({
               grey={greySet}
               partialTarget={partialForPage}
               mistakes={reciteMistakes}
+              glow={glow}
               onVerseTap={handleVerseTap}
               bigTextMode={bigTextMode}
             />
