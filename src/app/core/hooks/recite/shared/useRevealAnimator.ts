@@ -172,11 +172,18 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
     [deps, ensureTimer, stop],
   );
 
-  const confirm = useCallback((pos: RecitePosition) => {
-    if (!confirmedPosRef.current || cmpPos(pos, confirmedPosRef.current) > 0) {
-      confirmedPosRef.current = pos;
-    }
-  }, []);
+  const confirm = useCallback(
+    (pos: RecitePosition) => {
+      if (!confirmedPosRef.current || cmpPos(pos, confirmedPosRef.current) > 0) {
+        confirmedPosRef.current = pos;
+      }
+      // The timer stops when only held-back words remain, so without a
+      // restart the last word of a phrase would wait for more speech.
+      const display = displayPosRef.current;
+      if (display && cmpPos(display, pos) < 0) ensureTimer();
+    },
+    [ensureTimer],
+  );
 
   const landOnPage = useCallback(
     (verses: Verse[], landing: RecitePosition, pos: RecitePosition) => {

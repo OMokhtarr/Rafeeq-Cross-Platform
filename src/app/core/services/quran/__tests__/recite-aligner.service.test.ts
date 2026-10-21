@@ -279,6 +279,18 @@ describe("recite aligner: phrases and partial results", () => {
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("78:11:3");
   });
+
+  it("a phrase ending on a verse's last word moves the cursor past it", () => {
+    const s = recite(BAQARAH, at(2, 2), [standard("2:2")]);
+    expect(pos(s.cursor)).toBe("2:2:7");
+  });
+
+  it("moves past a verse's last word said in pause form", () => {
+    const first = "ذلك الكتاب لا ريب فيه هدى للمتقين";
+    const second = "الذين يؤمنون بالغيب ويقيمون الصلاه ومما رزقناهم ينفقون"; // الصلاه for الصلاة
+    expect(pos(recite(BAQARAH, at(2, 2), [first, second]).cursor)).toBe("2:3:8");
+    expect(pos(recite(BAQARAH, at(2, 3), [second]).cursor)).toBe("2:3:8");
+  });
 });
 
 describe("recite aligner: spelling and tajweed joins", () => {
