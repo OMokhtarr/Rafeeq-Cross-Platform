@@ -2,8 +2,10 @@ import type { Verse, VerseWord } from "../../../../shared/models/verse.model";
 import { quizAlignOptions } from "../../../../features/quiz/hooks/quizReciteProgress";
 import type { RecitePosition } from "../recite-matcher.service";
 import {
+  acceptedWords,
   alignPhrase,
   createReciteTracker,
+  glowKey,
   markPositionKeys,
   markSkipped,
   spokenWordsFrom,
@@ -605,5 +607,29 @@ describe("recite aligner: helpers", () => {
       { text: "لله", confidence: 0.8 },
     ]);
     expect(spokenWordsFrom("الحمد ، لله")).toEqual([{ text: "الحمد" }, { text: "لله" }]);
+  });
+});
+
+describe("recite aligner: accepted words", () => {
+  const accepted = (key: string, phrase: string) => {
+    const vs = verses(key);
+    const r = alignPhrase({ cursor: at(vs[0].sura, vs[0].aya), marks: new Map() }, spokenWordsFrom(phrase), vs);
+    return acceptedWords(r).map((w) => glowKey(w));
+  };
+
+  it("lists every word of a clean phrase", () => {
+    expect(accepted("2:2", standard("2:2"))).toEqual(["2:2:1", "2:2:2", "2:2:3", "2:2:4", "2:2:5", "2:2:6", "2:2:7"]);
+  });
+
+  it("leaves a wrong word out", () => {
+    const words = standard("2:2").split(" ");
+    words[2] = "كتاب";
+    const got = accepted("2:2", words.join(" "));
+    expect(got).toHaveLength(6);
+    expect(got).not.toContain("2:2:3");
+  });
+
+  it("lists the muqatta'at word when its letters are said", () => {
+    expect(accepted("2:1", "الف لام ميم")).toEqual(["2:1:1"]);
   });
 });

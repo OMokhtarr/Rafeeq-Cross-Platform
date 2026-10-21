@@ -229,6 +229,20 @@ export function wordKey(w: { sura: number; aya: number; wordIndex: number }): st
   return `${w.sura}:${w.aya}:${w.wordIndex}`;
 }
 
+/** `sura:aya:position` — the key MushafPage renders mistakes and glow by. */
+export function glowKey(w: { sura: number; aya: number; position: number }): string {
+  return `${w.sura}:${w.aya}:${w.position}`;
+}
+
+const ACCEPTED_KINDS: ReadonlySet<StepKind> = new Set(["said", "soundAlike", "merged", "split", "letters"]);
+
+/** The verse words `result.steps` say were recited correctly, in reading order.
+ *  A restart re-says words behind the cursor; those steps count too, so
+ *  re-recited words light up again. */
+export function acceptedWords(result: AlignResult): ExpectedWord[] {
+  return result.steps.filter((s) => ACCEPTED_KINDS.has(s.kind)).flatMap((s) => s.expected);
+}
+
 function cmp(a: { sura: number; aya: number; wordIndex: number }, b: RecitePosition): number {
   return a.sura - b.sura || a.aya - b.aya || a.wordIndex - b.wordIndex;
 }
