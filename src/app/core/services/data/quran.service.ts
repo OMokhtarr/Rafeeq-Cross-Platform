@@ -678,8 +678,8 @@ async function getIdentifyIndex(): Promise<{ corpus: IdentifyCorpus; index: Iden
 
 /**
  * Locates the verse a spoken phrase most likely starts from, for Recite
- * Mode's initial "which page am I reciting" detection. Returns null when it
- * can't *confidently* place the recitation — the caller keeps accumulating
+ * Mode's initial "which page am I reciting" detection. Returns `none` when
+ * it can't *confidently* place the recitation — the caller keeps accumulating
  * chunks and retries, and gives up (stops recite mode) if it never becomes
  * confident. It never forces a low-confidence guess: a wrong navigation is
  * worse than admitting "I can't tell yet."
@@ -692,7 +692,7 @@ async function getIdentifyIndex(): Promise<{ corpus: IdentifyCorpus; index: Iden
  * Several verses across the Quran open with near-identical phrasing (e.g.
  * many sūrahs open "تنزيل الكتاب…", six open with "الم"), so a short spoken
  * phrase can score two or more verses almost equally. A tied or near-tied
- * top score returns null — the caller accumulates more chunks and calls
+ * top score returns `ambiguous` — the caller accumulates more chunks and calls
  * again, which eliminates the wrong candidates as the recitation continues
  * past the shared opening.
  */

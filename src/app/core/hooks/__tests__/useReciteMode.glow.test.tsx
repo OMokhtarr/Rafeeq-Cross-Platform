@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
-import { act } from "react-dom/test-utils";
 import type { Verse } from "../../../shared/models/verse.model";
 import type { ExpectedWord } from "../../services/quran/recite-aligner.service";
 import type { ReciteDriverDeps } from "../recite/shared/reciteCore";

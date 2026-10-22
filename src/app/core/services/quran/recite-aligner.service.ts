@@ -161,11 +161,13 @@ export type StepKind =
   | "kept";
 
 export interface AlignStep {
-  /** `kept`: a pending word passed over, keeping its earlier outcome. */
+  /** `kept`: a pending word passed over, keeping its earlier outcome.
+   *  `letters`: a muqatta'at opener whose absorbed tokens spell it (said);
+   *  `lenient`: any other absorption by a lenient word (never marked). */
   kind: StepKind;
   /** 0 (extra), 1, or 2 (merged) verse words. */
   expected: ExpectedWord[];
-  /** 0 (missed, kept), 1, 2 (split), or 0–5 (lenient) spoken words. */
+  /** 0 (missed, kept), 1, 2 (split), or 0–5 (lenient, letters) spoken words. */
   spoken: SpokenWord[];
 }
 

@@ -13,7 +13,7 @@ const SEED = 1;
 const PASSAGES = 300;
 const PASSAGE_WORDS = 12;
 const MIN_MATCHED = 4; // the Deepgram value
-const IDENTIFY_WINDOW = 30; // the scorer's window, in words
+const IDENTIFY_WINDOW = 30; // a landing further than this from the passage start, in words, is wrong
 const SWAP_RATE = 0.15;
 const DROP_RATE = 0.1;
 
@@ -155,7 +155,7 @@ function measure(corpus: IdentifyCorpus, passages: Passage[], noisy: boolean, ra
     }
     needed.push(hit.at);
     if (hit.key === p.key) continue;
-    // Wrong: more than a scoring window from where the passage began, or a
+    // Wrong: more than IDENTIFY_WINDOW words from where the passage began, or a
     // verse the passage never reached. Otherwise a benign adjacent landing.
     const at = corpus.startIndexByVerse.get(hit.key) ?? Infinity;
     if (Math.abs(at - p.startToken) > IDENTIFY_WINDOW || !p.spans.has(hit.key)) wrong++;
