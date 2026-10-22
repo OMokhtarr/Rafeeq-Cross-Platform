@@ -296,6 +296,20 @@ function editCost(slots: Skeleton, spoken: string): EditCost {
   return prev[n];
 }
 
+/** A lower bound on the hard edits of any alignment: the spoken letters past
+ *  the slot count must be inserted (hard unless hamza), and the slots past
+ *  the letter count deleted (hard unless deletion() forgives the slot). */
+function minHardEdits(slots: Skeleton, spoken: string): number {
+  const extra = spoken.length - slots.length;
+  if (extra > 0) {
+    let hamzas = 0;
+    for (const ch of spoken) if (ch === HAMZA) hamzas++;
+    return Math.max(0, extra - hamzas);
+  }
+  const forgiven = slots.filter((s) => deletion(s) !== "hard").length;
+  return Math.max(0, -extra - forgiven);
+}
+
 /**
  * Classifies a spoken word (recognizer text, already one word or a
  * concatenation for merged/split alignment) against a verse word skeleton.
@@ -304,6 +318,9 @@ function editCost(slots: Skeleton, spoken: string): EditCost {
 export function compareWord(expected: Skeleton, spoken: string, confidence?: number): WordVerdict {
   const letters = spokenLetters(spoken);
   if (!letters) return "wrong";
+  // Two hard edits are wrong whatever else the alignment does — the length
+  // gap alone settles most of the aligner's comparisons without editCost.
+  if (minHardEdits(expected, letters) >= 2) return "wrong";
   const cost = editCost(expected, letters);
   if (cost.hard === 0 && cost.soft === 0) return "said";
   const coreLength = expected.filter((s) => !s.optional).length;

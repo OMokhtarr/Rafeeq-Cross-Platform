@@ -19,6 +19,7 @@ import {
   compareWord,
   isUnrecitable,
   joinedSpellings,
+  LOW_CONFIDENCE,
   plainLetters,
   spokenLetters,
   uthmaniSkeleton,
@@ -281,6 +282,47 @@ export function spokenWordsFrom(
   return list.filter((w) => spokenLetters(w.text).length > 0);
 }
 
+// ─── Word comparisons ────────────────────────────────────────────────────────
+
+/** Word comparisons kept across one phrase's interims. Deepgram's interims
+ *  are cumulative and the verse words do not change, so with this each
+ *  interim compares only its new spoken words — restartAnywhere aligns
+ *  against two whole pages, and comparisons are most of the work. Keyed by
+ *  verse word (one object per word, see verseExpectedWords), then spoken
+ *  text. */
+export interface CompareMemo {
+  verdict: Map<ExpectedWord, Map<string, WordVerdict>>;
+  /** This word and the next one of its verse, as one spoken word. */
+  merged: Map<ExpectedWord, Map<string, boolean>>;
+  /** Two spoken words as this one word. */
+  split: Map<ExpectedWord, Map<string, boolean>>;
+}
+
+export function createCompareMemo(): CompareMemo {
+  return { verdict: new Map(), merged: new Map(), split: new Map() };
+}
+
+function remember<T>(
+  memo: Map<ExpectedWord, Map<string, T>>,
+  word: ExpectedWord,
+  key: string,
+  compute: () => T,
+): T {
+  let byKey = memo.get(word);
+  if (!byKey) memo.set(word, (byKey = new Map()));
+  let value = byKey.get(key);
+  if (value === undefined) {
+    value = compute();
+    byKey.set(key, value);
+  }
+  return value;
+}
+
+/** compareWord's confidence matters only below LOW_CONFIDENCE, so the key
+ *  carries just that — an interim's revised confidence is still a hit. */
+const verdictKey = (w: SpokenWord) =>
+  w.confidence !== undefined && w.confidence < LOW_CONFIDENCE ? `${w.text} (low)` : w.text;
+
 // ─── Alignment ───────────────────────────────────────────────────────────────
 
 const OP_DIAG = 1;
@@ -316,13 +358,15 @@ function isCorrect(kind: StepKind): boolean {
 /**
  * Aligns one spoken phrase against the verse text from `state.cursor` and
  * returns the resulting state. Pure — the caller decides whether the result
- * is tentative (a partial result) or committed (a final).
+ * is tentative (a partial result) or committed (a final). `memo` carries word
+ * comparisons over from earlier interims of the same phrase.
  */
 export function alignPhrase(
   state: TrackerState,
   spoken: SpokenWord[],
   verses: Verse[],
   options: AlignOptions = {},
+  memo: CompareMemo = createCompareMemo(),
 ): AlignResult {
   const all = buildExpectedWords(verses);
   const cursorIdx = indexAtOrAfter(all, state.cursor);
@@ -350,29 +394,27 @@ export function alignPhrase(
   const opK = new Uint8Array((n + 1) * width);
   const at = (i: number, j: number) => i * width + j;
 
-  const diagCache = new Map<number, WordVerdict>();
-  const diag = (i: number, j: number): WordVerdict => {
-    const key = at(i, j);
-    let v = diagCache.get(key);
-    if (v === undefined) {
-      v = compareWord(E[j].skeleton, S[i].text, S[i].confidence);
-      diagCache.set(key, v);
-    }
-    return v;
-  };
+  const diag = (i: number, j: number): WordVerdict =>
+    remember(memo.verdict, E[j], verdictKey(S[i]), () => compareWord(E[j].skeleton, S[i].text, S[i].confidence));
   // Merges and splits bridge pure spelling joins (يا أيها ↔ يٰٓأيها), so they
   // must match exactly — a sound-alike join let a skipped short word vanish
-  // into its neighbour (ءامنوا + أن ≈ "آمنوا").
+  // into its neighbour (ءامنوا + أن ≈ "آمنوا"). Keyed by E[j] alone: a merge
+  // only pairs it with the next word of its own verse.
   const merged = (i: number, j: number): boolean => {
     const a = E[j];
     const b = E[j + 1];
     if (a.lenient || b.lenient || a.sura !== b.sura || a.aya !== b.aya) return false;
-    return compareWord([...a.skeleton, ...b.skeleton], S[i].text) === "said";
+    return remember(
+      memo.merged,
+      a,
+      S[i].text,
+      () => compareWord([...a.skeleton, ...b.skeleton], S[i].text) === "said",
+    );
   };
   const split = (i: number, j: number): boolean => {
     if (E[j].lenient) return false;
-    return joinedSpellings(S[i].text, S[i + 1].text).some(
-      (joined) => compareWord(E[j].skeleton, joined) === "said",
+    return remember(memo.split, E[j], `${S[i].text} ${S[i + 1].text}`, () =>
+      joinedSpellings(S[i].text, S[i + 1].text).some((joined) => compareWord(E[j].skeleton, joined) === "said"),
     );
   };
 
@@ -575,7 +617,7 @@ export function alignPhrase(
  * Phrase handling shared by the Mushaf driver and the quiz. Every partial
  * result of a phrase is aligned from the same committed state (so each
  * spoken word is used once, and a revised word just changes the tentative
- * result); a final commits.
+ * result); a final commits. The phrase's interims share one CompareMemo.
  */
 export interface ReciteTracker {
   committed: () => TrackerState;
@@ -587,17 +629,20 @@ export interface ReciteTracker {
 export function createReciteTracker(initial: TrackerState, options: AlignOptions = {}): ReciteTracker {
   let committed = initial;
   let opts = options;
+  let memo = createCompareMemo();
   return {
     committed: () => committed,
-    onPartial: (spoken, verses) => alignPhrase(committed, spoken, verses, opts),
+    onPartial: (spoken, verses) => alignPhrase(committed, spoken, verses, opts, memo),
     onFinal: (spoken, verses) => {
-      const result = alignPhrase(committed, spoken, verses, opts);
+      const result = alignPhrase(committed, spoken, verses, opts, memo);
       committed = result.state;
+      memo = createCompareMemo();
       return result;
     },
     reset: (state, nextOptions = {}) => {
       committed = state;
       opts = nextOptions;
+      memo = createCompareMemo();
     },
   };
 }
