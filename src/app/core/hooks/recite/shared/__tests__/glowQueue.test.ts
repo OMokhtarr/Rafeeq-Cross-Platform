@@ -66,6 +66,15 @@ it("drops a word whose verse is not on the page, so it is never due", () => {
   expect(q.due(at(2, 4, 1), [...page, verse(2, 3)])).toEqual([]);
 });
 
+it("keeps a next-page word, unlit on this page, until the turned page reveals it", () => {
+  const q = createGlowQueue();
+  const nextPage = [verse(2, 3)];
+  q.phraseAccepted([word(2, 3, 0)], false);
+  expect(q.due(at(2, 2, 0), page, nextPage)).toEqual([]);
+  expect(q.due(at(2, 3, 1), page, nextPage)).toEqual([]);
+  expect(q.due(at(2, 3, 1), nextPage)).toEqual([word(2, 3, 0)]);
+});
+
 it("forgets queued words and the phrase on reset", () => {
   const q = createGlowQueue();
   q.phraseAccepted([word(2, 2, 0)], false);

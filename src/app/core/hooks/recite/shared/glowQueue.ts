@@ -9,15 +9,16 @@ import { cmpPos, type RecitePosition } from "./reciteCore";
  * queued only the first time its phrase accepts it; a final ends the phrase,
  * unqueueing the words its interims accepted that the final does not (a
  * revised word may turn red), and saying the word again later queues it
- * again. A queued word waits until
- * the reveal shows it — the newest word is held back — and is dropped if its
- * verse is not on the page (accepted on the next page before the turn).
+ * again. A queued word waits until the reveal shows it on its own page — the
+ * newest word is held back. A word accepted on the next page before the turn
+ * waits for the turned page to show it; a word on neither page is dropped.
  */
 export interface GlowQueue {
   /** Queues and returns the words not yet queued in the current phrase. */
   phraseAccepted: (words: ExpectedWord[], isFinal: boolean) => ExpectedWord[];
-  /** Removes and returns the queued words `display` has revealed. */
-  due: (display: RecitePosition | null, pageVerses: Verse[]) => ExpectedWord[];
+  /** Removes and returns the queued words of `pageVerses` that `display` has
+   *  revealed. Words of `nextPageVerses` stay queued for the turn. */
+  due: (display: RecitePosition | null, pageVerses: Verse[], nextPageVerses?: Verse[]) => ExpectedWord[];
   reset: () => void;
 }
 
@@ -47,15 +48,19 @@ export function createGlowQueue(): GlowQueue {
     return fresh;
   };
 
-  const due = (display: RecitePosition | null, pageVerses: Verse[]) => {
-    const onPage = new Set(pageVerses.map((v) => `${v.sura}:${v.aya}`));
+  const due = (display: RecitePosition | null, pageVerses: Verse[], nextPageVerses: Verse[] = []) => {
+    const verseKeys = (verses: Verse[]) => new Set(verses.map((v) => `${v.sura}:${v.aya}`));
+    const onPage = verseKeys(pageVerses);
+    const onNextPage = verseKeys(nextPageVerses);
     const out: ExpectedWord[] = [];
     queued.forEach((w, key) => {
-      if (!onPage.has(`${w.sura}:${w.aya}`)) queued.delete(key);
-      else if (display && cmpPos(w, display) < 0) {
-        queued.delete(key);
-        out.push(w);
-      }
+      const verse = `${w.sura}:${w.aya}`;
+      if (onPage.has(verse)) {
+        if (display && cmpPos(w, display) < 0) {
+          queued.delete(key);
+          out.push(w);
+        }
+      } else if (!onNextPage.has(verse)) queued.delete(key);
     });
     return out;
   };

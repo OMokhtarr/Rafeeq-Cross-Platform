@@ -13,21 +13,26 @@ jest.mock("../recite/deepgram/deepgramDriver", () => ({
     return { start: () => {}, stop: () => {}, moveCursor: () => {} };
   },
 }));
-jest.mock("../../services/data/quran.service", () => ({ getPage: () => new Promise(() => {}) }));
+// Page 2 (verse 1:2) is the next page, prefetched on arm.
+jest.mock("../../services/data/quran.service", () => ({
+  getPage: (page: number) =>
+    page === 2 ? Promise.resolve([{ sura: 1, aya: 2, text: "", page: 2, suraNameAr: "" }]) : new Promise(() => {}),
+}));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const word = (wordIndex: number): ExpectedWord => ({
+const word = (wordIndex: number, aya = 1): ExpectedWord => ({
   sura: 1,
-  aya: 1,
+  aya,
   wordIndex,
   position: wordIndex + 1,
   text: "",
   skeleton: [],
   lenient: false,
 });
-const at = (wordIndex: number) => ({ sura: 1, aya: 1, wordIndex });
+const at = (wordIndex: number, aya = 1) => ({ sura: 1, aya, wordIndex });
 const page: Verse[] = [{ sura: 1, aya: 1, text: "", page: 1, suraNameAr: "" }];
+const nextPage: Verse[] = [{ sura: 1, aya: 2, text: "", page: 2, suraNameAr: "" }];
 
 let recite: ReturnType<typeof useReciteMode>;
 const Harness = () => {
@@ -59,6 +64,15 @@ it("lights a re-said word behind the display at once", () => {
   act(() => mockDeps.reveal.landOnPage(page, at(0), at(3), false));
   act(() => mockDeps.glowWords([word(0)], true));
   expect([...recite.reciteGlow.keys()]).toEqual(["1:1:1"]);
+});
+
+it("lights next-page words said before the turn once the turned page shows them", async () => {
+  await act(async () => {}); // the next page's prefetch lands
+  act(() => mockDeps.reveal.reconcile(at(2, 2), null));
+  act(() => mockDeps.glowWords([word(0, 2), word(1, 2)], true));
+  expect(recite.reciteGlow.size).toBe(0);
+  act(() => recite.syncPage(2, nextPage));
+  expect([...recite.reciteGlow.keys()]).toEqual(["1:2:1", "1:2:2"]);
 });
 
 it("clears the glow when recording stops", () => {

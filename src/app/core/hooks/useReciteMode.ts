@@ -193,10 +193,12 @@ export function useReciteMode(
     [onAdvancePage],
   );
 
-  // Lights the accepted words the display `pos` has now revealed.
+  // Lights the accepted words the display `pos` has now revealed on
+  // `verses`' page. Next-page words stay queued: syncPage's applyPosition
+  // lights them once the page turns.
   const lightRevealed = useCallback(
     (verses: Verse[], pos: RecitePosition | null) => {
-      const words = glowQueue.due(pos, verses);
+      const words = glowQueue.due(pos, verses, nextPageVersesRef.current ?? []);
       if (words.length) lightGlow(words.map(glowKey));
     },
     [glowQueue, lightGlow],
