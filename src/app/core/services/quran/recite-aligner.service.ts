@@ -73,6 +73,11 @@ const LENIENT_MAX_TOKENS = 5;
 /** Per absorbed token — small, so a lenient word never out-competes real
  *  words for the tokens that follow it. */
 const LENIENT_TOKEN_COST = 0.05;
+/** Taken off a lenient word's tokens when they spell its opener. Two openers
+ *  in a row (حم then عسق, 42:1–2) can split their tokens any way at the same
+ *  cost; this gives each opener its own letters, so both count as said. Less
+ *  than LENIENT_TOKEN_COST, so an absorption never costs less than none. */
+const LENIENT_SPELL_BONUS = 0.01;
 /** Added to merged/split steps so one-to-one matches win ties (a phrase
  *  ending "الرحمن إن" must not join the two into الرحمان). */
 const JOIN_COST = 0.05;
@@ -395,7 +400,8 @@ export function alignPhrase(
       }
       if (ej && ej.lenient) {
         for (let k = 0; k <= Math.min(LENIENT_MAX_TOKENS, i); k++) {
-          consider(cost[at(i - k, j - 1)] + LENIENT_TOKEN_COST * k, OP_LENIENT, k);
+          const bonus = spellsOpener(ej, S.slice(i - k, i)) ? LENIENT_SPELL_BONUS : 0;
+          consider(cost[at(i - k, j - 1)] + LENIENT_TOKEN_COST * k - bonus, OP_LENIENT, k);
         }
       }
       if (ej && !ej.lenient) {

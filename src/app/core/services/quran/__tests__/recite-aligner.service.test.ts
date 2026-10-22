@@ -94,7 +94,12 @@ const FIXTURE: Record<string, { uthmani: string; standard: string }> = {
     standard: "قَالَ|يَا ابْنَ أُمَّ|لَا|تَأْخُذْ|بِلِحْيَتِي|وَلَا|بِرَأْسِي ۖ|إِنِّي|خَشِيتُ|أَن|تَقُولَ|فَرَّقْتَ|بَيْنَ|بَنِي|إِسْرَائِيلَ|وَلَمْ|تَرْقُبْ|قَوْلِي",
   },
   "36:1": { uthmani: "يسٓ", standard: "يس" },
+  "42:1": { uthmani: "حمٓ", standard: "حم" },
   "42:2": { uthmani: "عٓسٓقٓ", standard: "عسق" },
+  "42:3": {
+    uthmani: "كَذَٰلِكَ|يُوحِىٓ|إِلَيْكَ|وَإِلَى|ٱلَّذِينَ|مِن|قَبْلِكَ|ٱللَّهُ|ٱلْعَزِيزُ|ٱلْحَكِيمُ",
+    standard: "كَذَٰلِكَ|يُوحِي|إِلَيْكَ|وَإِلَى|الَّذِينَ|مِن|قَبْلِكَ|اللَّهُ|الْعَزِيزُ|الْحَكِيمُ",
+  },
   "94:1": {
     uthmani: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
     standard: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
@@ -376,6 +381,20 @@ describe("recite aligner: spelling and tajweed joins", () => {
     const s = recite(verses("42:2"), at(42, 2), ["عين سين قاف"]);
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("42:2:1");
+  });
+
+  // Two openers in a row: each one's letters go to it, so both count as said.
+  it.each([
+    ["spelled out", "حا ميم عين سين قاف"],
+    ["said as words", "حم عسق"],
+  ])("counts حم then عسق %s (42:1–2)", (_, opener) => {
+    const vs = verses("42:1", "42:2", "42:3");
+    const r = alignPhrase({ cursor: at(42, 1), marks: new Map() }, spokenWordsFrom(`${opener} ${standard("42:3")}`), vs);
+    expect(r.steps.slice(0, 2).map((s) => s.kind)).toEqual(["letters", "letters"]);
+    expect(acceptedWords(r).slice(0, 2).map((w) => glowKey(w))).toEqual(["42:1:1", "42:2:1"]);
+    const s = recite(vs, at(42, 1), [`${opener} ${standard("42:3")}`]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("42:3:10");
   });
 
   it("keeps أَلَمْ an ordinary, markable word (94:1)", () => {
