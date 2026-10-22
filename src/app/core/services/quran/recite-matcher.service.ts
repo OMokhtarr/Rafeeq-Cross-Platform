@@ -124,23 +124,34 @@ function buildExpectedSequence(
 }
 
 /** Runs the sliding forward match against a pre-built expected sequence,
- *  starting the scan at `expected[0]`. Shared by the forward pass and the
- *  rewind-anchor scan so both use identical matching rules. */
-function matchAgainstSequence(
+ *  starting the scan at `expected[0]`. Shared by the forward pass, the
+ *  rewind-anchor scan and the whole-Quran identify so all use identical
+ *  matching rules (identify may pass a looser `matches`). For each consumed
+ *  spoken token, in order, `matchedIndices` holds the `expected` index it
+ *  matched and `spokenIndices` its own index in `spokenTokens`. */
+export function matchAgainstSequence(
   spokenTokens: string[],
   expected: { sura: number; aya: number; wordIndex: number; token: string }[],
   maxSkip: number,
-): { lastMatched: (typeof expected)[number] | null; consumedTokens: number } {
+  matches: (expected: string, spoken: string) => boolean = wordsMatch,
+): {
+  lastMatched: (typeof expected)[number] | null;
+  consumedTokens: number;
+  matchedIndices: number[];
+  spokenIndices: number[];
+} {
   let expectedCursor = 0;
   let lastMatched: (typeof expected)[number] | null = null;
   let consumedTokens = 0;
+  const matchedIndices: number[] = [];
+  const spokenIndices: number[] = [];
 
-  for (const spoken of spokenTokens) {
+  for (const [spokenIndex, spoken] of spokenTokens.entries()) {
     let found = -1;
     const window = Math.min(maxSkip + 1, expected.length - expectedCursor);
     for (let offset = 0; offset < window; offset++) {
       const candidate = expected[expectedCursor + offset];
-      if (wordsMatch(candidate.token, spoken)) {
+      if (matches(candidate.token, spoken)) {
         found = offset;
         break;
       }
@@ -148,11 +159,13 @@ function matchAgainstSequence(
     if (found === -1) continue; // spoken filler/mistake — skip, keep scanning
     expectedCursor += found + 1;
     lastMatched = expected[expectedCursor - 1];
+    matchedIndices.push(expectedCursor - 1);
+    spokenIndices.push(spokenIndex);
     consumedTokens++;
     if (expectedCursor >= expected.length) break;
   }
 
-  return { lastMatched, consumedTokens };
+  return { lastMatched, consumedTokens, matchedIndices, spokenIndices };
 }
 
 /**
@@ -212,7 +225,7 @@ export function matchTranscript(
   const forwardExpected = buildExpectedSequence(verses, from).slice(0, maxLookahead);
   const forward = forwardExpected.length
     ? matchAgainstSequence(spokenTokens, forwardExpected, maxSkip)
-    : { lastMatched: null, consumedTokens: 0 };
+    : { lastMatched: null, consumedTokens: 0, matchedIndices: [], spokenIndices: [] };
 
   // Only worth checking for a rewind if the forward match is weak — a
   // strong forward match means the reciter is just continuing normally.
@@ -245,7 +258,7 @@ export function matchTranscript(
   };
 }
 
-// ─── Whole-Quran identify scoring ────────────────────────────────────────────
+// ─── Whole-Quran identify corpus ─────────────────────────────────────────────
 
 /** One recitable word of the whole-Quran corpus, in canonical order. */
 export interface CorpusToken {
@@ -255,98 +268,6 @@ export interface CorpusToken {
   wordIndex: number;
   /** Pre-normalized (normalizeArabic) word text. */
   token: string;
-}
-
-export interface AnchorScore {
-  sura: number;
-  aya: number;
-  /** Distinct spoken words that matched somewhere in this anchor's window. */
-  matchedWords: number;
-}
-
-/**
- * Ranks candidate starting verses for Recite Mode's "which verse am I
- * reciting" identification. For each verse it takes a fixed-size forward
- * window of the Quran text starting at that verse (flowing across verse
- * boundaries — `corpus` is the whole Quran flattened in canonical order,
- * `verseStarts` the indices where each verse begins) and counts how many of
- * the distinct spoken words fuzzy-match *some* word in that window.
- *
- * Two failure modes shaped this design:
- *   1. Per-verse bag-of-words counting let a single long verse win just by
- *      containing many words — a passage spanning several short verses lost
- *      to an unrelated long verse (e.g. Yunus 10:37 beating As-Sajdah
- *      32:2–3). A *fixed-size* window makes every candidate compete over the
- *      same amount of text, removing that bias, while still spanning verse
- *      boundaries so a short starting verse gets credit for its
- *      continuation.
- *   2. Strict in-order sequence matching was too brittle for real Whisper
- *      output, which drops and mangles words badly enough to break any
- *      contiguous run — so bag-of-words (order-independent) within the
- *      window is what survives garbled transcription.
- *
- * Every verse is scored (no first-word prefilter): Whisper frequently drops
- * or mangles the opening word of a passage, and requiring the verse's first
- * word to appear in the transcript would exclude the correct verse entirely
- * whenever that happens.
- *
- * Because the window looks forward across verse boundaries, the verse just
- * *before* the true start would otherwise win on raw word-coverage: its
- * window absorbs the recited words (plus a coincidental self-match or two).
- * The primary ranking is therefore a *sequence* follow — how far the
- * recitation tracks this verse's word order starting from its first word.
- * That's high only for the verse the reciter actually began on: a preceding
- * verse whose window merely *contains* the recited words (scattered, out of
- * order) can't follow them in sequence. Bag-of-words coverage (robust to
- * garbled STT) then breaks ties and is what the caller thresholds on.
- */
-const SEQUENCE_MAX_SKIP = 3;
-
-export function scoreCorpusAnchors(
-  spokenText: string,
-  corpus: CorpusToken[],
-  verseStarts: number[],
-  options: { windowSize?: number } = {},
-): AnchorScore[] {
-  const windowSize = options.windowSize ?? 30;
-
-  const spokenAll = tokenize(spokenText).filter((t) => t.length > 2);
-  if (spokenAll.length < 3) return [];
-  const spoken = [...new Set(spokenAll)]; // distinct — buffer accumulation repeats words
-
-  const results: (AnchorScore & { seq: number })[] = [];
-  for (let vi = 0; vi < verseStarts.length; vi++) {
-    const start = verseStarts[vi];
-    const first = corpus[start];
-    if (!first) continue;
-
-    const windowTokens = corpus.slice(start, start + windowSize);
-    let matchedWords = 0;
-    for (const sw of spoken) {
-      if (windowTokens.some((wt) => wordsMatch(wt.token, sw))) matchedWords++;
-    }
-    if (matchedWords === 0) continue;
-
-    // How far the recitation follows THIS verse's word order from its start —
-    // ordered tokens (not deduped), so repeats don't inflate. High only for
-    // the verse the reciter actually started on.
-    const seq = matchAgainstSequence(spokenAll, windowTokens, SEQUENCE_MAX_SKIP)
-      .consumedTokens;
-
-    results.push({ sura: first.sura, aya: first.aya, matchedWords, seq });
-  }
-
-  // Rank by matched + seq: coverage (robust to garbling) *and* order-follow
-  // (pins to the true start). A coincidentally high seq on an unrelated verse
-  // won't win without also covering the words, and vice versa.
-  results.sort(
-    (a, b) =>
-      b.matchedWords + b.seq - (a.matchedWords + a.seq) ||
-      b.seq - a.seq ||
-      a.sura - b.sura ||
-      a.aya - b.aya,
-  );
-  return results.map(({ sura, aya, matchedWords }) => ({ sura, aya, matchedWords }));
 }
 
 export function firstWordPosition(verse: Verse): RecitePosition {

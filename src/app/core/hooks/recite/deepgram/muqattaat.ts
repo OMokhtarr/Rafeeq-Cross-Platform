@@ -21,60 +21,10 @@
  */
 
 import { normalizeArabic } from "../../../services/quran/recite-matcher.service";
+import { MUQATTAAT_OPENERS, spelledLetters } from "../../../services/quran/recite-muqattaat";
 
-/** Every muqatta'at sequence in the Quran, already in normalizeArabic form
- *  (matches how corpus tokens are stored) — the correction target. */
-const CANONICAL_OPENERS = [
-  "الم",
-  "يس",
-  "طه",
-  "المص",
-  "الر",
-  "المر",
-  "كهيعص",
-  "طسم",
-  "طس",
-  "ص",
-  "حم",
-  "ق",
-  "ن",
-];
-
-/** Arabic letter *names* as Deepgram tends to spell them out phonetically,
- *  keyed by the letter(s) they spell out (normalized form — usually one
- *  letter, but a run of names can get fused into a single STT word, e.g.
- *  "لاميم" for "لام"+"ميم" = ل+م). Built from the standard Arabic alphabet
- *  names — only the letters that actually appear in a muqatta'at sequence
- *  are needed here. Each entry is tried against the input text in sequence
- *  to reconstruct which opener was spoken; entries are normalizeArabic'd so
- *  variant spellings the STT might use (with/without a trailing ه) still
- *  match. */
-const LETTER_NAMES: Record<string, string[]> = {
-  ا: ["الف"],
-  ل: ["لام"],
-  م: ["ميم"],
-  لم: ["لاميم"], // "لام"+"ميم" fused into one STT word, seen in practice
-  ي: ["يا", "ياء"],
-  س: ["سين"],
-  ه: ["ها", "هاء"],
-  ط: ["طا", "طاء"],
-  ص: ["صاد"],
-  ر: ["را", "راء"],
-  ك: ["كاف"],
-  ع: ["عين"],
-  ح: ["حا", "حاء"],
-  ق: ["قاف"],
-  ن: ["نون"],
-};
-
-/** Reverse index: normalized phonetic spelling -> the letter(s) it spells
- *  out. Probed longest-word-first isn't needed here (each input word is
- *  looked up whole, never as a substring), but the map itself may resolve
- *  to more than one letter per matched word (see "لاميم" above). */
-const PHONETIC_TO_LETTERS = new Map<string, string>();
-for (const [letters, names] of Object.entries(LETTER_NAMES)) {
-  for (const name of names) PHONETIC_TO_LETTERS.set(normalizeArabic(name), letters);
-}
+/** A muqatta'at run is at most 5 letter names (كهيعص). */
+const MAX_OPENER_TOKENS = 5;
 
 /**
  * If `text` (already the start of an identify buffer/utterance) opens with
@@ -82,7 +32,7 @@ for (const [letters, names] of Object.entries(LETTER_NAMES)) {
  * compact canonical form when it matches a real muqatta'at sequence.
  * Leaves everything else untouched — including the rest of `text` after the
  * run, so "الف لاميم أم يقولون" still becomes "الم أم يقولون". A run that
- * doesn't assemble into one of the 13 known openers is left alone (most
+ * doesn't assemble into one of the known openers is left alone (most
  * likely just normal speech that happens to contain a short word), so this
  * can't misfire on ordinary recitation.
  */
@@ -90,21 +40,18 @@ export function correctMuqattaatOpening(text: string): string {
   const words = normalizeArabic(text).split(" ").filter(Boolean);
   if (!words.length) return text;
 
+  // Longest prefix of the buffer that spells a real opener wins.
   let consumed = 0;
   let letters = "";
-  while (consumed < words.length) {
-    const spelled = PHONETIC_TO_LETTERS.get(words[consumed]);
-    if (!spelled) break;
-    const extended = letters + spelled;
-    // A muqatta'at run is at most 5 letters (كهيعص) — stop as soon as no
-    // canonical opener could possibly still match this prefix, so this
-    // never runs away consuming ordinary recitation.
-    if (!CANONICAL_OPENERS.some((o) => o.startsWith(extended))) break;
-    letters = extended;
-    consumed += 1;
+  for (let n = 1; n <= Math.min(MAX_OPENER_TOKENS, words.length); n++) {
+    const spelled = spelledLetters(words.slice(0, n));
+    if (spelled && MUQATTAAT_OPENERS.includes(spelled)) {
+      consumed = n;
+      letters = spelled;
+    }
   }
 
-  if (consumed === 0 || !CANONICAL_OPENERS.includes(letters)) return text;
+  if (consumed === 0) return text;
 
   const rest = words.slice(consumed).join(" ");
   return rest ? `${letters} ${rest}` : letters;

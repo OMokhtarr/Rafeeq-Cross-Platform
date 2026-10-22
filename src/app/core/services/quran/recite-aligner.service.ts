@@ -19,12 +19,14 @@ import {
   compareWord,
   isUnrecitable,
   joinedSpellings,
+  LOW_CONFIDENCE,
   plainLetters,
   spokenLetters,
   uthmaniSkeleton,
   type Skeleton,
   type WordVerdict,
 } from "./recite-spelling.service";
+import { MUQATTAAT_OPENERS, spelledLetters } from "./recite-muqattaat";
 
 // ─── Tuning (starting values from the design spec) ───────────────────────────
 
@@ -38,10 +40,27 @@ export const EXTRA_COST = 0.7;
  *  than MISSED_COST, and less than WRONG_COST so a stray last word is not
  *  forced onto the next verse word. */
 const LAST_EXTRA_COST = 0.9;
-/** Cost per word of starting a phrase behind the committed position. */
-export const RESTART_COST_PER_WORD = 0.15;
-/** How far behind the committed position a phrase may restart (anywhere, at
- *  this distance's cost, with AlignOptions.restartAnywhere). */
+/** Starting a phrase behind the committed position (re-reciting) at a word
+ *  that is not red (see MARKED_RESTART_COST). More than moving on over the
+ *  CONFIRM_AFTER words a lagging cursor may still have to pass
+ *  (2 × MISSED_COST = 1.6), so a phrase that fits both the next verse and an
+ *  earlier one with the same opening moves on. Less than a three-word phrase
+ *  of extras (2 × EXTRA_COST + LAST_EXTRA_COST = 2.3), so three re-recited
+ *  words are taken as a restart. */
+export const RESTART_COST = 1.7;
+/** Added per word gone back, so the nearer of two identical passages wins
+ *  (109:3 and 109:5). Two consecutive pages hold at most 313 words, so a
+ *  restart stays under 2.1. */
+export const RESTART_COST_PER_WORD = 0.001;
+/** Starting a phrase behind the cursor at a red word, instead of RESTART_COST
+ *  — the reciter going back to fix it. With the furthest per-word cost
+ *  (0.313) and SOUND_ALIKE_COST it stays under LAST_EXTRA_COST (0.9), so the
+ *  red word said alone, even as a sound-alike, is a restart that clears it
+ *  rather than an extra. More than 0, so a phrase that carries on freely from
+ *  the cursor still does. */
+export const MARKED_RESTART_COST = 0.3;
+/** How far behind the committed position a phrase may restart (anywhere with
+ *  AlignOptions.restartAnywhere). */
 export const RESTART_WINDOW = 10;
 /** How far ahead of the committed position a phrase is aligned — room for a
  *  long phrase Deepgram has not finalized yet. */
@@ -55,6 +74,11 @@ const LENIENT_MAX_TOKENS = 5;
 /** Per absorbed token — small, so a lenient word never out-competes real
  *  words for the tokens that follow it. */
 const LENIENT_TOKEN_COST = 0.05;
+/** Taken off a lenient word's tokens when they spell its opener. Two openers
+ *  in a row (حم then عسق, 42:1–2) can split their tokens any way at the same
+ *  cost; this gives each opener its own letters, so both count as said. Less
+ *  than LENIENT_TOKEN_COST, so an absorption never costs less than none. */
+const LENIENT_SPELL_BONUS = 0.01;
 /** Added to merged/split steps so one-to-one matches win ties (a phrase
  *  ending "الرحمن إن" must not join the two into الرحمان). */
 const JOIN_COST = 0.05;
@@ -133,14 +157,17 @@ export type StepKind =
   | "merged"
   | "split"
   | "lenient"
+  | "letters"
   | "kept";
 
 export interface AlignStep {
-  /** `kept`: a pending word passed over, keeping its earlier outcome. */
+  /** `kept`: a pending word passed over, keeping its earlier outcome.
+   *  `letters`: a muqatta'at opener whose absorbed tokens spell it (said);
+   *  `lenient`: any other absorption by a lenient word (never marked). */
   kind: StepKind;
   /** 0 (extra), 1, or 2 (merged) verse words. */
   expected: ExpectedWord[];
-  /** 0 (missed, kept), 1, 2 (split), or 0–5 (lenient) spoken words. */
+  /** 0 (missed, kept), 1, 2 (split), or 0–5 (lenient, letters) spoken words. */
   spoken: SpokenWord[];
 }
 
@@ -167,9 +194,8 @@ export interface AlignOptions {
   /** Words before this position are never marked (a quiz's shown snippet). */
   protectBefore?: RecitePosition;
   /** A phrase may restart anywhere in `verses`, not only RESTART_WINDOW words
-   *  back — the quiz, whose reciter goes back over its one verse to fix red
-   *  words. Going back further costs the same as going back RESTART_WINDOW
-   *  words. */
+   *  back — a reciter going back over a long verse to recite it again or fix
+   *  red words (the page viewer and the quiz). */
   restartAnywhere?: boolean;
 }
 
@@ -211,6 +237,20 @@ export function wordKey(w: { sura: number; aya: number; wordIndex: number }): st
   return `${w.sura}:${w.aya}:${w.wordIndex}`;
 }
 
+/** `sura:aya:position` — the key MushafPage renders mistakes and glow by. */
+export function glowKey(w: { sura: number; aya: number; position: number }): string {
+  return `${w.sura}:${w.aya}:${w.position}`;
+}
+
+const ACCEPTED_KINDS: ReadonlySet<StepKind> = new Set(["said", "soundAlike", "merged", "split", "letters"]);
+
+/** The verse words `result.steps` say were recited correctly, in reading order.
+ *  A restart re-says words behind the cursor; those steps count too, so
+ *  re-recited words light up again. */
+export function acceptedWords(result: AlignResult): ExpectedWord[] {
+  return result.steps.filter((s) => ACCEPTED_KINDS.has(s.kind)).flatMap((s) => s.expected);
+}
+
 function cmp(a: { sura: number; aya: number; wordIndex: number }, b: RecitePosition): number {
   return a.sura - b.sura || a.aya - b.aya || a.wordIndex - b.wordIndex;
 }
@@ -244,6 +284,47 @@ export function spokenWordsFrom(
   return list.filter((w) => spokenLetters(w.text).length > 0);
 }
 
+// ─── Word comparisons ────────────────────────────────────────────────────────
+
+/** Word comparisons kept across one phrase's interims. Deepgram's interims
+ *  are cumulative and the verse words do not change, so with this each
+ *  interim compares only its new spoken words — restartAnywhere aligns
+ *  against two whole pages, and comparisons are most of the work. Keyed by
+ *  verse word (one object per word, see verseExpectedWords), then spoken
+ *  text. */
+export interface CompareMemo {
+  verdict: Map<ExpectedWord, Map<string, WordVerdict>>;
+  /** This word and the next one of its verse, as one spoken word. */
+  merged: Map<ExpectedWord, Map<string, boolean>>;
+  /** Two spoken words as this one word. */
+  split: Map<ExpectedWord, Map<string, boolean>>;
+}
+
+export function createCompareMemo(): CompareMemo {
+  return { verdict: new Map(), merged: new Map(), split: new Map() };
+}
+
+function remember<T>(
+  memo: Map<ExpectedWord, Map<string, T>>,
+  word: ExpectedWord,
+  key: string,
+  compute: () => T,
+): T {
+  let byKey = memo.get(word);
+  if (!byKey) memo.set(word, (byKey = new Map()));
+  let value = byKey.get(key);
+  if (value === undefined) {
+    value = compute();
+    byKey.set(key, value);
+  }
+  return value;
+}
+
+/** compareWord's confidence matters only below LOW_CONFIDENCE, so the key
+ *  carries just that — an interim's revised confidence is still a hit. */
+const verdictKey = (w: SpokenWord) =>
+  w.confidence !== undefined && w.confidence < LOW_CONFIDENCE ? `${w.text} (low)` : w.text;
+
 // ─── Alignment ───────────────────────────────────────────────────────────────
 
 const OP_DIAG = 1;
@@ -259,20 +340,35 @@ function verdictCost(v: WordVerdict): number {
   return v === "said" ? 0 : v === "soundAlike" ? SOUND_ALIKE_COST : WRONG_COST;
 }
 
+/** True when the tokens a lenient word absorbed say its muqatta'at opener:
+ *  the letter names spell it, or one token carries exactly its letters. */
+function spellsOpener(word: ExpectedWord, tokens: SpokenWord[]): boolean {
+  const opener = plainLetters(word.skeleton);
+  if (tokens.length === 0 || !MUQATTAAT_OPENERS.includes(opener)) return false;
+  const texts = tokens.map((t) => t.text);
+  return (
+    spelledLetters(texts) === opener || (tokens.length === 1 && spokenLetters(texts[0]) === opener)
+  );
+}
+
 function isCorrect(kind: StepKind): boolean {
-  return kind === "said" || kind === "soundAlike" || kind === "merged" || kind === "split";
+  return (
+    kind === "said" || kind === "soundAlike" || kind === "merged" || kind === "split" || kind === "letters"
+  );
 }
 
 /**
  * Aligns one spoken phrase against the verse text from `state.cursor` and
  * returns the resulting state. Pure — the caller decides whether the result
- * is tentative (a partial result) or committed (a final).
+ * is tentative (a partial result) or committed (a final). `memo` carries word
+ * comparisons over from earlier interims of the same phrase.
  */
 export function alignPhrase(
   state: TrackerState,
   spoken: SpokenWord[],
   verses: Verse[],
   options: AlignOptions = {},
+  memo: CompareMemo = createCompareMemo(),
 ): AlignResult {
   const all = buildExpectedWords(verses);
   const cursorIdx = indexAtOrAfter(all, state.cursor);
@@ -292,6 +388,7 @@ export function alignPhrase(
   }
   // What an earlier phrase found for words past the cursor (TrackerState.pending).
   const pendingAt = E.map((w) => state.pending?.get(wordKey(w)));
+  const markedAt = E.map((w) => state.marks.has(wordKey(w)));
 
   const width = m + 1;
   const cost = new Float64Array((n + 1) * width).fill(Infinity);
@@ -299,29 +396,27 @@ export function alignPhrase(
   const opK = new Uint8Array((n + 1) * width);
   const at = (i: number, j: number) => i * width + j;
 
-  const diagCache = new Map<number, WordVerdict>();
-  const diag = (i: number, j: number): WordVerdict => {
-    const key = at(i, j);
-    let v = diagCache.get(key);
-    if (v === undefined) {
-      v = compareWord(E[j].skeleton, S[i].text, S[i].confidence);
-      diagCache.set(key, v);
-    }
-    return v;
-  };
+  const diag = (i: number, j: number): WordVerdict =>
+    remember(memo.verdict, E[j], verdictKey(S[i]), () => compareWord(E[j].skeleton, S[i].text, S[i].confidence));
   // Merges and splits bridge pure spelling joins (يا أيها ↔ يٰٓأيها), so they
   // must match exactly — a sound-alike join let a skipped short word vanish
-  // into its neighbour (ءامنوا + أن ≈ "آمنوا").
+  // into its neighbour (ءامنوا + أن ≈ "آمنوا"). Keyed by E[j] alone: a merge
+  // only pairs it with the next word of its own verse.
   const merged = (i: number, j: number): boolean => {
     const a = E[j];
     const b = E[j + 1];
     if (a.lenient || b.lenient || a.sura !== b.sura || a.aya !== b.aya) return false;
-    return compareWord([...a.skeleton, ...b.skeleton], S[i].text) === "said";
+    return remember(
+      memo.merged,
+      a,
+      S[i].text,
+      () => compareWord([...a.skeleton, ...b.skeleton], S[i].text) === "said",
+    );
   };
   const split = (i: number, j: number): boolean => {
     if (E[j].lenient) return false;
-    return joinedSpellings(S[i].text, S[i + 1].text).some(
-      (joined) => compareWord(E[j].skeleton, joined) === "said",
+    return remember(memo.split, E[j], `${S[i].text} ${S[i + 1].text}`, () =>
+      joinedSpellings(S[i].text, S[i + 1].text).some((joined) => compareWord(E[j].skeleton, joined) === "said"),
     );
   };
 
@@ -349,7 +444,8 @@ export function alignPhrase(
       }
       if (ej && ej.lenient) {
         for (let k = 0; k <= Math.min(LENIENT_MAX_TOKENS, i); k++) {
-          consider(cost[at(i - k, j - 1)] + LENIENT_TOKEN_COST * k, OP_LENIENT, k);
+          const bonus = spellsOpener(ej, S.slice(i - k, i)) ? LENIENT_SPELL_BONUS : 0;
+          consider(cost[at(i - k, j - 1)] + LENIENT_TOKEN_COST * k - bonus, OP_LENIENT, k);
         }
       }
       if (ej && !ej.lenient) {
@@ -359,7 +455,8 @@ export function alignPhrase(
       }
       if (i > 0) consider(cost[at(i - 1, j)] + (i === n ? LAST_EXTRA_COST : EXTRA_COST), OP_EXTRA);
       if (i === 0 && j <= f) {
-        consider(j <= r ? RESTART_COST_PER_WORD * Math.min(r - j, RESTART_WINDOW) : 0, OP_START);
+        const restart = markedAt[j] ? MARKED_RESTART_COST : RESTART_COST;
+        consider(j < r ? restart + RESTART_COST_PER_WORD * (r - j) : 0, OP_START);
       }
       cost[at(i, j)] = best;
       op[at(i, j)] = bestOp;
@@ -396,7 +493,12 @@ export function alignPhrase(
       j -= 1;
     } else if (o === OP_LENIENT) {
       const k = opK[at(i, j)];
-      steps.push({ kind: "lenient", expected: [E[j - 1]], spoken: S.slice(i - k, i) });
+      const absorbed = S.slice(i - k, i);
+      steps.push({
+        kind: spellsOpener(E[j - 1], absorbed) ? "letters" : "lenient",
+        expected: [E[j - 1]],
+        spoken: absorbed,
+      });
       stepWindow.push(j - 1);
       i -= k;
       j -= 1;
@@ -416,6 +518,7 @@ export function alignPhrase(
   // ─── Result rules ───
   // One outcome per verse word, in reading order. Lenient words are
   // transparent: they neither count as said nor confirm or break a gap. A
+  // letters step (a muqatta'at opener spelled out) counts as said. A
   // kept word has the outcome the earlier phrase found for it.
   type Outcome = { idx: number; ok: boolean; kind: StepKind };
   const outcomes: Outcome[] = [];
@@ -516,7 +619,7 @@ export function alignPhrase(
  * Phrase handling shared by the Mushaf driver and the quiz. Every partial
  * result of a phrase is aligned from the same committed state (so each
  * spoken word is used once, and a revised word just changes the tentative
- * result); a final commits.
+ * result); a final commits. The phrase's interims share one CompareMemo.
  */
 export interface ReciteTracker {
   committed: () => TrackerState;
@@ -528,17 +631,20 @@ export interface ReciteTracker {
 export function createReciteTracker(initial: TrackerState, options: AlignOptions = {}): ReciteTracker {
   let committed = initial;
   let opts = options;
+  let memo = createCompareMemo();
   return {
     committed: () => committed,
-    onPartial: (spoken, verses) => alignPhrase(committed, spoken, verses, opts),
+    onPartial: (spoken, verses) => alignPhrase(committed, spoken, verses, opts, memo),
     onFinal: (spoken, verses) => {
-      const result = alignPhrase(committed, spoken, verses, opts);
+      const result = alignPhrase(committed, spoken, verses, opts, memo);
       committed = result.state;
+      memo = createCompareMemo();
       return result;
     },
     reset: (state, nextOptions = {}) => {
       committed = state;
       opts = nextOptions;
+      memo = createCompareMemo();
     },
   };
 }

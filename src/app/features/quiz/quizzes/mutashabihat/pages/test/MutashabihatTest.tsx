@@ -605,22 +605,22 @@ const MutashabihatTest: React.FC = () => {
                           {q.displayedPortion}
                         </p>
                         {/* Hidden-portion words revealed so far, per word:
-                            recited words are green, words skipped or said
+                            recited words are plain (the newest glows green), words skipped or said
                             wrongly are red, hint-button words use the hint
                             style. Recitation and hints are independent. */}
                         {(() => {
-                          const tokens = hiddenCardTokens(q.hints, recite, hintLevel);
+                          const tokens = hiddenCardTokens(q.hints, recite, hintLevel, recite.cardGlow);
                           if (tokens.length === 0) return null;
                           return (
                             <span lang="ar" dir="rtl">
                               {tokens.map((token, i) => (
                                 <span
-                                  key={i}
+                                  key={`${i}-${token.glow ?? 0}`}
                                   className={
                                     token.style === "mistake"
                                       ? "mst-mistake-inline"
                                       : token.style === "recited"
-                                        ? "mst-recited-inline"
+                                        ? `mst-recited-inline${token.glow !== undefined ? " mst-word-glow" : ""}`
                                         : "mst-hint-inline"
                                   }
                                 >
@@ -731,6 +731,7 @@ const MutashabihatTest: React.FC = () => {
                     recite.isArmed && selectedVerseIdx === 0 ? recite.livePosition : null
                   }
                   reciteMistakes={selectedVerseIdx === 0 ? recite.mistakePositions : undefined}
+                  glow={selectedVerseIdx === 0 ? recite.glow : undefined}
                 />
               </div>
             )}

@@ -11,7 +11,7 @@ import {
   verseWordCount,
   type RecitePosition,
 } from "../../../services/quran/recite-matcher.service";
-import type { Marks } from "../../../services/quran/recite-aligner.service";
+import type { ExpectedWord, Marks } from "../../../services/quran/recite-aligner.service";
 import type { RevealAnimator } from "./useRevealAnimator";
 
 export type { RecitePosition, RevealAnimator };
@@ -44,6 +44,9 @@ export interface ReciteDriverDeps {
   stopRecording: () => void;
   /** The session's red words changed (recite mistake detection). */
   setMarks: (marks: Marks) => void;
+  /** Words an interim or final accepted as recited (they glow once shown).
+   *  A final ends the phrase, so its words can glow again when re-said. */
+  glowWords: (words: ExpectedWord[], isFinal: boolean) => void;
 }
 
 /** What every driver hook returns — `useReciteMode` only ever talks to a

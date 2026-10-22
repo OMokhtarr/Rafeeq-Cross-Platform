@@ -231,13 +231,44 @@ ion-content::part(scroll) {
   font-weight: 600;
   border-bottom: 1.5px dashed var(--color-gold);
 }
-/* Words revealed by RECITATION (not the hint button) — green, to read as
-   "you said this correctly", visually distinct from gold hint words. */
+/* Words revealed by RECITATION (not the hint button) — plain text, like the
+   shown part; the one just recited glows green first, then settles. */
 .aa-recited-inline {
   font-family: var(--font-arabic-display);
   font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-  color: #1faa5a;
+  color: var(--color-text-primary);
   font-weight: 600;
+}
+.aa-word-glow {
+  animation: aa-word-glow 1650ms linear forwards;
+}
+[data-theme="night"] .aa-word-glow {
+  animation-name: aa-word-glow-night;
+}
+@keyframes aa-word-glow {
+  0%,
+  27% {
+    color: #00a33d;
+  }
+  100% {
+    color: var(--color-text-primary);
+  }
+}
+@keyframes aa-word-glow-night {
+  0%,
+  27% {
+    color: #4cff9a;
+    text-shadow: 0 0 10px rgba(76, 255, 154, 0.6);
+  }
+  100% {
+    color: var(--color-text-primary);
+    text-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aa-word-glow {
+    animation-timing-function: steps(1, end);
+  }
 }
 /* Words the reciter skipped or said wrongly — red with a dotted underline
    (the underline keeps them distinct from green for readers who can't tell

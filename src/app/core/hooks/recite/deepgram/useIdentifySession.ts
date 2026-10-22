@@ -307,7 +307,7 @@ export function useIdentifySession(deps: IdentifySessionDeps): IdentifySession {
             : undefined;
         state = alignPhrase(state, spokenWordsFrom(spokenSoFar), verses, { freeStartUntil }).state;
       }
-      deps.reveal.landOnPage(verses, landing, state.cursor);
+      deps.reveal.landOnPage(verses, landing, state.cursor, prior !== null && page === priorPage);
       deps.onLanded(state);
       deps.onNavigateToPage(page);
       deps.prefetchNextPage(page);
