@@ -115,6 +115,16 @@ describe("decideIdentify over the whole Quran", () => {
     ).toMatchObject({ status: "found", sura: 28, aya: 14, unique: false });
   });
 
+  it("doesn't let a lower-ranked place win the head-to-head on stray words", () => {
+    // 2:94 and 62:6 share "فتمنوا الموت ان كنتم صادقين"; the stale words
+    // before it sit in 3:169, inside 3:168's continuation.
+    const text = "احياء عند ربهم فتمنوا الموت ان كنتم صادقين";
+    expect(decideIdentify(text, quran, { minMatched: 4 }, index).status).toBe("ambiguous");
+    expect(
+      decideIdentify(text, quran, { minMatched: 4, nearPosition: { sura: 62, aya: 1 } }, index),
+    ).toMatchObject({ status: "found", sura: 62, aya: 6, unique: false });
+  });
+
   it("follows a passage into the next sura past the basmalah folded into it", () => {
     expect(
       decideIdentify("وما هو إلا ذكر للعالمين الحاقة ما الحاقة", quran, {}, index),

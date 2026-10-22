@@ -176,8 +176,6 @@ function indexFor(corpus: IdentifyCorpus): IdentifyIndex {
   return index;
 }
 
-/** Span (in words) the head-to-head compares from each place. */
-const IDENTIFY_WINDOW = 30;
 /** Spoken words whose occurrences seed the candidate places, rarest first. */
 const ANCHOR_WORDS = 3;
 /** Candidate places scored per call, rarest anchor's occurrences first. */
@@ -213,6 +211,9 @@ interface Candidate {
   ranks: number[];
   /** Corpus index of the first matched word; its verse is the answer. */
   first: number;
+  /** Spoken word indices the follow matched, and the one matched at `first`. */
+  said: Set<number>;
+  firstSaid: number;
 }
 
 /** Follows the spoken words in order outward from one anchor (spoken word
@@ -273,14 +274,21 @@ function scoreAround(
   // weak evidence of where the passage began (`wordsMatch` lets a 3-letter
   // word differ by a letter: a garbled قل matches the "بكل" two words before
   // 28:49), so the answer starts at the next matched word.
-  let first = searchOrder[ranks[0]];
-  if (ranks.length > 1 && ranks[1] - ranks[0] > 1 && tokens[first].token.length <= 3) {
+  let firstPair = 0;
+  if (ranks.length > 1 && ranks[1] - ranks[0] > 1) {
+    const lone = tokens[searchOrder[ranks[0]]];
     const next = tokens[searchOrder[ranks[1]]];
-    if (next.sura !== tokens[first].sura || next.aya !== tokens[first].aya) {
-      first = searchOrder[ranks[1]];
+    if (lone.token.length <= 3 && (next.sura !== lone.sura || next.aya !== lone.aya)) {
+      firstPair = 1;
     }
   }
-  return { score: score - skipped * SKIP_COST * index.hapaxWeight, ranks, first };
+  return {
+    score: score - skipped * SKIP_COST * index.hapaxWeight,
+    ranks,
+    first: searchOrder[ranks[firstPair]],
+    said: new Set(pairs.map(([, w]) => w)),
+    firstSaid: pairs[firstPair][1],
+  };
 }
 
 /** Candidate places: every occurrence of the rarest spoken words, each
@@ -418,40 +426,33 @@ export function decideIdentify(
 
   // Near-duplicate places score within the margin. Shared words inflate
   // them equally, so the raw gap is a weak signal. Decide it with a targeted
-  // head-to-head instead — compare only each place's *unique* window words
-  // (in its continuation but not the other's) against the recitation.
-  // Whichever place's discriminating words the reciter actually said wins,
-  // and it must beat every close place, not just the runner-up (a phrase
-  // like "له ملك السماوات والارض" recurs in many suras). This keys entirely
-  // on the divergence point (e.g. 2:38 "خوف عليهم يحزنون" vs 20:123 "يضل
-  // يشقى"), so it resolves as soon as you recite past the shared phrasing
-  // and shrugs off STT noise on the shared part.
+  // head-to-head instead: the words each place's own in-order follow
+  // matched and the other's didn't. Whichever place's discriminating words
+  // the reciter actually said wins. This keys entirely on the divergence
+  // point (e.g. 2:38 "خوف عليهم يحزنون" vs 20:123 "يضل يشقى"), so it
+  // resolves as soon as you recite past the shared phrasing and shrugs off
+  // STT noise on the shared part.
   const close = places.filter((p) => best.score - p.score < margin);
-  const windowWords = new Map(
-    close.map((c) => [
-      c,
-      [...new Set(tokens.slice(c.first, c.first + IDENTIFY_WINDOW).map((tok) => tok.token))],
-    ]),
-  );
-  const spokenDistinct = [...new Set(spoken.filter((w) => w.length > 2))];
-  // Spoken words found in `a`'s window but not in `b`'s. "Not in" must be
-  // fuzzy, not exact: near-duplicate verses differ in form on shared words
-  // too (اهبطوا/اهبطا, تبع/اتبع), and those must NOT count as discriminating
-  // — only genuinely different words (خوف/يضل …). Counted per spoken word,
-  // so one garbled word that fuzzy-matches two window words (الزي: الخزي,
-  // اخزي) is still one hit.
+  // Words said before the later of the two places begins (stale words left
+  // in a re-identify buffer, leading junk) don't count for either: they'd
+  // let a place win on words the other was never asked to follow.
   const hits = (a: Candidate, b: Candidate) => {
-    const unique = windowWords
-      .get(a)!
-      .filter((w) => !windowWords.get(b)!.some((r) => sameWord(r, w)));
-    return spokenDistinct.filter((s) => unique.some((u) => sameWord(u, s))).length;
+    const from = Math.max(a.firstSaid, b.firstSaid);
+    const words = new Set<string>();
+    a.said.forEach((w) => {
+      if (w >= from && !b.said.has(w) && spoken[w].length > 2) words.add(spoken[w]);
+    });
+    return words.size;
   };
   // Need a clear margin on the discriminating words before committing, so a
-  // single garbled/coincidental word can't flip the choice.
+  // single garbled/coincidental word can't flip the choice. Only the top two
+  // may win, and only by beating every close place: the rest can block a
+  // decision (a phrase like "له ملك السماوات والارض" recurs in many suras)
+  // but never take it from places that scored higher.
   const DECISIVE_MARGIN = 2;
   const beatsAll = (c: Candidate) =>
     close.every((r) => r === c || hits(c, r) - hits(r, c) >= DECISIVE_MARGIN);
-  const winner = close.length > MAX_CLOSE ? undefined : close.find(beatsAll);
+  const winner = close.length > MAX_CLOSE ? undefined : [best, rival].find(beatsAll);
   if (winner) {
     const t = tokens[winner.first];
     const tally = close.map((c) => `${at(c)}(${hits(c, c === best ? rival : best)})`);
