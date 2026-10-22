@@ -1,4 +1,5 @@
 import { createSonioxAssembler, tokensToWords } from "../stt/soniox.assembler";
+import { compareWord, uthmaniSkeleton } from "../../quran/recite-spelling.service";
 
 const t = (text: string, is_final = false, confidence = 0.9) => ({ text, is_final, confidence });
 
@@ -76,5 +77,15 @@ describe("soniox assembler", () => {
 
   it("emits no final for an empty utterance", () => {
     expect(createSonioxAssembler().push([t("<end>", true)])).toEqual([]);
+  });
+
+  it("lets a doubtful one-letter-off word through as a sound-alike, but not a confident one", () => {
+    const expected = uthmaniSkeleton("ٱلرَّحِيمِ");
+    const heard = (confidence: number) => {
+      const [word] = tokensToWords([t("الرحيل", true, confidence)]);
+      return compareWord(expected, word.word, word.confidence);
+    };
+    expect(heard(0.4)).toBe("soundAlike");
+    expect(heard(0.95)).toBe("wrong");
   });
 });
