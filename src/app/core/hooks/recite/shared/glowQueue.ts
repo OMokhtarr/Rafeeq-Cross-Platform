@@ -7,7 +7,9 @@ import { cmpPos, type RecitePosition } from "./reciteCore";
  *
  * Every interim of a phrase re-accepts the words before it, so a word is
  * queued only the first time its phrase accepts it; a final ends the phrase,
- * and saying the word again later queues it again. A queued word waits until
+ * unqueueing the words its interims accepted that the final does not (a
+ * revised word may turn red), and saying the word again later queues it
+ * again. A queued word waits until
  * the reveal shows it — the newest word is held back — and is dropped if its
  * verse is not on the page (accepted on the next page before the turn).
  */
@@ -21,15 +23,27 @@ export interface GlowQueue {
 
 export function createGlowQueue(): GlowQueue {
   let phrase = new Set<string>();
+  /** Keys this phrase put in the queue — the final drops those it no longer
+   *  accepts (an interim's word it revised to wrong). */
+  let phraseQueued = new Set<string>();
   let queued = new Map<string, ExpectedWord>();
 
   const phraseAccepted = (words: ExpectedWord[], isFinal: boolean) => {
     const fresh = words.filter((w) => !phrase.has(glowKey(w)));
     fresh.forEach((w) => {
-      phrase.add(glowKey(w));
-      queued.set(glowKey(w), w);
+      const key = glowKey(w);
+      phrase.add(key);
+      if (!queued.has(key)) phraseQueued.add(key);
+      queued.set(key, w);
     });
-    if (isFinal) phrase = new Set();
+    if (isFinal) {
+      const accepted = new Set(words.map(glowKey));
+      phraseQueued.forEach((key) => {
+        if (!accepted.has(key)) queued.delete(key);
+      });
+      phrase = new Set();
+      phraseQueued = new Set();
+    }
     return fresh;
   };
 
@@ -48,6 +62,7 @@ export function createGlowQueue(): GlowQueue {
 
   const reset = () => {
     phrase = new Set();
+    phraseQueued = new Set();
     queued = new Map();
   };
 

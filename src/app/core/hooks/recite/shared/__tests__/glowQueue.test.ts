@@ -30,6 +30,20 @@ it("queues the same word again after a final (a re-recitation)", () => {
   expect(q.phraseAccepted([word(2, 2, 0)], false)).toEqual([word(2, 2, 0)]);
 });
 
+it("drops a word an interim accepted but the final did not, so a mistake never glows", () => {
+  const q = createGlowQueue();
+  q.phraseAccepted([word(2, 2, 0), word(2, 2, 1)], false);
+  q.phraseAccepted([word(2, 2, 0)], true);
+  expect(q.due(at(2, 2, 5), page)).toEqual([word(2, 2, 0)]);
+});
+
+it("keeps a word an earlier phrase queued when the next final does not repeat it", () => {
+  const q = createGlowQueue();
+  q.phraseAccepted([word(2, 2, 0)], true);
+  q.phraseAccepted([word(2, 2, 1)], true);
+  expect(q.due(at(2, 2, 5), page)).toEqual([word(2, 2, 0), word(2, 2, 1)]);
+});
+
 it("holds a queued word until the display reveals it, then returns it once", () => {
   const q = createGlowQueue();
   q.phraseAccepted([word(2, 2, 3)], false);
