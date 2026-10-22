@@ -32,8 +32,10 @@ import { isLikelyOffline } from "../api/quran-api.client";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   buildIdentifyCorpus,
+  buildIdentifyIndex,
   decideIdentify,
   type IdentifyCorpus,
+  type IdentifyIndex,
 } from "../quran/recite-identify.service";
 
 /**
@@ -662,6 +664,18 @@ async function getCorpusSequence(): Promise<IdentifyCorpus> {
   return corpusSequenceCache;
 }
 
+/** The identify word index (positions + rarity per word) over that corpus,
+ *  built once alongside it — about 40 ms on desktop, so it's built on the
+ *  first identify call rather than in idle chunks. */
+let identifyIndexCache: { corpus: IdentifyCorpus; index: IdentifyIndex } | null = null;
+
+async function getIdentifyIndex(): Promise<{ corpus: IdentifyCorpus; index: IdentifyIndex }> {
+  if (identifyIndexCache) return identifyIndexCache;
+  const corpus = await getCorpusSequence();
+  identifyIndexCache = { corpus, index: buildIdentifyIndex(corpus) };
+  return identifyIndexCache;
+}
+
 /**
  * Locates the verse a spoken phrase most likely starts from, for Recite
  * Mode's initial "which page am I reciting" detection. Returns null when it
@@ -670,13 +684,10 @@ async function getCorpusSequence(): Promise<IdentifyCorpus> {
  * confident. It never forces a low-confidence guess: a wrong navigation is
  * worse than admitting "I can't tell yet."
  *
- * Scores every verse by how much of the spoken transcript matches forward
- * from it as a *contiguous in-order sequence* that flows across verse
- * boundaries (see `scoreCorpusAnchors`). This deliberately replaces the old
- * per-verse bag-of-words count, which gave long verses an unfair edge — a
- * passage spanning several short verses would lose to an unrelated long
- * verse that merely contained the same words scattered inside it (e.g.
- * Yunus 10:37 winning over As-Sajdah 32:2–3).
+ * Places are found from the rarest spoken words and scored by the rarity
+ * of the words the transcript follows in order from there, across verse
+ * boundaries (see `decideIdentify`), so a passage started mid-verse is
+ * found too and common words alone never decide.
  *
  * Several verses across the Quran open with near-identical phrasing (e.g.
  * many sūrahs open "تنزيل الكتاب…", six open with "الم"), so a short spoken
@@ -740,10 +751,13 @@ export async function findVerseByStartingPhrase(
   spokenText: string,
   options: { minMatched?: number; nearPosition?: { sura: number; aya: number } | null } = {},
 ): Promise<IdentifyOutcome> {
-  const decision = decideIdentify(spokenText, await getCorpusSequence(), {
-    ...options,
-    log: (line) => console.log(`[recite-identify] ${line}`),
-  });
+  const { corpus, index } = await getIdentifyIndex();
+  const decision = decideIdentify(
+    spokenText,
+    corpus,
+    { ...options, log: (line) => console.log(`[recite-identify] ${line}`) },
+    index,
+  );
   if (decision.status !== "found") return decision;
   return decideVerse(decision.sura, decision.aya, decision.unique);
 }

@@ -1,5 +1,12 @@
+import * as fs from "fs";
+import * as path from "path";
 import { normalizeArabic, type CorpusToken } from "../recite-matcher.service";
-import { buildIdentifyCorpus, decideIdentify, type IdentifyCorpus } from "../recite-identify.service";
+import {
+  buildIdentifyCorpus,
+  buildIdentifyIndex,
+  decideIdentify,
+  type IdentifyCorpus,
+} from "../recite-identify.service";
 
 // Verse text as the app carries it (Quran.com text_uthmani), "|" between words.
 const FIXTURE: Record<string, string> = {
@@ -55,6 +62,12 @@ describe("decideIdentify", () => {
     expect(out.status).not.toBe("found");
   });
 
+  it("lands on the verse the shared وجعلنا opening continues into", () => {
+    expect(
+      decideIdentify("وجعلنا الليل لباسا وجعلنا النهار معاشا", corpus),
+    ).toMatchObject({ status: "found", sura: 78, aya: 10 });
+  });
+
   it("honours a lower minMatched", () => {
     const text = spoken("2:3").split(" ").slice(0, 4).join(" ");
     expect(decideIdentify(text, corpus).status).toBe("none");
@@ -63,6 +76,49 @@ describe("decideIdentify", () => {
       sura: 2,
       aya: 3,
     });
+  });
+});
+
+// The app's own bundled corpus: word rarity only means something over the
+// whole Quran. Spoken text below is in standard (imlaei) spelling, as STT
+// writes it, not the corpus's Uthmani spelling.
+describe("decideIdentify over the whole Quran", () => {
+  const file = path.join(__dirname, "../../../../../../public/data/quran-text.json");
+  const quran = buildIdentifyCorpus(JSON.parse(fs.readFileSync(file, "utf8")).verses);
+  const index = buildIdentifyIndex(quran);
+
+  it("finds a passage started mid-verse", () => {
+    expect(
+      decideIdentify("أنزل من قبلك وبالآخرة هم يوقنون", quran, {}, index),
+    ).toMatchObject({ status: "found", sura: 2, aya: 4 });
+  });
+
+  it("never decides on common words alone", () => {
+    for (const minMatched of [4, 5]) {
+      const out = decideIdentify("الله الذين قال إن من", quran, { minMatched }, index);
+      expect(out.status).not.toBe("found");
+    }
+  });
+
+  it("rare words decide sooner than common ones", () => {
+    expect(
+      decideIdentify("الذين يؤمنون بالغيب ويقيمون", quran, { minMatched: 4 }, index),
+    ).toMatchObject({ status: "found", sura: 2, aya: 3 });
+  });
+
+  it("waits on a passage shared word for word, unless it knows where the reciter was", () => {
+    // 12:22 and 28:14 read the same through "حكما وعلما وكذلك نجزي المحسنين".
+    const text = "ولما بلغ أشده آتيناه حكما وعلما";
+    expect(decideIdentify(text, quran, { minMatched: 4 }, index).status).toBe("ambiguous");
+    expect(
+      decideIdentify(text, quran, { minMatched: 4, nearPosition: { sura: 28, aya: 10 } }, index),
+    ).toMatchObject({ status: "found", sura: 28, aya: 14, unique: false });
+  });
+
+  it("follows a passage into the next sura past the basmalah folded into it", () => {
+    expect(
+      decideIdentify("وما هو إلا ذكر للعالمين الحاقة ما الحاقة", quran, {}, index),
+    ).toMatchObject({ status: "found", sura: 68, aya: 52 });
   });
 });
 
