@@ -26,7 +26,10 @@ const STREAM_CONFIG = {
   language_hints: ["ar"],
   language_hints_strict: true,
   enable_endpoint_detection: true,
-  max_endpoint_delay_ms: 500,
+  // A tarteel reciter pauses between words; at 500 ms Soniox ended a phrase
+  // at almost every pause and cut words in two (إلى / كم for إِلَـٰهُكُمْ).
+  // Words still stream live as interims — only the phrase end waits longer.
+  max_endpoint_delay_ms: 1500,
 };
 
 /** How long `stop()` lets the server finish before closing the socket itself. */
