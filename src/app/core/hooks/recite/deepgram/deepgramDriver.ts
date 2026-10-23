@@ -26,9 +26,11 @@ import {
 import { normalizeArabic } from "../../../services/quran/recite-matcher.service";
 import {
   RESUME_MIN_SAID,
+  acceptedWords,
   createReciteTracker,
   formatAlignLog,
   spokenWordsFrom,
+  type AlignOptions,
   type ReciteTracker,
   type TrackerState,
 } from "../../../services/quran/recite-aligner.service";
@@ -66,6 +68,10 @@ const IDENTIFY_INTERIM_THROTTLE_MS = 400;
 /** Same throttle, applied to interim-driven wrong-page detection — see
  *  handleStreamEvent's mismatch counting below. */
 const MISMATCH_INTERIM_THROTTLE_MS = 400;
+
+/** A reciter may go back to any verse on the page and recite it again —
+ *  a long one too — without the tracker losing its place and re-searching. */
+const TRACKER_OPTIONS: AlignOptions = { restartAnywhere: true };
 
 export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
   const [micError, setMicError] = useState<string | null>(null);
@@ -132,12 +138,13 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
       if (probe.newSaid < RESUME_MIN_SAID) return 0;
       const result = isFinal ? tracker.onFinal(spoken, verses) : probe;
       showState(result.state);
+      deps.glowWords(acceptedWords(result), isFinal);
       if (isFinal) deps.reveal.confirm(result.state.cursor);
       return result.newSaid;
     },
     getTrackerState: () => trackerRef.current?.committed() ?? null,
     onLanded: (state) => {
-      trackerRef.current = state ? createReciteTracker(state) : null;
+      trackerRef.current = state ? createReciteTracker(state, TRACKER_OPTIONS) : null;
       if (state) deps.setMarks(state.marks);
     },
     resetMismatchStreak: () => {
@@ -190,6 +197,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
       // Also on an empty final: it settles the window at the committed
       // state, retracting anything an interim showed that the final dropped.
       showState(result.state);
+      deps.glowWords(acceptedWords(result), event.isFinal);
 
       if (event.isFinal) {
         // The window settled: its words are confirmed speech — release them
@@ -287,7 +295,7 @@ export function useDeepgramDriver(deps: ReciteDriverDeps): ReciteDriver {
 
   const moveCursor = useCallback((pos: RecitePosition) => {
     const tracker = trackerRef.current;
-    if (tracker) tracker.reset({ cursor: pos, marks: tracker.committed().marks });
+    if (tracker) tracker.reset({ cursor: pos, marks: tracker.committed().marks }, TRACKER_OPTIONS);
   }, []);
 
   return { micError, start, stop, moveCursor };

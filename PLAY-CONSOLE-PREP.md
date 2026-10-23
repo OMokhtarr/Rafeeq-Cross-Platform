@@ -176,11 +176,9 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 **Does your app collect or share any of the required user data types?** → **Yes**
 
 ### Audio → Voice or sound recordings
-- Collected: **Yes** · Shared: **Yes** (with the transcription provider selected in Settings: Deepgram, Soniox, or Cloudflare Workers AI)
-- Processed ephemerally: **Yes** — with Deepgram or Soniox, audio streams live over
-  a WebSocket for real-time transcription; with Cloudflare Whisper, short phrases are
-  uploaded over HTTPS through the token broker to Workers AI. Either way it is never
-  written to disk or retained by the app.
+- Collected: **Yes** · Shared: **Yes** (with the transcription provider selected in Settings: Deepgram or Soniox)
+- Processed ephemerally: **Yes** — audio streams live over a WebSocket to Deepgram or
+  Soniox for real-time transcription. It is never written to disk or retained by the app.
 - Required or optional: **Optional** — only recite mode uses the mic.
 - Purpose: **App functionality**
 

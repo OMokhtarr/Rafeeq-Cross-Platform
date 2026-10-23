@@ -67,13 +67,13 @@ interface Props {
     revealedWordCount: number;
     hiddenPositions?: Set<number>;
     hintedPositions?: Set<number>;
-    /** Word positions currently being recited correctly — highlighted green
-     *  as live "you said this" feedback during recite mode. */
-    recitedPositions?: Set<number>;
   };
   /** Recite mode's red words — skipped or said wrongly — as
    *  `sura:aya:position` keys. A hidden word stays hidden. */
   mistakes?: Set<string>;
+  /** Recite mode's green glow: `sura:aya:position` key -> generation. A new
+   *  generation re-keys the overlay, restarting its fade. */
+  glow?: ReadonlyMap<string, number>;
   onVerseTap?: (verseKey: string) => void;
   onVerseLongPress?: (verseKey: string) => void;
   /**
@@ -97,6 +97,7 @@ const MushafPage: React.FC<Props> = ({
   grey,
   partialTarget,
   mistakes,
+  glow,
   onVerseTap,
   onVerseLongPress,
   bigTextMode = false,
@@ -549,24 +550,20 @@ const MushafPage: React.FC<Props> = ({
       tw.word.charType !== "end" &&
       !!partialTarget!.hintedPositions?.has(tw.word.position);
 
-    // Live recite highlight: a word the reciter has just said correctly.
-    // NB: in this codebase's (inverted) model, actual recitable words are
-    // charType === "end" and the ayah-number marker is charType === "word"
-    // (see quran.service mapping) — so this matches the same glyphs the
-    // reveal/hide logic above does. recitedPositions only holds already-
-    // revealed words, so it never overlaps hiddenPositions.
-    const isWordRecited =
-      isPartialTargetVerse &&
-      tw.word.charType === "end" &&
-      !!partialTarget!.recitedPositions?.has(tw.word.position);
-
-    // Recite mistake: skipped or said wrongly — red once revealed, and red
-    // wins over the green "recited" highlight.
+    // Recite mistake: skipped or said wrongly — red once revealed.
     const isMistake =
       tw.word.charType === "end" &&
       !isHidden &&
       !isWordPastReveal &&
       !!mistakes?.has(`${key}:${tw.word.position}`);
+
+    // Glow: a green copy of the word laid over it, fading out. Hidden words
+    // never get one.
+    const glowGeneration =
+      tw.word.charType === "end" && !isHidden && !isWordPastReveal
+        ? glow?.get(`${key}:${tw.word.position}`)
+        : undefined;
+    const isGlowing = glowGeneration !== undefined;
 
     const isEndMarker =
       tw.word.charType === "end" &&
@@ -589,8 +586,8 @@ const MushafPage: React.FC<Props> = ({
       isGrey ? "mushaf-verse-grey" : "",
       isWordPastReveal ? "mushaf-verse-hidden" : "",
       isWordHinted ? "mushaf-word-hinted" : "",
-      isWordRecited && !isMistake ? "mushaf-word-recited" : "",
       isMistake ? "mushaf-word-mistake" : "",
+      isGlowing ? "mushaf-word--glowing" : "",
       isEndMarker ? "mushaf-verse-end-marker" : "",
     ]
       .filter(Boolean)
@@ -656,6 +653,23 @@ const MushafPage: React.FC<Props> = ({
         }
       >
         {tw.word.codeV2 || tw.word.text_uthmani}
+        {isGlowing && (
+          // Own palette: CSS `color` only reaches the font's foreground layer,
+          // so the tajweed glyph layers need the all-green palette instead.
+          <span
+            className="mushaf-word-glow"
+            aria-hidden="true"
+            key={glowGeneration}
+            style={{
+              fontPalette: paletteNameForPage(
+                page,
+                theme === "night" ? "glow-night" : "glow-day",
+              ),
+            }}
+          >
+            {tw.word.codeV2 || tw.word.text_uthmani}
+          </span>
+        )}
       </span>
     );
   };

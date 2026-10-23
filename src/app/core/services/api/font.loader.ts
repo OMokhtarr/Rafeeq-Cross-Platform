@@ -48,14 +48,23 @@ export function fontFamilyForPage(page: number): string {
  * property. V4 fonts ship two built-in palettes (0 = light, 1 = dark);
  * we additionally synthesize a "mono" palette per page that overrides
  * every color slot to `currentColor` so the glyphs render in the active
- * text color when the user disables tajweed coloring in Settings.
+ * text color when the user disables tajweed coloring in Settings. The two
+ * "glow" variants recolour every slot green for the recite-mode glow overlay.
  */
 export function paletteNameForPage(
   page: number,
-  variant: "day" | "night" | "mono",
+  variant: "day" | "night" | "mono" | "glow-day" | "glow-night",
 ): string {
   const suffix =
-    variant === "night" ? "dark" : variant === "mono" ? "mono" : "light";
+    variant === "night"
+      ? "dark"
+      : variant === "mono"
+      ? "mono"
+      : variant === "glow-day"
+      ? "glow-light"
+      : variant === "glow-night"
+      ? "glow-dark"
+      : "light";
   return `--tw-P${pad3(page)}-${suffix}`;
 }
 
@@ -237,10 +246,17 @@ const PALETTE_STYLE_ID = "qpc-v4-palettes";
 const MONO_STYLE_ID = "qpc-v4-mono-palettes";
 let currentMonoColor = "#000";
 
+/** Slots 0–9 all set to one colour (V4 uses ~8; extras are ignored). */
+const allSlots = (color: string): string =>
+  Array.from({ length: 10 }, (_, i) => `${i} ${color}`).join(", ");
+const GLOW_SLOTS_LIGHT = allSlots("#00a33d");
+const GLOW_SLOTS_DARK = allSlots("#4cff9a");
+
 /**
  * Append two `@font-palette-values` rules for the given page family:
  *   - light  (base-palette 0)         — the V4 font's default colored palette
  *   - dark   (base-palette 1)         — the V4 font's dark-theme colored palette
+ *   - glow-light / glow-dark          — all-green, for the recite glow overlay
  *
  * The mono palette is generated separately by `setMonoPaletteColor` so it
  * can be rebuilt without touching the colored palettes when the theme flips.
@@ -248,15 +264,19 @@ let currentMonoColor = "#000";
  * The rules are scoped to the page's own family because `@font-palette-values`
  * binds to a single `font-family`. A shared <style> element holds them all.
  */
-function injectPalettesForPage(page: number, family: string): void {
+export function injectPalettesForPage(page: number, family: string): void {
   if (palettedPages.has(page)) return;
   const styleEl = ensurePaletteStyleEl(PALETTE_STYLE_ID);
   const lightName = paletteNameForPage(page, "day");
   const darkName = paletteNameForPage(page, "night");
+  const glowLight = paletteNameForPage(page, "glow-day");
+  const glowDark = paletteNameForPage(page, "glow-night");
   styleEl.appendChild(
     document.createTextNode(
       `@font-palette-values ${lightName} { font-family: "${family}"; base-palette: 0; }\n` +
-        `@font-palette-values ${darkName} { font-family: "${family}"; base-palette: 1; }\n`,
+        `@font-palette-values ${darkName} { font-family: "${family}"; base-palette: 1; }\n` +
+        `@font-palette-values ${glowLight} { font-family: "${family}"; override-colors: ${GLOW_SLOTS_LIGHT}; }\n` +
+        `@font-palette-values ${glowDark} { font-family: "${family}"; override-colors: ${GLOW_SLOTS_DARK}; }\n`,
     ),
   );
   palettedPages.add(page);

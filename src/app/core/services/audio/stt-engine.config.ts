@@ -9,7 +9,7 @@
  * engine — each engine is an adapter under ./stt/.
  */
 
-export type ReciteEngineChoice = "deepgram" | "soniox" | "cloudflare-whisper";
+export type ReciteEngineChoice = "deepgram" | "soniox";
 
 export const DEFAULT_RECITE_ENGINE: ReciteEngineChoice = "deepgram";
 
@@ -20,18 +20,13 @@ export const RECITE_ENGINE_OPTIONS: {
 }[] = [
   { value: "deepgram", labelAr: "Deepgram — بث فوري", labelEn: "Deepgram — live streaming" },
   { value: "soniox", labelAr: "Soniox — بث فوري", labelEn: "Soniox — live streaming" },
-  {
-    value: "cloudflare-whisper",
-    labelAr: "Cloudflare Whisper — مقاطع قصيرة",
-    labelEn: "Cloudflare Whisper — short chunks",
-  },
 ];
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 
 // Validated against the full union, not the options array, so an engine reads
 // back as soon as it exists even before its dropdown entry does.
-const KNOWN_ENGINES: readonly string[] = ["deepgram", "soniox", "cloudflare-whisper"];
+const KNOWN_ENGINES: readonly string[] = ["deepgram", "soniox"];
 
 /** The saved engine, or the default when nothing valid is saved. */
 export function readReciteEngine(): ReciteEngineChoice {

@@ -22,23 +22,27 @@ const LETTER = /[ء-يٱ-ۓ]/;
  * button. `tokens` is the hidden part split on spaces; `hintLevel` counts
  * tokens. The verse text carries each pause mark as a token of its own while
  * recite progress counts words, so a pause mark goes with the word before it
- * (a leading one, with the first word).
+ * (a leading one, with the first word). `cardGlow` maps a word index to its
+ * glow generation, which its tokens carry.
  */
 export function hiddenCardTokens(
   tokens: string[],
   progress: { revealedWordCount: number; mistakeWordIndexes: Set<number> },
   hintLevel: number,
-): { text: string; style: CardTokenStyle }[] {
-  const shown: { text: string; style: CardTokenStyle }[] = [];
+  cardGlow?: ReadonlyMap<number, number>,
+): { text: string; style: CardTokenStyle; glow?: number }[] {
+  const shown: { text: string; style: CardTokenStyle; glow?: number }[] = [];
   let word = -1;
   tokens.forEach((text, i) => {
     if (LETTER.test(text)) word++;
     const owner = Math.max(word, 0);
     const recited = owner < progress.revealedWordCount;
     if (!recited && i >= hintLevel) return;
+    const glow = recited ? cardGlow?.get(owner) : undefined;
     shown.push({
       text,
       style: progress.mistakeWordIndexes.has(owner) ? "mistake" : recited ? "recited" : "hint",
+      ...(glow !== undefined && { glow }),
     });
   });
   return shown;

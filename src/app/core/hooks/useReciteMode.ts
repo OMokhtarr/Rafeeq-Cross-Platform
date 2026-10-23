@@ -6,9 +6,11 @@ import {
   verseWordCount,
   type RecitePosition,
 } from "../services/quran/recite-matcher.service";
-import { markPositionKeys } from "../services/quran/recite-aligner.service";
+import { glowKey, markPositionKeys } from "../services/quran/recite-aligner.service";
 import { SILENCE_TIMEOUT_MS, type ReciteDriverDeps } from "./recite/shared/reciteCore";
+import { createGlowQueue } from "./recite/shared/glowQueue";
 import { useRevealAnimator } from "./recite/shared/useRevealAnimator";
+import { useWordGlow } from "./recite/shared/useWordGlow";
 import { useDeepgramDriver } from "./recite/deepgram/deepgramDriver";
 
 /**
@@ -59,6 +61,10 @@ export interface UseReciteModeResult {
    *  keys — shown red. Kept after recording stops (for review); cleared when
    *  a new recording starts or recite mode is exited. */
   reciteMistakes: Set<string>;
+  /** Words just recited correctly, as `sura:aya:position` → generation —
+   *  each glows once as the reveal shows it, then fades. Cleared when a
+   *  recording starts or stops and when recite mode is exited. */
+  reciteGlow: ReadonlyMap<string, number>;
   micError: string | null;
   /** Seconds elapsed since the current recording started, ticking once per second. 0 when not recording. */
   recordingSeconds: number;
@@ -139,6 +145,8 @@ export function useReciteMode(
   const [showingAll, setShowingAll] = useState(false);
   const [noMatchHint, setNoMatchHint] = useState(false);
   const [identifying, setIdentifying] = useState(false);
+  const { glow: reciteGlow, light: lightGlow, clear: clearGlowMap } = useWordGlow();
+  const [glowQueue] = useState(createGlowQueue);
 
   // Mutable session state — avoids re-subscribing driver callbacks on every match.
   const versesRef = useRef<Verse[]>([]);
@@ -185,9 +193,26 @@ export function useReciteMode(
     [onAdvancePage],
   );
 
+  // Lights the accepted words the display `pos` has now revealed on
+  // `verses`' page. Next-page words stay queued: syncPage's applyPosition
+  // lights them once the page turns.
+  const lightRevealed = useCallback(
+    (verses: Verse[], pos: RecitePosition | null) => {
+      const words = glowQueue.due(pos, verses, nextPageVersesRef.current ?? []);
+      if (words.length) lightGlow(words.map(glowKey));
+    },
+    [glowQueue, lightGlow],
+  );
+
+  const clearGlow = useCallback(() => {
+    glowQueue.reset();
+    clearGlowMap();
+  }, [glowQueue, clearGlowMap]);
+
   const applyPosition = useCallback(
     (verses: Verse[], pos: RecitePosition) => {
       if (!verses.length) return;
+      lightRevealed(verses, pos);
 
       const activeVerse = verses.find(
         (v) => v.sura === pos.sura && v.aya === pos.aya,
@@ -205,7 +230,7 @@ export function useReciteMode(
         hiddenPositions: unrevealedWordPositions(activeVerse, pos.wordIndex),
       });
     },
-    [advancePastPage],
+    [advancePastPage, lightRevealed],
   );
 
   const hideWholePage = useCallback((verses: Verse[]) => {
@@ -345,8 +370,9 @@ export function useReciteMode(
     setReciteHidden(new Set());
     setRecitePartialTarget(undefined);
     setShowingAll(false);
+    clearGlow();
     if (activeRef.current) setStatus("armed");
-  }, [reveal]);
+  }, [clearGlow, reveal]);
   stopRecordingRef.current = stopRecording;
 
   const driverDeps: ReciteDriverDeps = {
@@ -375,6 +401,12 @@ export function useReciteMode(
     touchLastSpeechAt,
     stopRecording: () => stopRecordingRef.current(),
     setMarks: (marks) => setReciteMistakes(markPositionKeys(marks)),
+    glowWords: (words, isFinal) => {
+      glowQueue.phraseAccepted(words, isFinal);
+      // Words already on screen (a restart over revealed text) glow now;
+      // held-back ones wait for applyPosition to show them.
+      lightRevealed(versesRef.current, reveal.getDisplayPosition());
+    },
   };
 
   const deepgramDriver = useDeepgramDriver(driverDeps);
@@ -417,6 +449,7 @@ export function useReciteMode(
     setNoMatchHint(false);
     setIdentifying(true);
     setReciteMistakes(new Set());
+    clearGlow();
     // Starting to recite: hide the page and reveal word-by-word as matched.
     reveal.reset(versesRef.current.length ? firstWordPosition(versesRef.current[0]) : null);
     hideWholePage(versesRef.current);
@@ -434,7 +467,7 @@ export function useReciteMode(
         stopRecordingRef.current();
       }
     }, 1000);
-  }, [deepgramDriver, hideWholePage, reveal]);
+  }, [clearGlow, deepgramDriver, hideWholePage, reveal]);
 
   const syncPage = useCallback(
     (page: number, verses: Verse[]) => {
@@ -479,13 +512,14 @@ export function useReciteMode(
     setReciteHidden(new Set());
     setRecitePartialTarget(undefined);
     setReciteMistakes(new Set());
+    clearGlow();
     setRecordingSeconds(0);
     setLastChunkText("");
     setNoMatchHint(false);
     setShowingAll(false);
     setIdentifying(false);
     setStatus("idle");
-  }, [clearDurationTimer, deepgramDriver, reveal]);
+  }, [clearDurationTimer, clearGlow, deepgramDriver, reveal]);
 
   const micError = deepgramDriver.micError;
   useEffect(() => {
@@ -509,6 +543,7 @@ export function useReciteMode(
     reciteHidden,
     recitePartialTarget,
     reciteMistakes,
+    reciteGlow,
     micError,
     recordingSeconds,
     lastChunkText,

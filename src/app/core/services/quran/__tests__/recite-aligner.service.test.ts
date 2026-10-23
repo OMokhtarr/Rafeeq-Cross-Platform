@@ -2,8 +2,10 @@ import type { Verse, VerseWord } from "../../../../shared/models/verse.model";
 import { quizAlignOptions } from "../../../../features/quiz/hooks/quizReciteProgress";
 import type { RecitePosition } from "../recite-matcher.service";
 import {
+  acceptedWords,
   alignPhrase,
   createReciteTracker,
+  glowKey,
   markPositionKeys,
   markSkipped,
   spokenWordsFrom,
@@ -87,9 +89,88 @@ const FIXTURE: Record<string, { uthmani: string; standard: string }> = {
     uthmani: "وَأَلَّوِ|ٱسْتَقَـٰمُوا۟|عَلَى|ٱلطَّرِيقَةِ|لَأَسْقَيْنَـٰهُم|مَّآءً|غَدَقًۭا",
     standard: "وَأَن لَّوِ|اسْتَقَامُوا|عَلَى|الطَّرِيقَةِ|لَأَسْقَيْنَاهُم|مَّاءً|غَدَقًا",
   },
+  "20:85": {
+    uthmani: "قَالَ|فَإِنَّا|قَدْ|فَتَنَّا|قَوْمَكَ|مِنۢ|بَعْدِكَ|وَأَضَلَّهُمُ|ٱلسَّامِرِىُّ",
+    standard: "قَالَ|فَإِنَّا|قَدْ|فَتَنَّا|قَوْمَكَ|مِن|بَعْدِكَ|وَأَضَلَّهُمُ|السَّامِرِيُّ",
+  },
+  "20:86": {
+    uthmani: "فَرَجَعَ|مُوسَىٰٓ|إِلَىٰ|قَوْمِهِۦ|غَضْبَـٰنَ|أَسِفًۭا ۚ|قَالَ|يَـٰقَوْمِ|أَلَمْ|يَعِدْكُمْ|رَبُّكُمْ|وَعْدًا|حَسَنًا ۚ|أَفَطَالَ|عَلَيْكُمُ|ٱلْعَهْدُ|أَمْ|أَرَدتُّمْ|أَن|يَحِلَّ|عَلَيْكُمْ|غَضَبٌۭ|مِّن|رَّبِّكُمْ|فَأَخْلَفْتُم|مَّوْعِدِى",
+    standard: "فَرَجَعَ|مُوسَىٰ|إِلَىٰ|قَوْمِهِ|غَضْبَانَ|أَسِفًا ۚ|قَالَ|يَا قَوْمِ|أَلَمْ|يَعِدْكُمْ|رَبُّكُمْ|وَعْدًا|حَسَنًا ۚ|أَفَطَالَ|عَلَيْكُمُ|الْعَهْدُ|أَمْ|أَرَدتُّمْ|أَن|يَحِلَّ|عَلَيْكُمْ|غَضَبٌ|مِّن|رَّبِّكُمْ|فَأَخْلَفْتُم|مَّوْعِدِي",
+  },
+  "20:87": {
+    uthmani: "قَالُوا۟|مَآ|أَخْلَفْنَا|مَوْعِدَكَ|بِمَلْكِنَا|وَلَـٰكِنَّا|حُمِّلْنَآ|أَوْزَارًۭا|مِّن|زِينَةِ|ٱلْقَوْمِ|فَقَذَفْنَـٰهَا|فَكَذَٰلِكَ|أَلْقَى|ٱلسَّامِرِىُّ",
+    standard: "قَالُوا|مَا|أَخْلَفْنَا|مَوْعِدَكَ|بِمَلْكِنَا|وَلَٰكِنَّا|حُمِّلْنَا|أَوْزَارًا|مِّن|زِينَةِ|الْقَوْمِ|فَقَذَفْنَاهَا|فَكَذَٰلِكَ|أَلْقَى|السَّامِرِيُّ",
+  },
+  "20:88": {
+    uthmani: "فَأَخْرَجَ|لَهُمْ|عِجْلًۭا|جَسَدًۭا|لَّهُۥ|خُوَارٌۭ|فَقَالُوا۟|هَـٰذَآ|إِلَـٰهُكُمْ|وَإِلَـٰهُ|مُوسَىٰ|فَنَسِىَ",
+    standard: "فَأَخْرَجَ|لَهُمْ|عِجْلًا|جَسَدًا|لَّهُ|خُوَارٌ|فَقَالُوا|هَٰذَا|إِلَٰهُكُمْ|وَإِلَٰهُ|مُوسَىٰ|فَنَسِيَ",
+  },
   "20:94": {
     uthmani: "قَالَ|يَبْنَؤُمَّ|لَا|تَأْخُذْ|بِلِحْيَتِى|وَلَا|بِرَأْسِىٓ ۖ|إِنِّى|خَشِيتُ|أَن|تَقُولَ|فَرَّقْتَ|بَيْنَ|بَنِىٓ|إِسْرَٰٓءِيلَ|وَلَمْ|تَرْقُبْ|قَوْلِى",
     standard: "قَالَ|يَا ابْنَ أُمَّ|لَا|تَأْخُذْ|بِلِحْيَتِي|وَلَا|بِرَأْسِي ۖ|إِنِّي|خَشِيتُ|أَن|تَقُولَ|فَرَّقْتَ|بَيْنَ|بَنِي|إِسْرَائِيلَ|وَلَمْ|تَرْقُبْ|قَوْلِي",
+  },
+  "36:1": { uthmani: "يسٓ", standard: "يس" },
+  "42:1": { uthmani: "حمٓ", standard: "حم" },
+  "42:2": { uthmani: "عٓسٓقٓ", standard: "عسق" },
+  "42:3": {
+    uthmani: "كَذَٰلِكَ|يُوحِىٓ|إِلَيْكَ|وَإِلَى|ٱلَّذِينَ|مِن|قَبْلِكَ|ٱللَّهُ|ٱلْعَزِيزُ|ٱلْحَكِيمُ",
+    standard: "كَذَٰلِكَ|يُوحِي|إِلَيْكَ|وَإِلَى|الَّذِينَ|مِن|قَبْلِكَ|اللَّهُ|الْعَزِيزُ|الْحَكِيمُ",
+  },
+  "94:1": {
+    uthmani: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
+    standard: "أَلَمْ|نَشْرَحْ|لَكَ|صَدْرَكَ",
+  },
+  "94:5": {
+    uthmani: "فَإِنَّ|مَعَ|ٱلْعُسْرِ|يُسْرًا",
+    standard: "فَإِنَّ|مَعَ|الْعُسْرِ|يُسْرًا",
+  },
+  "94:6": {
+    uthmani: "إِنَّ|مَعَ|ٱلْعُسْرِ|يُسْرًۭا",
+    standard: "إِنَّ|مَعَ|الْعُسْرِ|يُسْرًا",
+  },
+  "82:17": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|يَوْمُ|ٱلدِّينِ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|يَوْمُ|الدِّينِ",
+  },
+  "82:18": {
+    uthmani: "ثُمَّ|مَآ|أَدْرَىٰكَ|مَا|يَوْمُ|ٱلدِّينِ",
+    standard: "ثُمَّ|مَا|أَدْرَاكَ|مَا|يَوْمُ|الدِّينِ",
+  },
+  "97:2": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|لَيْلَةُ|ٱلْقَدْرِ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|لَيْلَةُ|الْقَدْرِ",
+  },
+  "97:3": {
+    uthmani: "لَيْلَةُ|ٱلْقَدْرِ|خَيْرٌۭ|مِّنْ|أَلْفِ|شَهْرٍۢ",
+    standard: "لَيْلَةُ|الْقَدْرِ|خَيْرٌ|مِّنْ|أَلْفِ|شَهْرٍ",
+  },
+  "109:2": {
+    uthmani: "لَآ|أَعْبُدُ|مَا|تَعْبُدُونَ",
+    standard: "لَا|أَعْبُدُ|مَا|تَعْبُدُونَ",
+  },
+  "109:3": {
+    uthmani: "وَلَآ|أَنتُمْ|عَـٰبِدُونَ|مَآ|أَعْبُدُ",
+    standard: "وَلَا|أَنتُمْ|عَابِدُونَ|مَا|أَعْبُدُ",
+  },
+  "109:4": {
+    uthmani: "وَلَآ|أَنَا۠|عَابِدٌۭ|مَّا|عَبَدتُّمْ",
+    standard: "وَلَا|أَنَا|عَابِدٌ|مَّا|عَبَدتُّمْ",
+  },
+  "109:5": {
+    uthmani: "وَلَآ|أَنتُمْ|عَـٰبِدُونَ|مَآ|أَعْبُدُ",
+    standard: "وَلَا|أَنتُمْ|عَابِدُونَ|مَا|أَعْبُدُ",
+  },
+  "101:1": {
+    uthmani: "ٱلْقَارِعَةُ",
+    standard: "الْقَارِعَةُ",
+  },
+  "101:2": {
+    uthmani: "مَا|ٱلْقَارِعَةُ",
+    standard: "مَا|الْقَارِعَةُ",
+  },
+  "101:3": {
+    uthmani: "وَمَآ|أَدْرَىٰكَ|مَا|ٱلْقَارِعَةُ",
+    standard: "وَمَا|أَدْرَاكَ|مَا|الْقَارِعَةُ",
   },
 };
 
@@ -279,6 +360,18 @@ describe("recite aligner: phrases and partial results", () => {
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("78:11:3");
   });
+
+  it("a phrase ending on a verse's last word moves the cursor past it", () => {
+    const s = recite(BAQARAH, at(2, 2), [standard("2:2")]);
+    expect(pos(s.cursor)).toBe("2:2:7");
+  });
+
+  it("moves past a verse's last word said in pause form", () => {
+    const first = "ذلك الكتاب لا ريب فيه هدى للمتقين";
+    const second = "الذين يؤمنون بالغيب ويقيمون الصلاه ومما رزقناهم ينفقون"; // الصلاه for الصلاة
+    expect(pos(recite(BAQARAH, at(2, 2), [first, second]).cursor)).toBe("2:3:8");
+    expect(pos(recite(BAQARAH, at(2, 3), [second]).cursor)).toBe("2:3:8");
+  });
 });
 
 describe("recite aligner: spelling and tajweed joins", () => {
@@ -286,6 +379,43 @@ describe("recite aligner: spelling and tajweed joins", () => {
     const s = recite(verses("2:1", "2:2", "2:3"), at(2, 1), ["الف لام ميم ذلك الكتاب لا ريب فيه هدى للمتقين"]);
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("2:2:7");
+  });
+
+  it("counts الم as said when it is the whole verse (2:1)", () => {
+    const s = recite(verses("2:1", "2:2"), at(2, 1), ["الف لام ميم"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:1:1");
+  });
+
+  it("counts ياسين as said (36:1)", () => {
+    const s = recite(verses("36:1"), at(36, 1), ["ياسين"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("36:1:1");
+  });
+
+  it("counts عسق spelled out (42:2)", () => {
+    const s = recite(verses("42:2"), at(42, 2), ["عين سين قاف"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("42:2:1");
+  });
+
+  // Two openers in a row: each one's letters go to it, so both count as said.
+  it.each([
+    ["spelled out", "حا ميم عين سين قاف"],
+    ["said as words", "حم عسق"],
+  ])("counts حم then عسق %s (42:1–2)", (_, opener) => {
+    const vs = verses("42:1", "42:2", "42:3");
+    const r = alignPhrase({ cursor: at(42, 1), marks: new Map() }, spokenWordsFrom(`${opener} ${standard("42:3")}`), vs);
+    expect(r.steps.slice(0, 2).map((s) => s.kind)).toEqual(["letters", "letters"]);
+    expect(acceptedWords(r).slice(0, 2).map((w) => glowKey(w))).toEqual(["42:1:1", "42:2:1"]);
+    const s = recite(vs, at(42, 1), [`${opener} ${standard("42:3")}`]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("42:3:10");
+  });
+
+  it("keeps أَلَمْ an ordinary, markable word (94:1)", () => {
+    const s = recite(verses("94:1"), at(94, 1), ["الف لام ميم نشرح لك صدرك"]);
+    expect(marked(s)).toEqual(["94:1:0"]);
   });
 
   it("does not let a muqatta'at word swallow the rest of its verse", () => {
@@ -342,6 +472,93 @@ describe("recite aligner: spelling and tajweed joins", () => {
   });
 });
 
+describe("recite aligner: repeated openings", () => {
+  const end = (key: string) => `${key}:${FIXTURE[key].uthmani.split("|").length}`;
+
+  it("moves on to 94:6 when the cursor lags one word behind 94:5", () => {
+    // يسرا was said but is unconfirmed: pending, the cursor still before it.
+    const lagging: TrackerState = { cursor: at(94, 5, 3), marks: new Map(), pending: new Map([["94:5:3", "said"]]) };
+    const tracker = createReciteTracker(lagging);
+    tracker.onFinal(spokenWordsFrom(standard("94:6")), verses("94:5", "94:6"));
+    expect(pos(tracker.committed().cursor)).toBe("94:6:4");
+    expect(marked(tracker.committed())).toEqual([]);
+  });
+
+  it("moves on to 109:5 when the last two words of 109:4 were never heard, not back to 109:3", () => {
+    const s = recite(verses("109:2", "109:3", "109:4", "109:5"), at(109, 4, 3), [standard("109:5")]);
+    expect(pos(s.cursor)).toBe(end("109:5"));
+    expect(marked(s)).toEqual(["109:4:3", "109:4:4"]);
+  });
+
+  it("moves on through 109:3 → 109:5 (identical verses)", () => {
+    const keys = ["109:2", "109:3", "109:4", "109:5"];
+    const s = recite(verses(...keys), at(109, 2), keys.map(standard));
+    expect(pos(s.cursor)).toBe(end("109:5"));
+  });
+
+  it("moves on from 97:2 into 97:3, whose opening repeats 97:2's ending", () => {
+    const s = recite(verses("97:2", "97:3"), at(97, 2), [standard("97:2"), standard("97:3")]);
+    expect(pos(s.cursor)).toBe(end("97:3"));
+  });
+
+  it("moves on from 82:17 into 82:18, which repeats 82:17 after ثم", () => {
+    const s = recite(verses("82:17", "82:18"), at(82, 17), [standard("82:17"), standard("82:18")]);
+    expect(pos(s.cursor)).toBe(end("82:18"));
+  });
+
+  it("moves on from 101:2 into 101:3, which repeats 101:2's words", () => {
+    const s = recite(verses("101:1", "101:2", "101:3"), at(101, 2), [standard("101:2"), standard("101:3")]);
+    expect(pos(s.cursor)).toBe(end("101:3"));
+  });
+
+  it("re-reciting 109:5 clears its red word, not the identical 109:3", () => {
+    const keys = ["109:2", "109:3", "109:4", "109:5"];
+    const phrases = [...keys.slice(0, 3).map(standard), "ولا عابدون ما أعبد"];
+    const viewer = { restartAnywhere: true };
+    expect(marked(recite(verses(...keys), at(109, 2), phrases, viewer))).toEqual(["109:5:1"]);
+    const s = recite(verses(...keys), at(109, 2), [...phrases, standard("109:5")], viewer);
+    expect(marked(s)).toEqual([]);
+  });
+
+  // Standard words with the separate pause-mark tokens dropped, so index k is
+  // verse word k.
+  const kursi = standard("2:255")
+    .split(" ")
+    .filter((w) => !["ۚ", "ۗ", "ۖ"].includes(w));
+
+  it("re-reciting a long verse from its start restarts in place (2:255)", () => {
+    const tracker = createReciteTracker({ cursor: at(2, 255), marks: new Map() }, { restartAnywhere: true });
+    tracker.onFinal(spokenWordsFrom(standard("2:255")), verses("2:255"));
+    const again = tracker.onFinal(spokenWordsFrom(kursi.slice(0, 8).join(" ")), verses("2:255"));
+    // In place: the eight words are said again, and the cursor keeps its place.
+    expect(again.saidTotal).toBe(8);
+    expect(pos(again.state.cursor)).toBe("2:255:50");
+  });
+
+  it("going back over a red word clears it, past the old 10-word window", () => {
+    const skipped = [...kursi.slice(0, 3), ...kursi.slice(4)];
+    const phrases: string[] = [];
+    for (let k = 0; k < skipped.length; k += 12) phrases.push(skipped.slice(k, k + 12).join(" "));
+    const viewer = { restartAnywhere: true };
+    expect(marked(recite(verses("2:255"), at(2, 255), phrases, viewer))).toEqual(["2:255:3"]);
+    const s = recite(verses("2:255"), at(2, 255), [...phrases, kursi.slice(0, 8).join(" ")], viewer);
+    expect(marked(s)).toEqual([]);
+  });
+
+  it.each([
+    ["the red word and the next", 2],
+    ["just the red word", 1],
+  ])("re-saying %s clears it, far behind the cursor", (_, count) => {
+    const skipped = [...kursi.slice(0, 3), ...kursi.slice(4)];
+    const phrases: string[] = [];
+    for (let k = 0; k < skipped.length; k += 12) phrases.push(skipped.slice(k, k + 12).join(" "));
+    const reSay = kursi.slice(3, 3 + count).join(" ");
+    const s = recite(verses("2:255"), at(2, 255), [...phrases, reSay], { restartAnywhere: true });
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:255:50");
+  });
+});
+
 describe("recite aligner: quiz options", () => {
   const ayatAlKursi = verses("2:255");
   const hiddenStart = at(2, 255, 6);
@@ -379,6 +596,18 @@ describe("recite aligner: quiz options", () => {
     expect(marked(s)).toEqual([]);
     expect(pos(s.cursor)).toBe("2:255:50");
   });
+
+  it.each([
+    ["the red word and the next", 2],
+    ["just the red word", 1],
+  ])("clears a red word when the reciter goes back and says %s", (_, count) => {
+    const hidden = [...words.slice(6, 8), ...words.slice(9)];
+    const phrases: string[] = [];
+    for (let k = 0; k < hidden.length; k += 12) phrases.push(hidden.slice(k, k + 12).join(" "));
+    const s = recite(ayatAlKursi, at(2, 255), [...phrases, words.slice(8, 8 + count).join(" ")], quiz);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("2:255:50");
+  });
 });
 
 describe("recite aligner: helpers", () => {
@@ -413,5 +642,62 @@ describe("recite aligner: helpers", () => {
       { text: "لله", confidence: 0.8 },
     ]);
     expect(spokenWordsFrom("الحمد ، لله")).toEqual([{ text: "الحمد" }, { text: "لله" }]);
+  });
+});
+
+describe("recite aligner: accepted words", () => {
+  const accepted = (key: string, phrase: string) => {
+    const vs = verses(key);
+    const r = alignPhrase({ cursor: at(vs[0].sura, vs[0].aya), marks: new Map() }, spokenWordsFrom(phrase), vs);
+    return acceptedWords(r).map((w) => glowKey(w));
+  };
+
+  it("lists every word of a clean phrase", () => {
+    expect(accepted("2:2", standard("2:2"))).toEqual(["2:2:1", "2:2:2", "2:2:3", "2:2:4", "2:2:5", "2:2:6", "2:2:7"]);
+  });
+
+  it("leaves a wrong word out", () => {
+    const words = standard("2:2").split(" ");
+    words[2] = "كتاب";
+    const got = accepted("2:2", words.join(" "));
+    expect(got).toHaveLength(6);
+    expect(got).not.toContain("2:2:3");
+  });
+
+  it("lists the muqatta'at word when its letters are said", () => {
+    expect(accepted("2:1", "الف لام ميم")).toEqual(["2:1:1"]);
+  });
+});
+
+// Phrases exactly as Soniox finalized them on the owner's phone (2026-10-23).
+describe("recite aligner: real Soniox phrases (Taha 20:85–88)", () => {
+  it("accepts a verse's last word said in pause form", () => {
+    const s = recite(verses("20:85", "20:86"), at(20, 85), [
+      "قال فإنا قد فتنا قومك من بعدك، وأضلهم السامر.",
+      "فرجع موسى إلى قومه",
+    ]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("20:86:4");
+  });
+
+  it("accepts يا قوم when يا ends one phrase and قومي starts the next", () => {
+    const s = recite(verses("20:86"), at(20, 86, 6), ["قال.", "يا.", "قومي ألم يعدكم ربكم وعدا حسنا؟"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("20:86:13");
+  });
+
+  it("carries on through a verse Soniox cut into one-word phrases", () => {
+    // إِلَـٰهُكُمْ وَإِلَـٰهُ came back as إلى / كم / وإلى / هم: misheard, so
+    // marked, but the reciter must not be stuck before them.
+    const s = recite(verses("20:88"), at(20, 88, 8), ["إلى.", "كم.", "وإلى.", "هم.", "موسى فنسي؟"]);
+    expect(pos(s.cursor)).toBe("20:88:12");
+    expect(marked(s)).not.toContain("20:88:10");
+    expect(marked(s)).not.toContain("20:88:11");
+  });
+
+  it("joins a word split across two phrases", () => {
+    const s = recite(verses("20:87"), at(20, 87, 10), ["القوم فقذف.", "ناها فكذلك ألقى السامري"]);
+    expect(marked(s)).toEqual([]);
+    expect(pos(s.cursor)).toBe("20:87:15");
   });
 });

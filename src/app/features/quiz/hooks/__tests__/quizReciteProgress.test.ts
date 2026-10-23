@@ -56,4 +56,15 @@ describe("hiddenCardTokens", () => {
   it("shows nothing before anything is recited or hinted", () => {
     expect(shown(0, [])).toEqual([]);
   });
+
+  it("tags a glowing word's tokens, pause marks included, with its generation", () => {
+    const words = ["فِيهِ", "هُدًى", "ۛ", "لِّلْمُتَّقِينَ"];
+    const out = hiddenCardTokens(
+      words,
+      { revealedWordCount: 3, mistakeWordIndexes: new Set() },
+      0,
+      new Map([[1, 4]]),
+    );
+    expect(out.map((t) => t.glow)).toEqual([undefined, 4, 4, undefined]);
+  });
 });

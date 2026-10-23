@@ -157,7 +157,7 @@ test("caches a Pro answer for five minutes, then asks again", async () => {
   const start = realNow();
   Date.now = () => start;
   await worker.fetch(speech(id), env());
-  await worker.fetch(speech(id, "/whisper/transcribe"), env());
+  await worker.fetch(speech(id, "/deepgram/token"), env());
   assert.equal(calls.length, 1);
   Date.now = () => start + 5 * 60 * 1000 + 1;
   await worker.fetch(speech(id), env());

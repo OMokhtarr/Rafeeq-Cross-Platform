@@ -583,7 +583,7 @@ const AkmelAlAyah: React.FC = () => {
                           {q.versePart ?? q.displayedPortion}
                         </p>
                         {/* Hidden-portion words revealed so far, per word:
-                            recited words are green, words skipped or said
+                            recited words are plain (the newest glows green), words skipped or said
                             wrongly are red, hint-button words use the hint
                             style. Recitation and hints are independent — a
                             word can come from either source. */}
@@ -592,18 +592,19 @@ const AkmelAlAyah: React.FC = () => {
                             (q.hiddenPortion ?? q.correctAnswer ?? "").trim().split(" ").filter(Boolean),
                             recite,
                             hintLevel,
+                            recite.cardGlow,
                           );
                           if (tokens.length === 0) return null;
                           return (
                             <span lang="ar" dir="rtl">
                               {tokens.map((token, i) => (
                                 <span
-                                  key={i}
+                                  key={`${i}-${token.glow ?? 0}`}
                                   className={
                                     token.style === "mistake"
                                       ? "aa-mistake-inline"
                                       : token.style === "recited"
-                                        ? "aa-recited-inline"
+                                        ? `aa-recited-inline${token.glow !== undefined ? " aa-word-glow" : ""}`
                                         : "aa-hint-inline"
                                   }
                                 >
@@ -716,6 +717,7 @@ const AkmelAlAyah: React.FC = () => {
                   mode="sidebar"
                   liveRecitePosition={recite.isArmed ? recite.livePosition : null}
                   reciteMistakes={recite.mistakePositions}
+                  glow={recite.glow}
                 />
               </div>
             )}
