@@ -13,14 +13,14 @@ The release name is only shown in Play Console, never to users.
 
 ```
 <en-US>
-• Recite mode: pick your speech engine in Settings — Deepgram, Soniox or Cloudflare Whisper
+• Recite mode: pick your speech engine in Settings — Deepgram or Soniox
 • Search: open a verse's tafsir straight from its search result
 • Mushaf: fixed 25 pages that started at the wrong verse; hiding verses now covers the whole page
 • Tafsir: no more stray code in downloaded tafsir, and Back from Tafsir Settings returns you where you were
 • Recite mode is more reliable, and content sync no longer fails for some resources
 </en-US>
 <ar>
-• وضع التسميع: اختر محرك التعرّف على الصوت من الإعدادات — Deepgram أو Soniox أو Cloudflare Whisper
+• وضع التسميع: اختر محرك التعرّف على الصوت من الإعدادات — Deepgram أو Soniox
 • البحث: افتح تفسير الآية مباشرة من نتيجة البحث
 • المصحف: تصحيح بداية ٢٥ صفحة، وإخفاء الآيات يغطي الصفحة كاملة
 • التفسير: إزالة الرموز الزائدة من التفسير المحمّل، والرجوع من إعدادات التفسير يعيدك إلى حيث كنت
