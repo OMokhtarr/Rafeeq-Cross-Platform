@@ -628,22 +628,45 @@ export interface ReciteTracker {
   reset: (state: TrackerState, options?: AlignOptions) => void;
 }
 
+/** Unplaced words at the end of a phrase carried into the next one. A slow
+ *  reciter's pauses make Soniox finalize one word at a time (إلى / كم for
+ *  إِلَـٰهُكُمْ), and a word or phrase cut that way can only be matched once
+ *  its pieces are aligned together. */
+const MAX_CARRY_WORDS = 4;
+
+/** The spoken words the phrase's trailing extra steps left unplaced. */
+function trailingExtras(steps: AlignStep[]): SpokenWord[] {
+  const out: SpokenWord[] = [];
+  for (let s = steps.length - 1; s >= 0; s--) {
+    const step = steps[s];
+    if (step.kind !== "extra") {
+      if (step.spoken.length > 0) break;
+      continue;
+    }
+    out.unshift(...step.spoken);
+  }
+  return out.slice(-MAX_CARRY_WORDS);
+}
+
 export function createReciteTracker(initial: TrackerState, options: AlignOptions = {}): ReciteTracker {
   let committed = initial;
   let opts = options;
   let memo = createCompareMemo();
+  let carry: SpokenWord[] = [];
   return {
     committed: () => committed,
-    onPartial: (spoken, verses) => alignPhrase(committed, spoken, verses, opts, memo),
+    onPartial: (spoken, verses) => alignPhrase(committed, [...carry, ...spoken], verses, opts, memo),
     onFinal: (spoken, verses) => {
-      const result = alignPhrase(committed, spoken, verses, opts, memo);
+      const result = alignPhrase(committed, [...carry, ...spoken], verses, opts, memo);
       committed = result.state;
+      carry = trailingExtras(result.steps);
       memo = createCompareMemo();
       return result;
     },
     reset: (state, nextOptions = {}) => {
       committed = state;
       opts = nextOptions;
+      carry = [];
       memo = createCompareMemo();
     },
   };
