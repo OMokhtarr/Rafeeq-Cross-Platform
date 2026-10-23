@@ -181,17 +181,40 @@ const PRO_ENTITLEMENT = "com_rafeeq_quranquiz_pro";
  *  someone who has just bought. Per isolate — a cold isolate just asks again. */
 const proCache = new Map<string, number>();
 
+/** Caches a Pro answer, first dropping every answer that has run out, so a
+ *  long-lived isolate doesn't keep one entry per subscriber it ever saw. */
+function rememberPro(id: string, nowMs: number): void {
+  for (const [cachedId, until] of proCache) {
+    if (until <= nowMs) proCache.delete(cachedId);
+  }
+  proCache.set(id, nowMs + PRO_CACHE_MS);
+}
+
+interface RevenueCatSubscriber {
+  subscriber?: {
+    entitlements?: Record<string, { expires_date?: string | null; product_identifier?: string }>;
+    subscriptions?: Record<string, { grace_period_expires_date?: string | null }>;
+  };
+}
+
 /**
  * True when a RevenueCat `GET /v1/subscribers/{id}` body shows an active
- * Rafeeq Pro entitlement: present, and either never expiring (lifetime/promo) or
- * expiring after `nowMs`.
+ * Rafeeq Pro entitlement: present, and either never expiring (lifetime/promo),
+ * expiring after `nowMs`, or past its expiry but inside the store's billing
+ * grace period. RevenueCat keeps grace-period subscribers' access, but marks
+ * the grace period on the subscription (`grace_period_expires_date`), not on
+ * the entitlement, so both are read.
  */
 function isProSubscriber(body: unknown, nowMs: number): boolean {
-  const pro = (body as { subscriber?: { entitlements?: Record<string, { expires_date?: string | null }> } })
-    ?.subscriber?.entitlements?.[PRO_ENTITLEMENT];
+  const subscriber = (body as RevenueCatSubscriber | null)?.subscriber;
+  const pro = subscriber?.entitlements?.[PRO_ENTITLEMENT];
   if (!pro) return false;
   if (pro.expires_date == null) return true;
-  return Date.parse(pro.expires_date) > nowMs;
+  if (Date.parse(pro.expires_date) > nowMs) return true;
+  const graceUntil = pro.product_identifier
+    ? subscriber?.subscriptions?.[pro.product_identifier]?.grace_period_expires_date
+    : null;
+  return graceUntil != null && Date.parse(graceUntil) > nowMs;
 }
 
 /** RevenueCat app-user ids — anonymous ("$RCAnonymousID:<hex>") or custom —
@@ -257,7 +280,7 @@ async function requirePro(
   }
 
   if (!isProSubscriber(await res.json(), now)) return refuse();
-  proCache.set(id, now + PRO_CACHE_MS);
+  rememberPro(id, now);
   return null;
 }
 

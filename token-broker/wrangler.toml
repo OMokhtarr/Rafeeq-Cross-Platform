@@ -17,6 +17,8 @@ binding = "AI"
 # /whisper/transcribe) refuse anyone RevenueCat doesn't report as Pro (402).
 # Keep it "false" until store purchases work. Release order: ship the app
 # build with REACT_APP_PRO_GATE=on first, then set this to "true" and deploy.
+# This file is the switch: every `wrangler deploy` replaces whatever value
+# was set in the Cloudflare dashboard with the one below, so change it here.
 [vars]
 REQUIRE_PRO = "false"
 
