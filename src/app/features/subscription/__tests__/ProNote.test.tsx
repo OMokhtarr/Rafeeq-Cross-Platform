@@ -6,6 +6,8 @@ import { useSubscription } from "../../../core/context/SubscriptionContext";
 import { closeTopOverlay } from "../../../core/utils/overlay-registry";
 
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
+const mockOpenPaywall = jest.fn();
+jest.mock("../usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,16 +56,15 @@ it("shows the Arabic note when open", () => {
   expect(host.textContent).toContain("عرض الاشتراك");
 });
 
-it("navigates to /subscribe and closes", () => {
+it("closes and opens the paywall", () => {
   mount(true);
   const cta = Array.from(host.querySelectorAll("button")).find((b) =>
     b.textContent?.includes("عرض الاشتراك"),
   );
   act(() => cta!.click());
-  expect(path).toBe("/subscribe");
-  // The mocked note stays "open", so the leave-the-page close fires as well;
-  // in the app the first close already hides it.
-  expect(closeNote).toHaveBeenCalled();
+  expect(closeNote).toHaveBeenCalledTimes(1);
+  expect(mockOpenPaywall).toHaveBeenCalledTimes(1);
+  expect(path).toBe("/viewer");
 });
 
 it("registers with the overlay registry so Android Back closes it", () => {

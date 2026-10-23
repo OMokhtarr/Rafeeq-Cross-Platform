@@ -569,9 +569,17 @@ ships dark: the paywall only appears when the app is built with
 
 ### Setup (owner)
 1. **RevenueCat:** project with the Android app (and iOS later); entitlement
-   **`pro`**; offering "default" with monthly + yearly packages. Copy the public
-   SDK key into `.env.local` / `.env.production` as
+   **`com_rafeeq_quranquiz_pro`** (the app and the broker both check this id);
+   products `monthly` and `yearly` attached to it; offering "default" (marked
+   current) with the Monthly and Annual packages. Design a **Paywall** for that
+   offering (Arabic + English localizations) — the app shows RevenueCat's
+   paywall, not its own page — and turn on **Customer Center**. Copy the public
+   SDK key (`goog_…`) into `.env.production` as
    `REACT_APP_REVENUECAT_ANDROID_KEY` (and `REACT_APP_REVENUECAT_IOS_KEY` later).
+   For debug-build testing before Play is linked, a **Test Store** key
+   (`test_…`) in `.env.local` works; release builds refuse it. CRA lets
+   `.env.local` override `.env.production`, so delete the `test_` line before
+   building anything for the Play Console.
 2. **Play Console:** create the monthly and yearly subscription products (free
    trial optional), link Play's service account in RevenueCat, and add a
    license-tester account for test purchases.
@@ -581,8 +589,9 @@ ships dark: the paywall only appears when the app is built with
    `ALLOWED_ORIGIN` including `http://localhost:3000`) and point `npm start` at
    it through `.env.development.local`.
 4. `npx cap sync`, build, and test purchases from Account → Subscription
-   (works while the paywall is off): buy → status "active"; reinstall →
-   Restore; Manage opens Play's subscription page.
+   (works while the paywall is off): View subscription → paywall → buy →
+   status "active"; reinstall → Restore; Manage subscription opens the
+   Customer Center.
 
 ### Store declarations — redo before the first build that carries a RevenueCat key
 

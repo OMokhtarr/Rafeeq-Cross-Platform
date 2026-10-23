@@ -8,35 +8,50 @@
  *
  * There is no login: RevenueCat's anonymous app-user id is the identity, and
  * "Restore purchases" re-attaches a store purchase to it on a new device.
+ * Buying happens on RevenueCat's Paywall and managing an active subscription
+ * in its Customer Center — both native screens designed in the RevenueCat
+ * dashboard, so plans and wording change without an app release.
  * Only call these on native platforms — store billing doesn't exist on web.
  */
 
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import type {
-  CustomerInfo,
-  PurchasesPackage,
-} from "@revenuecat/purchases-capacitor";
+import type { CustomerInfo } from "@revenuecat/purchases-capacitor";
+import { PAYWALL_RESULT, RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 
-export type { CustomerInfo, PurchasesPackage };
+export type { CustomerInfo };
 
-/** Must match the entitlement id in the RevenueCat dashboard. */
-const PRO_ENTITLEMENT = "pro";
+/** Must match the entitlement id in the RevenueCat dashboard (and the token
+ *  broker's PRO_ENTITLEMENT). */
+const PRO_ENTITLEMENT = "com_rafeeq_quranquiz_pro";
+
+/** RevenueCat Test Store keys start with this. The SDK deliberately crashes a
+ *  release build (any non-debuggable APK, Play testing tracks included) that
+ *  is configured with one. */
+const TEST_STORE_KEY_PREFIX = "test_";
 
 let configured: Promise<void> | null = null;
 
 /** Configures the SDK once, with the platform's public key. A build without
  *  a key never starts RevenueCat, so it sends nothing to it (the privacy
- *  declarations change only for builds that carry a key). */
+ *  declarations change only for builds that carry a key). A Test Store key is
+ *  refused outside debug builds, which then behave like a build without a key
+ *  instead of crashing at launch. */
 export function configureRevenueCat(): Promise<void> {
   if (!configured) {
     const apiKey =
       Capacitor.getPlatform() === "ios"
         ? process.env.REACT_APP_REVENUECAT_IOS_KEY ?? ""
         : process.env.REACT_APP_REVENUECAT_ANDROID_KEY ?? "";
-    configured = apiKey
-      ? Purchases.configure({ apiKey })
-      : Promise.reject(new Error("RevenueCat is not configured for this build"));
+    if (!apiKey) {
+      configured = Promise.reject(new Error("RevenueCat is not configured for this build"));
+    } else if (apiKey.startsWith(TEST_STORE_KEY_PREFIX) && !Capacitor.DEBUG) {
+      configured = Promise.reject(
+        new Error("A RevenueCat Test Store key only works in debug builds — use the store key for release"),
+      );
+    } else {
+      configured = Purchases.configure({ apiKey });
+    }
   }
   return configured;
 }
@@ -55,16 +70,6 @@ export async function onCustomerInfo(cb: (info: CustomerInfo) => void): Promise<
   };
 }
 
-export async function fetchOfferingPackages(): Promise<PurchasesPackage[]> {
-  const offerings = await Purchases.getOfferings();
-  return offerings.current?.availablePackages ?? [];
-}
-
-export async function buyPackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
-  const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
-  return customerInfo;
-}
-
 export async function restore(): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.restorePurchases();
   return customerInfo;
@@ -79,12 +84,25 @@ export function isProFromCustomerInfo(info: CustomerInfo): boolean {
   return info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
 }
 
-/** The store's own subscription-management page, when RevenueCat has one. */
-export function managementUrl(info: CustomerInfo): string | null {
-  return info.managementURL ?? null;
+export type PaywallResult = "purchased" | "restored" | "cancelled" | "error";
+
+/** Shows the current offering's paywall and resolves once it is dismissed. */
+export async function presentPaywall(): Promise<PaywallResult> {
+  const { result } = await RevenueCatUI.presentPaywall();
+  switch (result) {
+    case PAYWALL_RESULT.PURCHASED:
+      return "purchased";
+    case PAYWALL_RESULT.RESTORED:
+      return "restored";
+    case PAYWALL_RESULT.ERROR:
+      return "error";
+    default:
+      return "cancelled";
+  }
 }
 
-/** True when a purchase rejection is the user backing out of the store sheet. */
-export function isUserCancelled(err: unknown): boolean {
-  return (err as { userCancelled?: boolean } | null)?.userCancelled === true;
+/** Shows the Customer Center (cancel, change plan, restore, refund requests)
+ *  and resolves once it is dismissed. */
+export async function presentCustomerCenter(): Promise<void> {
+  await RevenueCatUI.presentCustomerCenter();
 }

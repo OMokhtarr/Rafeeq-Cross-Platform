@@ -172,6 +172,10 @@ const SPEECH_ROUTES = new Set(["/deepgram/token", "/soniox/token", "/whisper/tra
  *  to about one per subscriber every few minutes. */
 const PRO_CACHE_MS = 5 * 60 * 1000;
 
+/** The Rafeeq Pro entitlement id in the RevenueCat dashboard (and the app's
+ *  PRO_ENTITLEMENT). */
+const PRO_ENTITLEMENT = "com_rafeeq_quranquiz_pro";
+
 /** app-user id → time (ms) its Pro answer stops being trusted. Only Pro
  *  answers are cached: a "not Pro" answer from a minute ago must never block
  *  someone who has just bought. Per isolate — a cold isolate just asks again. */
@@ -179,12 +183,12 @@ const proCache = new Map<string, number>();
 
 /**
  * True when a RevenueCat `GET /v1/subscribers/{id}` body shows an active
- * "pro" entitlement: present, and either never expiring (lifetime/promo) or
+ * Rafeeq Pro entitlement: present, and either never expiring (lifetime/promo) or
  * expiring after `nowMs`.
  */
 function isProSubscriber(body: unknown, nowMs: number): boolean {
   const pro = (body as { subscriber?: { entitlements?: Record<string, { expires_date?: string | null }> } })
-    ?.subscriber?.entitlements?.pro;
+    ?.subscriber?.entitlements?.[PRO_ENTITLEMENT];
   if (!pro) return false;
   if (pro.expires_date == null) return true;
   return Date.parse(pro.expires_date) > nowMs;

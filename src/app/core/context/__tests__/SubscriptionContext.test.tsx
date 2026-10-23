@@ -2,6 +2,7 @@ import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
+import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
 import { brokerHeaders, setBrokerUserId } from "../../services/audio/stt/broker";
 
@@ -12,10 +13,18 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
     getCustomerInfo: jest.fn(),
     addCustomerInfoUpdateListener: jest.fn(),
     removeCustomerInfoUpdateListener: jest.fn(),
-    getOfferings: jest.fn(),
     getAppUserID: jest.fn(),
-    purchasePackage: jest.fn(),
     restorePurchases: jest.fn(),
+  },
+}));
+jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
+  RevenueCatUI: { presentPaywall: jest.fn(), presentCustomerCenter: jest.fn() },
+  PAYWALL_RESULT: {
+    NOT_PRESENTED: "NOT_PRESENTED",
+    ERROR: "ERROR",
+    CANCELLED: "CANCELLED",
+    PURCHASED: "PURCHASED",
+    RESTORED: "RESTORED",
   },
 }));
 
@@ -26,11 +35,13 @@ process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_test_key";
 
 const platform = Capacitor.getPlatform as jest.Mock;
 const rc = Purchases as unknown as Record<string, jest.Mock>;
+const ui = RevenueCatUI as unknown as Record<string, jest.Mock>;
 
 const info = (pro: boolean) => ({
   customerInfo: {
-    entitlements: { active: pro ? { pro: { identifier: "pro" } } : {} },
-    managementURL: pro ? "https://play.google.com/store/account/subscriptions" : null,
+    entitlements: {
+      active: pro ? { com_rafeeq_quranquiz_pro: { identifier: "com_rafeeq_quranquiz_pro" } } : {},
+    },
   },
 });
 
@@ -72,7 +83,6 @@ beforeEach(() => {
     return "cb-1";
   });
   rc.removeCustomerInfoUpdateListener.mockResolvedValue({ wasRemoved: true });
-  rc.getOfferings.mockResolvedValue({ current: { availablePackages: [] } });
   rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:abc" });
 });
 
@@ -108,7 +118,6 @@ it("applies listener updates live", async () => {
   expect(sub.isPro).toBe(false);
   await act(async () => listener?.(info(true).customerInfo));
   expect(sub.isPro).toBe(true);
-  expect(sub.managementUrl).toBe("https://play.google.com/store/account/subscriptions");
 });
 
 it("exposes the app-user id and hands it to the broker", async () => {
@@ -126,22 +135,64 @@ it("markNotPro flips isPro for the session without touching the cache", async ()
   expect(localStorage.getItem("rafiq_pro_v1")).toBe("1");
 });
 
-it("sets Pro straight from a purchase result and reports a cancel", async () => {
+it("reports a paywall purchase as subscribed and caches it", async () => {
   await mount();
-  rc.purchasePackage.mockResolvedValue({ customerInfo: info(true).customerInfo });
+  ui.presentPaywall.mockResolvedValue({ result: "PURCHASED" });
+  rc.getCustomerInfo.mockResolvedValue(info(true));
   let outcome: string | undefined;
   await act(async () => {
-    outcome = await sub.purchase({ identifier: "$rc_annual" } as never);
+    outcome = await sub.showPaywall();
   });
-  expect(outcome).toBe("purchased");
+  expect(outcome).toBe("subscribed");
   expect(sub.isPro).toBe(true);
   expect(localStorage.getItem("rafiq_pro_v1")).toBe("1");
+});
 
-  rc.purchasePackage.mockRejectedValue({ userCancelled: true, code: "1" });
+it("reports a restore that found no subscription as dismissed", async () => {
+  await mount();
+  ui.presentPaywall.mockResolvedValue({ result: "RESTORED" });
+  let outcome: string | undefined;
   await act(async () => {
-    outcome = await sub.purchase({ identifier: "$rc_annual" } as never);
+    outcome = await sub.showPaywall();
   });
-  expect(outcome).toBe("cancelled");
+  expect(outcome).toBe("dismissed");
+  expect(sub.isPro).toBe(false);
+});
+
+it.each([
+  ["CANCELLED", "dismissed"],
+  ["ERROR", "failed"],
+])("reports a %s paywall as %s", async (native, expected) => {
+  await mount();
+  ui.presentPaywall.mockResolvedValue({ result: native });
+  let outcome: string | undefined;
+  await act(async () => {
+    outcome = await sub.showPaywall();
+  });
+  expect(outcome).toBe(expected);
+});
+
+it("reports the paywall unavailable when it can't be shown", async () => {
+  await mount();
+  ui.presentPaywall.mockRejectedValue(new Error("no offering"));
+  let outcome: string | undefined;
+  await act(async () => {
+    outcome = await sub.showPaywall();
+  });
+  expect(outcome).toBe("unavailable");
+});
+
+it("refreshes the Pro state after the Customer Center closes", async () => {
+  rc.getCustomerInfo.mockResolvedValue(info(true));
+  await mount();
+  ui.presentCustomerCenter.mockResolvedValue(undefined);
+  rc.getCustomerInfo.mockResolvedValue(info(false));
+  await act(async () => {
+    await sub.showCustomerCenter();
+  });
+  await flush();
+  expect(ui.presentCustomerCenter).toHaveBeenCalled();
+  expect(sub.isPro).toBe(false);
 });
 
 it("restore returns the new Pro state", async () => {
@@ -167,17 +218,6 @@ it("opens and closes the note", async () => {
   expect(sub.noteOpen).toBe(true);
   act(() => sub.closeNote());
   expect(sub.noteOpen).toBe(false);
-});
-
-it("loads the plans again on demand after an offline start", async () => {
-  rc.getOfferings.mockRejectedValue(new Error("offline"));
-  await mount();
-  expect(sub.packages).toEqual([]);
-  rc.getOfferings.mockResolvedValue({ current: { availablePackages: [{ identifier: "$rc_annual" }] } });
-  await act(async () => {
-    await sub.refreshPackages();
-  });
-  expect(sub.packages).toEqual([{ identifier: "$rc_annual" }]);
 });
 
 it("keeps the cached Pro flag when the live check fails offline", async () => {

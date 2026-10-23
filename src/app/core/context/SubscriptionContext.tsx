@@ -1,9 +1,9 @@
 /**
  * SUBSCRIPTION CONTEXT
  *
- * App-wide Rafeeq Pro state: whether this person is subscribed, the store
- * packages for the subscribe page, purchase/restore, and the open state of
- * the subscriber note any recite surface can raise.
+ * App-wide Rafeeq Pro state: whether this person is subscribed, the
+ * RevenueCat Paywall and Customer Center, restore, and the open state of the
+ * subscriber note any recite surface can raise.
  *
  * On native, the last known answer is cached in localStorage and used as the
  * starting value, so a subscriber never sees the PRO badge flash while
@@ -26,37 +26,34 @@ import React, {
 } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
-  buyPackage,
   configureRevenueCat,
   CustomerInfo,
   fetchAppUserId,
   fetchCustomerInfo,
-  fetchOfferingPackages,
   isProFromCustomerInfo,
-  isUserCancelled,
-  managementUrl as managementUrlOf,
   onCustomerInfo,
-  PurchasesPackage,
+  PaywallResult,
+  presentCustomerCenter,
+  presentPaywall,
   restore as restorePurchases,
 } from "../services/subscription/revenuecat.service";
 import { setBrokerUserId } from "../services/audio/stt/broker";
 
 const CACHE_KEY = "rafiq_pro_v1";
 
-export type PurchaseOutcome = "purchased" | "cancelled";
+/** How the paywall ended: "unavailable" when it couldn't be shown at all (no
+ *  key, offline, no offering), "failed" when a purchase or restore errored. */
+export type PaywallOutcome = "subscribed" | "dismissed" | "failed" | "unavailable";
 
 interface SubscriptionCtx {
   isPro: boolean;
   /** RevenueCat has given a real answer this session. */
   ready: boolean;
   appUserId: string | null;
-  managementUrl: string | null;
-  packages: PurchasesPackage[];
-  /** Fetches the store plans again — the startup fetch fails when the app
-   *  opens offline, and the subscribe page must not stay empty after that. */
-  refreshPackages: () => Promise<void>;
-  /** Resolves "cancelled" when the user backs out; throws on other failures. */
-  purchase: (pkg: PurchasesPackage) => Promise<PurchaseOutcome>;
+  /** Shows RevenueCat's Paywall; resolves once it is closed. */
+  showPaywall: () => Promise<PaywallOutcome>;
+  /** Shows RevenueCat's Customer Center; throws when it can't be shown. */
+  showCustomerCenter: () => Promise<void>;
   /** Resolves to whether the restore found an active Pro subscription. */
   restore: () => Promise<boolean>;
   /** The broker refused this session as not subscribed — trust it until the
@@ -92,14 +89,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isPro, setIsPro] = useState<boolean>(() => (native ? readCache() : true));
   const [ready, setReady] = useState(!native);
   const [appUserId, setAppUserId] = useState<string | null>(null);
-  const [managementUrl, setManagementUrl] = useState<string | null>(null);
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [noteOpen, setNoteOpen] = useState(false);
 
   const apply = useCallback((info: CustomerInfo) => {
     const pro = isProFromCustomerInfo(info);
     setIsPro(pro);
-    setManagementUrl(managementUrlOf(info));
     setReady(true);
     writeCache(pro);
     return pro;
@@ -133,11 +127,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             setBrokerUserId(id);
           })
           .catch((err) => console.error("[pro] app user id failed", err));
-        fetchOfferingPackages()
-          .then((pkgs) => {
-            if (!cancelled) setPackages(pkgs);
-          })
-          .catch((err) => console.error("[pro] offerings failed", err));
       })
       .catch((err) => console.error("[pro] RevenueCat configure failed", err));
 
@@ -147,30 +136,39 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [native, apply]);
 
-  const purchase = useCallback(
-    async (pkg: PurchasesPackage): Promise<PurchaseOutcome> => {
-      try {
-        apply(await buyPackage(pkg));
-        return "purchased";
-      } catch (err) {
-        if (isUserCancelled(err)) return "cancelled";
-        throw err;
-      }
-    },
-    [apply],
-  );
+  const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 
-  const restore = useCallback(async () => apply(await restorePurchases()), [apply]);
-
-  const refreshPackages = useCallback(async () => {
-    if (!native) return;
+  const showPaywall = useCallback(async (): Promise<PaywallOutcome> => {
+    if (!native) return "unavailable";
+    let result: PaywallResult;
     try {
       await configureRevenueCat();
-      setPackages(await fetchOfferingPackages());
+      result = await presentPaywall();
     } catch (err) {
-      console.error("[pro] offerings failed", err);
+      console.error("[pro] paywall failed", err);
+      return "unavailable";
     }
-  }, [native]);
+    if (result === "error") return "failed";
+    if (result === "cancelled") return "dismissed";
+    try {
+      // A restore that found nothing also reports "restored".
+      return (await refresh()) ? "subscribed" : "dismissed";
+    } catch (err) {
+      // The purchase stands; the listener delivers it once RevenueCat answers.
+      console.error("[pro] customer info failed", err);
+      return "subscribed";
+    }
+  }, [native, refresh]);
+
+  const showCustomerCenter = useCallback(async () => {
+    await configureRevenueCat();
+    await presentCustomerCenter();
+    // A cancel or plan change made there also arrives through the listener;
+    // this makes the Account row current the moment the screen closes.
+    refresh().catch((err) => console.error("[pro] customer info failed", err));
+  }, [refresh]);
+
+  const restore = useCallback(async () => apply(await restorePurchases()), [apply]);
 
   const markNotPro = useCallback(() => setIsPro(false), []);
   const openNote = useCallback(() => setNoteOpen(true), []);
@@ -181,17 +179,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       isPro,
       ready,
       appUserId,
-      managementUrl,
-      packages,
-      refreshPackages,
-      purchase,
+      showPaywall,
+      showCustomerCenter,
       restore,
       markNotPro,
       noteOpen,
       openNote,
       closeNote,
     }),
-    [isPro, ready, appUserId, managementUrl, packages, refreshPackages, purchase, restore, markNotPro, noteOpen, openNote, closeNote],
+    [isPro, ready, appUserId, showPaywall, showCustomerCenter, restore, markNotPro, noteOpen, openNote, closeNote],
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

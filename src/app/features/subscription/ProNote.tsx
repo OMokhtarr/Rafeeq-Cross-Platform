@@ -5,20 +5,21 @@
  * tap a recite mic. Rendered once at the app root (inside the router) and
  * opened from any recite surface through `useSubscription().openNote()`. It
  * sits at the bottom centre, above the toolbars, where every recite mic
- * lives. "View subscription" leads to the full /subscribe page.
+ * lives. "View subscription" opens RevenueCat's Paywall.
  */
 
 import React, { useEffect, useRef } from "react";
-import { useHistory, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { registerOverlay } from "../../core/utils/overlay-registry";
+import { usePaywall } from "./usePaywall";
 import "./ProNote.css";
 
 const ProNote: React.FC = () => {
   const { noteOpen, closeNote } = useSubscription();
   const { t } = useLang();
-  const history = useHistory();
+  const openPaywall = usePaywall();
   const { pathname } = useLocation();
 
   // Android Back and the edge swipe close the topmost registered overlay
@@ -40,7 +41,7 @@ const ProNote: React.FC = () => {
 
   const viewSubscription = () => {
     closeNote();
-    history.push("/subscribe");
+    void openPaywall();
   };
 
   return (
