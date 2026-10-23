@@ -4,7 +4,7 @@ import {
   transcribeSegment,
   WhisperResult,
 } from "../stt/whisper/whisper.adapter";
-import { NOT_SUBSCRIBED_MESSAGE, brokerUrl, setBrokerUserId } from "../stt/broker";
+import { NOT_SUBSCRIBED_MESSAGE, brokerUrl, expectBrokerUserId, setBrokerUserId } from "../stt/broker";
 import { startPcmCapture } from "../stt/pcm-capture";
 import type { AudioSegment } from "../stt/whisper/pause-segmenter";
 
@@ -318,6 +318,19 @@ describe("transcribeSegment", () => {
       body: wav,
       signal,
     });
+    setBrokerUserId(null);
+  });
+
+  it("waits for an id RevenueCat is still fetching before uploading", async () => {
+    expectBrokerUserId();
+    const wav = new Blob([], { type: "audio/wav" });
+    respond(200, { text: "" });
+    const result = transcribeSegment(wav, new AbortController().signal);
+    await Promise.resolve();
+    expect(fetchMock).not.toHaveBeenCalled();
+    setBrokerUserId("$RCAnonymousID:late");
+    await result;
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({ "content-type": "audio/wav", "x-rafeeq-user": "$RCAnonymousID:late" });
     setBrokerUserId(null);
   });
 });

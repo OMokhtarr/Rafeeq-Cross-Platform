@@ -37,7 +37,7 @@ import {
   presentPaywall,
   restore as restorePurchases,
 } from "../services/subscription/revenuecat.service";
-import { setBrokerUserId } from "../services/audio/stt/broker";
+import { expectBrokerUserId, setBrokerUserId } from "../services/audio/stt/broker";
 
 const CACHE_KEY = "rafiq_pro_v1";
 
@@ -104,6 +104,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
+    // Speech requests hold until the id arrives, so a mic tap in the first
+    // moment after launch isn't sent without one and refused as not Pro.
+    expectBrokerUserId();
     configureRevenueCat()
       .then(() => {
         if (cancelled) return;
@@ -126,9 +129,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             setAppUserId(id);
             setBrokerUserId(id);
           })
-          .catch((err) => console.error("[pro] app user id failed", err));
+          .catch((err) => {
+            console.error("[pro] app user id failed", err);
+            setBrokerUserId(null);
+          });
       })
-      .catch((err) => console.error("[pro] RevenueCat configure failed", err));
+      .catch((err) => {
+        console.error("[pro] RevenueCat configure failed", err);
+        setBrokerUserId(null);
+      });
 
     return () => {
       cancelled = true;

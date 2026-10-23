@@ -596,6 +596,7 @@ export interface AppStrings {
     noteCta: string;
     restore: string;
     restoreNone: string;
+    restoreFailed: string;
     purchaseFailed: string;
     noPlans: string;
     accountTitle: string;
@@ -1307,6 +1308,7 @@ const ar: AppStrings = {
     noteCta: "عرض الاشتراك",
     restore: "استعادة المشتريات",
     restoreNone: "لم يُعثر على اشتراك سابق",
+    restoreFailed: "تعذّر الاتصال بالمتجر، تحقّق من الاتصال وحاول مرة أخرى",
     purchaseFailed: "تعذّر إتمام الاشتراك، حاول مرة أخرى",
     noPlans: "خطط الاشتراك غير متاحة الآن",
     accountTitle: "الاشتراك",
@@ -2025,6 +2027,7 @@ const en: AppStrings = {
     noteCta: "View subscription",
     restore: "Restore purchases",
     restoreNone: "No previous subscription found",
+    restoreFailed: "Couldn't reach the store. Check your connection and try again.",
     purchaseFailed: "The subscription couldn't be completed. Please try again.",
     noPlans: "Subscription plans aren't available right now",
     accountTitle: "Subscription",

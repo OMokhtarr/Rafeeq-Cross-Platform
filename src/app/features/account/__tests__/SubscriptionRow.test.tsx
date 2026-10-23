@@ -78,6 +78,16 @@ it("shows Free + View subscription + Restore for non-Pro", async () => {
   expect(mockOpenPaywall).toHaveBeenCalled();
 });
 
+it("says the store couldn't be reached when Restore fails, not that nothing was found", async () => {
+  restore.mockRejectedValue(new Error("network"));
+  mount({ isPro: false, appUserId: ID });
+  await act(async () => button("استعادة المشتريات")!.click());
+  await flush();
+  expect(mockPresentToast).toHaveBeenCalledWith(
+    expect.objectContaining({ message: "تعذّر الاتصال بالمتجر، تحقّق من الاتصال وحاول مرة أخرى" }),
+  );
+});
+
 it("shows a shortened Support ID and copies the full app-user id", async () => {
   mount({ isPro: false, appUserId: ID });
   expect(host.textContent).toContain("89abcdef");

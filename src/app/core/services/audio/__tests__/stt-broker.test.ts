@@ -1,7 +1,10 @@
 import {
   NOT_SUBSCRIBED_MESSAGE,
   STT_UNAVAILABLE_MESSAGE,
+  USER_ID_WAIT_MS,
   brokerHeaders,
+  brokerUserIdSettled,
+  expectBrokerUserId,
   fetchBrokerKey,
   setBrokerUserId,
 } from "../stt/broker";
@@ -38,6 +41,55 @@ it("sends x-rafeeq-user when an id is set", async () => {
   expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", {
     method: "POST",
     headers: { "x-rafeeq-user": "$RCAnonymousID:abc" },
+  });
+});
+
+describe("an id RevenueCat is still fetching", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("holds the request until the id arrives, then sends it", async () => {
+    expectBrokerUserId();
+    respond(200, { access_token: "tok" });
+    const key = fetchBrokerKey("/soniox/token");
+    await Promise.resolve();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    setBrokerUserId("$RCAnonymousID:late");
+    await expect(key).resolves.toBe("tok");
+    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", {
+      method: "POST",
+      headers: { "x-rafeeq-user": "$RCAnonymousID:late" },
+    });
+  });
+
+  it("goes without an id when RevenueCat can't provide one", async () => {
+    expectBrokerUserId();
+    respond(200, { access_token: "tok" });
+    const key = fetchBrokerKey("/soniox/token");
+    setBrokerUserId(null);
+    await expect(key).resolves.toBe("tok");
+    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", { method: "POST", headers: {} });
+  });
+
+  it("stops waiting after USER_ID_WAIT_MS", async () => {
+    jest.useFakeTimers();
+    expectBrokerUserId();
+    respond(200, { access_token: "tok" });
+    const key = fetchBrokerKey("/soniox/token");
+    jest.advanceTimersByTime(USER_ID_WAIT_MS - 1);
+    await Promise.resolve();
+    expect(fetchMock).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+    await expect(key).resolves.toBe("tok");
+    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", { method: "POST", headers: {} });
+  });
+
+  it("doesn't wait once the id is known", () => {
+    setBrokerUserId("$RCAnonymousID:abc");
+    expectBrokerUserId();
+    return expect(brokerUserIdSettled()).resolves.toBeUndefined();
   });
 });
 

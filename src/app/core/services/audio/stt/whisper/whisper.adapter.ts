@@ -16,6 +16,7 @@
 import {
   brokerHeaders,
   brokerUrl,
+  brokerUserIdSettled,
   NOT_SUBSCRIBED_MESSAGE,
   STT_UNAVAILABLE_MESSAGE,
 } from "../broker";
@@ -49,7 +50,9 @@ export type Transcribe = (wav: Blob, signal: AbortSignal) => Promise<WhisperResu
 
 /** Uploads one phrase to the broker and returns Whisper's transcript. */
 export const transcribeSegment: Transcribe = async (wav, signal) => {
-  const res = await fetch(brokerUrl(TRANSCRIBE_PATH), {
+  const url = brokerUrl(TRANSCRIBE_PATH);
+  await brokerUserIdSettled();
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "audio/wav", ...brokerHeaders() },
     body: wav,

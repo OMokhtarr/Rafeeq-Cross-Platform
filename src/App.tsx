@@ -283,26 +283,26 @@ const App: React.FC = () => {
         <VerseVisibilityProvider>
           <PlaybackProvider>
             <SubscriptionProvider>
-            <IonApp>
-              {preloading && preloadProgress.done < preloadProgress.total && (
-                <div className="global-preload-bar">
-                  <div
-                    className="global-preload-fill"
-                    style={{
-                      width: `${
-                        (preloadProgress.done / preloadProgress.total) * 100
-                      }%`,
-                    }}
-                  />
-                </div>
-              )}
-              <IonReactRouter>
-                <TourProvider initial={onboarding}>
-                  <MainRouterOutlet />
-                </TourProvider>
-                <ProNote />
-              </IonReactRouter>
-            </IonApp>
+              <IonApp>
+                {preloading && preloadProgress.done < preloadProgress.total && (
+                  <div className="global-preload-bar">
+                    <div
+                      className="global-preload-fill"
+                      style={{
+                        width: `${
+                          (preloadProgress.done / preloadProgress.total) * 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                )}
+                <IonReactRouter>
+                  <TourProvider initial={onboarding}>
+                    <MainRouterOutlet />
+                  </TourProvider>
+                  <ProNote />
+                </IonReactRouter>
+              </IonApp>
             </SubscriptionProvider>
           </PlaybackProvider>
         </VerseVisibilityProvider>

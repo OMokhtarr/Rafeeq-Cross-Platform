@@ -47,8 +47,9 @@ const SubscriptionRow: React.FC = () => {
     try {
       if (!(await restore())) toast(ts.restoreNone);
     } catch (err) {
+      // A failed restore says nothing about whether a subscription exists.
       console.error("[pro] restore failed", err);
-      toast(ts.restoreNone);
+      toast(ts.restoreFailed);
     } finally {
       setRestoring(false);
     }

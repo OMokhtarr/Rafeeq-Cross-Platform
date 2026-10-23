@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
-import { brokerHeaders, setBrokerUserId } from "../../services/audio/stt/broker";
+import { brokerHeaders, brokerUserIdSettled, setBrokerUserId } from "../../services/audio/stt/broker";
 
 jest.mock("@capacitor/core", () => ({ Capacitor: { getPlatform: jest.fn() } }));
 jest.mock("@revenuecat/purchases-capacitor", () => ({
@@ -124,6 +124,32 @@ it("exposes the app-user id and hands it to the broker", async () => {
   await mount();
   expect(sub.appUserId).toBe("$RCAnonymousID:abc");
   expect(brokerHeaders()).toEqual({ "x-rafeeq-user": "$RCAnonymousID:abc" });
+});
+
+/** Whether a speech request starting now would go ahead without waiting. */
+async function brokerGoesAhead(): Promise<boolean> {
+  let settled = false;
+  void brokerUserIdSettled().then(() => {
+    settled = true;
+  });
+  await flush();
+  return settled;
+}
+
+it("holds speech requests while the app-user id is on its way", async () => {
+  let giveId!: (v: { appUserID: string }) => void;
+  rc.getAppUserID.mockReturnValue(new Promise((r) => (giveId = r)));
+  await mount();
+  expect(await brokerGoesAhead()).toBe(false);
+  await act(async () => giveId({ appUserID: "$RCAnonymousID:late" }));
+  expect(await brokerGoesAhead()).toBe(true);
+  expect(brokerHeaders()).toEqual({ "x-rafeeq-user": "$RCAnonymousID:late" });
+});
+
+it("lets speech requests go when the app-user id can't be fetched", async () => {
+  rc.getAppUserID.mockRejectedValue(new Error("offline"));
+  await mount();
+  expect(await brokerGoesAhead()).toBe(true);
 });
 
 it("markNotPro flips isPro for the session without touching the cache", async () => {
