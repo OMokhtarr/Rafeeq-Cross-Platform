@@ -95,3 +95,25 @@ describe("Uthmani spelling vs the recognizer's standard spelling", () => {
     expect(plainLetters(uthmaniSkeleton("يَبْنَؤُمَّ"))).toBe("يبنءم");
   });
 });
+
+describe("pause forms", () => {
+  it("forgives a verse's last word said in pause form without its final ي", () => {
+    // 20:85 and 20:87 end on ٱلسَّامِرِىُّ, 20:86 on مَّوْعِدِى — Soniox wrote
+    // السامر and موعد for a correct recitation that stopped on them.
+    expect(verdict("ٱلسَّامِرِىُّ", "السامر")).toBe("soundAlike");
+    expect(verdict("مَّوْعِدِى", "موعد")).toBe("soundAlike");
+    expect(verdict("ٱلسَّامِرِىُّ", "السامري")).toBe("said");
+  });
+
+  it("forgives it before a pause mark too, but not mid-phrase", () => {
+    expect(verdict("ٱلَّذِى ۖ", "الذ", "قَالَ")).toBe("soundAlike");
+    expect(verdict("ٱلَّذِى", "الذ", "قَالَ")).toBe("wrong");
+  });
+
+  it("accepts the ي a recognizer writes after a word-final kasra", () => {
+    // يَـٰقَوْمِ (20:86) heard as قومي, رَبِّ as ربي.
+    expect(verdict("يَـٰقَوْمِ", "قومي", "أَلَمْ")).not.toBe("wrong");
+    expect(verdict("رَبِّ", "ربي", "لِتَرْضَىٰ")).toBe("said");
+    expect(verdict("قَوْمَكَ", "قومكي", "مِنۢ")).toBe("wrong");
+  });
+});

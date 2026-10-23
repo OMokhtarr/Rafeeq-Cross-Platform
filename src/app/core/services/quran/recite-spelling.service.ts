@@ -58,6 +58,16 @@ const SMALL_LETTERS: Record<string, string> = {
  *  (iqlab, where the ن is heard as م). */
 const NOON_JOIN_LETTERS = new Set(["ي", "ر", "م", "ل", "و", "ن", "ب"]);
 
+/** Quranic pause marks (ۖ ۗ ۘ ۙ ۚ ۛ ۜ) — the reciter may stop on the word before one. */
+const PAUSE_MARK = /[ۖ-ۜ]/;
+/** Ends in a long ī: a kasra, then ى/ي and only marks after it (ٱلسَّامِرِىُّ، مَّوْعِدِى). */
+const ENDS_IN_LONG_I = /ِ[ىي][ً-ْٰ]*$/;
+/** Ends in a kasra with no letter after it (يَـٰقَوْمِ، رَبِّ — the shadda may
+ *  come before or after the kasra). */
+const ENDS_IN_KASRA = /ِّ?$|ِّ$/;
+/** Pause marks and spaces carried in a verse token's text. */
+const MARKS_AND_SPACES = /[ۖ-ۜ\s]/g;
+
 /** Letter pairs the recognizer mixes up on correct recitation — forgiven as
  *  sound-alike (see the Balanced strictness decision in the design spec). */
 export const SOUND_ALIKE_PAIRS = [
@@ -192,6 +202,19 @@ export function uthmaniSkeleton(uthmani: string, nextUthmani?: string): Skeleton
   // Standard spelling adds an alif after a word-final plural و (جاءوا، باءوا)
   // that Uthmani spelling sometimes leaves out (جَآءُو).
   if (final && final.chars === "و" && !final.optional) push({ chars: ALIF, optional: true }, "");
+
+  // Pause form: stopping on a word — the verse's last word, or one before a
+  // pause mark — the recognizer may leave out a final long ī (ٱلسَّامِرِىُّ →
+  // السامر، مَّوْعِدِى → موعد). Only ī: a dropped final و or ا changes the word
+  // (قالوا/قال).
+  const bare = uthmani.replace(MARKS_AND_SPACES, "");
+  const lastLetter = slots[slots.length - 1];
+  if ((!nextUthmani || PAUSE_MARK.test(uthmani)) && ENDS_IN_LONG_I.test(bare) && lastLetter?.chars === "ي") {
+    lastLetter.softOptional = true;
+  }
+  // A word-final kasra standing for the elided ي of "my" (يَـٰقَوْمِ، رَبِّ)
+  // is often written out by the recognizer (قومي، ربي).
+  if (ENDS_IN_KASRA.test(bare)) push({ chars: "ي", optional: true }, "");
 
   // Tajweed at the join: a word-final ن assimilates into a following
   // ي ر م ل و ن, or turns to م before ب — the recognizer may drop it or hear

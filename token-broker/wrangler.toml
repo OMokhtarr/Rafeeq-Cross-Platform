@@ -7,7 +7,3 @@ compatibility_date = "2026-01-15"
 #   wrangler secret put QF_CLIENT_SECRET
 #   wrangler secret put QF_TOKEN_URL
 #   wrangler secret put ALLOWED_ORIGIN
-
-# Workers AI, for recite mode's Whisper engine ( /whisper/transcribe ).
-[ai]
-binding = "AI"

@@ -2,7 +2,7 @@
  * PCM CAPTURE
  *
  * Opens the microphone as 16 kHz mono Float32 frames, for speech engines
- * that take raw PCM (Soniox streaming) or WAV segments (Whisper) rather
+ * that take raw PCM (Soniox streaming) rather
  * than MediaRecorder's containerized audio.
  */
 

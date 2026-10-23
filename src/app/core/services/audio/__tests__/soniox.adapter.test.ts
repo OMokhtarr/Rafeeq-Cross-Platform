@@ -56,7 +56,7 @@ const EXPECTED_CONFIG = {
   language_hints: ["ar"],
   language_hints_strict: true,
   enable_endpoint_detection: true,
-  max_endpoint_delay_ms: 500,
+  max_endpoint_delay_ms: 1500,
 };
 
 const realWebSocket = global.WebSocket;
