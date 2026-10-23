@@ -162,7 +162,7 @@ sign-in, so there are no user OAuth scopes to audit.
 | `verses.quran.foundation` | recitation audio files | none |
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
 | `stt-rt.soniox.com` (wss) | recite mode speech-to-text (if selected in Settings) | **live microphone audio** |
-| Cloudflare Workers AI (via the token broker) | recite mode speech-to-text (if selected in Settings) | **short microphone audio phrases** |
+| `api.revenuecat.com` | Rafeeq Pro subscription status (builds with a RevenueCat key) | anonymous app-user id, purchase history |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
 **User sign-in:** none. The app has no accounts and requests no OAuth user
@@ -190,12 +190,12 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 > dashboard; an incorrect Data safety declaration is an enforcement risk, not a
 > cosmetic one.
 >
-> - [ ] **Also confirm Soniox and Cloudflare Workers AI** process the audio without
->       retaining it (their data-retention / AI terms), now that either can be
->       selected in Settings. The same declaration covers all three providers.
+> - [ ] **Also confirm Soniox** processes the audio without retaining it (its
+>       data-retention / AI terms), now that it can be selected in Settings.
+>       The same declaration covers both providers.
 > - [ ] **The hosted privacy policy still names only Deepgram.** `privacy.html`
->       (on the `gh-pages` branch, not in this repo) must add Soniox and
->       Cloudflare Workers AI as speech-to-text processors before this ships.
+>       (on the `gh-pages` branch, not in this repo) must add Soniox as a
+>       speech-to-text processor before this ships.
 
 ### Personal info → Name / Email
 - Collected: **No** — the app has no sign-in and never asks for a name or email.

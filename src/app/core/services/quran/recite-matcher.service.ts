@@ -277,35 +277,3 @@ export function firstWordPosition(verse: Verse): RecitePosition {
 export function verseWordCount(verse: Verse): number {
   return (verse.words ?? []).filter((w: VerseWord) => w.charType === "end").length;
 }
-
-/**
- * Diacritic-stripped text of the last `wordCount` words *already recited*
- * before `from`, for use as Whisper's `prompt`. The prompt is Whisper's
- * preceding-context conditioning: passing the words just recited pins the
- * decoding to the right passage and vocabulary. It must NOT contain the
- * upcoming (not-yet-recited) words — Whisper echoes prompt text into its
- * output whenever the audio trails off into silence, which used to reveal
- * words the reciter never said (it would even "finish the verse" for them).
- * Tashkeel is removed because Whisper transcribes Arabic inconsistently
- * vocalized, and everything downstream matches on diacritic-free text
- * anyway — an un-vocalized prompt keeps the hint in the same shape as what
- * we compare against.
- */
-export function precedingWordsText(
-  verses: Verse[],
-  from: RecitePosition,
-  wordCount: number = 12,
-): string {
-  const seq: string[] = [];
-  for (const v of verses) {
-    const isFromVerse = v.sura === from.sura && v.aya === from.aya;
-    const isBefore =
-      v.sura < from.sura || (v.sura === from.sura && v.aya < from.aya);
-    if (!isBefore && !isFromVerse) break;
-    const words = (v.words ?? []).filter((w) => w.charType === "end");
-    const end = isFromVerse ? Math.min(from.wordIndex, words.length) : words.length;
-    for (let i = 0; i < end; i++) seq.push(removeDiacritics(words[i].text_uthmani));
-    if (isFromVerse) break;
-  }
-  return seq.slice(-wordCount).join(" ");
-}
