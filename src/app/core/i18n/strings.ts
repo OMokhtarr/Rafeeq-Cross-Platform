@@ -590,6 +590,25 @@ export interface AppStrings {
     languageGroup: (lang: string) => string;
   };
 
+  subscription: {
+    noteTitle: string;
+    noteLine: string;
+    noteCta: string;
+    restore: string;
+    restoreNone: string;
+    restoreFailed: string;
+    purchaseFailed: string;
+    noPlans: string;
+    accountTitle: string;
+    accountActive: string;
+    accountFree: string;
+    manage: string;
+    manageFailed: string;
+    view: string;
+    supportId: string;
+    copied: string;
+  };
+
   hifz: {
     tabLabel: string;
     title: string;
@@ -1281,6 +1300,25 @@ const ar: AppStrings = {
     downloading: "جارٍ الحفظ…",
     downloaded: "محفوظ",
     languageGroup: (lang: string) => lang,
+  },
+
+  subscription: {
+    noteTitle: "التسميع متاح للمشتركين",
+    noteLine: "سمّع وسيتابعك رفيق ويُظهر أخطاءك",
+    noteCta: "عرض الاشتراك",
+    restore: "استعادة المشتريات",
+    restoreNone: "لم يُعثر على اشتراك سابق",
+    restoreFailed: "تعذّر الاتصال بالمتجر، تحقّق من الاتصال وحاول مرة أخرى",
+    purchaseFailed: "تعذّر إتمام الاشتراك، حاول مرة أخرى",
+    noPlans: "خطط الاشتراك غير متاحة الآن",
+    accountTitle: "الاشتراك",
+    accountActive: "رفيق برو — مفعّل",
+    accountFree: "مجاني",
+    manage: "إدارة الاشتراك",
+    manageFailed: "تعذّر فتح إدارة الاشتراك، تحقّق من الاتصال",
+    view: "عرض الاشتراك",
+    supportId: "معرّف الدعم",
+    copied: "تم النسخ",
   },
 
   hifz: {
@@ -1981,6 +2019,25 @@ const en: AppStrings = {
     downloading: "Saving…",
     downloaded: "Saved",
     languageGroup: (lang: string) => lang,
+  },
+
+  subscription: {
+    noteTitle: "Recite is for subscribers",
+    noteLine: "Recite and Rafeeq follows along and shows your mistakes",
+    noteCta: "View subscription",
+    restore: "Restore purchases",
+    restoreNone: "No previous subscription found",
+    restoreFailed: "Couldn't reach the store. Check your connection and try again.",
+    purchaseFailed: "The subscription couldn't be completed. Please try again.",
+    noPlans: "Subscription plans aren't available right now",
+    accountTitle: "Subscription",
+    accountActive: "Rafeeq Pro — active",
+    accountFree: "Free",
+    manage: "Manage subscription",
+    manageFailed: "Couldn't open subscription settings. Check your connection.",
+    view: "View subscription",
+    supportId: "Support ID",
+    copied: "Copied",
   },
 
   hifz: {

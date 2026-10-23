@@ -7,3 +7,26 @@ compatibility_date = "2026-01-15"
 #   wrangler secret put QF_CLIENT_SECRET
 #   wrangler secret put QF_TOKEN_URL
 #   wrangler secret put ALLOWED_ORIGIN
+#   wrangler secret put REVENUECAT_SECRET_KEY   (Rafeeq Pro check)
+
+# Rafeeq Pro: when "true", the speech routes (/deepgram/token, /soniox/token)
+# refuse anyone RevenueCat doesn't report as Pro (402).
+# Keep it "false" until store purchases work. Release order: ship the app
+# build with REACT_APP_PRO_GATE=on first, then set this to "true" and deploy.
+# This file is the switch: every `wrangler deploy` replaces whatever value
+# was set in the Cloudflare dashboard with the one below, so change it here.
+[vars]
+REQUIRE_PRO = "false"
+
+# Dev copy of the broker for `npm start` (browser development), deployed with
+#   npx wrangler deploy --env dev
+# Point the dev server at it through .env.development.local
+# (REACT_APP_TOKEN_BROKER_URL=<dev worker url>); CRA reads that file only for
+# the dev server, never for production builds. Environments don't inherit
+# vars or secrets: set each secret again with `--env dev`, and include
+# http://localhost:3000 in its ALLOWED_ORIGIN.
+[env.dev]
+name = "rafeeq-token-broker-dev"
+
+[env.dev.vars]
+REQUIRE_PRO = "false"

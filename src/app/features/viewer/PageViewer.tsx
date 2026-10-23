@@ -43,6 +43,9 @@ import { isPageBookmarked } from "../../core/services/storage/notes.service";
 import { markPageRead, isPageMarkedRead } from "../hifz/hifz.service";
 import PlaybackSettings from "../playback/PlaybackSettings";
 import type { Verse } from "../../shared/models/verse.model";
+import { useProGate } from "../subscription/useProGate";
+import { useReciteMicError } from "../subscription/useReciteMicError";
+import ProBadge from "../subscription/ProBadge";
 import "./PageViewer.css";
 
 // ─── Last-page persistence ────────────────────────────────────────────────────
@@ -187,16 +190,15 @@ const PageViewer: React.FC = () => {
     }, 800);
   }, [queue, recite, currentPage, verses, reciteMode]);
 
-  // Surface mic permission / capture failures once, when they occur.
-  useEffect(() => {
-    if (recite.status === "mic-error" && recite.micError) {
-      presentToast({
-        message: recite.micError,
-        duration: 2500,
-        position: "bottom",
-      });
-    }
-  }, [recite.status, recite.micError, presentToast]);
+  // Starting to listen is Rafeeq Pro; arming recite mode and stopping are free.
+  const { locked: reciteLocked, requirePro } = useProGate();
+
+  // Surface mic permission / capture failures once, when they occur. A
+  // not-subscribed refusal from the broker opens the subscriber note instead.
+  useReciteMicError(
+    recite.status === "mic-error" ? recite.micError : null,
+    (message) => presentToast({ message, duration: 2500, position: "bottom" }),
+  );
 
   // Chime when recite mode starts/stops listening (manual tap, silence
   // timeout, or failed identification) so the user hears the mic go on/off.
@@ -220,14 +222,14 @@ const PageViewer: React.FC = () => {
         if (recite.status === "recording") {
           recite.stopRecording();
         } else {
-          recite.startRecording();
+          requirePro(() => recite.startRecording());
         }
       } else {
         sheetOpenTimeRef.current = Date.now();
         setPlaybackSheetOpen(true);
       }
     }
-  }, [reciteMode, recite]);
+  }, [reciteMode, recite, requirePro]);
 
   // playbackVerse: static grey highlight tracking the currently playing verse
   const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
@@ -1036,6 +1038,7 @@ const PageViewer: React.FC = () => {
                       <polygon points="5 3 19 12 5 21 5 3" />
                     </svg>
                   )}
+                  {reciteMode && reciteLocked && <ProBadge />}
                 </button>
               )}
               <div

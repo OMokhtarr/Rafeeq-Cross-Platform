@@ -16,6 +16,7 @@
  *   wrangler secret put QF_OAUTH_CLIENT_ID  # (optional) same as QF_CLIENT_ID for OAuth2
  *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
  *   wrangler secret put SONIOX_API_KEY      # for recite mode's Soniox engine
+ *   wrangler secret put REVENUECAT_SECRET_KEY # Rafeeq Pro check (REQUIRE_PRO="true")
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
  *   wrangler deploy
  */
@@ -29,6 +30,8 @@ export interface Env {
   DEEPGRAM_API_KEY?: string; // recite mode STT; never shipped to the client
   SONIOX_API_KEY?: string; // recite mode Soniox engine; never shipped to the client
   ALLOWED_ORIGIN: string;
+  REQUIRE_PRO?: string; // "true" = speech routes are Rafeeq Pro only (wrangler.toml [vars])
+  REVENUECAT_SECRET_KEY?: string; // RevenueCat REST secret, for the Pro check
 }
 
 interface CachedToken {
@@ -47,7 +50,7 @@ export default {
     const corsHeaders = {
       "access-control-allow-origin": corsOrigin,
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type, x-rafeeq-user",
       "access-control-max-age": "86400",
     };
 
@@ -67,6 +70,12 @@ export default {
     // ── OAuth2 User Token Exchange ( /oauth2/token ) ──────────────────────
     if (url.pathname === "/oauth2/token") {
       return handleOAuthToken(req, env, corsHeaders);
+    }
+
+    // ── Speech routes: Rafeeq Pro only when REQUIRE_PRO is "true" ─────────
+    if (SPEECH_ROUTES.has(url.pathname)) {
+      const refused = await requirePro(req, env, corsHeaders);
+      if (refused) return refused;
     }
 
     // ── Deepgram ephemeral token ( /deepgram/token ) ──────────────────────
@@ -144,6 +153,128 @@ export default {
     );
   },
 };
+
+// ─── Rafeeq Pro check ────────────────────────────────────────────────────────
+
+/** Routes that spend paid speech-engine time. */
+const SPEECH_ROUTES = new Set(["/deepgram/token", "/soniox/token"]);
+
+/** How long a "yes, subscribed" answer is trusted before asking RevenueCat
+ *  again. Each recite session asks for a new speech token, so this keeps
+ *  RevenueCat calls to about one per subscriber every few minutes. */
+const PRO_CACHE_MS = 5 * 60 * 1000;
+
+/** The Rafeeq Pro entitlement id in the RevenueCat dashboard (and the app's
+ *  PRO_ENTITLEMENT). */
+const PRO_ENTITLEMENT = "com_rafeeq_quranquiz_pro";
+
+/** app-user id → time (ms) its Pro answer stops being trusted. Only Pro
+ *  answers are cached: a "not Pro" answer from a minute ago must never block
+ *  someone who has just bought. Per isolate — a cold isolate just asks again. */
+const proCache = new Map<string, number>();
+
+/** Caches a Pro answer, first dropping every answer that has run out, so a
+ *  long-lived isolate doesn't keep one entry per subscriber it ever saw. */
+function rememberPro(id: string, nowMs: number): void {
+  for (const [cachedId, until] of proCache) {
+    if (until <= nowMs) proCache.delete(cachedId);
+  }
+  proCache.set(id, nowMs + PRO_CACHE_MS);
+}
+
+interface RevenueCatSubscriber {
+  subscriber?: {
+    entitlements?: Record<string, { expires_date?: string | null; product_identifier?: string }>;
+    subscriptions?: Record<string, { grace_period_expires_date?: string | null }>;
+  };
+}
+
+/**
+ * True when a RevenueCat `GET /v1/subscribers/{id}` body shows an active
+ * Rafeeq Pro entitlement: present, and either never expiring (lifetime/promo),
+ * expiring after `nowMs`, or past its expiry but inside the store's billing
+ * grace period. RevenueCat keeps grace-period subscribers' access, but marks
+ * the grace period on the subscription (`grace_period_expires_date`), not on
+ * the entitlement, so both are read.
+ */
+function isProSubscriber(body: unknown, nowMs: number): boolean {
+  const subscriber = (body as RevenueCatSubscriber | null)?.subscriber;
+  const pro = subscriber?.entitlements?.[PRO_ENTITLEMENT];
+  if (!pro) return false;
+  if (pro.expires_date == null) return true;
+  if (Date.parse(pro.expires_date) > nowMs) return true;
+  const graceUntil = pro.product_identifier
+    ? subscriber?.subscriptions?.[pro.product_identifier]?.grace_period_expires_date
+    : null;
+  return graceUntil != null && Date.parse(graceUntil) > nowMs;
+}
+
+/** RevenueCat app-user ids — anonymous ("$RCAnonymousID:<hex>") or custom —
+ *  use these characters. Anything else, or "." / "..", is refused before it
+ *  can shape the RevenueCat URL. */
+function isPlausibleAppUserId(id: string): boolean {
+  return /^[A-Za-z0-9_$:.-]{1,100}$/.test(id) && id !== "." && id !== "..";
+}
+
+/**
+ * Null when the request may use a speech route; otherwise the 402 to send.
+ *
+ * Off unless REQUIRE_PRO is exactly "true", so the owner turns enforcement
+ * on only once store purchases work. The app sends its RevenueCat app-user id
+ * as `x-rafeeq-user`. Only a real RevenueCat outage — the request throwing
+ * or a 5xx — lets the request through (logged), so an outage there doesn't
+ * lock out paying users. Everything else refuses: a malformed id, a missing
+ * or wrong secret (401), a crafted id RevenueCat rejects (4xx), or its rate
+ * limit (429), so neither a crafted header nor a misconfigured deploy can
+ * quietly turn enforcement off.
+ */
+async function requirePro(
+  req: Request,
+  env: Env,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (env.REQUIRE_PRO !== "true") return null;
+
+  const refuse = () =>
+    new Response(JSON.stringify({ error: "subscription required", code: "not_subscribed" }), {
+      status: 402,
+      headers: { "content-type": "application/json", ...corsHeaders },
+    });
+
+  const id = req.headers.get("x-rafeeq-user");
+  if (!id || !isPlausibleAppUserId(id)) return refuse();
+
+  const now = Date.now();
+  const trustedUntil = proCache.get(id);
+  if (trustedUntil !== undefined && trustedUntil > now) return null;
+
+  if (!env.REVENUECAT_SECRET_KEY) {
+    console.error("REQUIRE_PRO is on but REVENUECAT_SECRET_KEY is not set; refusing");
+    return refuse();
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(id)}`, {
+      headers: { authorization: `Bearer ${env.REVENUECAT_SECRET_KEY}` },
+    });
+  } catch (err) {
+    console.error("RevenueCat check threw; allowing", err);
+    return null;
+  }
+  if (res.status >= 500) {
+    console.error("RevenueCat check failed; allowing", res.status);
+    return null;
+  }
+  if (!res.ok) {
+    console.error("RevenueCat check refused the request; refusing", res.status);
+    return refuse();
+  }
+
+  if (!isProSubscriber(await res.json(), now)) return refuse();
+  rememberPro(id, now);
+  return null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
