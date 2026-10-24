@@ -4,9 +4,15 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
+import { LanguageProvider, useLang } from "../LanguageContext";
 import { brokerHeaders, brokerUserIdSettled, setBrokerUserId } from "../../services/audio/stt/broker";
 
-jest.mock("@capacitor/core", () => ({ Capacitor: { getPlatform: jest.fn() } }));
+// isNativePlatform/registerPlugin serve LanguageContext's widget sync, which
+// stays a no-op here.
+jest.mock("@capacitor/core", () => ({
+  Capacitor: { getPlatform: jest.fn(), isNativePlatform: () => false },
+  registerPlugin: () => ({}),
+}));
 jest.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     configure: jest.fn(),
@@ -15,6 +21,7 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
     removeCustomerInfoUpdateListener: jest.fn(),
     getAppUserID: jest.fn(),
     restorePurchases: jest.fn(),
+    overridePreferredUILocale: jest.fn(),
   },
 }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
@@ -83,6 +90,7 @@ beforeEach(() => {
     return "cb-1";
   });
   rc.removeCustomerInfoUpdateListener.mockResolvedValue({ wasRemoved: true });
+  rc.overridePreferredUILocale.mockResolvedValue(undefined);
   rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:abc" });
 });
 
@@ -252,4 +260,27 @@ it("keeps the cached Pro flag when the live check fails offline", async () => {
   await mount();
   expect(sub.isPro).toBe(true);
   expect(localStorage.getItem("rafiq_pro_v1")).toBe("1");
+});
+
+it("shows RevenueCat's screens in the app's language and follows a switch", async () => {
+  let setLang!: (l: "ar" | "en") => void;
+  const LangProbe = () => {
+    setLang = useLang().setLang;
+    return null;
+  };
+  root = createRoot(document.createElement("div"));
+  await act(async () => {
+    root.render(
+      <LanguageProvider>
+        <SubscriptionProvider>
+          <LangProbe />
+        </SubscriptionProvider>
+      </LanguageProvider>,
+    );
+  });
+  await flush();
+  expect(rc.overridePreferredUILocale).toHaveBeenLastCalledWith({ locale: "ar" });
+  await act(async () => setLang("en"));
+  await flush();
+  expect(rc.overridePreferredUILocale).toHaveBeenLastCalledWith({ locale: "en" });
 });

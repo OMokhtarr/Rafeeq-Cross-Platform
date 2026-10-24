@@ -56,6 +56,14 @@ export function configureRevenueCat(): Promise<void> {
   return configured;
 }
 
+/** RevenueCat's screens follow the phone's language unless told otherwise.
+ *  The app has its own language setting, so the Paywall and Customer Center
+ *  follow that instead. */
+export async function setRevenueCatLocale(lang: "ar" | "en"): Promise<void> {
+  await configureRevenueCat();
+  await Purchases.overridePreferredUILocale({ locale: lang });
+}
+
 export async function fetchCustomerInfo(): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.getCustomerInfo();
   return customerInfo;
