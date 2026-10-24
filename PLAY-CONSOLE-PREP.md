@@ -190,12 +190,14 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 > dashboard; an incorrect Data safety declaration is an enforcement risk, not a
 > cosmetic one.
 >
-> - [ ] **Also confirm Soniox** processes the audio without retaining it (its
->       data-retention / AI terms), now that it can be selected in Settings.
->       The same declaration covers both providers.
-> - [ ] **The hosted privacy policy still names only Deepgram.** `privacy.html`
->       (on the `gh-pages` branch, not in this repo) must add Soniox as a
->       speech-to-text processor before this ships.
+> - [x] **Soniox confirmed (24 Oct 2026).** Its privacy policy states that
+>       "real-time API requests are processed transiently and are not stored",
+>       so "processed ephemerally" holds for Soniox. Deepgram is still open
+>       (above).
+> - [x] **Hosted privacy policy updated (24 Oct 2026).** `privacy.html` and
+>       `privacy-ar.html` on `gh-pages` name Deepgram and Soniox as the speech
+>       engines and RevenueCat / Google Play for Rafeeq Pro; the terms gained a
+>       subscription section.
 
 ### Personal info → Name / Email
 - Collected: **No** — the app has no sign-in and never asks for a name or email.
@@ -603,8 +605,8 @@ RevenueCat. Builds without the key send nothing.
   Play billing and RevenueCat (a service provider processing it for the app),
   for app functionality (subscription status). Confirm the exact "shared"
   answer against Play's service-provider rule when filling the form.
-- **Privacy policy:** add RevenueCat as a processor (purchase history and an
-  anonymous app-user id) next to the speech providers.
+- ~~**Privacy policy:** add RevenueCat as a processor~~ — done 24 Oct 2026
+  (privacy + terms, English and Arabic, live on GitHub Pages).
 
 ### Release order
 1. Ship a build with `REACT_APP_PRO_GATE=on` in `.env.production`.
