@@ -47,15 +47,41 @@ afterEach(() => {
 
 const lastWordIndex = () => applyPosition.mock.calls[applyPosition.mock.calls.length - 1][1].wordIndex;
 
-it("reveals the held-back last word when the phrase is confirmed", () => {
+it("shows the first newly matched word at once, without waiting a step", () => {
   act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
-  act(() => animator.advanceTo(at(1, 1, 4), 1));
-  act(() => jest.advanceTimersByTime(2000));
-  expect(lastWordIndex()).toBe(3);
+  act(() => animator.advanceTo(at(1, 1, 2), 1));
+  expect(lastWordIndex()).toBe(1);
+});
 
-  act(() => animator.confirm(at(1, 1, 4)));
-  act(() => jest.advanceTimersByTime(2000));
-  expect(lastWordIndex()).toBe(4);
+it("holds the newest word back while it is fresh, then shows it", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
+  act(() => animator.advanceTo(at(1, 1, 1), 1));
+  act(() => jest.advanceTimersByTime(200));
+  expect(lastWordIndex()).toBe(0);
+
+  act(() => jest.advanceTimersByTime(200));
+  expect(lastWordIndex()).toBe(1);
+});
+
+it("restarts the hold when the matcher moves to a newer word", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
+  act(() => animator.advanceTo(at(1, 1, 1), 1));
+  act(() => jest.advanceTimersByTime(200));
+  act(() => animator.advanceTo(at(1, 1, 2), 1));
+  act(() => jest.advanceTimersByTime(200));
+  expect(lastWordIndex()).toBe(1);
+
+  act(() => jest.advanceTimersByTime(300));
+  expect(lastWordIndex()).toBe(2);
+});
+
+it("reveals the held-back word as soon as the phrase is confirmed", () => {
+  act(() => animator.landOnPage(verses, at(1, 1, 0), at(1, 1, 0), false));
+  act(() => animator.advanceTo(at(1, 1, 1), 1));
+  expect(lastWordIndex()).toBe(0);
+
+  act(() => animator.confirm(at(1, 1, 1)));
+  expect(lastWordIndex()).toBe(1);
 });
 
 it("keeps confirmed words revealed when the cursor restarts behind them", () => {

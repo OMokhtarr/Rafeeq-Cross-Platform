@@ -55,7 +55,7 @@ const NO_MATCH_REIDENTIFY_STREAK = 6;
 /** Holdback while the streaming engine is driving. Streamed interims don't
  *  hallucinate a continuation — the only instability is that a window's last
  *  word may still be revised — so one word of margin suffices, and each
- *  final releases it. */
+ *  final releases it, as does the word standing a moment unrevised. */
 const STREAM_REVEAL_HOLDBACK_WORDS = 1;
 
 /** Minimum gap between whole-Quran identify searches while accumulating

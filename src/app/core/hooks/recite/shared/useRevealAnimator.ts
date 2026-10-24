@@ -29,6 +29,13 @@ import { cmpPos, nextWordPosition, type RecitePosition } from "./reciteCore";
  *  is never delayed by this — only what's on screen. */
 const WORD_REVEAL_STEP_MS = 160;
 
+/** The holdback only waits this long. A revised interim changes its last
+ *  word within a few hundred ms, so a word that stays the matcher's newest
+ *  for this long was really said and is shown without waiting for the next
+ *  word (a whole word late in slow recitation) or for the phrase's final
+ *  (which comes only after the reciter pauses). */
+const HOLDBACK_RELEASE_MS = 300;
+
 export interface RevealAnimatorDeps {
   /** True while recite mode is armed/recording at all. */
   isActive: () => boolean;
@@ -60,7 +67,8 @@ export interface RevealAnimator {
   reconcile: (truePos: RecitePosition | null, displayPos: RecitePosition | null) => void;
   /** Advances the true position immediately (matching/prompts must not
    *  wait for the animation) and lets the display catch up word by word,
-   *  respecting `holdbackWords` until `confirm` releases it. A rewind
+   *  respecting `holdbackWords` until `confirm` releases it or the position
+   *  has stood for HOLDBACK_RELEASE_MS. A rewind
    *  (correction, true position moves backward) renders instantly instead
    *  of trickling, but never below the confirmed position: words the reciter
    *  truly said stay on screen when they restart, and only words beyond it
@@ -93,6 +101,9 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
   const confirmedPosRef = useRef<RecitePosition | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdbackRef = useRef(0);
+  // When the true position last moved (Date.now() ms) — how long its newest
+  // words have been held back.
+  const targetSinceRef = useRef(0);
 
   const stop = useCallback(() => {
     if (timerRef.current !== null) {
@@ -101,44 +112,47 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
     }
   }, []);
 
+  /** Reveals at most one more word; false once there is nothing to reveal. */
+  const step = useCallback((): boolean => {
+    const target = positionRef.current;
+    const display = displayPosRef.current;
+    if (!deps.isActive() || !target || !display || cmpPos(display, target) >= 0) return false;
+    const combined = deps.getCombinedVerses();
+    const next = nextWordPosition(combined, display);
+    // If the display position got orphaned (page changed under it), snap
+    // to the target instead of stalling.
+    if (!next || cmpPos(next, target) > 0) {
+      displayPosRef.current = target;
+      deps.applyPosition(deps.getPageVerses(), target);
+      return false;
+    }
+    // Words already corroborated are certainly real — reveal them with no
+    // holdback margin. Beyond that, hold the matcher's newest words back
+    // until confirm() releases them, the target moves further, they outlast
+    // HOLDBACK_RELEASE_MS, or a rewind clears them (they were never said).
+    const confirmed = confirmedPosRef.current;
+    const fresh = Date.now() - targetSinceRef.current < HOLDBACK_RELEASE_MS;
+    if (fresh && (!confirmed || cmpPos(next, confirmed) > 0)) {
+      let probe: RecitePosition | null = next;
+      for (let i = 0; i < holdbackRef.current && probe; i++) {
+        probe = nextWordPosition(combined, probe);
+      }
+      // Keep ticking: the hold runs out on a later step.
+      if (!probe || cmpPos(probe, target) > 0) return true;
+    }
+    displayPosRef.current = next;
+    deps.applyPosition(deps.getPageVerses(), next);
+    return cmpPos(next, target) < 0;
+  }, [deps]);
+
   const ensureTimer = useCallback(() => {
     if (timerRef.current !== null) return;
+    // The first word shows now; only the words after it trickle.
+    if (!step()) return;
     timerRef.current = setInterval(() => {
-      const target = positionRef.current;
-      const display = displayPosRef.current;
-      if (!deps.isActive() || !target || !display || cmpPos(display, target) >= 0) {
-        stop();
-        return;
-      }
-      const combined = deps.getCombinedVerses();
-      const next = nextWordPosition(combined, display);
-      // If the display position got orphaned (page changed under it), snap
-      // to the target instead of stalling.
-      if (!next || cmpPos(next, target) > 0) {
-        displayPosRef.current = target;
-        deps.applyPosition(deps.getPageVerses(), target);
-        return;
-      }
-      // Words already corroborated are certainly real — reveal them with no
-      // holdback margin. Beyond that, hold the matcher's newest words back
-      // until confirm() releases them, the target moves further, or a
-      // rewind clears them (they were never said); the timer restarts on
-      // the next advanceTo.
-      const confirmed = confirmedPosRef.current;
-      if (!confirmed || cmpPos(next, confirmed) > 0) {
-        let probe: RecitePosition | null = next;
-        for (let i = 0; i < holdbackRef.current && probe; i++) {
-          probe = nextWordPosition(combined, probe);
-        }
-        if (!probe || cmpPos(probe, target) > 0) {
-          stop();
-          return;
-        }
-      }
-      displayPosRef.current = next;
-      deps.applyPosition(deps.getPageVerses(), next);
+      if (!step()) stop();
     }, WORD_REVEAL_STEP_MS);
-  }, [deps, stop]);
+  }, [step, stop]);
 
   const reset = useCallback(
     (pos: RecitePosition | null) => {
@@ -162,6 +176,9 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
   const advanceTo = useCallback(
     (pos: RecitePosition, holdbackWords: number) => {
       const display = displayPosRef.current;
+      if (!positionRef.current || cmpPos(pos, positionRef.current) !== 0) {
+        targetSinceRef.current = Date.now();
+      }
       positionRef.current = pos;
       holdbackRef.current = holdbackWords;
       if (display && cmpPos(pos, display) >= 0) {
@@ -185,12 +202,15 @@ export function useRevealAnimator(deps: RevealAnimatorDeps): RevealAnimator {
       if (!confirmedPosRef.current || cmpPos(pos, confirmedPosRef.current) > 0) {
         confirmedPosRef.current = pos;
       }
-      // The timer stops when only held-back words remain, so without a
-      // restart the last word of a phrase would wait for more speech.
+      // Restarted so the released word shows now rather than on the next
+      // step of a timer that may be running.
       const display = displayPosRef.current;
-      if (display && cmpPos(display, pos) < 0) ensureTimer();
+      if (display && cmpPos(display, pos) < 0) {
+        stop();
+        ensureTimer();
+      }
     },
-    [ensureTimer],
+    [ensureTimer, stop],
   );
 
   const landOnPage = useCallback(
