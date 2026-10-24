@@ -1,6 +1,7 @@
 /**
- * The streak read-out: current and longest run, the week centred on today, and
- * the freeze row that opens the explainer.
+ * The streak read-out: current and longest run, the week centred on today
+ * (which opens into the month-by-month calendar), and the freeze row that
+ * opens the explainer.
  *
  * Shared by the Account tab (as a card body) and the Hifz page (inside a
  * sheet), so the two can never drift apart. It loads its own data rather than
@@ -26,6 +27,7 @@ import FreezeSnowflake from "./FreezeSnowflake";
 import StreakFreezeMeter from "./StreakFreezeMeter";
 import StreakFreezeSheet from "./StreakFreezeSheet";
 import StreakWeekStrip from "./StreakWeekStrip";
+import StreakCalendar from "./StreakCalendar";
 // The panel's own styles live in Account.css alongside the card that first
 // used them. Imported here rather than by the host page, so rendering this
 // anywhere brings its styling with it.
@@ -45,6 +47,7 @@ function latestDate(dates: string[]): string | null {
 
 const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
   const [freezeSheet, setFreezeSheet] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Cheap synchronous reads over localStorage, recomputed on each render so a
   // session completed while a host page is mounted is reflected on reopen.
@@ -62,6 +65,8 @@ const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
     freezesReady: ar ? "تجميدات جاهزة للاستخدام" : "streak freezes ready to use",
     freezeOneReady: ar ? "تجميد جاهز للاستخدام" : "streak freeze ready to use",
     freezesNone: ar ? "لا تجميدات متبقية" : "No streak freezes left",
+    showCalendar: ar ? "عرض التقويم" : "Show calendar",
+    hideCalendar: ar ? "إخفاء التقويم" : "Hide calendar",
   };
 
   return (
@@ -78,7 +83,28 @@ const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
         </div>
       </div>
 
-      <StreakWeekStrip days={week} lang={lang} />
+      {/* The week is the at-a-glance view; tapping it opens the whole history
+          month by month. The toggle below is the labelled control for the
+          same thing, so the strip itself needs no button semantics. */}
+      {calendarOpen ? (
+        <StreakCalendar sessions={sessions} lang={lang} />
+      ) : (
+        <div className="ac-week-open" onClick={() => setCalendarOpen(true)}>
+          <StreakWeekStrip days={week} lang={lang} />
+        </div>
+      )}
+      <button
+        type="button"
+        className="ac-cal-toggle"
+        onClick={() => setCalendarOpen((o) => !o)}
+        aria-expanded={calendarOpen}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" />
+        </svg>
+        <span>{calendarOpen ? t.hideCalendar : t.showCalendar}</span>
+      </button>
 
       {/* Freeze row — only once the streak has actually been started. A meter
           for a feature they never use is a standing nag. The row opens the

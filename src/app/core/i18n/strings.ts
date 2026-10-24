@@ -600,8 +600,9 @@ export interface AppStrings {
     purchaseFailed: string;
     noPlans: string;
     accountTitle: string;
-    accountActive: string;
-    accountFree: string;
+    plan: string;
+    planPro: string;
+    planFree: string;
     manage: string;
     manageFailed: string;
     view: string;
@@ -1312,8 +1313,9 @@ const ar: AppStrings = {
     purchaseFailed: "تعذّر إتمام الاشتراك، حاول مرة أخرى",
     noPlans: "خطط الاشتراك غير متاحة الآن",
     accountTitle: "الاشتراك",
-    accountActive: "رفيق برو — مفعّل",
-    accountFree: "مجاني",
+    plan: "الخطة",
+    planPro: "رفيق برو",
+    planFree: "مجاني",
     manage: "إدارة الاشتراك",
     manageFailed: "تعذّر فتح إدارة الاشتراك، تحقّق من الاتصال",
     view: "عرض الاشتراك",
@@ -2031,8 +2033,9 @@ const en: AppStrings = {
     purchaseFailed: "The subscription couldn't be completed. Please try again.",
     noPlans: "Subscription plans aren't available right now",
     accountTitle: "Subscription",
-    accountActive: "Rafeeq Pro — active",
-    accountFree: "Free",
+    plan: "Plan",
+    planPro: "Rafeeq Pro",
+    planFree: "Free",
     manage: "Manage subscription",
     manageFailed: "Couldn't open subscription settings. Check your connection.",
     view: "View subscription",

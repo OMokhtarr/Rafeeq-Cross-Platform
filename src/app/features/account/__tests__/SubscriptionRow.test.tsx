@@ -47,7 +47,7 @@ const ID = "$RCAnonymousID:0123456789abcdef";
 it("shows active + Manage for Pro and opens the Customer Center", async () => {
   showCustomerCenter.mockResolvedValue(undefined);
   mount({ isPro: true, appUserId: ID });
-  expect(host.textContent).toContain("رفيق برو — مفعّل");
+  expect(host.querySelector(".ac-plan-pill--pro")?.textContent).toBe("رفيق برو");
   expect(button("عرض الاشتراك")).toBeUndefined();
   expect(button("استعادة المشتريات")).toBeUndefined();
   await act(async () => button("إدارة الاشتراك")!.click());
@@ -68,7 +68,9 @@ it("says so when the Customer Center can't open", async () => {
 it("shows Free + View subscription + Restore for non-Pro", async () => {
   restore.mockResolvedValue(false);
   mount({ isPro: false, appUserId: ID });
-  expect(host.textContent).toContain("مجاني");
+  const pill = host.querySelector(".ac-plan-pill");
+  expect(pill?.textContent).toBe("مجاني");
+  expect(pill?.classList.contains("ac-plan-pill--pro")).toBe(false);
   await act(async () => button("استعادة المشتريات")!.click());
   await flush();
   expect(mockPresentToast).toHaveBeenCalledWith(
