@@ -23,8 +23,8 @@ order. Full detail in `PLAY-CONSOLE-PREP.md` §9.
       `REQUIRE_PRO` still `"false"`.
 - [ ] **Store forms.** Before the first build carrying the `goog_` key:
       content rating (digital purchases = Yes) and Data safety (purchase
-      history). The hosted privacy policy and terms must already name
-      RevenueCat and cover subscriptions.
+      history). The hosted privacy policy and terms already name RevenueCat
+      and cover subscriptions (updated 24 Oct 2026).
 - [ ] **Real-purchase test.** Closed-testing build with the `goog_` key and
       the license-tester account: buy, renew, expire, reinstall + Restore,
       Customer Center.
