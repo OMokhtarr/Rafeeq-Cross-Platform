@@ -36,7 +36,9 @@ import {
   presentCustomerCenter,
   presentPaywall,
   restore as restorePurchases,
+  setRevenueCatLocale,
 } from "../services/subscription/revenuecat.service";
+import { useLang } from "./LanguageContext";
 import { expectBrokerUserId, setBrokerUserId } from "../services/audio/stt/broker";
 
 const CACHE_KEY = "rafiq_pro_v1";
@@ -144,6 +146,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       unsubscribe?.();
     };
   }, [native, apply]);
+
+  // The Paywall and Customer Center speak the app's language, not the phone's,
+  // and follow it when it's switched in Settings.
+  const { lang } = useLang();
+  useEffect(() => {
+    if (!native) return;
+    configureRevenueCat()
+      .then(() =>
+        setRevenueCatLocale(lang).catch((err) => console.error("[pro] paywall language failed", err)),
+      )
+      // A failed configure is already reported by the effect above.
+      .catch(() => {});
+  }, [native, lang]);
 
   const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 
