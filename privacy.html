@@ -73,8 +73,8 @@
   <body>
     <h1>Privacy Policy</h1>
     <p class="updated">
-      <strong>Last updated:</strong> 26 September 2026 &nbsp;·&nbsp;
-      <strong>Effective:</strong> 26 September 2026
+      <strong>Last updated:</strong> 24 October 2026 &nbsp;·&nbsp;
+      <strong>Effective:</strong> 24 October 2026
     </p>
 
     <p>
@@ -87,8 +87,9 @@
       The App has no accounts and no sign-in, and needs no permissions for
       Quran reading, memorisation, or quizzes. Two optional features ask for a
       permission and can send limited data off your device: Recite Mode
-      (microphone) and prayer times / qibla (approximate location). Both are
-      described below.
+      (microphone) and prayer times / qibla (approximate location). Recite Mode
+      is part of the optional Rafeeq Pro subscription, which involves the
+      purchase data described in section 4. All three are described below.
     </p>
 
     <div class="callout">
@@ -140,10 +141,15 @@
     <p>
       Recite Mode listens to your recitation and follows along with the text. To
       turn speech into text, the App streams your microphone audio in real time
-      to
+      to the speech-recognition provider you choose in Settings: either
       <a href="https://deepgram.com/privacy" target="_blank" rel="noopener"
         >Deepgram</a
-      >, a speech-recognition provider based in the United States.
+      >
+      (the default) or
+      <a href="https://soniox.com/policies/privacy-policy" target="_blank" rel="noopener"
+        >Soniox</a
+      >. Both are based in the United States. Only the provider you selected
+      receives audio.
     </p>
     <ul>
       <li>
@@ -160,8 +166,10 @@
         Mode. If you decline, the rest of the App works normally.
       </li>
       <li>
-        Deepgram processes the audio under its own privacy policy and its
-        retention settings. We do not use your recitation to train any model.
+        The provider processes the audio under its own privacy policy. Soniox
+        states that real-time requests are processed transiently and not
+        stored; Deepgram applies its own retention settings. We do not use
+        your recitation to train any model.
       </li>
     </ul>
 
@@ -208,7 +216,57 @@
       </li>
     </ul>
 
-    <h2>4. Religious information and your consent</h2>
+    <h2>4. Rafeeq Pro subscription</h2>
+    <p>
+      Recite Mode is offered as an optional paid subscription, Rafeeq Pro. The
+      rest of the App stays free and works without it. Subscriptions are
+      bought through Google Play (or the App Store on iPhone) and managed for
+      us by
+      <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener"
+        >RevenueCat</a
+      >, a subscription service based in the United States.
+    </p>
+    <ul>
+      <li>
+        <strong>An anonymous ID, not an account.</strong> When the App starts,
+        RevenueCat gives this installation a random ID. It is not linked to
+        your name, email address, or Google account inside the App. The App
+        shows it as your <em>Support ID</em> in Account → Subscription, so you
+        can quote it if you contact us about a purchase.
+      </li>
+      <li>
+        <strong>Purchase records.</strong> RevenueCat receives the store's
+        purchase details — which plan, its price and currency, purchase and
+        renewal dates, and the store's purchase token — together with the
+        anonymous ID and basic device information (device type and operating
+        system). It uses them to confirm that a subscription is active, to
+        restore it on a new phone, and to show it in the subscription
+        management screen.
+      </li>
+      <li>
+        <strong>Paywall views.</strong> RevenueCat records when the
+        subscription screen is shown or closed, so we can see whether it is
+        clear. These records carry only the anonymous ID.
+      </li>
+      <li>
+        <strong>Payments.</strong> Google Play (or Apple) takes the payment
+        under its own terms and privacy policy. Neither we nor RevenueCat ever
+        see your card or payment details.
+      </li>
+      <li>
+        <strong>Subscription check.</strong> When you start Recite Mode, the App
+        sends the anonymous ID to our token broker, which asks RevenueCat
+        whether the subscription is active before issuing a speech token. The
+        answer may be remembered for a few minutes; nothing else is stored.
+      </li>
+      <li>
+        <strong>Restoring on a new phone.</strong> "Restore purchases" asks the
+        store which subscriptions belong to the store account signed in on the
+        device, and links them to the new installation's ID.
+      </li>
+    </ul>
+
+    <h2>5. Religious information and your consent</h2>
     <p>
       Recitation audio, memorisation progress, and reading activity reveal
       religious practice, and many privacy laws treat that as a
@@ -236,9 +294,13 @@
         by not using Recite Mode. Withdrawal takes effect immediately; because
         no audio is retained, there is nothing left to delete.
       </li>
+      <li>
+        A Rafeeq Pro purchase record shows only that a subscription was bought
+        and when. It contains nothing about what you recite, read, or memorise.
+      </li>
     </ul>
 
-    <h2>5. We do not train AI models on your content</h2>
+    <h2>6. We do not train AI models on your content</h2>
     <p>
       Your notes, reflections, bookmarks, memorisation records, and recitation
       audio are <strong>never</strong> used to train, fine-tune, or evaluate any
@@ -249,15 +311,17 @@
       first — continuing to use the App would not be treated as agreement.
     </p>
 
-    <h2>6. No account required</h2>
+    <h2>7. No account required</h2>
     <p>
       The App has no sign-in and no user account. Your notes, bookmarks,
       memorisation progress, and your Hifz streak are written only to
       this device — they are never uploaded, never synced, and are not tied to
-      your identity in any way.
+      your identity in any way. The only identifier the App uses is the
+      anonymous subscription ID described in section 4, which is linked to
+      purchases and to nothing else.
     </p>
 
-    <h2>7. Third parties the App connects to</h2>
+    <h2>8. Third parties the App connects to</h2>
     <p>
       These are every external service the App contacts, what each one is for,
       and what it receives. Each operates under its own privacy policy, linked
@@ -299,11 +363,13 @@
           </td>
           <td>
             Hosts our token broker, a small service that holds our API
-            credentials so they are never shipped inside the App
+            credentials so they are never shipped inside the App, and checks
+            the Rafeeq Pro subscription before Recite Mode starts
           </td>
           <td>
             Standard connection metadata such as your IP address, as with any
-            web request. No content of yours passes through it.
+            web request, and the anonymous subscription ID when Recite Mode
+            starts. No content of yours passes through it.
           </td>
         </tr>
         <tr>
@@ -312,8 +378,41 @@
               >Deepgram</a
             >
           </td>
-          <td>Speech recognition for Recite Mode</td>
+          <td>Speech recognition for Recite Mode (default engine)</td>
           <td>Live microphone audio, only while Recite Mode is running</td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://soniox.com/policies/privacy-policy" target="_blank" rel="noopener"
+              >Soniox</a
+            >
+          </td>
+          <td>Speech recognition for Recite Mode, if you select it in Settings</td>
+          <td>Live microphone audio, only while Recite Mode is running</td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener"
+              >RevenueCat</a
+            >
+          </td>
+          <td>Rafeeq Pro subscription status, restore, and management</td>
+          <td>
+            The anonymous subscription ID, store purchase details, paywall
+            views, and device type and operating system
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
+              >Google Play</a
+            >
+          </td>
+          <td>Taking payment for Rafeeq Pro</td>
+          <td>
+            Your purchase, under your Google account and Google's own terms —
+            only if you subscribe
+          </td>
         </tr>
         <tr>
           <td>
@@ -341,11 +440,13 @@
     </table>
     <p>All connections use encrypted transport (HTTPS/WSS).</p>
 
-    <h2>8. International data transfers</h2>
+    <h2>9. International data transfers</h2>
     <p>
-      Deepgram and Cloudflare are based in the United States, and Cloudflare
-      serves requests from data centres worldwide, so if you use Recite Mode
-      outside the US your audio is processed there. The safeguards that apply:
+      Deepgram, Soniox, RevenueCat, and Cloudflare are based in the United
+      States, and Cloudflare serves requests from data centres worldwide, so if
+      you use Recite Mode outside the US your audio is processed there, and a
+      Rafeeq Pro purchase record is held there. The safeguards that apply to
+      audio:
       audio travels only over an encrypted connection (WSS), is transcribed in
       the moment and never stored by us, is never linked to an account or
       identity because the App has none, and reaches no third party beyond the
@@ -358,10 +459,14 @@
       that identifies you is sent with them.
     </p>
 
-    <h2>9. What the App does not do</h2>
+    <h2>10. What the App does not do</h2>
     <ul>
       <li>No advertising, and no advertising identifiers</li>
-      <li>No analytics or behavioural tracking SDKs</li>
+      <li>
+        No analytics or behavioural tracking SDKs. RevenueCat's records of
+        subscription-screen views (section 4) are the only usage records, and
+        they carry no identity
+      </li>
       <li>No selling or sharing of personal data</li>
       <li>
         No access to your precise location, and no location tracking in the
@@ -371,7 +476,7 @@
       <li>No access to your contacts, photos, files, or call history</li>
     </ul>
 
-    <h2>10. Security</h2>
+    <h2>11. Security</h2>
     <p>The measures protecting the small amount of data that moves at all:</p>
     <ul>
       <li>
@@ -394,9 +499,10 @@
         suspected and can be revoked immediately at the provider.
       </li>
       <li>
-        <strong>Access control:</strong> the token broker exposes only the two
+        <strong>Access control:</strong> the token broker exposes only the
         endpoints the App needs, and requests the minimum API scope required to
-        read Quran content — no broader permission is requested or held.
+        read Quran content — no broader permission is requested or held. Its
+        RevenueCat key is a server-side secret and never leaves the broker.
       </li>
       <li>
         <strong>Breach reporting:</strong> any actual or suspected unauthorised
@@ -406,7 +512,7 @@
       </li>
     </ul>
 
-    <h2>11. Backing up your data</h2>
+    <h2>12. Backing up your data</h2>
     <p>
       Because there is no account, the App gives you a file instead. In
       <strong>Account → Backup</strong>, "Export My Data" writes your data
@@ -418,10 +524,11 @@
       The backup file includes your notes, bookmarks, memorisation progress,
       streaks, preferences, worship tracker entries, favourite azkar, and saved
       quiz range sets. It does not include your saved location, which the App
-      simply asks for again on the new device.
+      simply asks for again on the new device, or your Rafeeq Pro
+      subscription, which you bring across with "Restore purchases" instead.
     </p>
 
-    <h2>12. Accessing, correcting, and deleting your data</h2>
+    <h2>13. Accessing, correcting, and deleting your data</h2>
     <p>
       <strong>Access and correction.</strong> Everything the App holds about you
       is on your device and directly visible in the App — your notes, bookmarks,
@@ -437,6 +544,15 @@
       request to send us. If you want to keep your notes and streaks first,
       export them from <strong>Account → Backup</strong> before uninstalling.
     </p>
+    <p>
+      <strong>Subscription records.</strong> If you bought Rafeeq Pro, the
+      purchase record is held by RevenueCat and by the store, so uninstalling
+      does not remove it. To have the RevenueCat record deleted, email us your
+      Support ID (Account → Subscription) and we will delete it within 30
+      days. Cancel the subscription in Google Play first — deleting the record
+      does not stop billing. Google Play keeps its own record of the purchase
+      under its privacy policy.
+    </p>
     <div class="callout">
       <strong
         >Why the usual account-deletion and OAuth-revocation steps do not apply
@@ -446,23 +562,26 @@
       requests no OAuth permission from you, so there is no authorisation to
       revoke and no linked account whose deletion could affect your data. We
       operate no user database and hold no copy of your content on any server,
-      which means there is nothing for us to delete on request and nothing of
-      yours in any backup of ours. Should Rafeeq ever add an account system, we
+      which means that, apart from the subscription record above, there is
+      nothing for us to delete on request and nothing of yours in any backup
+      of ours. Should Rafeeq ever add an account system, we
       would honour deletion requests by permanently deleting the data within 30
       days and purging it from backups within 90 days, and deleting your Quran
       Foundation account would delete the associated data held here — but today
       no such data exists.
     </div>
 
-    <h2>13. Children's privacy</h2>
+    <h2>14. Children's privacy</h2>
     <p>
       The App is suitable for all ages and does not knowingly collect personal
       information from children under 13. Recite Mode requires microphone
       permission, and prayer times require location permission. On most
-      devices, the device owner has to grant these.
+      devices, the device owner has to grant these. Rafeeq Pro can only be
+      bought through the store account on the device, so purchases follow the
+      store's own parental controls.
     </p>
 
-    <h2>14. Changes to this policy</h2>
+    <h2>15. Changes to this policy</h2>
     <p>
       If this policy changes materially — particularly regarding what data
       leaves your device — the "Last updated" date above will change and the
