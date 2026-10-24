@@ -975,6 +975,40 @@ export function streakWindow(sessions: PlanSession[]): StreakDay[] {
   return days;
 }
 
+/**
+ * Every day of one calendar month, oldest first, for the streak calendar.
+ * `month` is 0-based, as in `Date`. Unlike the week strip this is a calendar
+ * month on purpose: it is for looking back over the history, not at the run.
+ */
+export function streakMonth(
+  sessions: PlanSession[],
+  year: number,
+  month: number,
+): StreakDay[] {
+  const dates = allStreakDates(sessions);
+  const today = todayStr();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: StreakDay[] = [];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = localDateStr(new Date(year, month, d));
+    days.push({
+      date,
+      active: dates.has(date),
+      frozen: wasFrozen("hifz", date),
+      future: date > today,
+    });
+  }
+  return days;
+}
+
+/** The earliest day that counts toward the streak, or null if none ever did —
+ *  how far back the calendar lets you go. */
+export function firstStreakDate(sessions: PlanSession[]): string | null {
+  const dates = Array.from(allStreakDates(sessions)).sort();
+  return dates[0] ?? null;
+}
+
 export interface StreakRecoveryInfo {
   /** True when yesterday was missed but a prior streak exists to reconnect. */
   recoverable: boolean;

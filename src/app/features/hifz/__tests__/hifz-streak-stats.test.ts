@@ -1,6 +1,6 @@
 /**
  * The read-only helpers behind the Account streak card: the longest run and
- * the seven-day strip.
+ * the seven-day strip, and the month calendar it opens into.
  *
  * These read the same merged date set the streak itself uses — persistent
  * active days, the current plan's completed sessions, and bridged days — so
@@ -11,6 +11,8 @@ import {
   recordStreakDay,
   computeLongestStreakPersistent,
   streakWindow,
+  streakMonth,
+  firstStreakDate,
   type PlanSession,
 } from "../hifz.service";
 import { todayStr, daysAgoStr } from "../../../core/utils/local-date.util";
@@ -148,5 +150,45 @@ describe("week strip", () => {
         .filter((d) => d.future)
         .every((d) => !d.active && !d.frozen),
     ).toBe(true);
+  });
+});
+
+describe("month calendar", () => {
+  it("lists every day of the month, oldest first", () => {
+    const days = streakMonth(noSessions, 2026, 1); // February 2026
+    expect(days).toHaveLength(28);
+    expect(days[0].date).toBe("2026-02-01");
+    expect(days[27].date).toBe("2026-02-28");
+  });
+
+  it("marks earned and frozen days in any past month", () => {
+    recordStreakDay("2026-03-10");
+    bridge("2026-03-11");
+    spendFreezeOn("2026-03-11");
+    const byDate = Object.fromEntries(
+      streakMonth(noSessions, 2026, 2).map((d) => [d.date, d]),
+    );
+    expect(byDate["2026-03-10"]).toMatchObject({ active: true, frozen: false });
+    expect(byDate["2026-03-11"]).toMatchObject({ active: true, frozen: true });
+    expect(byDate["2026-03-12"].active).toBe(false);
+  });
+
+  it("flags the days after today as future", () => {
+    const now = new Date();
+    const days = streakMonth(noSessions, now.getFullYear(), now.getMonth());
+    expect(days.find((d) => d.date === todayStr())!.future).toBe(false);
+    expect(days.filter((d) => d.future).every((d) => d.date > todayStr())).toBe(true);
+  });
+});
+
+describe("first streak date", () => {
+  it("is null before the streak was ever started", () => {
+    expect(firstStreakDate(noSessions)).toBeNull();
+  });
+
+  it("is the earliest counted day across earned and bridged days", () => {
+    recordStreakDay("2026-05-02");
+    bridge("2026-04-30");
+    expect(firstStreakDate(noSessions)).toBe("2026-04-30");
   });
 });

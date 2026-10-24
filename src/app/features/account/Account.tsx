@@ -280,10 +280,8 @@ const Account: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Rafeeq Pro subscription ── */}
-            <SubscriptionRow />
-
             {/* ── Notes card ── */}
+            <p className="ac-section-label">{t.notes}</p>
             <div className="ac-card ac-notes-card" {...tourAttr("account.notes")}>
                 <button
                   className="ac-streak-header"
@@ -291,17 +289,18 @@ const Account: React.FC = () => {
                   aria-expanded={notesOpen}
                 >
                   <div className="ac-streak-header-left">
-                    <span className="ac-streak-flame">📝</span>
-                    <div>
-                      <p className="ac-streak-title">{t.notes}</p>
-                      {!notesOpen && !loading && (
-                        <p className="ac-streak-summary">
-                          {notes.length > 0
-                            ? `${notes.length} ${lang === "ar" ? "ملاحظة" : notes.length === 1 ? "note" : "notes"}`
-                            : t.noNotes}
-                        </p>
-                      )}
-                    </div>
+                    <svg className="ac-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                      <polyline points="14 3 14 9 20 9" />
+                      <line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="13" y2="17" />
+                    </svg>
+                    <p className="ac-streak-title">
+                      {loading
+                        ? t.loading
+                        : notes.length > 0
+                          ? `${notes.length} ${lang === "ar" ? "ملاحظة" : notes.length === 1 ? "note" : "notes"}`
+                          : t.noNotes}
+                    </p>
                   </div>
                   <svg className={`ac-chevron ${notesOpen ? "ac-chevron-up" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 9l6 6 6-6" />
@@ -351,6 +350,9 @@ const Account: React.FC = () => {
                   </div>
                 )}
             </div>
+
+            {/* ── Rafeeq Pro subscription ── */}
+            <SubscriptionRow />
 
             {/* ── Info group ── */}
             <p className="ac-section-label">{lang === "ar" ? "معلومات" : "Info"}</p>
