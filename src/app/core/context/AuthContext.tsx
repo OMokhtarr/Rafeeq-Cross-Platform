@@ -24,11 +24,11 @@ import {
   AccountUser,
   AuthProviderId,
   currentUser,
-  isAuthConfigured,
   onAccountChange,
   signIn as authSignIn,
   signOut as authSignOut,
 } from "../services/auth/auth.service";
+import { isAuthConfigured } from "../services/auth/supabase.client";
 
 export type SignInOutcome = "signed_in" | "cancelled" | "failed";
 

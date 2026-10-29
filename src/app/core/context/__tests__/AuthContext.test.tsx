@@ -3,19 +3,22 @@ import { createRoot, Root } from "react-dom/client";
 import { AuthProvider, useAuth } from "../AuthContext";
 import { isAccountsOn } from "../../services/auth/accounts-switch";
 import * as auth from "../../services/auth/auth.service";
+import { isAuthConfigured } from "../../services/auth/supabase.client";
 
 jest.mock("../../services/auth/accounts-switch", () => ({ isAccountsOn: jest.fn() }));
 jest.mock("../../services/auth/auth.service", () => ({
-  isAuthConfigured: jest.fn(),
   signIn: jest.fn(),
   signOut: jest.fn(),
   currentUser: jest.fn(),
   onAccountChange: jest.fn(),
 }));
 
+jest.mock("../../services/auth/supabase.client", () => ({ isAuthConfigured: jest.fn() }));
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const on = isAccountsOn as jest.Mock;
+const configured = isAuthConfigured as jest.Mock;
 const svc = auth as unknown as Record<string, jest.Mock>;
 
 const alice = { id: "u1", email: "a@x.com", name: "Alice", provider: "google" as const };
@@ -51,7 +54,7 @@ async function mount() {
 beforeEach(() => {
   emit = null;
   on.mockReturnValue(true);
-  svc.isAuthConfigured.mockReturnValue(true);
+  configured.mockReturnValue(true);
   svc.currentUser.mockResolvedValue(null);
   svc.signOut.mockResolvedValue(undefined);
   svc.onAccountChange.mockImplementation((cb: (u: typeof alice | null) => void) => {
@@ -75,7 +78,7 @@ describe("AuthProvider", () => {
   });
 
   it("is disabled when the auth backend isn't configured", async () => {
-    svc.isAuthConfigured.mockReturnValue(false);
+    configured.mockReturnValue(false);
     await mount();
     expect(ctx.enabled).toBe(false);
     expect(ctx.ready).toBe(true);
