@@ -5,7 +5,12 @@
 
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { appleClientSecret, exchangeAppleCode, revokeAppleToken } from "../functions/_shared/apple.ts";
+import {
+  appleClientSecret,
+  appleKeyFromEnv,
+  exchangeAppleCode,
+  revokeAppleToken,
+} from "../functions/_shared/apple.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -89,4 +94,10 @@ test("revokeAppleToken posts the refresh token under the client id that issued i
 test("revokeAppleToken throws on a non-2xx response", async () => {
   stubFetch(400, { error: "invalid_client" });
   await assert.rejects(revokeAppleToken({ refreshToken: "r-1", clientId: CLIENT_ID }, KEY), /400/);
+});
+
+test("appleKeyFromEnv reads the three key secrets and is null while any is missing", () => {
+  const vars: Record<string, string> = { APPLE_TEAM_ID: "T", APPLE_KEY_ID: "K", APPLE_PRIVATE_KEY: "P" };
+  assert.deepEqual(appleKeyFromEnv((n) => vars[n]), { teamId: "T", keyId: "K", privateKeyPem: "P" });
+  assert.equal(appleKeyFromEnv((n) => (n === "APPLE_KEY_ID" ? null : vars[n])), null);
 });

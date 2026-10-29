@@ -23,6 +23,17 @@ export interface AppleKey {
   privateKeyPem: string;
 }
 
+/**
+ * The signing key from APPLE_TEAM_ID, APPLE_KEY_ID and APPLE_PRIVATE_KEY;
+ * null while any is unset (they may be absent until iOS ships).
+ */
+export function appleKeyFromEnv(get: (name: string) => string | null | undefined): AppleKey | null {
+  const teamId = get("APPLE_TEAM_ID");
+  const keyId = get("APPLE_KEY_ID");
+  const privateKeyPem = get("APPLE_PRIVATE_KEY");
+  return teamId && keyId && privateKeyPem ? { teamId, keyId, privateKeyPem } : null;
+}
+
 /** A refresh token and the client id it was issued to. */
 export interface AppleGrant {
   refreshToken: string;

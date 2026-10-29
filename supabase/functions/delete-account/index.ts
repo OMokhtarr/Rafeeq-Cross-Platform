@@ -15,7 +15,8 @@
  */
 
 import { createClient, type User } from "npm:@supabase/supabase-js@2";
-import { revokeAppleToken, type AppleKey } from "../_shared/apple.ts";
+import { appleKeyFromEnv, revokeAppleToken } from "../_shared/apple.ts";
+import { isNotFound } from "../_shared/http.ts";
 import { handleDeleteAccount, type AccountRef } from "./handler.ts";
 
 const env = (name: string) => Deno.env.get(name) || null;
@@ -25,16 +26,6 @@ const admin = createClient(env("SUPABASE_URL")!, env("SUPABASE_SERVICE_ROLE_KEY"
 });
 
 const toRef = (user: User): AccountRef => ({ id: user.id, provider: user.app_metadata?.provider ?? "" });
-
-/** A 4xx from Auth means "no such user / bad token"; anything else is an outage. */
-const isNotFound = (error: { status?: number }) => !!error.status && error.status < 500;
-
-function appleKey(): AppleKey | null {
-  const teamId = env("APPLE_TEAM_ID");
-  const keyId = env("APPLE_KEY_ID");
-  const privateKeyPem = env("APPLE_PRIVATE_KEY");
-  return teamId && keyId && privateKeyPem ? { teamId, keyId, privateKeyPem } : null;
-}
 
 async function findUserByEmail(email: string): Promise<User | null> {
   const wanted = email.trim().toLowerCase();
@@ -83,7 +74,7 @@ Deno.serve((req) =>
     },
 
     async revokeApple(grant) {
-      const key = appleKey();
+      const key = appleKeyFromEnv(env);
       if (!key) throw new Error("apple credentials not configured");
       await revokeAppleToken(grant, key);
     },

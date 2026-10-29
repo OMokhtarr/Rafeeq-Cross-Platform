@@ -218,6 +218,7 @@ async function signInWithAppleNative(): Promise<AccountUser | null> {
  */
 const AUTH_CALLBACK_URL = "rafeeq://auth/callback";
 const CALLBACK_GRACE_MS = 1500;
+const CANCEL_ERRORS = new Set(["user_cancelled_authorize", "access_denied"]);
 
 type SignInResult = { user: AccountUser | null } | { error: unknown };
 
@@ -296,9 +297,11 @@ async function accountFromCallback(url: string): Promise<AccountUser | null> {
   const code = params.get("code");
   if (!code) {
     const error = params.get("error");
-    // OAuth's "access_denied" is the person declining on Apple's page: a
-    // cancel, like closing the tab. Any other error is a real failure.
-    if (error === "access_denied") return null;
+    // The person declining is a cancel, like closing the tab: Apple's own
+    // Cancel arrives as "user_cancelled_authorize" (Supabase forwards the
+    // provider's error), OAuth's generic refusal as "access_denied". Any
+    // other error is a real failure.
+    if (error && CANCEL_ERRORS.has(error)) return null;
     throw new Error(
       params.get("error_description") ?? error ?? "callback carried no code"
     );

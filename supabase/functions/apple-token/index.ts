@@ -16,7 +16,8 @@
  */
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { exchangeAppleCode, type AppleKey } from "../_shared/apple.ts";
+import { appleKeyFromEnv, exchangeAppleCode } from "../_shared/apple.ts";
+import { isNotFound } from "../_shared/http.ts";
 import { handleAppleToken } from "./handler.ts";
 
 const env = (name: string) => Deno.env.get(name) || null;
@@ -24,16 +25,6 @@ const env = (name: string) => Deno.env.get(name) || null;
 const admin = createClient(env("SUPABASE_URL")!, env("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-
-/** A 4xx from Auth means "bad token"; anything else is an outage. */
-const isNotFound = (error: { status?: number }) => !!error.status && error.status < 500;
-
-function appleKey(): AppleKey | null {
-  const teamId = env("APPLE_TEAM_ID");
-  const keyId = env("APPLE_KEY_ID");
-  const privateKeyPem = env("APPLE_PRIVATE_KEY");
-  return teamId && keyId && privateKeyPem ? { teamId, keyId, privateKeyPem } : null;
-}
 
 Deno.serve((req) =>
   handleAppleToken(req, {
@@ -47,7 +38,7 @@ Deno.serve((req) =>
     },
 
     async exchangeAppleCode(code) {
-      const key = appleKey();
+      const key = appleKeyFromEnv(env);
       const bundleId = env("APPLE_BUNDLE_ID");
       if (!key || !bundleId) throw new Error("apple credentials not configured");
       return exchangeAppleCode(code, bundleId, key);

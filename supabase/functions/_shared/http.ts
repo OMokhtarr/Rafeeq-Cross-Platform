@@ -1,5 +1,5 @@
 /**
- * Response helpers shared by the edge functions the app calls.
+ * Request/response helpers shared by the edge functions the app calls.
  */
 
 // Bearer auth, no cookies, so any origin may call; the token is the gate.
@@ -15,6 +15,9 @@ export const json = (status: number, body: object) =>
     status,
     headers: { ...CORS, "content-type": "application/json" },
   });
+
+/** A 4xx from Auth means "no such user / bad token"; anything else is an outage. */
+export const isNotFound = (error: { status?: number }) => !!error.status && error.status < 500;
 
 /** The access token from `Authorization: Bearer <token>`, if present. */
 export const bearerToken = (req: Request): string | undefined =>

@@ -89,7 +89,12 @@ beforeEach(() => {
   });
 });
 
+// Some suites below stub fetch; put back whatever jsdom had (possibly none).
+const realFetch = Object.getOwnPropertyDescriptor(globalThis, "fetch");
+
 afterEach(() => {
+  if (realFetch) Object.defineProperty(globalThis, "fetch", realFetch);
+  else delete (globalThis as { fetch?: unknown }).fetch;
   delete process.env.REACT_APP_SUPABASE_URL;
   delete process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY;
   delete process.env.REACT_APP_GOOGLE_WEB_CLIENT_ID;
@@ -228,6 +233,20 @@ describe("signIn apple on iOS (native)", () => {
     warn.mockRestore();
   });
 
+  it("still resolves the user when the token function answers with an error", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 502 });
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const { signIn } = load();
+
+    await expect(signIn("apple")).resolves.toEqual(APPLE_ACCOUNT);
+    await flush();
+    expect(warn).toHaveBeenCalledWith(
+      "[auth] storing the Apple token failed",
+      expect.objectContaining({ message: "apple-token failed: 502" })
+    );
+    warn.mockRestore();
+  });
+
   it("returns null when the person cancels", async () => {
     mockLogin.mockRejectedValue({ code: "USER_CANCELLED" });
     const { signIn } = load();
@@ -296,13 +315,28 @@ describe("signIn apple on Android (web flow)", () => {
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
-  it("returns null when the browser closes without a callback", async () => {
+  it("returns null once the browser has been closed for the grace period with no callback", async () => {
     const { result } = await startSignIn();
+    let settled = false;
+    result.then(
+      () => (settled = true),
+      () => (settled = true)
+    );
+    // Promise callbacks are microtasks, which fake timers leave alone.
+    const drain = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    };
 
     jest.useFakeTimers();
     try {
       browserFinished();
-      jest.advanceTimersByTime(5000);
+      jest.advanceTimersByTime(1499);
+      await drain();
+      expect(settled).toBe(false);
+
+      jest.advanceTimersByTime(1);
+      await drain();
+      expect(settled).toBe(true);
     } finally {
       jest.useRealTimers();
     }
@@ -318,6 +352,17 @@ describe("signIn apple on Android (web flow)", () => {
     await auth.completeOAuthRedirect("rafeeq://auth/callback?code=abc");
 
     await expect(result).resolves.toEqual(APPLE_ACCOUNT);
+  });
+
+  it("returns null when the person taps Cancel on Apple's page", async () => {
+    const { auth, result } = await startSignIn();
+
+    await auth.completeOAuthRedirect(
+      "rafeeq://auth/callback?error=user_cancelled_authorize&error_description=user_cancelled_authorize"
+    );
+
+    await expect(result).resolves.toBeNull();
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
   });
 
   it("returns null when the callback says the person denied access", async () => {
