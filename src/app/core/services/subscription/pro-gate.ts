@@ -1,3 +1,5 @@
+import { isAccountsOn } from "../auth/accounts-switch";
+
 /**
  * PRO GATE SWITCH
  *
@@ -7,7 +9,10 @@
  * purchases can be tested before launch. Set REACT_APP_PRO_GATE=on in
  * .env.production for the store release, then turn on the broker's
  * REQUIRE_PRO.
+ *
+ * The gate also needs accounts (REACT_APP_ACCOUNTS=on): Pro is always on an
+ * account, so with accounts off there is nothing to gate against.
  */
 export function isProGateOn(): boolean {
-  return process.env.REACT_APP_PRO_GATE === "on";
+  return isAccountsOn() && process.env.REACT_APP_PRO_GATE === "on";
 }
