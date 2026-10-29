@@ -46,6 +46,9 @@ import { useLang } from "./LanguageContext";
 
 const CACHE_KEY = "rafiq_pro_v1";
 
+/** Longest a purchase or restore waits for RevenueCat to move onto the account. */
+const IDENTITY_WAIT_MS = 8000;
+
 /** How the paywall ended: "unavailable" when it couldn't be shown at all (no
  *  key, offline, no offering), "failed" when a purchase or restore errored. */
 export type PaywallOutcome = "subscribed" | "dismissed" | "failed" | "unavailable";
@@ -101,6 +104,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const auth = useAuth();
   const authReady = !auth.enabled || auth.ready;
   const accountId = auth.enabled ? auth.user?.id ?? null : null;
+  const currentUserId = auth.currentUserId;
   const accountIdRef = useRef(accountId);
   accountIdRef.current = accountId;
   // The account RevenueCat is on (undefined until configured), and a counter
@@ -134,7 +138,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     identityPending.current += 1;
     identityChain.current = identityChain.current
       .then(async () => {
-        const target = accountIdRef.current;
+        // Read live: the render-lagged accountIdRef can miss a sign-in that
+        // has just landed.
+        const target = auth.enabled ? currentUserId() : null;
         let info: CustomerInfo;
         if (!target) {
           // No-op when RevenueCat is already anonymous.
@@ -155,7 +161,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       .then(() => {
         identityPending.current -= 1;
       });
-  }, [apply]);
+  }, [apply, auth.enabled, currentUserId]);
 
   useEffect(() => {
     if (!native || !authReady) return;
@@ -223,13 +229,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       .catch(() => {});
   }, [native, authReady, lang]);
 
-  /** Resolves once RevenueCat is on the current account. A sign-in that has
-   *  just landed queues its logIn only after React renders, so yield once to
-   *  let that happen, then wait out the chain (a newer step may join it). */
-  const identitySettled = useCallback(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    while (identityPending.current > 0) await identityChain.current;
-  }, []);
+  /** Resolves true once RevenueCat is on the account that is signed in right
+   *  now. A sign-in that has just landed only queues its logIn after React
+   *  renders, so when nothing is pending but the SDK is on another account this
+   *  queues the switch itself. False when the switch fails or takes too long. */
+  const identitySettled = useCallback(async (): Promise<boolean> => {
+    if (!auth.enabled) return true;
+    const deadline = Date.now() + IDENTITY_WAIT_MS;
+    let queuedOwn = false;
+    while (Date.now() < deadline) {
+      if (identityPending.current > 0) {
+        await Promise.race([
+          identityChain.current,
+          new Promise((resolve) => setTimeout(resolve, deadline - Date.now())),
+        ]);
+        continue;
+      }
+      if (sdkAccountId.current === currentUserId()) return true;
+      if (queuedOwn) return false;
+      queuedOwn = true;
+      syncIdentity();
+    }
+    return false;
+  }, [auth.enabled, currentUserId, syncIdentity]);
 
   const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 
@@ -240,7 +262,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       await configureRevenueCat();
       // A purchase made before logIn finishes would attach to the anonymous id.
-      await identitySettled();
+      if (!(await identitySettled())) return "failed";
       result = await presentPaywall();
     } catch (err) {
       console.error("[pro] paywall failed", err);
@@ -267,7 +289,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [refresh]);
 
   const restore = useCallback(async () => {
-    await identitySettled();
+    if (!(await identitySettled())) throw new Error("RevenueCat is not on the signed-in account");
     return apply(await restorePurchases());
   }, [apply, identitySettled]);
 

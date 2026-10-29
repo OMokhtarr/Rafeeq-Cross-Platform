@@ -42,6 +42,9 @@ interface AuthCtx {
   user: AccountUser | null;
   signIn: (provider: AuthProviderId) => Promise<SignInOutcome>;
   signOut: () => Promise<void>;
+  /** The signed-in account id right now, read synchronously. Unlike `user` it
+   *  is never a render behind a sign-in or sign-out that just landed. */
+  currentUserId: () => string | null;
   /** Opens the sign-in sheet; resolves true once signed in, false if it is
    *  dismissed. A second call while it is open returns the same promise. */
   requestSignIn: () => Promise<boolean>;
@@ -130,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyUser(null);
   }, [applyUser]);
 
+  const currentUserId = useCallback(() => userRef.current?.id ?? null, []);
+
   const requestSignIn = useCallback((): Promise<boolean> => {
     if (userRef.current) return Promise.resolve(true);
     if (pendingRef.current) return pendingRef.current.promise;
@@ -143,8 +148,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const closeSignIn = useCallback(() => settle(false), [settle]);
 
   const value = useMemo<AuthCtx>(
-    () => ({ enabled, ready, user, signIn, signOut, requestSignIn, signInOpen, closeSignIn }),
-    [enabled, ready, user, signIn, signOut, requestSignIn, signInOpen, closeSignIn],
+    () => ({
+      enabled,
+      ready,
+      user,
+      signIn,
+      signOut,
+      currentUserId,
+      requestSignIn,
+      signInOpen,
+      closeSignIn,
+    }),
+    [enabled, ready, user, signIn, signOut, currentUserId, requestSignIn, signInOpen, closeSignIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

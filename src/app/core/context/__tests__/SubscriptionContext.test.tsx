@@ -31,7 +31,9 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
 const mockAuth: { current: { enabled: boolean; ready: boolean; user: { id: string } | null } } = {
   current: { enabled: false, ready: true, user: null },
 };
-jest.mock("../AuthContext", () => ({ useAuth: () => mockAuth.current }));
+// currentUserId reads the live state, like AuthContext's ref, not the last render.
+const currentUserId = () => mockAuth.current.user?.id ?? null;
+jest.mock("../AuthContext", () => ({ useAuth: () => ({ ...mockAuth.current, currentUserId }) }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
   RevenueCatUI: { presentPaywall: jest.fn(), presentCustomerCenter: jest.fn() },
   PAYWALL_RESULT: {
@@ -445,14 +447,15 @@ describe("accounts", () => {
     );
     ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
     rc.restorePurchases.mockResolvedValue(info(false));
-    // The paywall is requested right as the sign-in lands.
+    // The paywall is requested right as the sign-in lands, before the render.
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
     let paywall!: Promise<string>;
     let restoring!: Promise<boolean>;
     await act(async () => {
       paywall = sub.showPaywall();
       restoring = sub.restore();
     });
-    await setAuth({ user: { id: "u1" } });
+    await setAuth({});
     expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
     expect(ui.presentPaywall).not.toHaveBeenCalled();
     expect(rc.restorePurchases).not.toHaveBeenCalled();
@@ -462,5 +465,60 @@ describe("accounts", () => {
     });
     expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
     expect(rc.restorePurchases).toHaveBeenCalledTimes(1);
+  });
+  it("waits for logIn even before the account-change effect has run", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let finishLogIn!: () => void;
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLogIn = () => resolve({ customerInfo: info(false).customerInfo, created: false });
+        }),
+    );
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    // The user flips with no re-render, so only the live read can see it.
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
+    let paywall!: Promise<string>;
+    await act(async () => {
+      paywall = sub.showPaywall();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    await act(async () => {
+      finishLogIn();
+      await paywall;
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show the paywall, or restore, when logIn fails", async () => {
+    const errors = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    rc.logIn.mockRejectedValue(new Error("offline"));
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
+    let outcome: string | undefined;
+    let restoreError: unknown;
+    await act(async () => {
+      outcome = await sub.showPaywall();
+      await sub.restore().catch((e) => (restoreError = e));
+    });
+    expect(outcome).toBe("failed");
+    expect(restoreError).toBeDefined();
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.restorePurchases).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it("does not wait for any account switch when accounts are off", async () => {
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    await mount();
+    await act(async () => {
+      await sub.showPaywall();
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+    expect(rc.logIn).not.toHaveBeenCalled();
   });
 });
