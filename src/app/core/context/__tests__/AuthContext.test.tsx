@@ -10,6 +10,7 @@ jest.mock("../../services/auth/accounts-switch", () => ({ isAccountsOn: jest.fn(
 jest.mock("../../services/auth/auth.service", () => ({
   signIn: jest.fn(),
   signOut: jest.fn(),
+  deleteAccount: jest.fn(),
   currentUser: jest.fn(),
   accessToken: jest.fn(),
   onAccountChange: jest.fn(),
@@ -213,6 +214,29 @@ describe("AuthProvider", () => {
     await act(async () => ctx.signOut());
     expect(svc.signOut).toHaveBeenCalled();
     expect(ctx.user).toBeNull();
+  });
+
+  describe("deleteAccount", () => {
+    it("clears the user once the account is deleted", async () => {
+      svc.currentUser.mockResolvedValue(alice);
+      svc.deleteAccount.mockResolvedValue(undefined);
+      await mount();
+      await act(async () => ctx.deleteAccount());
+      expect(svc.deleteAccount).toHaveBeenCalled();
+      expect(ctx.user).toBeNull();
+    });
+
+    it("rethrows a failure and keeps the user signed in", async () => {
+      svc.currentUser.mockResolvedValue(alice);
+      svc.deleteAccount.mockRejectedValue(new Error("502"));
+      await mount();
+      let caught: unknown;
+      await act(async () => {
+        await ctx.deleteAccount().catch((e) => (caught = e));
+      });
+      expect(caught).toEqual(new Error("502"));
+      expect(ctx.user).toEqual(alice);
+    });
   });
 
   describe("requestSignIn", () => {

@@ -25,6 +25,7 @@ import {
   AuthProviderId,
   accessToken,
   currentUser,
+  deleteAccount as authDeleteAccount,
   onAccountChange,
   signIn as authSignIn,
   signOut as authSignOut,
@@ -42,6 +43,9 @@ interface AuthCtx {
   user: AccountUser | null;
   signIn: (provider: AuthProviderId) => Promise<SignInOutcome>;
   signOut: () => Promise<void>;
+  /** Deletes the account on the server, then signs out. Rejects (still
+   *  signed in) when any server step fails. */
+  deleteAccount: () => Promise<void>;
   /** The signed-in account id right now, read synchronously. Unlike `user` it
    *  is never a render behind a sign-in or sign-out that just landed. */
   currentUserId: () => string | null;
@@ -133,6 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyUser(null);
   }, [applyUser]);
 
+  const deleteAccount = useCallback(async () => {
+    await authDeleteAccount();
+    applyUser(null);
+  }, [applyUser]);
+
   const currentUserId = useCallback(() => userRef.current?.id ?? null, []);
 
   const requestSignIn = useCallback((): Promise<boolean> => {
@@ -154,12 +163,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       signIn,
       signOut,
+      deleteAccount,
       currentUserId,
       requestSignIn,
       signInOpen,
       closeSignIn,
     }),
-    [enabled, ready, user, signIn, signOut, currentUserId, requestSignIn, signInOpen, closeSignIn],
+    [enabled, ready, user, signIn, signOut, deleteAccount, currentUserId, requestSignIn, signInOpen, closeSignIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

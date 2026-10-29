@@ -1,0 +1,11 @@
+# Supabase CLI project config (hand-written; the CLI isn't installed here).
+# Only what the deployed functions need. Link the real project with
+# `supabase link --project-ref <ref>` before `supabase db push` / deploy.
+project_id = "rafeeq"
+
+[functions.delete-account]
+# The gateway's JWT check is off because the function authenticates every
+# request itself: the app's bearer token is verified with Auth (getUser),
+# and the owner script's x-admin-secret carries no JWT at all, so the
+# gateway would turn it away before the handler could check the secret.
+verify_jwt = false

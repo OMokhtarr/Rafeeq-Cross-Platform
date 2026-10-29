@@ -178,3 +178,26 @@ export async function accessToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token ?? null;
 }
+
+/**
+ * Deletes the signed-in account on the server (the delete-account edge
+ * function: Apple revoke, RevenueCat customer, then the auth user), then
+ * signs out locally. Any failure throws before the sign-out, so the person
+ * stays signed in and can try again.
+ */
+export async function deleteAccount(): Promise<void> {
+  const token = await accessToken();
+  if (!token) throw new Error("not signed in");
+  const res = await fetch(
+    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/delete-account`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        apikey: process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY ?? "",
+      },
+    }
+  );
+  if (!res.ok) throw new Error(`delete-account failed: ${res.status}`);
+  await signOut();
+}

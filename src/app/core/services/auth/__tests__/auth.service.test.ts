@@ -243,6 +243,51 @@ describe("offline launch cache", () => {
   });
 });
 
+describe("deleteAccount", () => {
+  const FUNCTION_URL = "https://x.supabase.co/functions/v1/delete-account";
+  const mockFetch = jest.fn();
+
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "fetch", { value: mockFetch, configurable: true });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "at-1", user: USER } },
+    });
+    localStorage.setItem("rafiq_account_v1", JSON.stringify({ id: "u1" }));
+  });
+
+  it("posts to the function with the bearer token, then signs out locally", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200 });
+    const { deleteAccount } = load();
+
+    await deleteAccount();
+
+    expect(mockFetch).toHaveBeenCalledWith(FUNCTION_URL, {
+      method: "POST",
+      headers: { authorization: "Bearer at-1", apikey: "sb_publishable_x" },
+    });
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
+  });
+
+  it("throws on a 502 and keeps the person signed in", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 502 });
+    const { deleteAccount } = load();
+
+    await expect(deleteAccount()).rejects.toThrow("502");
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(localStorage.getItem("rafiq_account_v1")).not.toBeNull();
+  });
+
+  it("throws without calling the function when there is no session", async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    const { deleteAccount } = load();
+
+    await expect(deleteAccount()).rejects.toThrow("not signed in");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe("configuration", () => {
   it("is unconfigured with no URL", () => {
     delete process.env.REACT_APP_SUPABASE_URL;

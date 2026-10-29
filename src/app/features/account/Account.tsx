@@ -25,6 +25,7 @@ import {
 } from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
 import AccountIdentityRow from "./AccountIdentityRow";
+import DeleteAccountSheet from "./DeleteAccountSheet";
 import SubscriptionRow from "./SubscriptionRow";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
@@ -46,6 +47,9 @@ const Account: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const openDelete = useCallback(() => setDeleteOpen(true), []);
+  const closeDelete = useCallback(() => setDeleteOpen(false), []);
   const [featureText, setFeatureText] = useState("");
   const [featureSent, setFeatureSent] = useState(false);
   const featureRef = useRef<HTMLTextAreaElement>(null);
@@ -353,7 +357,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* ── Sign-in / signed-in identity ── */}
-            <AccountIdentityRow />
+            <AccountIdentityRow onDelete={openDelete} />
 
             {/* ── Rafeeq Pro subscription ── */}
             <SubscriptionRow />
@@ -562,6 +566,8 @@ const Account: React.FC = () => {
             </div>
           </AccountModal>
         )}
+
+        <DeleteAccountSheet open={deleteOpen} onClose={closeDelete} />
 
       </IonContent>
       <BottomNavBar active="more" fixed />
