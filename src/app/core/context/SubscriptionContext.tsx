@@ -11,9 +11,9 @@
  * renewals/expiries arrive through RevenueCat's listener. On web there is no
  * store billing, so recite stays unlocked for development.
  *
- * The RevenueCat app-user id is handed to the token broker client, which
- * sends it with every speech request so the broker can check the
- * subscription server-side.
+ * With accounts on, RevenueCat's identity follows the signed-in account
+ * (logIn/logOut), so Pro belongs to the account; with them off it stays on
+ * RevenueCat's anonymous id.
  */
 
 import React, {
@@ -22,6 +22,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Capacitor } from "@capacitor/core";
@@ -31,6 +32,8 @@ import {
   fetchAppUserId,
   fetchCustomerInfo,
   isProFromCustomerInfo,
+  logInRevenueCat,
+  logOutRevenueCat,
   onCustomerInfo,
   PaywallResult,
   presentCustomerCenter,
@@ -38,6 +41,7 @@ import {
   restore as restorePurchases,
   setRevenueCatLocale,
 } from "../services/subscription/revenuecat.service";
+import { useAuth } from "./AuthContext";
 import { useLang } from "./LanguageContext";
 
 const CACHE_KEY = "rafiq_pro_v1";
@@ -92,6 +96,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
+  // RevenueCat follows the account only when accounts are on; it is configured
+  // once auth has read the stored session, so the first identity is right.
+  const auth = useAuth();
+  const authReady = !auth.enabled || auth.ready;
+  const accountId = auth.enabled ? auth.user?.id ?? null : null;
+  const accountIdRef = useRef(accountId);
+  accountIdRef.current = accountId;
+  // The account RevenueCat is on (undefined until configured), and a counter
+  // so a slow logIn/logOut can't overwrite a later change.
+  const identityRef = useRef<string | null | undefined>(undefined);
+  const identitySeq = useRef(0);
+  // Drops isPro in the very render where the account changes, so no frame
+  // shows the previous account's Pro to the next one.
+  const [seenAccountId, setSeenAccountId] = useState(accountId);
+  if (seenAccountId !== accountId) {
+    setSeenAccountId(accountId);
+    if (native && identityRef.current !== undefined) setIsPro(false);
+  }
+
   const apply = useCallback((info: CustomerInfo) => {
     const pro = isProFromCustomerInfo(info);
     setIsPro(pro);
@@ -101,11 +124,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
-    if (!native) return;
+    if (!native || !authReady) return;
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
-    configureRevenueCat()
+    identityRef.current = accountIdRef.current;
+    configureRevenueCat(accountIdRef.current)
       .then(() => {
         if (cancelled) return;
         fetchCustomerInfo()
@@ -133,20 +157,40 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       cancelled = true;
       unsubscribe?.();
     };
-  }, [native, apply]);
+  }, [native, authReady, apply]);
+
+  // A later sign-in or sign-out moves RevenueCat to the new identity. The Pro
+  // cache is cleared first (isPro is dropped during render, above), so the
+  // next account never sees the previous one's Pro while RevenueCat answers.
+  useEffect(() => {
+    if (!native || !authReady || !auth.enabled) return;
+    if (identityRef.current === undefined || identityRef.current === accountId) return;
+    identityRef.current = accountId;
+    const seq = ++identitySeq.current;
+    writeCache(false);
+    configureRevenueCat()
+      .then(async () => {
+        const info = accountId ? await logInRevenueCat(accountId) : await logOutRevenueCat();
+        const id = accountId ?? (await fetchAppUserId());
+        if (seq !== identitySeq.current) return;
+        apply(info);
+        setAppUserId(id);
+      })
+      .catch((err) => console.error("[pro] switching account failed", err));
+  }, [native, authReady, auth.enabled, accountId, apply]);
 
   // The Paywall and Customer Center speak the app's language, not the phone's,
   // and follow it when it's switched in Settings.
   const { lang } = useLang();
   useEffect(() => {
-    if (!native) return;
-    configureRevenueCat()
+    if (!native || !authReady) return;
+    configureRevenueCat(accountIdRef.current)
       .then(() =>
         setRevenueCatLocale(lang).catch((err) => console.error("[pro] paywall language failed", err)),
       )
       // A failed configure is already reported by the effect above.
       .catch(() => {});
-  }, [native, lang]);
+  }, [native, authReady, lang]);
 
   const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 

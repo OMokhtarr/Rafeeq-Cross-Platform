@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
+import { resetRevenueCatForTests } from "../../services/subscription/revenuecat.service";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
 import { LanguageProvider, useLang } from "../LanguageContext";
 
@@ -21,8 +22,16 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
     getAppUserID: jest.fn(),
     restorePurchases: jest.fn(),
     overridePreferredUILocale: jest.fn(),
+    logIn: jest.fn(),
+    logOut: jest.fn(),
+    isAnonymous: jest.fn(),
   },
 }));
+// Accounts state is driven per test; the default is accounts switched off.
+const mockAuth: { current: { enabled: boolean; ready: boolean; user: { id: string } | null } } = {
+  current: { enabled: false, ready: true, user: null },
+};
+jest.mock("../AuthContext", () => ({ useAuth: () => mockAuth.current }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
   RevenueCatUI: { presentPaywall: jest.fn(), presentCustomerCenter: jest.fn() },
   PAYWALL_RESULT: {
@@ -65,19 +74,32 @@ const flush = () => act(async () => {
   await new Promise((r) => setTimeout(r, 0));
 });
 
+// A fresh element per render, so React re-renders instead of bailing out.
+const tree = () => (
+  <SubscriptionProvider>
+    <Probe />
+  </SubscriptionProvider>
+);
+
 async function mount() {
   root = createRoot(document.createElement("div"));
   await act(async () => {
-    root.render(
-      <SubscriptionProvider>
-        <Probe />
-      </SubscriptionProvider>,
-    );
+    root.render(tree());
+  });
+  await flush();
+}
+
+/** Changes the accounts state and re-renders the provider. */
+async function setAuth(next: Partial<typeof mockAuth.current>) {
+  mockAuth.current = { ...mockAuth.current, ...next };
+  await act(async () => {
+    root.render(tree());
   });
   await flush();
 }
 
 beforeEach(() => {
+  resetRevenueCatForTests();
   localStorage.clear();
   listener = null;
   platform.mockReturnValue("android");
@@ -90,6 +112,10 @@ beforeEach(() => {
   rc.removeCustomerInfoUpdateListener.mockResolvedValue({ wasRemoved: true });
   rc.overridePreferredUILocale.mockResolvedValue(undefined);
   rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:abc" });
+  rc.isAnonymous.mockResolvedValue({ isAnonymous: false });
+  rc.logIn.mockImplementation(async () => ({ customerInfo: info(false).customerInfo, created: false }));
+  rc.logOut.mockResolvedValue(info(false));
+  mockAuth.current = { enabled: false, ready: true, user: null };
 });
 
 afterEach(() => {
@@ -254,4 +280,95 @@ it("shows RevenueCat's screens in the app's language and follows a switch", asyn
   await act(async () => setLang("en"));
   await flush();
   expect(rc.overridePreferredUILocale).toHaveBeenLastCalledWith({ locale: "en" });
+});
+
+describe("accounts", () => {
+  it("configures with the account id at launch, after auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(rc.configure).not.toHaveBeenCalled();
+    await setAuth({ ready: true, user: { id: "u1" } });
+    expect(rc.configure).toHaveBeenCalledWith({ apiKey: "goog_test_key", appUserID: "u1" });
+    expect(rc.logIn).not.toHaveBeenCalled();
+  });
+
+  it("logs in on a later sign-in and takes Pro from its result", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    rc.logIn.mockResolvedValue({ customerInfo: info(true).customerInfo, created: false });
+    await setAuth({ user: { id: "u1" } });
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(sub.isPro).toBe(true);
+    expect(sub.appUserId).toBe("u1");
+  });
+
+  it("logs out on sign-out and clears the Pro cache", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    rc.getCustomerInfo.mockResolvedValue(info(true));
+    await mount();
+    expect(sub.isPro).toBe(true);
+    rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:new" });
+    await setAuth({ user: null });
+    expect(rc.logOut).toHaveBeenCalled();
+    expect(sub.isPro).toBe(false);
+    expect(localStorage.getItem("rafiq_pro_v1")).toBe("0");
+    expect(sub.appUserId).toBe("$RCAnonymousID:new");
+  });
+
+  it("never shows one account's Pro to the next account on the same phone", async () => {
+    const seen: boolean[] = [];
+    const Spy = () => {
+      seen.push(useSubscription().isPro);
+      return null;
+    };
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    rc.getCustomerInfo.mockResolvedValue(info(true));
+    root = createRoot(document.createElement("div"));
+    const spied = () => (
+      <SubscriptionProvider>
+        <Probe />
+        <Spy />
+      </SubscriptionProvider>
+    );
+    await act(async () => {
+      root.render(spied());
+    });
+    await flush();
+    expect(sub.isPro).toBe(true);
+
+    // u2 is not Pro: after the switch every rendered frame must say so.
+    rc.getCustomerInfo.mockResolvedValue(info(false));
+    seen.length = 0;
+    for (const user of [null, { id: "u2" }]) {
+      mockAuth.current = { ...mockAuth.current, user };
+      await act(async () => {
+        root.render(spied());
+      });
+      await flush();
+    }
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u2" });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((p) => p === false)).toBe(true);
+    expect(sub.isPro).toBe(false);
+  });
+
+  it("lets the later change win when sign-in and sign-out overlap", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let resolveLogIn!: (v: unknown) => void;
+    rc.logIn.mockReturnValue(new Promise((r) => (resolveLogIn = r)));
+    await setAuth({ user: { id: "u1" } });
+    await setAuth({ user: null });
+    await act(async () => resolveLogIn({ customerInfo: info(true).customerInfo, created: false }));
+    await flush();
+    expect(sub.isPro).toBe(false);
+    expect(localStorage.getItem("rafiq_pro_v1")).toBe("0");
+  });
+
+  it("with accounts off, configures anonymously and never logs in or out", async () => {
+    await mount();
+    expect(rc.configure).toHaveBeenCalledWith({ apiKey: "goog_test_key" });
+    expect(rc.logIn).not.toHaveBeenCalled();
+    expect(rc.logOut).not.toHaveBeenCalled();
+  });
 });
