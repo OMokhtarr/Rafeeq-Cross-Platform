@@ -4,12 +4,14 @@ import { AuthProvider, useAuth } from "../AuthContext";
 import { isAccountsOn } from "../../services/auth/accounts-switch";
 import * as auth from "../../services/auth/auth.service";
 import { isAuthConfigured } from "../../services/auth/supabase.client";
+import { brokerHeaders } from "../../services/audio/stt/broker";
 
 jest.mock("../../services/auth/accounts-switch", () => ({ isAccountsOn: jest.fn() }));
 jest.mock("../../services/auth/auth.service", () => ({
   signIn: jest.fn(),
   signOut: jest.fn(),
   currentUser: jest.fn(),
+  accessToken: jest.fn(),
   onAccountChange: jest.fn(),
 }));
 
@@ -123,6 +125,29 @@ describe("AuthProvider", () => {
     await act(async () => root.unmount());
     expect(unsubscribe).toHaveBeenCalled();
     root = createRoot(document.createElement("div"));
+  });
+
+  describe("broker token", () => {
+    it("hands the account token to speech requests when enabled", async () => {
+      svc.accessToken.mockResolvedValue("tok");
+      await mount();
+      expect(await brokerHeaders()).toEqual({ authorization: "Bearer tok" });
+    });
+
+    it("sends no token when accounts are off", async () => {
+      on.mockReturnValue(false);
+      svc.accessToken.mockResolvedValue("tok");
+      await mount();
+      expect(await brokerHeaders()).toEqual({});
+    });
+
+    it("clears the token source on unmount", async () => {
+      svc.accessToken.mockResolvedValue("tok");
+      await mount();
+      await act(async () => root.unmount());
+      expect(await brokerHeaders()).toEqual({});
+      root = createRoot(document.createElement("div"));
+    });
   });
 
   describe("signIn", () => {

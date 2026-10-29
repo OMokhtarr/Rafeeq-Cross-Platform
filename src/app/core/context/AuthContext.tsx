@@ -23,12 +23,14 @@ import { isAccountsOn } from "../services/auth/accounts-switch";
 import {
   AccountUser,
   AuthProviderId,
+  accessToken,
   currentUser,
   onAccountChange,
   signIn as authSignIn,
   signOut as authSignOut,
 } from "../services/auth/auth.service";
 import { isAuthConfigured } from "../services/auth/supabase.client";
+import { setBrokerTokenSource } from "../services/audio/stt/broker";
 
 export type SignInOutcome = "signed_in" | "cancelled" | "failed";
 
@@ -62,6 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [signInOpen, setSignInOpen] = useState(false);
   const userRef = useRef<AccountUser | null>(null);
   const pendingRef = useRef<PendingRequest | null>(null);
+
+  // Speech requests carry the signed-in account's token.
+  useEffect(() => {
+    setBrokerTokenSource(enabled ? accessToken : null);
+    return () => setBrokerTokenSource(null);
+  }, [enabled]);
 
   const settle = useCallback((signedIn: boolean) => {
     pendingRef.current?.resolve(signedIn);

@@ -39,7 +39,6 @@ import {
   setRevenueCatLocale,
 } from "../services/subscription/revenuecat.service";
 import { useLang } from "./LanguageContext";
-import { expectBrokerUserId, setBrokerUserId } from "../services/audio/stt/broker";
 
 const CACHE_KEY = "rafiq_pro_v1";
 
@@ -106,9 +105,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
-    // Speech requests hold until the id arrives, so a mic tap in the first
-    // moment after launch isn't sent without one and refused as not Pro.
-    expectBrokerUserId();
     configureRevenueCat()
       .then(() => {
         if (cancelled) return;
@@ -127,19 +123,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           .catch((err) => console.error("[pro] listener failed", err));
         fetchAppUserId()
           .then((id) => {
-            if (cancelled) return;
-            setAppUserId(id);
-            setBrokerUserId(id);
+            if (!cancelled) setAppUserId(id);
           })
-          .catch((err) => {
-            console.error("[pro] app user id failed", err);
-            setBrokerUserId(null);
-          });
+          .catch((err) => console.error("[pro] app user id failed", err));
       })
-      .catch((err) => {
-        console.error("[pro] RevenueCat configure failed", err);
-        setBrokerUserId(null);
-      });
+      .catch((err) => console.error("[pro] RevenueCat configure failed", err));
 
     return () => {
       cancelled = true;

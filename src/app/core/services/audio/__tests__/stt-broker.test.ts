@@ -1,12 +1,9 @@
 import {
   NOT_SUBSCRIBED_MESSAGE,
   STT_UNAVAILABLE_MESSAGE,
-  USER_ID_WAIT_MS,
   brokerHeaders,
-  brokerUserIdSettled,
-  expectBrokerUserId,
   fetchBrokerKey,
-  setBrokerUserId,
+  setBrokerTokenSource,
 } from "../stt/broker";
 
 const fetchMock = jest.fn();
@@ -21,7 +18,7 @@ afterAll(() => {
 });
 beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch;
-  setBrokerUserId(null);
+  setBrokerTokenSource(null);
 });
 afterEach(() => {
   global.fetch = realFetch;
@@ -30,66 +27,41 @@ afterEach(() => {
 const respond = (status: number, body: unknown = {}) =>
   fetchMock.mockResolvedValue({ ok: status < 300, status, json: async () => body });
 
-it("sends no identity header until an id is set", () => {
-  expect(brokerHeaders()).toEqual({});
-});
-
-it("sends x-rafeeq-user when an id is set", async () => {
-  setBrokerUserId("$RCAnonymousID:abc");
-  respond(200, { access_token: "tok" });
-  await expect(fetchBrokerKey("/soniox/token")).resolves.toBe("tok");
-  expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", {
-    method: "POST",
-    headers: { "x-rafeeq-user": "$RCAnonymousID:abc" },
-  });
-});
-
-describe("an id RevenueCat is still fetching", () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it("holds the request until the id arrives, then sends it", async () => {
-    expectBrokerUserId();
+describe("the account token", () => {
+  it("sends no auth header without a token source", async () => {
     respond(200, { access_token: "tok" });
-    const key = fetchBrokerKey("/soniox/token");
-    await Promise.resolve();
-    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(fetchBrokerKey("/soniox/token")).resolves.toBe("tok");
+    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", { method: "POST", headers: {} });
+  });
 
-    setBrokerUserId("$RCAnonymousID:late");
-    await expect(key).resolves.toBe("tok");
+  it("sends the token as a bearer authorization header", async () => {
+    setBrokerTokenSource(async () => "tok");
+    respond(200, { access_token: "tok2" });
+    await expect(fetchBrokerKey("/soniox/token")).resolves.toBe("tok2");
     expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", {
       method: "POST",
-      headers: { "x-rafeeq-user": "$RCAnonymousID:late" },
+      headers: { authorization: "Bearer tok" },
     });
   });
 
-  it("goes without an id when RevenueCat can't provide one", async () => {
-    expectBrokerUserId();
+  it("sends no auth header when the source yields null", async () => {
+    setBrokerTokenSource(async () => null);
+    expect(await brokerHeaders()).toEqual({});
+  });
+
+  it("treats a source that throws as no token", async () => {
+    setBrokerTokenSource(async () => {
+      throw new Error("refresh failed");
+    });
     respond(200, { access_token: "tok" });
-    const key = fetchBrokerKey("/soniox/token");
-    setBrokerUserId(null);
-    await expect(key).resolves.toBe("tok");
+    await expect(fetchBrokerKey("/soniox/token")).resolves.toBe("tok");
     expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", { method: "POST", headers: {} });
   });
 
-  it("stops waiting after USER_ID_WAIT_MS", async () => {
-    jest.useFakeTimers();
-    expectBrokerUserId();
-    respond(200, { access_token: "tok" });
-    const key = fetchBrokerKey("/soniox/token");
-    jest.advanceTimersByTime(USER_ID_WAIT_MS - 1);
-    await Promise.resolve();
-    expect(fetchMock).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(1);
-    await expect(key).resolves.toBe("tok");
-    expect(fetchMock).toHaveBeenCalledWith("https://broker.test/soniox/token", { method: "POST", headers: {} });
-  });
-
-  it("doesn't wait once the id is known", () => {
-    setBrokerUserId("$RCAnonymousID:abc");
-    expectBrokerUserId();
-    return expect(brokerUserIdSettled()).resolves.toBeUndefined();
+  it("stops sending the token once the source is cleared", async () => {
+    setBrokerTokenSource(async () => "tok");
+    setBrokerTokenSource(null);
+    expect(await brokerHeaders()).toEqual({});
   });
 });
 

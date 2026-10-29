@@ -15,54 +15,25 @@ export const STT_UNAVAILABLE_MESSAGE = "Speech recognition is not available righ
  *  subscriber note instead of showing an error. */
 export const NOT_SUBSCRIBED_MESSAGE = "Subscription required";
 
-/** The RevenueCat app-user id the broker checks the subscription against.
- *  Set by the SubscriptionProvider once RevenueCat reports it; null on web
- *  and before RevenueCat answers. */
-let brokerUserId: string | null = null;
+/** Where the signed-in account's access token comes from; null when accounts
+ *  are off or nobody is signed in. Set by the AuthProvider. */
+let tokenSource: (() => Promise<string | null>) | null = null;
 
-/** How long a speech request waits for an id RevenueCat is still fetching.
- *  Without the wait, a subscriber who taps the mic in the first moment after
- *  launch is sent without an id and refused as not subscribed. */
-export const USER_ID_WAIT_MS = 3000;
-
-/** Settles when the expected id arrives or RevenueCat gives up; null when no
- *  id is on its way (web, a build without a RevenueCat key, or already set). */
-let pendingUserId: Promise<void> | null = null;
-let settlePendingUserId: (() => void) | null = null;
-
-/** Called as RevenueCat starts, so speech requests wait for the id instead of
- *  going out without one. */
-export function expectBrokerUserId(): void {
-  if (brokerUserId || pendingUserId) return;
-  pendingUserId = new Promise((resolve) => {
-    settlePendingUserId = resolve;
-  });
+export function setBrokerTokenSource(source: (() => Promise<string | null>) | null): void {
+  tokenSource = source;
 }
 
-/** Sets the id, or null when RevenueCat couldn't provide one; either way any
- *  request waiting for it goes ahead. */
-export function setBrokerUserId(id: string | null): void {
-  brokerUserId = id;
-  settlePendingUserId?.();
-  pendingUserId = null;
-  settlePendingUserId = null;
-}
-
-/** Resolves at once unless an id is on its way; then when it arrives, or
- *  after USER_ID_WAIT_MS at most. */
-export async function brokerUserIdSettled(): Promise<void> {
-  if (!pendingUserId) return;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<void>((resolve) => {
-    timer = setTimeout(resolve, USER_ID_WAIT_MS);
-  });
-  await Promise.race([pendingUserId, timeout]);
-  clearTimeout(timer);
-}
-
-/** Headers every broker speech request carries. */
-export function brokerHeaders(): Record<string, string> {
-  return brokerUserId ? { "x-rafeeq-user": brokerUserId } : {};
+/** Headers every broker speech request carries: the account's access token,
+ *  which the broker checks the subscription against. Empty with no token; a
+ *  source that fails counts as no token, and the broker answers 401 itself. */
+export async function brokerHeaders(): Promise<Record<string, string>> {
+  if (!tokenSource) return {};
+  try {
+    const token = await tokenSource();
+    return token ? { authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 /** Full broker URL for `path`. The configured URL may or may not carry a
@@ -81,8 +52,7 @@ export async function fetchBrokerKey(
   path: "/deepgram/token" | "/soniox/token",
 ): Promise<string> {
   const url = brokerUrl(path);
-  await brokerUserIdSettled();
-  const res = await fetch(url, { method: "POST", headers: brokerHeaders() });
+  const res = await fetch(url, { method: "POST", headers: await brokerHeaders() });
   if (!res.ok) {
     throw new Error(
       res.status === 503
