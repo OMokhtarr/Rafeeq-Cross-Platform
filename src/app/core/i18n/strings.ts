@@ -1347,7 +1347,7 @@ const ar: AppStrings = {
 
   account: {
     signInTitle: "سجّل الدخول للاشتراك",
-    signInWhy: "يبقى اشتراكك وبياناتك المتزامنة مع حسابك",
+    signInWhy: "يبقى اشتراكك مع حسابك",
     continueGoogle: "المتابعة عبر Google",
     continueApple: "المتابعة عبر Apple",
     close: "إغلاق",
@@ -1359,7 +1359,7 @@ const ar: AppStrings = {
     sectionTitle: "الحساب",
     deleteTitle: "حذف حسابك؟",
     deleteLede: "لا يمكن التراجع عن الحذف. سيُحذف نهائياً:",
-    deleteWhat: ["حسابك في رفيق", "بياناتك المتزامنة", "سجل اشتراكك"],
+    deleteWhat: ["حسابك في رفيق", "البيانات المخزّنة مع حسابك", "سجل اشتراكك"],
     deleteStoreNote:
       "حذف الحساب لا يُلغي اشتراكك في Google Play أو App Store. ألغِه من هناك حتى لا يستمر التجديد.",
     deleteKeep: "الإبقاء على الحساب",
@@ -2090,7 +2090,7 @@ const en: AppStrings = {
 
   account: {
     signInTitle: "Sign in to subscribe",
-    signInWhy: "Your subscription and synced data stay with your account",
+    signInWhy: "Your subscription stays with your account",
     continueGoogle: "Continue with Google",
     continueApple: "Continue with Apple",
     close: "Close",
@@ -2102,7 +2102,7 @@ const en: AppStrings = {
     sectionTitle: "Account",
     deleteTitle: "Delete your account?",
     deleteLede: "This can't be undone. It permanently deletes:",
-    deleteWhat: ["Your Rafeeq account", "Your synced data", "Your subscription record"],
+    deleteWhat: ["Your Rafeeq account", "Data stored with your account", "Your subscription record"],
     deleteStoreNote:
       "Deleting your account doesn't cancel your Google Play or App Store subscription. Cancel it there so it stops renewing.",
     deleteKeep: "Keep account",

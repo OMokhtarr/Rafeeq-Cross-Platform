@@ -322,8 +322,10 @@ The auth user goes last and any failing step returns 502 with nothing after it
 run, so a retry still finds the account and can finish the job.
 
 **Email-request runbook.** A user who cannot open the app emails
-`or.mokhtar@gmail.com`. Check the request comes from the address on the
-account, then:
+`or.mokhtar@gmail.com`. Reply to the sender and ask them to confirm from the
+email address registered on the account (or otherwise confirm the account is
+theirs) **before** running anything. Complete the deletion within 30 days of the
+request, then:
 
 ```bash
 SUPABASE_URL=https://<project-ref>.supabase.co \
@@ -387,7 +389,7 @@ with the real region of the production project **before** pushing.
 **Aug 2026 — second pass, against the Quran Foundation developer-privacy
 requirements** (email from Basit Minhas, QF Developer Support, and
 <https://api-docs.quran.foundation/legal/developer-privacy/>). Added to
-`privacy.html`, `terms.html`, and the in-app AR/EN mirror:
+`privacy.html` and `terms.html` (an in-app mirror existed then; it has since been removed):
 
 - QF attribution + an explicit "Rafeeq is an independent app, not an official
   Quran Foundation application" disclaimer.

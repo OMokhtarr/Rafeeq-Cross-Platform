@@ -83,6 +83,7 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       account, and re-run the content rating if not done for Pro.
 - [ ] **Supabase Free to Pro** before real subscribers' data accumulates (Free
       has no backups).
+- [ ] **Owner:** confirm the 30-day deletion window, the email identity check and the terms §5 closure clause before pushing gh-pages.
 - [ ] **Support runbook.** Email deletion requests:
       `SUPABASE_URL=... ADMIN_DELETE_SECRET=... scripts/delete-account.sh <user-id | email>`.
 
