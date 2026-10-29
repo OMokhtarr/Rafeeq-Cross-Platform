@@ -15,8 +15,17 @@ compatibility_date = "2026-01-15"
 # build with REACT_APP_PRO_GATE=on first, then set this to "true" and deploy.
 # This file is the switch: every `wrangler deploy` replaces whatever value
 # was set in the Cloudflare dashboard with the one below, so change it here.
+#
+# SUPABASE_URL: the Supabase project whose account tokens the Pro check
+# accepts, e.g. "https://<project-ref>.supabase.co" (the app's
+# REACT_APP_SUPABASE_URL). The app sends `authorization: Bearer <access
+# token>`; the Worker checks it against that project's published signing keys
+# and uses its account id for the RevenueCat lookup. The project must sign
+# with asymmetric (ES256) JWT keys. Not a secret. While it is empty and
+# REQUIRE_PRO is "true", every speech request is refused.
 [vars]
 REQUIRE_PRO = "false"
+SUPABASE_URL = ""
 
 # Dev copy of the broker for `npm start` (browser development), deployed with
 #   npx wrangler deploy --env dev
@@ -30,3 +39,4 @@ name = "rafeeq-token-broker-dev"
 
 [env.dev.vars]
 REQUIRE_PRO = "false"
+SUPABASE_URL = ""
