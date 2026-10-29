@@ -8,6 +8,7 @@ const mockCreateClient = jest.fn();
 const mockInitialize = jest.fn();
 const mockLogin = jest.fn();
 const mockLogout = jest.fn();
+const mockOnAuthStateChange = jest.fn();
 
 jest.mock("@supabase/supabase-js", () => ({
   createClient: (...args: unknown[]) => mockCreateClient(...args),
@@ -43,6 +44,7 @@ async function sha256Hex(s: string) {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   // jsdom has neither TextEncoder nor crypto; real webviews do.
   Object.defineProperty(globalThis, "TextEncoder", {
     value: NodeTextEncoder,
@@ -63,6 +65,7 @@ beforeEach(() => {
       signInWithIdToken: mockSignInWithIdToken,
       getSession: mockGetSession,
       signOut: mockSignOut,
+      onAuthStateChange: mockOnAuthStateChange,
     },
   });
 });
@@ -155,6 +158,88 @@ describe("session", () => {
     await expect(signOut()).resolves.toBeUndefined();
     expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
     warn.mockRestore();
+  });
+});
+
+describe("offline launch cache", () => {
+  const CACHED = {
+    id: "u1",
+    email: "a@b.c",
+    name: "Ahmad Ali",
+    provider: "google",
+  };
+
+  function seedCache() {
+    localStorage.setItem("rafiq_account_v1", JSON.stringify(CACHED));
+  }
+
+  it("returns the cached user when a failed refresh yields no session", async () => {
+    seedCache();
+    mockGetSession.mockResolvedValue({
+      data: { session: null },
+      error: new Error("fetch failed"),
+    });
+    const { currentUser } = load();
+    await expect(currentUser()).resolves.toEqual(CACHED);
+    expect(localStorage.getItem("rafiq_account_v1")).not.toBeNull();
+  });
+
+  it("returns null and clears the cache when truly signed out", async () => {
+    seedCache();
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+    const { currentUser } = load();
+    await expect(currentUser()).resolves.toBeNull();
+    expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
+  });
+
+  it("caches the user when a session exists", async () => {
+    mockGetSession.mockResolvedValue({ data: { session: { user: USER } } });
+    const { currentUser } = load();
+    await currentUser();
+    expect(
+      JSON.parse(localStorage.getItem("rafiq_account_v1") as string)
+    ).toEqual(CACHED);
+  });
+
+  it("signOut clears the cache", async () => {
+    seedCache();
+    const { signOut } = load();
+    await signOut();
+    expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
+  });
+
+  it("emits null and clears the cache only on SIGNED_OUT", () => {
+    seedCache();
+    let handler: (e: string, s: unknown) => void = () => {};
+    mockOnAuthStateChange.mockImplementation((cb) => {
+      handler = cb;
+      return { data: { subscription: { unsubscribe: jest.fn() } } };
+    });
+    const { onAccountChange } = load();
+    const cb = jest.fn();
+    onAccountChange(cb);
+
+    handler("TOKEN_REFRESHED", null);
+    expect(cb).not.toHaveBeenCalled();
+    expect(localStorage.getItem("rafiq_account_v1")).not.toBeNull();
+
+    handler("SIGNED_OUT", null);
+    expect(cb).toHaveBeenCalledWith(null);
+    expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
+  });
+
+  it("emits and caches the user when a session arrives", () => {
+    let handler: (e: string, s: unknown) => void = () => {};
+    mockOnAuthStateChange.mockImplementation((cb) => {
+      handler = cb;
+      return { data: { subscription: { unsubscribe: jest.fn() } } };
+    });
+    const { onAccountChange } = load();
+    const cb = jest.fn();
+    onAccountChange(cb);
+    handler("SIGNED_IN", { user: USER });
+    expect(cb).toHaveBeenCalledWith(CACHED);
+    expect(localStorage.getItem("rafiq_account_v1")).not.toBeNull();
   });
 });
 

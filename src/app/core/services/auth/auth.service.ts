@@ -1,7 +1,16 @@
 import { SocialLogin } from "@capgo/capacitor-social-login";
-import type { Session, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase.client";
 
+/**
+ * AUTH SERVICE
+ *
+ * Supabase's getSession() returns no session when the stored access token
+ * is expired and the refresh fails (e.g. offline at launch). That must not
+ * read as "signed out", so the last known AccountUser is cached in
+ * localStorage: it is used only when getSession() reports an error, and is
+ * cleared on sign-out or a session that is genuinely gone.
+ */
 export type AuthProviderId = "google" | "apple";
 
 export interface AccountUser {
@@ -9,6 +18,26 @@ export interface AccountUser {
   email: string | null;
   name: string | null;
   provider: AuthProviderId;
+}
+
+const ACCOUNT_CACHE_KEY = "rafiq_account_v1";
+
+function readCache(): AccountUser | null {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as AccountUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(user: AccountUser | null): void {
+  try {
+    if (user) localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(ACCOUNT_CACHE_KEY);
+  } catch {
+    // storage unavailable: the cache is only a convenience
+  }
 }
 
 let socialLoginReady: Promise<void> | null = null;
@@ -37,7 +66,7 @@ async function createNonce(): Promise<{ raw: string; hashed: string }> {
   const raw = toHex(crypto.getRandomValues(new Uint8Array(32)));
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(raw),
+    new TextEncoder().encode(raw)
   );
   return { raw, hashed: toHex(new Uint8Array(digest)) };
 }
@@ -82,18 +111,21 @@ async function signInWithGoogle(): Promise<AccountUser | null> {
   });
   if (error) throw error;
   if (!data.user) throw new Error("sign-in returned no user");
-  return toAccountUser(data.user);
+  const account = toAccountUser(data.user);
+  writeCache(account);
+  return account;
 }
 
 /** Null means the person cancelled; real failures throw. */
 export async function signIn(
-  provider: AuthProviderId,
+  provider: AuthProviderId
 ): Promise<AccountUser | null> {
   if (provider === "google") return signInWithGoogle();
   throw new Error("apple sign-in not available");
 }
 
 export async function signOut(): Promise<void> {
+  writeCache(null);
   try {
     await getSupabase()?.auth.signOut({ scope: "local" });
   } catch (e) {
@@ -106,30 +138,43 @@ export async function signOut(): Promise<void> {
   }
 }
 
-async function storedSession(): Promise<Session | null> {
+export async function currentUser(): Promise<AccountUser | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  return data.session;
-}
-
-export async function currentUser(): Promise<AccountUser | null> {
-  const session = await storedSession();
-  return session?.user ? toAccountUser(session.user) : null;
+  const { data, error } = await supabase.auth.getSession();
+  if (data.session?.user) {
+    const account = toAccountUser(data.session.user);
+    writeCache(account);
+    return account;
+  }
+  // A failed refresh is not a sign-out: keep the person signed in offline.
+  if (error) return readCache();
+  writeCache(null);
+  return null;
 }
 
 export function onAccountChange(
-  cb: (user: AccountUser | null) => void,
+  cb: (user: AccountUser | null) => void
 ): () => void {
   const supabase = getSupabase();
   if (!supabase) return () => {};
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    cb(session?.user ? toAccountUser(session.user) : null);
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      const account = toAccountUser(session.user);
+      writeCache(account);
+      cb(account);
+    } else if (event === "SIGNED_OUT") {
+      writeCache(null);
+      cb(null);
+    }
   });
   return () => data.subscription.unsubscribe();
 }
 
 /** Supabase refreshes the token when it is near expiry. */
 export async function accessToken(): Promise<string | null> {
-  return (await storedSession())?.access_token ?? null;
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
 }
