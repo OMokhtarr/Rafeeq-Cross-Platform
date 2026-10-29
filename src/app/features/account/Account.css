@@ -1221,3 +1221,15 @@ ion-content::part(scroll) {
 }
 
 .ac-fz-got:active { opacity: 0.7; }
+
+/* Signed-in identity: name over email, both from the sign-in provider. */
+.ac-identity-name,
+.ac-identity-email {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.ac-identity-name { font-weight: 600; }
+.ac-identity-email {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

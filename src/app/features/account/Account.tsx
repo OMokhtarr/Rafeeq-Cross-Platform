@@ -24,6 +24,7 @@ import {
   type BackupSummary,
 } from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
+import AccountIdentityRow from "./AccountIdentityRow";
 import SubscriptionRow from "./SubscriptionRow";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
@@ -350,6 +351,9 @@ const Account: React.FC = () => {
                   </div>
                 )}
             </div>
+
+            {/* ── Sign-in / signed-in identity ── */}
+            <AccountIdentityRow />
 
             {/* ── Rafeeq Pro subscription ── */}
             <SubscriptionRow />

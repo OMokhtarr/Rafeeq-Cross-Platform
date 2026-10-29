@@ -621,6 +621,7 @@ export interface AppStrings {
     signOut: string;
     signedInAs: (email: string) => string;
     deleteAccount: string;
+    sectionTitle: string;
   };
 
   hifz: {
@@ -1347,6 +1348,7 @@ const ar: AppStrings = {
     signOut: "تسجيل الخروج",
     signedInAs: (email: string) => `مسجّل الدخول باسم ${email}`,
     deleteAccount: "حذف الحساب",
+    sectionTitle: "الحساب",
   },
 
   hifz: {
@@ -2080,6 +2082,7 @@ const en: AppStrings = {
     signOut: "Sign out",
     signedInAs: (email: string) => `Signed in as ${email}`,
     deleteAccount: "Delete account",
+    sectionTitle: "Account",
   },
 
   hifz: {
