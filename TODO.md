@@ -33,8 +33,58 @@ order. Full detail in `PLAY-CONSOLE-PREP.md` §9.
 - [ ] **Launch.** Set `REACT_APP_PRO_GATE=on` in `.env.production` (leave it
       out of `.env.local`) and release; then set `REQUIRE_PRO = "true"` in
       `token-broker/wrangler.toml` and deploy; then run
-      `PRO_USER_ID=<a subscriber's Support ID> bash token-broker/verify-deploy.sh`
-      — every check must pass.
+      `PRO_TOKEN=<access token of a signed-in Pro account> bash token-broker/verify-deploy.sh`
+      — every check must pass. (`PRO_TOKEN` is a fresh Supabase access
+      token, not a user id.)
+
+## Accounts launch (Supabase sign-in, owner setup)
+
+Code is merged and dark behind `REACT_APP_ACCOUNTS=on`. Pro lives on the
+account, so this comes before the Pro launch above goes live. Full detail,
+the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
+§4 and §9.
+
+- [ ] **Supabase projects.** Create dev + prod. Both must sign JWTs with the
+      asymmetric **ES256** signing keys (the broker refuses legacy HS256
+      tokens). Put the prod URL in `token-broker/wrangler.toml`
+      `SUPABASE_URL` and the dev URL in `[env.dev.vars]`; put the project ref
+      in `supabase/config.toml` `project_id`; `supabase link`, then
+      `supabase db push` to apply the `apple_tokens` migration.
+- [ ] **Google.** OAuth clients: a Web client (→ `REACT_APP_GOOGLE_WEB_CLIENT_ID`
+      and Supabase's Google provider) and an Android client with the debug
+      SHA-1 **and** the Play App Signing SHA-1.
+- [ ] **Apple (when ready).** Services ID + key; Supabase Apple provider with
+      the Services ID and the iOS bundle id among its client ids;
+      `rafeeq://auth/callback` in Supabase's redirect allow-list; Edge Function
+      secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`,
+      `APPLE_BUNDLE_ID`; `REACT_APP_APPLE_SIGNIN=on` to show Apple on Android.
+      Known limit: Apple accounts created through the Android web flow have no
+      stored Apple token, so deletion can't revoke Apple's grant for them.
+- [ ] **Edge Functions.** Secrets `SUPABASE_SERVICE_ROLE_KEY` (Supabase
+      provides it), `REVENUECAT_SECRET_KEY`, `ADMIN_DELETE_SECRET` (long random,
+      at least 32 characters); deploy `delete-account` and `apple-token`.
+- [ ] **App env.** `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_PUBLISHABLE_KEY`,
+      and `REACT_APP_ACCOUNTS=on` only in the build that goes out after the
+      paperwork is live.
+- [ ] **RevenueCat dashboard.** Transfer behaviour so a purchase stays with the
+      account that bought it ("Keep with original App User ID", or the
+      dashboard's current name for it; verify). Create a reviewer test Google
+      account and grant it promotional Pro.
+- [ ] **`npx cap sync`** before the next build: `@capacitor/browser` and
+      `@capgo/capacitor-social-login` are not registered in the Android
+      project yet.
+- [ ] **Legal pages.** On the local `gh-pages` branch (not pushed): replace the
+      `[REGION]` placeholder in `privacy.html` and `privacy-ar.html` with the
+      Supabase region, then push; confirm `delete-account.html` (+ `-ar`),
+      `privacy.html` and `terms.html` load.
+- [ ] **Play Console.** Redo Data safety (Name, Email, User IDs for account
+      management; Purchase history; deletion = yes; delete-account URL
+      `<LEGAL_BASE_URL>/delete-account.html`), App access with the reviewer
+      account, and re-run the content rating if not done for Pro.
+- [ ] **Supabase Free to Pro** before real subscribers' data accumulates (Free
+      has no backups).
+- [ ] **Support runbook.** Email deletion requests:
+      `SUPABASE_URL=... ADMIN_DELETE_SECRET=... scripts/delete-account.sh <user-id | email>`.
 
 ## Later
 
