@@ -69,6 +69,7 @@ const Probe = () => {
 
 let root: Root;
 let listener: ((ci: unknown) => void) | null;
+let sdkAnonymous = true;
 
 const flush = () => act(async () => {
   await new Promise((r) => setTimeout(r, 0));
@@ -112,9 +113,17 @@ beforeEach(() => {
   rc.removeCustomerInfoUpdateListener.mockResolvedValue({ wasRemoved: true });
   rc.overridePreferredUILocale.mockResolvedValue(undefined);
   rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:abc" });
-  rc.isAnonymous.mockResolvedValue({ isAnonymous: false });
-  rc.logIn.mockImplementation(async () => ({ customerInfo: info(false).customerInfo, created: false }));
-  rc.logOut.mockResolvedValue(info(false));
+  // A stateful SDK: it is anonymous until a logIn finishes, like the real one.
+  sdkAnonymous = true;
+  rc.isAnonymous.mockImplementation(async () => ({ isAnonymous: sdkAnonymous }));
+  rc.logIn.mockImplementation(async () => {
+    sdkAnonymous = false;
+    return { customerInfo: info(false).customerInfo, created: false };
+  });
+  rc.logOut.mockImplementation(async () => {
+    sdkAnonymous = true;
+    return info(false);
+  });
   mockAuth.current = { enabled: false, ready: true, user: null };
 });
 
@@ -307,6 +316,7 @@ describe("accounts", () => {
     rc.getCustomerInfo.mockResolvedValue(info(true));
     await mount();
     expect(sub.isPro).toBe(true);
+    sdkAnonymous = false; // configured as u1
     rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:new" });
     await setAuth({ user: null });
     expect(rc.logOut).toHaveBeenCalled();
@@ -356,13 +366,65 @@ describe("accounts", () => {
     mockAuth.current = { enabled: true, ready: true, user: null };
     await mount();
     let resolveLogIn!: (v: unknown) => void;
-    rc.logIn.mockReturnValue(new Promise((r) => (resolveLogIn = r)));
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolveLogIn = (v) => {
+            sdkAnonymous = false;
+            r(v);
+          };
+        }),
+    );
     await setAuth({ user: { id: "u1" } });
     await setAuth({ user: null });
-    await act(async () => resolveLogIn({ customerInfo: info(true).customerInfo, created: false }));
+    // The SDK is still anonymous while logIn is pending, so a naive logOut skips.
+    expect(rc.logOut).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveLogIn({ customerInfo: info(true).customerInfo, created: false });
+      // RevenueCat tells the listener about the account it just logged in.
+      listener?.(info(true).customerInfo);
+    });
     await flush();
+    expect(rc.logOut).toHaveBeenCalledTimes(1);
+    expect(rc.logOut.mock.invocationCallOrder[0]).toBeGreaterThan(rc.logIn.mock.invocationCallOrder[0]);
+    expect(sdkAnonymous).toBe(true);
     expect(sub.isPro).toBe(false);
     expect(localStorage.getItem("rafiq_pro_v1")).toBe("0");
+  });
+
+  it("ends on the latest account when sign-out and a new sign-in overlap", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    await mount();
+    await setAuth({ user: null });
+    await setAuth({ user: { id: "u2" } });
+    expect(rc.logIn).toHaveBeenLastCalledWith({ appUserID: "u2" });
+    expect(sdkAnonymous).toBe(false);
+  });
+
+  it("puts a still-identified SDK back to anonymous on a signed-out launch", async () => {
+    sdkAnonymous = false;
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    rc.logOut.mockImplementation(async () => {
+      sdkAnonymous = true;
+      return info(true);
+    });
+    await mount();
+    expect(rc.logOut).toHaveBeenCalledTimes(1);
+    expect(rc.logIn).not.toHaveBeenCalled();
+    expect(sub.isPro).toBe(true);
+    expect(sub.ready).toBe(true);
+  });
+
+  it("reports the paywall unavailable until auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await sub.showPaywall();
+    });
+    expect(outcome).toBe("unavailable");
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.configure).not.toHaveBeenCalled();
   });
 
   it("with accounts off, configures anonymously and never logs in or out", async () => {

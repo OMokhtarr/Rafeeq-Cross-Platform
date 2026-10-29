@@ -70,6 +70,27 @@ afterEach(async () => {
 });
 
 describe("AuthProvider", () => {
+  it("never renders ready with no user before a stored user arrives", async () => {
+    svc.currentUser.mockResolvedValue(alice);
+    const seen: Array<[boolean, string | null]> = [];
+    const Spy = () => {
+      const a = useAuth();
+      seen.push([a.ready, a.user?.id ?? null]);
+      return null;
+    };
+    root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <AuthProvider>
+          <Spy />
+        </AuthProvider>,
+      );
+    });
+    await flush();
+    expect(seen[seen.length - 1]).toEqual([true, "u1"]);
+    expect(seen).not.toContainEqual([true, null]);
+  });
+
   it("is ready with no user and never reads a session when accounts are off", async () => {
     on.mockReturnValue(false);
     await mount();

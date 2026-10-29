@@ -92,7 +92,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentUser()
       .then((u) => {
         // An account event that landed first is newer than the stored session.
-        if (!cancelled && !userRef.current) applyUser(u);
+        if (cancelled) return;
+        if (!userRef.current) applyUser(u);
+        // Same batch as the user, so `ready` never shows before a stored user.
+        setReady(true);
       })
       .catch((err) => console.error("[auth] reading session failed", err))
       .finally(() => {

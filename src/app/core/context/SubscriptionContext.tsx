@@ -106,7 +106,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // The account RevenueCat is on (undefined until configured), and a counter
   // so a slow logIn/logOut can't overwrite a later change.
   const identityRef = useRef<string | null | undefined>(undefined);
-  const identitySeq = useRef(0);
+  // Identity switches run one at a time: RevenueCat's logIn/logOut overlap
+  // badly (isAnonymous lags a pending logIn, and two can finish out of order).
+  // Each step reads the latest target when it runs; only the last queued step
+  // applies its result, and the customer-info listener is muted meanwhile.
+  const identityChain = useRef<Promise<void>>(Promise.resolve());
+  const identityPending = useRef(0);
+  const sdkAccountId = useRef<string | null>(null);
   // Drops isPro in the very render where the account changes, so no frame
   // shows the previous account's Pro to the next one.
   const [seenAccountId, setSeenAccountId] = useState(accountId);
@@ -123,33 +129,67 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return pro;
   }, []);
 
+  /** Queues a move of RevenueCat onto whichever account is current when it runs. */
+  const syncIdentity = useCallback(() => {
+    identityPending.current += 1;
+    identityChain.current = identityChain.current
+      .then(async () => {
+        const target = accountIdRef.current;
+        let info: CustomerInfo;
+        if (!target) {
+          // No-op when RevenueCat is already anonymous.
+          info = await logOutRevenueCat();
+        } else if (sdkAccountId.current === target) {
+          info = await fetchCustomerInfo();
+        } else {
+          info = await logInRevenueCat(target);
+        }
+        sdkAccountId.current = target;
+        const id = target ?? (await fetchAppUserId());
+        if (identityPending.current === 1) {
+          apply(info);
+          setAppUserId(id);
+        }
+      })
+      .catch((err) => console.error("[pro] switching account failed", err))
+      .then(() => {
+        identityPending.current -= 1;
+      });
+  }, [apply]);
+
   useEffect(() => {
     if (!native || !authReady) return;
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
     identityRef.current = accountIdRef.current;
+    sdkAccountId.current = accountIdRef.current;
     configureRevenueCat(accountIdRef.current)
       .then(() => {
         if (cancelled) return;
-        fetchCustomerInfo()
-          .then((info) => {
-            if (!cancelled) apply(info);
-          })
-          .catch((err) => console.error("[pro] customer info failed", err));
+        if (auth.enabled) {
+          // Also puts a stale identified SDK back to anonymous when signed out.
+          syncIdentity();
+        } else {
+          fetchCustomerInfo()
+            .then((info) => {
+              if (!cancelled) apply(info);
+            })
+            .catch((err) => console.error("[pro] customer info failed", err));
+          fetchAppUserId()
+            .then((id) => {
+              if (!cancelled) setAppUserId(id);
+            })
+            .catch((err) => console.error("[pro] app user id failed", err));
+        }
         onCustomerInfo((info) => {
-          if (!cancelled) apply(info);
+          if (!cancelled && identityPending.current === 0) apply(info);
         })
           .then((unsub) => {
             if (cancelled) unsub();
             else unsubscribe = unsub;
           })
           .catch((err) => console.error("[pro] listener failed", err));
-        fetchAppUserId()
-          .then((id) => {
-            if (!cancelled) setAppUserId(id);
-          })
-          .catch((err) => console.error("[pro] app user id failed", err));
       })
       .catch((err) => console.error("[pro] RevenueCat configure failed", err));
 
@@ -157,7 +197,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       cancelled = true;
       unsubscribe?.();
     };
-  }, [native, authReady, apply]);
+  }, [native, authReady, auth.enabled, apply, syncIdentity]);
 
   // A later sign-in or sign-out moves RevenueCat to the new identity. The Pro
   // cache is cleared first (isPro is dropped during render, above), so the
@@ -166,18 +206,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (!native || !authReady || !auth.enabled) return;
     if (identityRef.current === undefined || identityRef.current === accountId) return;
     identityRef.current = accountId;
-    const seq = ++identitySeq.current;
     writeCache(false);
-    configureRevenueCat()
-      .then(async () => {
-        const info = accountId ? await logInRevenueCat(accountId) : await logOutRevenueCat();
-        const id = accountId ?? (await fetchAppUserId());
-        if (seq !== identitySeq.current) return;
-        apply(info);
-        setAppUserId(id);
-      })
-      .catch((err) => console.error("[pro] switching account failed", err));
-  }, [native, authReady, auth.enabled, accountId, apply]);
+    syncIdentity();
+  }, [native, authReady, auth.enabled, accountId, syncIdentity]);
 
   // The Paywall and Customer Center speak the app's language, not the phone's,
   // and follow it when it's switched in Settings.
@@ -195,7 +226,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 
   const showPaywall = useCallback(async (): Promise<PaywallOutcome> => {
-    if (!native) return "unavailable";
+    // Configuring before auth is read would lock RevenueCat to an anonymous id.
+    if (!native || !authReady) return "unavailable";
     let result: PaywallResult;
     try {
       await configureRevenueCat();
@@ -214,7 +246,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       console.error("[pro] customer info failed", err);
       return "subscribed";
     }
-  }, [native, refresh]);
+  }, [native, authReady, refresh]);
 
   const showCustomerCenter = useCallback(async () => {
     await configureRevenueCat();
