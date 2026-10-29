@@ -73,8 +73,8 @@
   <body>
     <h1>Privacy Policy</h1>
     <p class="updated">
-      <strong>Last updated:</strong> 24 October 2026 &nbsp;·&nbsp;
-      <strong>Effective:</strong> 24 October 2026
+      <strong>Last updated:</strong> 29 October 2026 &nbsp;·&nbsp;
+      <strong>Effective:</strong> 29 October 2026
     </p>
 
     <p>
@@ -84,12 +84,14 @@
     </p>
 
     <p>
-      The App has no accounts and no sign-in, and needs no permissions for
-      Quran reading, memorisation, or quizzes. Two optional features ask for a
-      permission and can send limited data off your device: Recite Mode
-      (microphone) and prayer times / qibla (approximate location). Recite Mode
-      is part of the optional Rafeeq Pro subscription, which involves the
-      purchase data described in section 4. All three are described below.
+      No account is required for the free app, and it needs no permissions for
+      Quran reading, memorisation, or quizzes. Signing in with Google or Apple
+      is optional, and is needed only to subscribe to Rafeeq Pro (sections 4
+      and 7). Two optional features ask for a permission and can send limited
+      data off your device: Recite Mode (microphone) and prayer times / qibla
+      (approximate location). Recite Mode is part of the optional Rafeeq Pro
+      subscription, which involves the purchase and account data described in
+      sections 4 and 7. All of these are described below.
     </p>
 
     <div class="callout">
@@ -228,17 +230,20 @@
     </p>
     <ul>
       <li>
-        <strong>An anonymous ID, not an account.</strong> When the App starts,
-        RevenueCat gives this installation a random ID. It is not linked to
-        your name, email address, or Google account inside the App. The App
-        shows it as your <em>Support ID</em> in Account → Subscription, so you
-        can quote it if you contact us about a purchase.
+        <strong>Linked to your account.</strong> Rafeeq Pro belongs to your
+        Rafeeq account (section 7). When you are signed in, RevenueCat
+        identifies you by your Rafeeq account ID, so the subscription follows
+        the account to a new phone. Before you sign in, RevenueCat gives the
+        installation a random anonymous ID instead, which is not linked to your
+        name or email address. Either ID is shown as your <em>Support ID</em>
+        in Account → Subscription, so you can quote it if you contact us about
+        a purchase.
       </li>
       <li>
         <strong>Purchase records.</strong> RevenueCat receives the store's
         purchase details — which plan, its price and currency, purchase and
-        renewal dates, and the store's purchase token — together with the
-        anonymous ID and basic device information (device type and operating
+        renewal dates, and the store's purchase token — together with your
+        account ID (or the anonymous ID) and basic device information (device type and operating
         system). It uses them to confirm that a subscription is active, to
         restore it on a new phone, and to show it in the subscription
         management screen.
@@ -246,7 +251,7 @@
       <li>
         <strong>Paywall views.</strong> RevenueCat records when the
         subscription screen is shown or closed, so we can see whether it is
-        clear. These records carry only the anonymous ID.
+        clear. These records carry only that ID.
       </li>
       <li>
         <strong>Payments.</strong> Google Play (or Apple) takes the payment
@@ -255,14 +260,16 @@
       </li>
       <li>
         <strong>Subscription check.</strong> When you start Recite Mode, the App
-        sends the anonymous ID to our token broker, which asks RevenueCat
-        whether the subscription is active before issuing a speech token. The
+        sends your sign-in token to our token broker, which verifies it with
+        Supabase's public signing keys and asks RevenueCat whether that
+        account's subscription is active before issuing a speech token. The
         answer may be remembered for a few minutes; nothing else is stored.
       </li>
       <li>
-        <strong>Restoring on a new phone.</strong> "Restore purchases" asks the
+        <strong>Restoring on a new phone.</strong> Sign in to the same Rafeeq
+        account and your subscription is there. "Restore purchases" asks the
         store which subscriptions belong to the store account signed in on the
-        device, and links them to the new installation's ID.
+        device, and links them to your account.
       </li>
     </ul>
 
@@ -296,7 +303,8 @@
       </li>
       <li>
         A Rafeeq Pro purchase record shows only that a subscription was bought
-        and when. It contains nothing about what you recite, read, or memorise.
+        and when. It contains nothing about what you recite, read, or
+        memorise, and your account holds nothing of that either.
       </li>
     </ul>
 
@@ -311,22 +319,55 @@
       first — continuing to use the App would not be treated as agreement.
     </p>
 
-    <h2>7. No account required</h2>
+    <h2>7. Accounts and sign-in</h2>
     <p>
-      The App has no sign-in and no user account. Your notes, bookmarks,
-      memorisation progress, and your Hifz streak are written only to
-      this device — they are never uploaded, never synced, and are not tied to
-      your identity in any way. The only identifier the App uses is the
-      anonymous subscription ID described in section 4, which is linked to
-      purchases and to nothing else.
+      <strong>No account is required for the free app.</strong> Reading,
+      memorisation, quizzes, prayer times, and everything else except Rafeeq
+      Pro work without signing in. A Rafeeq account is needed only to
+      subscribe to Rafeeq Pro, so that the subscription belongs to you rather
+      than to one phone.
     </p>
+    <ul>
+      <li>
+        <strong>How you sign in.</strong> With Google (on Android), or with
+        Apple (on iPhone, and on Android where it is offered). Google or Apple
+        tells us your name and email address; if you use Apple's "Hide My
+        Email", we receive Apple's relay address instead of your real one. We
+        never see your Google or Apple password.
+      </li>
+      <li>
+        <strong>What we hold.</strong> Your account ID, the email address and
+        name from your sign-in provider, and the sign-in method. On iPhone,
+        when you sign in with Apple, we also keep the token Apple issues for
+        the app, only so that it can be revoked if you delete your account.
+        Notes, bookmarks, and other personal data are not part of your account
+        today; they stay on your device (section 1). If we add the option to
+        sync data to your account, this policy will say exactly what is
+        synced before it takes effect.
+      </li>
+      <li>
+        <strong>Where it is held.</strong> Accounts are run by
+        <a href="https://supabase.com/privacy" target="_blank" rel="noopener"
+          >Supabase</a
+        >, which hosts them in the <strong>[REGION]</strong> region.
+      </li>
+      <li>
+        <strong>How long.</strong> Until you delete your account. Signing out
+        does not delete it.
+      </li>
+      <li>
+        <strong>Deleting it.</strong> In the App, Account → Delete account, or
+        by email. See section 13 and
+        <a href="delete-account.html">how to delete your account</a>.
+      </li>
+    </ul>
 
     <h2>8. Third parties the App connects to</h2>
     <p>
       These are every external service the App contacts, what each one is for,
       and what it receives. Each operates under its own privacy policy, linked
       below. None of them is given access to your notes, bookmarks, or
-      memorisation data, because that data never leaves your device.
+      memorisation data, because that data stays on your device.
     </p>
     <table>
       <thead>
@@ -348,8 +389,8 @@
           </td>
           <td>Quran text, translations, tafsir, recitation audio</td>
           <td>
-            Which pages and verses the App requests. No account, no user
-            identifier, and nothing that identifies you.
+            Which pages and verses the App requests. Your account details are
+            not passed on to it, and nothing that identifies you.
           </td>
         </tr>
         <tr>
@@ -368,8 +409,8 @@
           </td>
           <td>
             Standard connection metadata such as your IP address, as with any
-            web request, and the anonymous subscription ID when Recite Mode
-            starts. No content of yours passes through it.
+            web request, and your sign-in token when Recite Mode starts. No
+            content of yours passes through it.
           </td>
         </tr>
         <tr>
@@ -398,8 +439,37 @@
           </td>
           <td>Rafeeq Pro subscription status, restore, and management</td>
           <td>
-            The anonymous subscription ID, store purchase details, paywall
-            views, and device type and operating system
+            Your account ID (or the anonymous ID before you sign in), store
+            purchase details, paywall views, and device type and operating
+            system
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://supabase.com/privacy" target="_blank" rel="noopener"
+              >Supabase</a
+            >
+          </td>
+          <td>Rafeeq accounts and sign-in</td>
+          <td>
+            Your account ID, email address, and name, and the sign-in method.
+            Only if you sign in.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
+              >Google Sign-In</a
+            >
+            and
+            <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener"
+              >Sign in with Apple</a
+            >
+          </td>
+          <td>Proving who you are when you sign in</td>
+          <td>
+            That you are signing in to Rafeeq. They give us your name and
+            email address. Only if you sign in.
           </td>
         </tr>
         <tr>
@@ -445,12 +515,13 @@
       Deepgram, Soniox, RevenueCat, and Cloudflare are based in the United
       States, and Cloudflare serves requests from data centres worldwide, so if
       you use Recite Mode outside the US your audio is processed there, and a
-      Rafeeq Pro purchase record is held there. The safeguards that apply to
-      audio:
+      Rafeeq Pro purchase record is held there. Your Rafeeq account, if you
+      create one, is held by Supabase in the [REGION] region. The safeguards
+      that apply to audio:
       audio travels only over an encrypted connection (WSS), is transcribed in
-      the moment and never stored by us, is never linked to an account or
-      identity because the App has none, and reaches no third party beyond the
-      transcription provider itself.
+      the moment and never stored by us, is not linked to your account (it is
+      sent under a short-lived token and carries no account ID), and reaches
+      no third party beyond the transcription provider itself.
     </p>
     <p>
       The place-name lookup described in section 3 is handled by your
@@ -464,8 +535,7 @@
       <li>No advertising, and no advertising identifiers</li>
       <li>
         No analytics or behavioural tracking SDKs. RevenueCat's records of
-        subscription-screen views (section 4) are the only usage records, and
-        they carry no identity
+        subscription-screen views (section 4) are the only usage records
       </li>
       <li>No selling or sharing of personal data</li>
       <li>
@@ -488,8 +558,9 @@
         <strong>At rest:</strong> your notes, bookmarks, streaks, and cached
         Quran content are held in the App's private storage area, which Android
         isolates from other apps and encrypts at the OS level on any device with
-        device encryption enabled. We operate no user database, so there is no
-        server-side store of your data to protect.
+        device encryption enabled. The only user data we hold on a server is
+        your Rafeeq account (section 7), if you create one, which is held by
+        Supabase, accessible only to us, and encrypted in transit.
       </li>
       <li>
         <strong>Credentials:</strong> API keys and secrets are never bundled
@@ -514,7 +585,8 @@
 
     <h2>12. Backing up your data</h2>
     <p>
-      Because there is no account, the App gives you a file instead. In
+      Your notes and progress are not stored in your account, so the App gives
+      you a file for backing them up. In
       <strong>Account → Backup</strong>, "Export My Data" writes your data
       to a JSON file you control; "Restore From File"
       loads it back on another device. The file stays wherever you save it — the
@@ -525,7 +597,8 @@
       streaks, preferences, worship tracker entries, favourite azkar, and saved
       quiz range sets. It does not include your saved location, which the App
       simply asks for again on the new device, or your Rafeeq Pro
-      subscription, which you bring across with "Restore purchases" instead.
+      subscription, which comes back when you sign in to your account on the
+      new device (or with "Restore purchases").
     </p>
 
     <h2>13. Accessing, correcting, and deleting your data</h2>
@@ -540,35 +613,40 @@
     <p>
       <strong>Deletion.</strong> Uninstall the App, or clear its storage from
       Android Settings → Apps → Rafeeq → Storage. Deletion is immediate and
-      permanent — there is no account to close, no server-side copy, and no
-      request to send us. If you want to keep your notes and streaks first,
+      permanent — for the data held on your device there is no server-side
+      copy and no request to send us. If you want to keep your notes and streaks first,
       export them from <strong>Account → Backup</strong> before uninstalling.
+    </p>
+    <p>
+      <strong>Your Rafeeq account.</strong> If you created an account,
+      uninstalling the App does not delete it. Delete it in the App with
+      <strong>Account → Delete account</strong>, or email
+      <a href="mailto:or.mokhtar@gmail.com">or.mokhtar@gmail.com</a> from the
+      address on the account and we will delete it within 30 days. Deleting it
+      permanently removes your account (including your email address and name)
+      and your RevenueCat subscription record, and, on iPhone, revokes the
+      app's Sign in with Apple grant. If you signed in with Apple through the
+      Android app, we hold no Apple token for you; you can remove Rafeeq from
+      your Apple ID settings (Sign in with Apple) yourself. Full steps are on
+      the <a href="delete-account.html">account deletion page</a>.
     </p>
     <p>
       <strong>Subscription records.</strong> If you bought Rafeeq Pro, the
       purchase record is held by RevenueCat and by the store, so uninstalling
-      does not remove it. To have the RevenueCat record deleted, email us your
-      Support ID (Account → Subscription) and we will delete it within 30
-      days. Cancel the subscription in Google Play first — deleting the record
-      does not stop billing. Google Play keeps its own record of the purchase
-      under its privacy policy.
+      does not remove it. Deleting your account deletes the RevenueCat record.
+      If you never created an account, email us your Support ID
+      (Account → Subscription) and we will delete it within 30 days. Cancel
+      the subscription in Google Play (or the App Store) first — deleting
+      your account or the record does not cancel it or stop billing. The store
+      keeps its own record of the purchase under its privacy policy.
     </p>
     <div class="callout">
-      <strong
-        >Why the usual account-deletion and OAuth-revocation steps do not apply
-        here.</strong
-      >
-      Rafeeq has no sign-in, does not use Quran Foundation user accounts, and
-      requests no OAuth permission from you, so there is no authorisation to
-      revoke and no linked account whose deletion could affect your data. We
-      operate no user database and hold no copy of your content on any server,
-      which means that, apart from the subscription record above, there is
-      nothing for us to delete on request and nothing of yours in any backup
-      of ours. Should Rafeeq ever add an account system, we
-      would honour deletion requests by permanently deleting the data within 30
-      days and purging it from backups within 90 days, and deleting your Quran
-      Foundation account would delete the associated data held here — but today
-      no such data exists.
+      <strong>Quran Foundation accounts.</strong> Rafeeq does not use Quran
+      Foundation user accounts and requests no OAuth permission from you, so
+      there is no Quran Foundation authorisation to revoke. Your notes,
+      bookmarks, and other content are not held on any server, so apart from
+      your Rafeeq account and subscription record described above there is
+      nothing else for us to delete on request.
     </div>
 
     <h2>14. Children's privacy</h2>
