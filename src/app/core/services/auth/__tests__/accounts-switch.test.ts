@@ -7,11 +7,7 @@ jest.mock("@capacitor/core", () => ({
 }));
 
 const platform = Capacitor.getPlatform as jest.Mock;
-const KEYS = [
-  "REACT_APP_ACCOUNTS",
-  "REACT_APP_APPLE_SIGNIN",
-  "REACT_APP_PRO_GATE",
-];
+const KEYS = ["REACT_APP_ACCOUNTS", "REACT_APP_APPLE_SIGNIN", "REACT_APP_PRO_GATE"];
 
 beforeEach(() => {
   KEYS.forEach((k) => delete process.env[k]);
