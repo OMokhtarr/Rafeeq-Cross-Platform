@@ -610,6 +610,18 @@ export interface AppStrings {
     copied: string;
   };
 
+  account: {
+    signInTitle: string;
+    signInWhy: string;
+    continueGoogle: string;
+    continueApple: string;
+    signInFailed: string;
+    signIn: string;
+    signOut: string;
+    signedInAs: (email: string) => string;
+    deleteAccount: string;
+  };
+
   hifz: {
     tabLabel: string;
     title: string;
@@ -1321,6 +1333,18 @@ const ar: AppStrings = {
     view: "عرض الاشتراك",
     supportId: "معرّف الدعم",
     copied: "تم النسخ",
+  },
+
+  account: {
+    signInTitle: "سجّل الدخول للاشتراك",
+    signInWhy: "يبقى اشتراكك وبياناتك المتزامنة مع حسابك",
+    continueGoogle: "المتابعة عبر Google",
+    continueApple: "المتابعة عبر Apple",
+    signInFailed: "تعذّر تسجيل الدخول، حاول مرة أخرى",
+    signIn: "تسجيل الدخول",
+    signOut: "تسجيل الخروج",
+    signedInAs: (email: string) => `مسجّل الدخول باسم ${email}`,
+    deleteAccount: "حذف الحساب",
   },
 
   hifz: {
@@ -2041,6 +2065,18 @@ const en: AppStrings = {
     view: "View subscription",
     supportId: "Support ID",
     copied: "Copied",
+  },
+
+  account: {
+    signInTitle: "Sign in to subscribe",
+    signInWhy: "Your subscription and synced data stay with your account",
+    continueGoogle: "Continue with Google",
+    continueApple: "Continue with Apple",
+    signInFailed: "Couldn't sign in. Please try again.",
+    signIn: "Sign in",
+    signOut: "Sign out",
+    signedInAs: (email: string) => `Signed in as ${email}`,
+    deleteAccount: "Delete account",
   },
 
   hifz: {

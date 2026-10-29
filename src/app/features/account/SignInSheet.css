@@ -1,0 +1,111 @@
+/* Sign-in sheet — a bottom sheet in the Pro note's family: gold border and
+   title, neutral provider buttons (green stays for fills, so none here). */
+.signin-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.signin-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.signin-sheet {
+  position: relative;
+  width: 100%;
+  max-width: var(--max-width-mobile, 600px);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--color-gold-subtle);
+  border-bottom: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  text-align: center;
+  animation: signin-rise 200ms ease-out;
+}
+
+.signin-close {
+  position: absolute;
+  top: var(--space-3);
+  inset-inline-end: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.signin-title {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-arabic-display);
+  font-size: var(--text-lg);
+  font-weight: normal;
+  color: var(--color-gold);
+}
+
+.signin-why {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.signin-provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-gold-subtle);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.signin-provider + .signin-provider {
+  margin-top: var(--space-3);
+}
+
+.signin-provider:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.signin-provider:focus-visible,
+.signin-close:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+@keyframes signin-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-sheet {
+    animation: none;
+  }
+}

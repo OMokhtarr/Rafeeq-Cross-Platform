@@ -13,13 +13,13 @@ import { useLocation } from "react-router-dom";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { registerOverlay } from "../../core/utils/overlay-registry";
-import { usePaywall } from "./usePaywall";
+import { useStartSubscribe } from "./useStartSubscribe";
 import "./ProNote.css";
 
 const ProNote: React.FC = () => {
   const { noteOpen, closeNote } = useSubscription();
   const { t } = useLang();
-  const openPaywall = usePaywall();
+  const startSubscribe = useStartSubscribe();
   const { pathname } = useLocation();
 
   // Android Back and the edge swipe close the topmost registered overlay
@@ -41,7 +41,7 @@ const ProNote: React.FC = () => {
 
   const viewSubscription = () => {
     closeNote();
-    void openPaywall();
+    void startSubscribe();
   };
 
   return (

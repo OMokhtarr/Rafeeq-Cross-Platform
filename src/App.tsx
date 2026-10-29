@@ -58,6 +58,7 @@ import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 import { AuthProvider } from "./app/core/context/AuthContext";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 import ProNote from "./app/features/subscription/ProNote";
+import SignInSheet from "./app/features/account/SignInSheet";
 
 // `hardwareBackButton: false` is load-bearing, not cosmetic.
 //
@@ -303,6 +304,7 @@ const App: React.FC = () => {
                       <MainRouterOutlet />
                     </TourProvider>
                     <ProNote />
+                    <SignInSheet />
                   </IonReactRouter>
                 </IonApp>
               </SubscriptionProvider>

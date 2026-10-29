@@ -16,7 +16,7 @@ import React, { useState } from "react";
 import { useIonToast } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
 import { useSubscription } from "../../core/context/SubscriptionContext";
-import { usePaywall } from "../subscription/usePaywall";
+import { useSignedInAction, useStartSubscribe } from "../subscription/useStartSubscribe";
 
 /** Characters of the Support ID shown on screen; the full id is copied. */
 const SHORT_ID_LENGTH = 8;
@@ -25,7 +25,8 @@ const SubscriptionRow: React.FC = () => {
   const { t } = useLang();
   const ts = t.subscription;
   const { isPro, appUserId, restore, showCustomerCenter } = useSubscription();
-  const openPaywall = usePaywall();
+  const startSubscribe = useStartSubscribe();
+  const whenSignedIn = useSignedInAction();
   const [presentToast] = useIonToast();
   const [restoring, setRestoring] = useState(false);
 
@@ -87,7 +88,7 @@ const SubscriptionRow: React.FC = () => {
           </button>
         ) : (
           <>
-            <button className="ac-row" onClick={() => void openPaywall()}>
+            <button className="ac-row" onClick={() => void startSubscribe()}>
               <span className="ac-row-label">{ts.view}</span>
               <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3.5 3.5 0 013.5 3.5v6a3.5 3.5 0 01-7 0v-6A3.5 3.5 0 0112 2z" />
@@ -95,7 +96,7 @@ const SubscriptionRow: React.FC = () => {
               </svg>
             </button>
             <div className="ac-row-divider" />
-            <button className="ac-row" onClick={onRestore} disabled={restoring}>
+            <button className="ac-row" onClick={() => void whenSignedIn(onRestore)} disabled={restoring}>
               <span className="ac-row-label">{ts.restore}</span>
               <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><polyline points="3 3 3 8 8 8" />

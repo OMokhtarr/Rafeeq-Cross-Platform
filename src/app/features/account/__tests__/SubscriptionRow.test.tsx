@@ -6,6 +6,9 @@ import { useSubscription } from "../../../core/context/SubscriptionContext";
 const mockPresentToast = jest.fn();
 jest.mock("@ionic/react", () => ({ useIonToast: () => [mockPresentToast] }));
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
+jest.mock("../../../core/context/AuthContext", () => ({
+  useAuth: () => ({ enabled: false, user: null, requestSignIn: jest.fn() }),
+}));
 const mockOpenPaywall = jest.fn();
 jest.mock("../../subscription/usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
 
