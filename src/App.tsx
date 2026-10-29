@@ -55,6 +55,7 @@ import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
+import { AuthProvider } from "./app/core/context/AuthContext";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 import ProNote from "./app/features/subscription/ProNote";
 
@@ -282,28 +283,30 @@ const App: React.FC = () => {
       <LanguageProvider>
         <VerseVisibilityProvider>
           <PlaybackProvider>
-            <SubscriptionProvider>
-              <IonApp>
-                {preloading && preloadProgress.done < preloadProgress.total && (
-                  <div className="global-preload-bar">
-                    <div
-                      className="global-preload-fill"
-                      style={{
-                        width: `${
-                          (preloadProgress.done / preloadProgress.total) * 100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                )}
-                <IonReactRouter>
-                  <TourProvider initial={onboarding}>
-                    <MainRouterOutlet />
-                  </TourProvider>
-                  <ProNote />
-                </IonReactRouter>
-              </IonApp>
-            </SubscriptionProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <IonApp>
+                  {preloading && preloadProgress.done < preloadProgress.total && (
+                    <div className="global-preload-bar">
+                      <div
+                        className="global-preload-fill"
+                        style={{
+                          width: `${
+                            (preloadProgress.done / preloadProgress.total) * 100
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                  <IonReactRouter>
+                    <TourProvider initial={onboarding}>
+                      <MainRouterOutlet />
+                    </TourProvider>
+                    <ProNote />
+                  </IonReactRouter>
+                </IonApp>
+              </SubscriptionProvider>
+            </AuthProvider>
           </PlaybackProvider>
         </VerseVisibilityProvider>
       </LanguageProvider>
