@@ -29,10 +29,10 @@ function deps(overrides: Partial<DeleteDeps> = {}): DeleteDeps {
     },
     appleRefreshToken: async (userId) => {
       calls.push(`appleRefreshToken:${userId}`);
-      return userId === ALICE.id ? "apple-refresh" : null;
+      return userId === ALICE.id ? { refreshToken: "apple-refresh", clientId: "com.rafeeq.quranquiz" } : null;
     },
-    revokeApple: async (token) => {
-      calls.push(`revokeApple:${token}`);
+    revokeApple: async (grant) => {
+      calls.push(`revokeApple:${grant.refreshToken}@${grant.clientId}`);
     },
     deleteRevenueCatCustomer: async (userId) => {
       calls.push(`revenueCat:${userId}`);
@@ -80,7 +80,7 @@ test("a caller token deletes in order: Apple revoke, RevenueCat, then the auth u
   assert.deepEqual(await res.json(), { deleted: true });
   assert.deepEqual(steps(), [
     `appleRefreshToken:${ALICE.id}`,
-    "revokeApple:apple-refresh",
+    "revokeApple:apple-refresh@com.rafeeq.quranquiz",
     `revenueCat:${ALICE.id}`,
     `deleteAuthUser:${ALICE.id}`,
   ]);
@@ -117,7 +117,7 @@ test("a RevenueCat failure is 502 and the auth user is not deleted", async () =>
     ),
   );
   assert.equal(res.status, 502);
-  assert.deepEqual(steps(), [`appleRefreshToken:${ALICE.id}`, "revokeApple:apple-refresh", "revenueCat"]);
+  assert.deepEqual(steps(), [`appleRefreshToken:${ALICE.id}`, "revokeApple:apple-refresh@com.rafeeq.quranquiz", "revenueCat"]);
 });
 
 test("an Apple revoke failure is 502 and nothing after it runs", async () => {

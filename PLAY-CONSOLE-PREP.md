@@ -271,6 +271,13 @@ recoverable from git history — see below.
 > Note also **Apple Guideline 4.8**: adding Google Sign-In *alone* obliges you to
 > offer Sign in with Apple as an equivalent option. Adding one means adding both.
 
+> **Apple token revocation covers iOS sign-ins only.** On iOS the app sends
+> Apple's authorization code to the `apple-token` edge function, which stores
+> the refresh token (with the bundle id it was issued to) in `apple_tokens`;
+> `delete-account` revokes it. On Android, Sign in with Apple runs through
+> Supabase's web flow in a browser tab, which never gives the app a code, so
+> those accounts have no stored token and deletion skips the revoke for them.
+
 ### Recovering the sign-in code
 
 All sign-in files were deleted from the working tree but remain in git history.

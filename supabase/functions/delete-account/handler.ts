@@ -16,6 +16,9 @@
  * (wired in index.ts), so this file runs unchanged under Node's tests.
  */
 
+import type { AppleGrant } from "../_shared/apple.ts";
+import { bearerToken, CORS, json } from "../_shared/http.ts";
+
 export interface AccountRef {
   id: string;
   /** app_metadata.provider: "google" | "apple" | … */
@@ -26,28 +29,15 @@ export interface DeleteDeps {
   /** The account an access token belongs to; null when it isn't valid. */
   userFromToken(token: string): Promise<AccountRef | null>;
   findUser(q: { id?: string; email?: string }): Promise<AccountRef | null>;
-  appleRefreshToken(userId: string): Promise<string | null>;
-  revokeApple(refreshToken: string): Promise<void>;
+  /** The stored Apple token; only the native iOS sign-in stores one. */
+  appleRefreshToken(userId: string): Promise<AppleGrant | null>;
+  revokeApple(grant: AppleGrant): Promise<void>;
   /** Resolves when the customer is gone, including when it never existed. */
   deleteRevenueCatCustomer(userId: string): Promise<void>;
   deleteAuthUser(userId: string): Promise<void>;
   /** Null closes the admin path. */
   adminSecret: string | null;
 }
-
-// Bearer auth, no cookies, so any origin may call; the token is the gate.
-// x-admin-secret is deliberately absent: the admin path is not for browsers.
-const CORS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
-  "access-control-allow-headers": "authorization, apikey, content-type, x-client-info",
-};
-
-const json = (status: number, body: object) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "content-type": "application/json" },
-  });
 
 function sameSecret(given: string, expected: string): boolean {
   const a = new TextEncoder().encode(given);
@@ -72,7 +62,7 @@ async function adminTarget(req: Request, given: string, deps: DeleteDeps): Promi
 }
 
 async function callerTarget(req: Request, deps: DeleteDeps): Promise<Target> {
-  const token = /^Bearer\s+(\S+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
+  const token = bearerToken(req);
   const account = token ? await deps.userFromToken(token) : null;
   return account ? { account } : { refuse: json(401, { error: "unauthorized" }) };
 }
@@ -96,8 +86,9 @@ export async function handleDeleteAccount(req: Request, deps: DeleteDeps): Promi
   try {
     // Any account may hold an Apple token (a linked identity), not only one
     // whose first provider was Apple, so the stored token decides.
-    const appleToken = await deps.appleRefreshToken(id);
-    if (appleToken) await deps.revokeApple(appleToken);
+    // Android's web-flow sign-in stores none, so those accounts skip this.
+    const appleGrant = await deps.appleRefreshToken(id);
+    if (appleGrant) await deps.revokeApple(appleGrant);
     step = "revenuecat";
     await deps.deleteRevenueCatCustomer(id);
     step = "auth";

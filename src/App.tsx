@@ -56,6 +56,7 @@ import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 import { AuthProvider } from "./app/core/context/AuthContext";
+import { completeOAuthRedirect } from "./app/core/services/auth/auth.service";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 import ProNote from "./app/features/subscription/ProNote";
 import SignInSheet from "./app/features/account/SignInSheet";
@@ -139,9 +140,15 @@ const MainRouterOutlet: React.FC = () => {
 
   // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
   // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
-  // running app receives it as appUrlOpen.
+  // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
+  // Android's Apple sign-in in the browser; a cold start there means the
+  // app was killed while the tab was open, and the code still signs in.
   useEffect(() => {
     const open = (url: string | undefined) => {
+      if (url?.startsWith("rafeeq://auth/")) {
+        void completeOAuthRedirect(url);
+        return;
+      }
       const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);
       if (m) historyRef.current.push(`/azkar/${m[1]}`);
     };

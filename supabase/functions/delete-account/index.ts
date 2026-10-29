@@ -4,8 +4,10 @@
  * Wires handler.ts to the service-role Supabase client, RevenueCat and
  * Apple. Secrets (set with `supabase secrets set`):
  *   REVENUECAT_SECRET_KEY, ADMIN_DELETE_SECRET,
- *   APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_CLIENT_ID, APPLE_PRIVATE_KEY.
+ *   APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY.
  * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
+ * The revoke's client id is not a secret: apple-token stores it with each
+ * token, since Apple only accepts a revoke from the client that issued it.
  *
  * The Apple secrets may be absent until iOS ships. Then revoking a stored
  * Apple token throws, so that account gets a 502 rather than being deleted
@@ -13,7 +15,7 @@
  */
 
 import { createClient, type User } from "npm:@supabase/supabase-js@2";
-import { revokeAppleToken, type AppleConfig } from "../_shared/apple.ts";
+import { revokeAppleToken, type AppleKey } from "../_shared/apple.ts";
 import { handleDeleteAccount, type AccountRef } from "./handler.ts";
 
 const env = (name: string) => Deno.env.get(name) || null;
@@ -27,12 +29,11 @@ const toRef = (user: User): AccountRef => ({ id: user.id, provider: user.app_met
 /** A 4xx from Auth means "no such user / bad token"; anything else is an outage. */
 const isNotFound = (error: { status?: number }) => !!error.status && error.status < 500;
 
-function appleConfig(): AppleConfig | null {
+function appleKey(): AppleKey | null {
   const teamId = env("APPLE_TEAM_ID");
   const keyId = env("APPLE_KEY_ID");
-  const clientId = env("APPLE_CLIENT_ID");
   const privateKeyPem = env("APPLE_PRIVATE_KEY");
-  return teamId && keyId && clientId && privateKeyPem ? { teamId, keyId, clientId, privateKeyPem } : null;
+  return teamId && keyId && privateKeyPem ? { teamId, keyId, privateKeyPem } : null;
 }
 
 async function findUserByEmail(email: string): Promise<User | null> {
@@ -74,17 +75,17 @@ Deno.serve((req) =>
     async appleRefreshToken(userId) {
       const { data, error } = await admin
         .from("apple_tokens")
-        .select("refresh_token")
+        .select("refresh_token, client_id")
         .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
-      return data?.refresh_token ?? null;
+      return data ? { refreshToken: data.refresh_token, clientId: data.client_id } : null;
     },
 
-    async revokeApple(refreshToken) {
-      const cfg = appleConfig();
-      if (!cfg) throw new Error("apple credentials not configured");
-      await revokeAppleToken(refreshToken, cfg);
+    async revokeApple(grant) {
+      const key = appleKey();
+      if (!key) throw new Error("apple credentials not configured");
+      await revokeAppleToken(grant, key);
     },
 
     async deleteRevenueCatCustomer(userId) {

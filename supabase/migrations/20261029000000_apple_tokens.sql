@@ -8,6 +8,9 @@
 create table public.apple_tokens (
   user_id uuid primary key references auth.users (id) on delete cascade,
   refresh_token text not null,
+  -- The client id the token was issued to (the bundle id for the native iOS
+  -- sign-in). Apple only accepts a revoke from that same client id.
+  client_id text not null,
   updated_at timestamptz not null default now()
 );
 

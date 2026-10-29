@@ -9,3 +9,8 @@ project_id = "rafeeq"
 # and the owner script's x-admin-secret carries no JWT at all, so the
 # gateway would turn it away before the handler could check the secret.
 verify_jwt = false
+
+[functions.apple-token]
+# The gateway's JWT check is off for the same reason: the function verifies
+# the app's bearer token with Auth (getUser) itself, like delete-account.
+verify_jwt = false
