@@ -223,6 +223,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       .catch(() => {});
   }, [native, authReady, lang]);
 
+  /** Resolves once RevenueCat is on the current account. A sign-in that has
+   *  just landed queues its logIn only after React renders, so yield once to
+   *  let that happen, then wait out the chain (a newer step may join it). */
+  const identitySettled = useCallback(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    while (identityPending.current > 0) await identityChain.current;
+  }, []);
+
   const refresh = useCallback(async () => apply(await fetchCustomerInfo()), [apply]);
 
   const showPaywall = useCallback(async (): Promise<PaywallOutcome> => {
@@ -231,6 +239,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     let result: PaywallResult;
     try {
       await configureRevenueCat();
+      // A purchase made before logIn finishes would attach to the anonymous id.
+      await identitySettled();
       result = await presentPaywall();
     } catch (err) {
       console.error("[pro] paywall failed", err);
@@ -246,7 +256,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       console.error("[pro] customer info failed", err);
       return "subscribed";
     }
-  }, [native, authReady, refresh]);
+  }, [native, authReady, refresh, identitySettled]);
 
   const showCustomerCenter = useCallback(async () => {
     await configureRevenueCat();
@@ -256,7 +266,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     refresh().catch((err) => console.error("[pro] customer info failed", err));
   }, [refresh]);
 
-  const restore = useCallback(async () => apply(await restorePurchases()), [apply]);
+  const restore = useCallback(async () => {
+    await identitySettled();
+    return apply(await restorePurchases());
+  }, [apply, identitySettled]);
 
   const markNotPro = useCallback(() => setIsPro(false), []);
   const openNote = useCallback(() => setNoteOpen(true), []);

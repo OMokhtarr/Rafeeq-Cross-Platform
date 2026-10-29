@@ -615,6 +615,7 @@ export interface AppStrings {
     signInWhy: string;
     continueGoogle: string;
     continueApple: string;
+    close: string;
     signInFailed: string;
     signIn: string;
     signOut: string;
@@ -1340,6 +1341,7 @@ const ar: AppStrings = {
     signInWhy: "يبقى اشتراكك وبياناتك المتزامنة مع حسابك",
     continueGoogle: "المتابعة عبر Google",
     continueApple: "المتابعة عبر Apple",
+    close: "إغلاق",
     signInFailed: "تعذّر تسجيل الدخول، حاول مرة أخرى",
     signIn: "تسجيل الدخول",
     signOut: "تسجيل الخروج",
@@ -2072,6 +2074,7 @@ const en: AppStrings = {
     signInWhy: "Your subscription and synced data stay with your account",
     continueGoogle: "Continue with Google",
     continueApple: "Continue with Apple",
+    close: "Close",
     signInFailed: "Couldn't sign in. Please try again.",
     signIn: "Sign in",
     signOut: "Sign out",

@@ -433,4 +433,34 @@ describe("accounts", () => {
     expect(rc.logIn).not.toHaveBeenCalled();
     expect(rc.logOut).not.toHaveBeenCalled();
   });
+  it("waits for the account switch to settle before showing the paywall or restoring", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let finishLogIn!: () => void;
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLogIn = () => resolve({ customerInfo: info(false).customerInfo, created: false });
+        }),
+    );
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    rc.restorePurchases.mockResolvedValue(info(false));
+    // The paywall is requested right as the sign-in lands.
+    let paywall!: Promise<string>;
+    let restoring!: Promise<boolean>;
+    await act(async () => {
+      paywall = sub.showPaywall();
+      restoring = sub.restore();
+    });
+    await setAuth({ user: { id: "u1" } });
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.restorePurchases).not.toHaveBeenCalled();
+    await act(async () => {
+      finishLogIn();
+      await Promise.all([paywall, restoring]);
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+    expect(rc.restorePurchases).toHaveBeenCalledTimes(1);
+  });
 });

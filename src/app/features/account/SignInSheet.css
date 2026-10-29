@@ -62,20 +62,50 @@
   color: var(--color-text-secondary);
 }
 
+/* Provider buttons follow Google's and Apple's sign-in branding rules, which
+   take precedence over the app's gold-border rule for these two controls.
+   Google: light #FFFFFF / #747775 / #1F1F1F, dark #131314 / #8E918F / #E3E3E3,
+   Roboto Medium 14px. Apple: black with white logo and text on the light
+   theme, white with black on the dark one. The app is dark (night) unless
+   <html data-theme="day">. */
 .signin-provider {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--color-gold-subtle);
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-md);
+  font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+}
+
+.signin-provider--google {
+  background: #131314;
+  border-color: #8e918f;
+  color: #e3e3e3;
+}
+
+.signin-provider--apple {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+
+:root[data-theme="day"] .signin-provider--google {
+  background: #fff;
+  border-color: #747775;
+  color: #1f1f1f;
+}
+
+:root[data-theme="day"] .signin-provider--apple {
+  background: #000;
+  border-color: #000;
+  color: #fff;
 }
 
 .signin-provider + .signin-provider {
