@@ -221,14 +221,20 @@
 - **Produces:**
   - `pullSince(cursor: string | null): Promise<{ rows: SyncRow[]; cursor: string | null }>`
     - It pages with `.select("*").gt("server_at", cursor).order("server_at").limit(500)` until a short page.
-    - The returned cursor is the max `server_at` **minus 5 seconds**. That overlap catches rows committed late with an earlier timestamp, and merging is idempotent so re-reading them is safe.
+    - Between pages, advance by the **exact last `server_at` string** of the previous page. Keep the PostgREST string with its microseconds; never round-trip it through a JS `Date`.
+    - Apply the overlap only to the cursor that is finally returned: the max `server_at` **minus 10 seconds**. That is at least the `authenticated` statement_timeout (8 s), so rows committed late with an earlier stamp are caught. Merging is idempotent, so re-reading them is safe.
     - `null` means everything.
   - `push(rows: SyncRow[]): Promise<SyncRow[]>`: calls `rpc("sync_push", { items: rows })` in chunks of 200 and returns the stored rows.
+    - The server rejects more than 500 items, and PostgREST's `max-rows` caps the rows returned, so never raise the chunk size.
+    - `edited_at` must be an ISO-8601 string; the server rejects epoch numbers.
+    - Values over 256 KB are rejected by a CHECK constraint, which fails the whole chunk. Skip oversized items client-side with a `console.warn`.
   - **Errors:** both throw `SyncOfflineError` on network failures and `SyncError` otherwise.
 
 - [ ] **Step 1: Write the failing tests** (mock the Supabase query builder and `rpc`).
   - Paging stops on a short page.
-  - The cursor is the max `server_at` minus 5 s.
+  - The second page's `gt` uses the first page's exact last `server_at` string.
+  - The returned cursor is the max `server_at` minus 10 s.
+  - An item whose JSON is over 256 KB is not sent.
   - `null` cursor → no `gt` filter.
   - `push` chunks 450 rows into 3 calls.
   - A `fetch failed` / `TypeError` → `SyncOfflineError`; a PostgREST error → `SyncError`.
