@@ -39,6 +39,22 @@ export interface DeleteDeps {
   adminSecret: string | null;
 }
 
+/** Shorter admin secrets are too guessable to open the admin path. */
+const MIN_ADMIN_SECRET_LENGTH = 32;
+
+/** The configured admin secret, or null (admin path closed) when it is unset
+ *  or shorter than 32 characters; a short one is reported once per call. */
+export function adminSecretOrNull(secret: string | null): string | null {
+  if (!secret) return null;
+  if (secret.length < MIN_ADMIN_SECRET_LENGTH) {
+    console.error(
+      `[delete-account] ADMIN_DELETE_SECRET is shorter than ${MIN_ADMIN_SECRET_LENGTH} characters; the admin path is closed`,
+    );
+    return null;
+  }
+  return secret;
+}
+
 function sameSecret(given: string, expected: string): boolean {
   const a = new TextEncoder().encode(given);
   const b = new TextEncoder().encode(expected);

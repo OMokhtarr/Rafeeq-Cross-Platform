@@ -8,7 +8,7 @@
 
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { handleDeleteAccount, type DeleteDeps } from "../functions/delete-account/handler.ts";
+import { adminSecretOrNull, handleDeleteAccount, type DeleteDeps } from "../functions/delete-account/handler.ts";
 
 const ALICE = { id: "11111111-1111-4111-8111-111111111111", provider: "apple" };
 const BOB = { id: "22222222-2222-4222-8222-222222222222", provider: "google" };
@@ -160,6 +160,16 @@ test("the admin path is closed when no admin secret is configured", async () => 
   const res = await handleDeleteAccount(adminRequest("", { email: "bob@x.com" }), deps({ adminSecret: null }));
   assert.equal(res.status, 401);
   assert.deepEqual(calls, []);
+});
+
+test("an admin secret shorter than 32 characters closes the admin path", (t) => {
+  const error = t.mock.method(console, "error", () => {});
+  assert.equal(adminSecretOrNull("too-short"), null);
+  assert.equal(error.mock.callCount(), 1);
+  assert.equal(adminSecretOrNull(null), null);
+  const long = "x".repeat(32);
+  assert.equal(adminSecretOrNull(long), long);
+  assert.equal(error.mock.callCount(), 1);
 });
 
 test("the admin path with the right secret and an email deletes that user", async () => {

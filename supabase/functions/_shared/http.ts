@@ -16,8 +16,10 @@ export const json = (status: number, body: object) =>
     headers: { ...CORS, "content-type": "application/json" },
   });
 
-/** A 4xx from Auth means "no such user / bad token"; anything else is an outage. */
-export const isNotFound = (error: { status?: number }) => !!error.status && error.status < 500;
+/** A 4xx from Auth means "no such user / bad token"; anything else, rate
+ *  limiting (429) included, is an outage. */
+export const isNotFound = (error: { status?: number }) =>
+  !!error.status && error.status < 500 && error.status !== 429;
 
 /** The access token from `Authorization: Bearer <token>`, if present. */
 export const bearerToken = (req: Request): string | undefined =>

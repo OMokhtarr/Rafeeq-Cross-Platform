@@ -3,8 +3,8 @@
  *
  * Wires handler.ts to the service-role Supabase client, RevenueCat and
  * Apple. Secrets (set with `supabase secrets set`):
- *   REVENUECAT_SECRET_KEY, ADMIN_DELETE_SECRET,
- *   APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY.
+ *   REVENUECAT_SECRET_KEY, ADMIN_DELETE_SECRET (at least 32 characters, or
+ *   the admin path stays closed), APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY.
  * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
  * The revoke's client id is not a secret: apple-token stores it with each
  * token, since Apple only accepts a revoke from the client that issued it.
@@ -17,9 +17,12 @@
 import { createClient, type User } from "npm:@supabase/supabase-js@2";
 import { appleKeyFromEnv, revokeAppleToken } from "../_shared/apple.ts";
 import { isNotFound } from "../_shared/http.ts";
-import { handleDeleteAccount, type AccountRef } from "./handler.ts";
+import { adminSecretOrNull, handleDeleteAccount, type AccountRef } from "./handler.ts";
 
 const env = (name: string) => Deno.env.get(name) || null;
+
+// Read once per isolate, so a too-short secret is logged once, not per request.
+const adminSecret = adminSecretOrNull(env("ADMIN_DELETE_SECRET"));
 
 const admin = createClient(env("SUPABASE_URL")!, env("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -95,6 +98,6 @@ Deno.serve((req) =>
       if (error) throw error;
     },
 
-    adminSecret: env("ADMIN_DELETE_SECRET"),
+    adminSecret,
   }),
 );
