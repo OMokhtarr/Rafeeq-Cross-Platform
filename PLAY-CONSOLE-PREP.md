@@ -664,7 +664,9 @@ ships dark: the paywall only appears when the app is built with
 4. `npx cap sync`, build, and test purchases from Account → Subscription
    (works while the paywall is off): View subscription → paywall → buy →
    status "active"; reinstall → Restore; Manage subscription opens the
-   Customer Center.
+   Customer Center. View and Restore only appear in a **debug build** or a
+   build with `REACT_APP_ACCOUNTS=on` (sign in first): a release build with
+   accounts off offers no way to buy, since Pro always belongs to an account.
 
 ### Store declarations — redo before the first build that carries a RevenueCat key
 

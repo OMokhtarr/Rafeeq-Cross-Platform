@@ -7,6 +7,11 @@
  * purchase made on another device. Works whether or not the app-side paywall
  * switch is on, so purchases can be tested before launch.
  *
+ * Pro always belongs to an account, so a release build with accounts off
+ * offers no way to buy or restore it: a purchase there would land on an
+ * anonymous id. Debug builds keep both rows for store testing, and an
+ * existing subscriber can still reach Manage.
+ *
  * The Support ID is the RevenueCat app-user id, shown shortened and copied
  * in full. The owner needs it to grant free Pro (testers, family, a store
  * reviewer) or to sort out "I paid but it's still locked".
@@ -14,6 +19,8 @@
 
 import React, { useState } from "react";
 import { useIonToast } from "@ionic/react";
+import { Capacitor } from "@capacitor/core";
+import { useAuth } from "../../core/context/AuthContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useSignedInAction, useStartSubscribe } from "../subscription/useStartSubscribe";
@@ -25,6 +32,8 @@ const SubscriptionRow: React.FC = () => {
   const { t } = useLang();
   const ts = t.subscription;
   const { isPro, appUserId, restore, showCustomerCenter } = useSubscription();
+  const { enabled: accountsEnabled } = useAuth();
+  const canBuy = accountsEnabled || Capacitor.DEBUG === true;
   const startSubscribe = useStartSubscribe();
   const whenSignedIn = useSignedInAction();
   const [presentToast] = useIonToast();
@@ -76,8 +85,8 @@ const SubscriptionRow: React.FC = () => {
             {isPro ? ts.planPro : ts.planFree}
           </span>
         </div>
-        <div className="ac-row-divider" />
 
+        {(isPro || canBuy) && <div className="ac-row-divider" />}
         {isPro ? (
           <button className="ac-row" onClick={onManage}>
             <span className="ac-row-label">{ts.manage}</span>
@@ -86,7 +95,7 @@ const SubscriptionRow: React.FC = () => {
               <circle cx="9" cy="7" r="2.2" fill="var(--color-bg-card)" /><circle cx="15" cy="17" r="2.2" fill="var(--color-bg-card)" />
             </svg>
           </button>
-        ) : (
+        ) : canBuy ? (
           <>
             <button className="ac-row" onClick={() => void startSubscribe()}>
               <span className="ac-row-label">{ts.view}</span>
@@ -103,7 +112,7 @@ const SubscriptionRow: React.FC = () => {
               </svg>
             </button>
           </>
-        )}
+        ) : null}
 
         {appUserId && (
           <>

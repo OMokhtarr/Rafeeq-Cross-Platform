@@ -6,8 +6,20 @@ import { useSubscription } from "../../../core/context/SubscriptionContext";
 const mockPresentToast = jest.fn();
 jest.mock("@ionic/react", () => ({ useIonToast: () => [mockPresentToast] }));
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
+let mockAuthEnabled = false;
+let mockDebugBuild = true;
+jest.mock("@capacitor/core", () => ({
+  registerPlugin: () => ({}),
+  Capacitor: {
+    getPlatform: () => "android",
+    isNativePlatform: () => false,
+    get DEBUG() {
+      return mockDebugBuild;
+    },
+  },
+}));
 jest.mock("../../../core/context/AuthContext", () => ({
-  useAuth: () => ({ enabled: false, user: null, requestSignIn: jest.fn() }),
+  useAuth: () => ({ enabled: mockAuthEnabled, user: null, requestSignIn: jest.fn() }),
 }));
 const mockOpenPaywall = jest.fn();
 jest.mock("../../subscription/usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
@@ -36,6 +48,8 @@ const button = (text: string) =>
   Array.from(host.querySelectorAll("button")).find((b) => b.textContent?.includes(text));
 
 beforeEach(() => {
+  mockAuthEnabled = false;
+  mockDebugBuild = true;
   localStorage.clear();
   Object.assign(navigator, { clipboard: { writeText } });
   writeText.mockResolvedValue(undefined);
@@ -106,4 +120,30 @@ it("shows a shortened Support ID and copies the full app-user id", async () => {
 it("hides Support ID when there is no app-user id", () => {
   mount({ isPro: false, appUserId: null });
   expect(host.textContent).not.toContain("معرّف الدعم");
+});
+
+describe("release build with accounts off", () => {
+  beforeEach(() => {
+    mockDebugBuild = false;
+  });
+
+  it("offers no way to buy or restore Pro without an account", () => {
+    mount({ isPro: false, appUserId: ID });
+    expect(host.querySelector(".ac-plan-pill")?.textContent).toBe("مجاني");
+    expect(button("عرض الاشتراك")).toBeUndefined();
+    expect(button("استعادة المشتريات")).toBeUndefined();
+    expect(host.querySelectorAll(".ac-row-divider")).toHaveLength(1);
+  });
+
+  it("still lets an existing subscriber manage their subscription", () => {
+    mount({ isPro: true, appUserId: ID });
+    expect(button("إدارة الاشتراك")).toBeDefined();
+  });
+
+  it("offers View and Restore once accounts are on", () => {
+    mockAuthEnabled = true;
+    mount({ isPro: false, appUserId: ID });
+    expect(button("عرض الاشتراك")).toBeDefined();
+    expect(button("استعادة المشتريات")).toBeDefined();
+  });
 });
