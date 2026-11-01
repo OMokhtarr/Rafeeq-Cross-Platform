@@ -11,13 +11,21 @@
 -- trigger stamps `server_at` with clock_timestamp() on every write, whatever
 -- the client sent. clock_timestamp() rather than now(): now() is fixed for
 -- the whole transaction, so two writes in one transaction would tie. A row
--- can still commit after a later-stamped one; the client re-reads a few
--- seconds behind its cursor to catch it (merging is idempotent).
+-- can still commit after a later-stamped one, at most a statement's length
+-- later; the client re-reads 10 s behind its cursor to catch it (merging is
+-- idempotent). That overlap must stay at least the `authenticated` role's
+-- statement_timeout (8 s by default).
 --
 -- Row-level security: each signed-in user reaches only rows whose user_id is
 -- their own, for every command. `user_id` defaults to auth.uid(), and the
 -- insert/update checks refuse any other value. Pro-only is enforced in the
 -- app, not here: the database only enforces "own rows".
+--
+-- Size bounds: collection 1-64 characters, item_key 1-256, value at most
+-- 256 KB (a recitation-history session can carry a whole-Quran queue, about
+-- 125 KB), and at most 500 items per push. There is deliberately no per-user
+-- row quota yet (Pro is enforced in the app, per the spec); the bounds cap
+-- what any one account can store per row and per call.
 --
 -- sync_push: the last-write-wins push the app uses instead of writing rows
 -- directly. It upserts each item, but replaces a stored row only when the
@@ -36,7 +44,13 @@ create table public.sync_items (
   edited_at timestamptz not null,
   deleted boolean not null default false,
   server_at timestamptz not null default now(),
-  primary key (user_id, collection, item_key)
+  primary key (user_id, collection, item_key),
+  constraint sync_items_collection_length
+    check (char_length(collection) between 1 and 64),
+  constraint sync_items_item_key_length
+    check (char_length(item_key) between 1 and 256),
+  constraint sync_items_value_size
+    check (pg_column_size(value) <= 262144)
 );
 
 -- The pull: one user's rows after the cursor, in server_at order. (The
@@ -87,7 +101,9 @@ grant select, insert, update, delete on table public.sync_items to authenticated
 -- items: a JSON array of {collection, item_key, value, edited_at, deleted}.
 -- Any other field (user_id, server_at, ...) is ignored. A missing `deleted`
 -- means false; a missing collection, item_key or edited_at fails the
--- not-null constraints and the whole push is rolled back.
+-- not-null constraints, and an item over the size bounds fails the checks
+-- (23514); either way the whole push is rolled back. More than 500 items is
+-- refused (the client pushes in chunks of 200).
 create function public.sync_push(items jsonb)
 returns setof public.sync_items
 language plpgsql
@@ -104,9 +120,15 @@ begin
     raise exception 'sync_push expects a JSON array of items'
       using errcode = '22023';
   end if;
+  if jsonb_array_length(items) > 500 then
+    raise exception 'sync_push takes at most 500 items per call (got %)',
+      jsonb_array_length(items)
+      using errcode = '22023';
+  end if;
 
   -- distinct on: a key pushed twice in one call keeps its newest copy (an
-  -- upsert may not touch the same row twice in one statement).
+  -- upsert may not touch the same row twice in one statement); the value
+  -- breaks a tie so the pick doesn't depend on the payload's order.
   insert into public.sync_items as s
     (user_id, collection, item_key, value, edited_at, deleted)
   select distinct on (i.collection, i.item_key)
@@ -116,7 +138,7 @@ begin
     collection text, item_key text, value jsonb,
     edited_at timestamptz, deleted boolean
   )
-  order by i.collection, i.item_key, i.edited_at desc
+  order by i.collection, i.item_key, i.edited_at desc, i.value::text desc
   on conflict (user_id, collection, item_key) do update
     set value = excluded.value,
         edited_at = excluded.edited_at,
@@ -143,8 +165,9 @@ grant execute on function public.sync_push(jsonb) to authenticated;
 SELF-CHECK. Run it in the Supabase SQL editor after applying this migration,
 in each project (dev, then prod): copy everything from `do $$` to the final
 `$$;` below. It creates two throwaway auth users, A and B, checks the rules as
-each of them, then deletes them. Expect the notice
-"sync_items self-check: PASS". Any failure stops at "FAIL n: ..." and rolls
+each of them, then deletes them. A run that finishes with no error means it
+passed (the "sync_items self-check: PASS" notice shows if your client
+displays notices). Any failure stops at an error "FAIL n: ..." and rolls
 everything back, the throwaway users included. (If the editor refuses the
 insert into auth.users, create two users under Authentication -> Users, put
 their ids in place of gen_random_uuid() below, and drop that insert. If
@@ -159,6 +182,7 @@ declare
   b uuid := gen_random_uuid();
   r public.sync_items;
   n int;
+  rows_before int;
   first_server_at timestamptz;
 begin
   insert into auth.users (id, aud, role, email) values
@@ -240,6 +264,37 @@ begin
     raise exception 'FAIL 7: a non-array push was accepted';
   exception when invalid_parameter_value then null;
   end;
+
+  -- 7b. An item_key over 256 characters is refused (23514) and nothing is
+  --     stored.
+  select count(*) into rows_before from public.sync_items;
+  begin
+    perform * from public.sync_push(jsonb_build_array(jsonb_build_object(
+      'collection', 'selfcheck', 'item_key', repeat('k', 257),
+      'edited_at', '2026-01-01T00:00:00Z')));
+    raise exception 'FAIL 7b: a 257-character item_key was accepted';
+  exception when check_violation then null;
+  end;
+  select count(*) into n from public.sync_items;
+  if n <> rows_before then
+    raise exception 'FAIL 7b: row count changed from % to %', rows_before, n;
+  end if;
+
+  -- 7c. A push of more than 500 items is refused (22023) and nothing is
+  --     stored.
+  begin
+    perform * from public.sync_push((
+      select jsonb_agg(jsonb_build_object(
+        'collection', 'selfcheck', 'item_key', 'bulk-' || g,
+        'edited_at', '2026-01-01T00:00:00Z'))
+      from generate_series(1, 501) as g));
+    raise exception 'FAIL 7c: a 501-item push was accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  select count(*) into n from public.sync_items;
+  if n <> rows_before then
+    raise exception 'FAIL 7c: row count changed from % to %', rows_before, n;
+  end if;
 
   -- 8. A cannot insert a row for B directly (RLS).
   begin

@@ -699,8 +699,9 @@ this is owner work in dashboards; the code is merged and dark behind
    `20261101000000_sync_items.sql` creates `sync_items` and the `sync_push`
    function (Pro sync). Then run the self-check at the bottom of
    `20261101000000_sync_items.sql` in the SQL editor (copy the `do $$ … $$;`
-   block out of the comment) and expect the notice
-   `sync_items self-check: PASS`.
+   block out of the comment). A run that finishes with no error means it
+   passed (the `sync_items self-check: PASS` notice shows if your client
+   displays notices).
 2. **Google:** in Google Cloud, OAuth clients — a **Web** client (its id goes
    in `REACT_APP_GOOGLE_WEB_CLIENT_ID` and in Supabase's Google provider) and
    an **Android** client for `com.rafeeq.quranquiz` with the **debug SHA-1
