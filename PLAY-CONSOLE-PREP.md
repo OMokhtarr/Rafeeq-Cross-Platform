@@ -316,7 +316,7 @@ be cancelled separately.
 2. **RevenueCat**: `DELETE /v1/subscribers/<account id>` using
    `REVENUECAT_SECRET_KEY` (an already-missing customer counts as success).
 3. **The auth user** (Supabase `auth.admin.deleteUser`). Foreign keys cascade
-   to every per-user table, including `apple_tokens`.
+   to every per-user table, including `apple_tokens` and `sync_items`.
 
 The auth user goes last and any failing step returns 502 with nothing after it
 run, so a retry still finds the account and can finish the job.
@@ -693,9 +693,14 @@ this is owner work in dashboards; the code is merged and dark behind
    use the **asymmetric ES256 signing keys** (the broker refuses legacy HS256
    tokens). Put the prod project URL in `token-broker/wrangler.toml`
    `SUPABASE_URL` and the dev one in `[env.dev.vars]`; put the project ref in
-   `supabase/config.toml` `project_id`. Apply the migration
-   (`supabase db push` after `supabase link --project-ref <ref>`), which
-   creates `apple_tokens`.
+   `supabase/config.toml` `project_id`. Apply both migrations
+   (`supabase db push` after `supabase link --project-ref <ref>`):
+   `20261029000000_apple_tokens.sql` creates `apple_tokens`, and
+   `20261101000000_sync_items.sql` creates `sync_items` and the `sync_push`
+   function (Pro sync). Then run the self-check at the bottom of
+   `20261101000000_sync_items.sql` in the SQL editor (copy the `do $$ … $$;`
+   block out of the comment) and expect the notice
+   `sync_items self-check: PASS`.
 2. **Google:** in Google Cloud, OAuth clients — a **Web** client (its id goes
    in `REACT_APP_GOOGLE_WEB_CLIENT_ID` and in Supabase's Google provider) and
    an **Android** client for `com.rafeeq.quranquiz` with the **debug SHA-1
