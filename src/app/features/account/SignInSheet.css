@@ -20,7 +20,7 @@
   width: 100%;
   max-width: var(--max-width-mobile, 600px);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-6) var(--space-5) calc(var(--space-5) + var(--safe-inset-bottom));
   border: 1px solid var(--color-gold-subtle);
   border-bottom: none;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;

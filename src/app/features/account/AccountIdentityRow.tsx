@@ -37,6 +37,9 @@ const AccountIdentityRow: React.FC<AccountIdentityRowProps> = ({ onDelete }) => 
               <span className="ac-row-label">
                 {user.name && <span className="ac-identity-name">{user.name}</span>}
                 {user.email && <span className="ac-identity-email">{ta.signedInAs(user.email)}</span>}
+                {!user.name && !user.email && (
+                  <span className="ac-identity-name">{PROVIDER_LABEL[user.provider]}</span>
+                )}
               </span>
               <span className="ac-plan-pill">{PROVIDER_LABEL[user.provider]}</span>
             </div>

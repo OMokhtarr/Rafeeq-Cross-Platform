@@ -33,6 +33,11 @@ function readCache(): AccountUser | null {
   }
 }
 
+/** Someone was signed in on this phone when the app last knew. */
+export function hasCachedAccount(): boolean {
+  return readCache() !== null;
+}
+
 function writeCache(user: AccountUser | null): void {
   try {
     if (user) localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(user));
@@ -408,7 +413,9 @@ export async function accessToken(): Promise<string | null> {
  * Deletes the signed-in account on the server (the delete-account edge
  * function: Apple revoke, RevenueCat customer, then the auth user), then
  * signs out locally. Any failure throws before the sign-out, so the person
- * stays signed in and can try again.
+ * stays signed in and can try again. A 401 means the function no longer
+ * knows this token's account: a retry after a lost response finds it already
+ * deleted, so that signs out too.
  */
 export async function deleteAccount(): Promise<void> {
   const token = await accessToken();
@@ -423,6 +430,6 @@ export async function deleteAccount(): Promise<void> {
       },
     }
   );
-  if (!res.ok) throw new Error(`delete-account failed: ${res.status}`);
+  if (!res.ok && res.status !== 401) throw new Error(`delete-account failed: ${res.status}`);
   await signOut();
 }

@@ -7,7 +7,9 @@
  *
  * On native, the last known answer is cached in localStorage and used as the
  * starting value, so a subscriber never sees the PRO badge flash while
- * RevenueCat answers (or while offline). The live answer replaces it, and
+ * RevenueCat answers (or while offline). With accounts on, that cache counts
+ * only while an account is cached too: Pro lives on the account, so a
+ * signed-out launch starts from not-Pro. The live answer replaces it, and
  * renewals/expiries arrive through RevenueCat's listener. On web there is no
  * store billing, so recite stays unlocked for development.
  *
@@ -41,6 +43,7 @@ import {
   restore as restorePurchases,
   setRevenueCatLocale,
 } from "../services/subscription/revenuecat.service";
+import { hasCachedAccount } from "../services/auth/auth.service";
 import { useAuth } from "./AuthContext";
 import { useLang } from "./LanguageContext";
 
@@ -94,14 +97,18 @@ function writeCache(pro: boolean): void {
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const native = isNative();
-  const [isPro, setIsPro] = useState<boolean>(() => (native ? readCache() : true));
+  // RevenueCat follows the account only when accounts are on; it is configured
+  // once auth has read the stored session, so the first identity is right.
+  const auth = useAuth();
+  const [isPro, setIsPro] = useState<boolean>(() => {
+    if (!native) return true;
+    if (auth.enabled && !hasCachedAccount()) return false;
+    return readCache();
+  });
   const [ready, setReady] = useState(!native);
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
-  // RevenueCat follows the account only when accounts are on; it is configured
-  // once auth has read the stored session, so the first identity is right.
-  const auth = useAuth();
   const authReady = !auth.enabled || auth.ready;
   const accountId = auth.enabled ? auth.user?.id ?? null : null;
   const currentUserId = auth.currentUserId;
@@ -281,12 +288,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [native, authReady, refresh, identitySettled]);
 
   const showCustomerCenter = useCallback(async () => {
+    // Configuring before auth is read would lock RevenueCat to an anonymous id.
+    if (!authReady) throw new Error("auth is not ready");
     await configureRevenueCat();
     await presentCustomerCenter();
     // A cancel or plan change made there also arrives through the listener;
     // this makes the Account row current the moment the screen closes.
     refresh().catch((err) => console.error("[pro] customer info failed", err));
-  }, [refresh]);
+  }, [authReady, refresh]);
 
   const restore = useCallback(async () => {
     if (!(await identitySettled())) throw new Error("RevenueCat is not on the signed-in account");

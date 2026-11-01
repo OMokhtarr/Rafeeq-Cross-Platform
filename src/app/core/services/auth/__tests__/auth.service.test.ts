@@ -492,6 +492,13 @@ describe("offline launch cache", () => {
     expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
   });
 
+  it("hasCachedAccount reports whether an account is cached", () => {
+    const { hasCachedAccount } = load();
+    expect(hasCachedAccount()).toBe(false);
+    seedCache();
+    expect(hasCachedAccount()).toBe(true);
+  });
+
   it("emits null and clears the cache only on SIGNED_OUT", () => {
     seedCache();
     let handler: (e: string, s: unknown) => void = () => {};
@@ -549,6 +556,15 @@ describe("deleteAccount", () => {
       method: "POST",
       headers: { authorization: "Bearer at-1", apikey: "sb_publishable_x" },
     });
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
+  });
+
+  it("signs out and resolves on a 401: the account is already gone", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 401 });
+    const { deleteAccount } = load();
+
+    await expect(deleteAccount()).resolves.toBeUndefined();
     expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
     expect(localStorage.getItem("rafiq_account_v1")).toBeNull();
   });

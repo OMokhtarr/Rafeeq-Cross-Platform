@@ -4,6 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
 import { resetRevenueCatForTests } from "../../services/subscription/revenuecat.service";
+import { hasCachedAccount } from "../../services/auth/auth.service";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
 import { LanguageProvider, useLang } from "../LanguageContext";
 
@@ -34,6 +35,8 @@ const mockAuth: { current: { enabled: boolean; ready: boolean; user: { id: strin
 // currentUserId reads the live state, like AuthContext's ref, not the last render.
 const currentUserId = () => mockAuth.current.user?.id ?? null;
 jest.mock("../AuthContext", () => ({ useAuth: () => ({ ...mockAuth.current, currentUserId }) }));
+// Whether an account is cached on the phone (auth.service's own cache).
+jest.mock("../../services/auth/auth.service", () => ({ hasCachedAccount: jest.fn() }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
   RevenueCatUI: { presentPaywall: jest.fn(), presentCustomerCenter: jest.fn() },
   PAYWALL_RESULT: {
@@ -127,6 +130,7 @@ beforeEach(() => {
     return info(false);
   });
   mockAuth.current = { enabled: false, ready: true, user: null };
+  (hasCachedAccount as jest.Mock).mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -415,6 +419,31 @@ describe("accounts", () => {
     expect(rc.logIn).not.toHaveBeenCalled();
     expect(sub.isPro).toBe(true);
     expect(sub.ready).toBe(true);
+  });
+
+  it("starts signed-out launches from not-Pro, ignoring a cached Pro flag", async () => {
+    localStorage.setItem("rafiq_pro_v1", "1");
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(sub.isPro).toBe(false);
+  });
+
+  it("starts from the cached Pro flag when an account is cached", async () => {
+    localStorage.setItem("rafiq_pro_v1", "1");
+    (hasCachedAccount as jest.Mock).mockReturnValue(true);
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(sub.isPro).toBe(true);
+  });
+
+  it("refuses the Customer Center until auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    await act(async () => {
+      await expect(sub.showCustomerCenter()).rejects.toThrow();
+    });
+    expect(ui.presentCustomerCenter).not.toHaveBeenCalled();
+    expect(rc.configure).not.toHaveBeenCalled();
   });
 
   it("reports the paywall unavailable until auth is ready", async () => {

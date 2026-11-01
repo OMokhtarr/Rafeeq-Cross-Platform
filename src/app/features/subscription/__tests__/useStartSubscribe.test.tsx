@@ -2,8 +2,10 @@ import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { useSignedInAction, useStartSubscribe } from "../useStartSubscribe";
 import { useAuth } from "../../../core/context/AuthContext";
+import { isAccountsOn } from "../../../core/services/auth/accounts-switch";
 
 jest.mock("../../../core/context/AuthContext", () => ({ useAuth: jest.fn() }));
+jest.mock("../../../core/services/auth/accounts-switch", () => ({ isAccountsOn: jest.fn() }));
 const mockOpenPaywall = jest.fn();
 jest.mock("../usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
 
@@ -28,6 +30,10 @@ function mount(auth: { enabled: boolean; user: object | null }) {
   root = createRoot(host);
   act(() => root.render(<Probe />));
 }
+
+beforeEach(() => {
+  (isAccountsOn as jest.Mock).mockReturnValue(true);
+});
 
 afterEach(() => {
   act(() => root.unmount());
@@ -66,11 +72,22 @@ describe("useStartSubscribe", () => {
     expect(mockOpenPaywall).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the paywall directly when accounts are disabled", async () => {
+  it("opens the paywall directly when accounts are switched off", async () => {
+    (isAccountsOn as jest.Mock).mockReturnValue(false);
     mount({ enabled: false, user: null });
     await act(async () => start());
     expect(requestSignIn).not.toHaveBeenCalled();
     expect(mockOpenPaywall).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens no paywall when accounts are on but sign-in isn't configured", async () => {
+    const error = jest.spyOn(console, "error").mockImplementation(() => {});
+    mount({ enabled: false, user: null });
+    await act(async () => start());
+    expect(requestSignIn).not.toHaveBeenCalled();
+    expect(mockOpenPaywall).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
   });
 });
 

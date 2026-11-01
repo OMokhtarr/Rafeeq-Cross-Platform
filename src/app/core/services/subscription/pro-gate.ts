@@ -1,4 +1,5 @@
 import { isAccountsOn } from "../auth/accounts-switch";
+import { isAuthConfigured } from "../auth/supabase.client";
 
 /**
  * PRO GATE SWITCH
@@ -10,9 +11,10 @@ import { isAccountsOn } from "../auth/accounts-switch";
  * .env.production for the store release, then turn on the broker's
  * REQUIRE_PRO.
  *
- * The gate also needs accounts (REACT_APP_ACCOUNTS=on): Pro is always on an
- * account, so with accounts off there is nothing to gate against.
+ * The gate also needs working accounts (REACT_APP_ACCOUNTS=on and Supabase
+ * configured, the same test as sign-in): Pro is always on an account, so
+ * without sign-in there is nothing to gate against.
  */
 export function isProGateOn(): boolean {
-  return isAccountsOn() && process.env.REACT_APP_PRO_GATE === "on";
+  return isAccountsOn() && isAuthConfigured() && process.env.REACT_APP_PRO_GATE === "on";
 }

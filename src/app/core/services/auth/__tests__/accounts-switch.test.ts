@@ -1,17 +1,21 @@
 import { Capacitor } from "@capacitor/core";
 import { isAccountsOn, isAppleSignInOn } from "../accounts-switch";
 import { isProGateOn } from "../../subscription/pro-gate";
+import { isAuthConfigured } from "../supabase.client";
 
 jest.mock("@capacitor/core", () => ({
   Capacitor: { getPlatform: jest.fn() },
 }));
+jest.mock("../supabase.client", () => ({ isAuthConfigured: jest.fn() }));
 
 const platform = Capacitor.getPlatform as jest.Mock;
+const configured = isAuthConfigured as jest.Mock;
 const KEYS = ["REACT_APP_ACCOUNTS", "REACT_APP_APPLE_SIGNIN", "REACT_APP_PRO_GATE"];
 
 beforeEach(() => {
   KEYS.forEach((k) => delete process.env[k]);
   platform.mockReturnValue("android");
+  configured.mockReturnValue(true);
 });
 
 afterAll(() => {
@@ -41,6 +45,13 @@ describe("isProGateOn", () => {
     process.env.REACT_APP_PRO_GATE = "on";
     process.env.REACT_APP_ACCOUNTS = "on";
     expect(isProGateOn()).toBe(true);
+  });
+
+  it("is off when both switches are on but Supabase isn't configured", () => {
+    process.env.REACT_APP_PRO_GATE = "on";
+    process.env.REACT_APP_ACCOUNTS = "on";
+    configured.mockReturnValue(false);
+    expect(isProGateOn()).toBe(false);
   });
 });
 

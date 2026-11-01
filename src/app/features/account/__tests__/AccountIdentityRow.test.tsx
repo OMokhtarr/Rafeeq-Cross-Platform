@@ -66,6 +66,11 @@ it("labels Apple accounts", () => {
   expect(host.textContent).toContain("Apple");
 });
 
+it("labels the identity with the provider when there is no name or email", () => {
+  mount({ enabled: true, user: { ...USER, name: null, email: null, provider: "apple" } });
+  expect(host.querySelector(".ac-row--static .ac-row-label")!.textContent).toBe("Apple");
+});
+
 it("signs out", async () => {
   mount({ enabled: true, user: USER });
   await act(async () => button("تسجيل الخروج")!.click());
