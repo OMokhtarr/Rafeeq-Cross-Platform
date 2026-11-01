@@ -83,6 +83,15 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       account, and re-run the content rating if not done for Pro.
 - [ ] **Supabase Free to Pro** before real subscribers' data accumulates (Free
       has no backups).
+- [ ] **Device check: offline launch.** Sign in, wait until the access token
+      has expired (over an hour), then launch offline: the app must show the
+      account as signed in and keep Pro.
+- [ ] **Broker against prod.** Run `token-broker/verify-deploy.sh` with a
+      `PRO_TOKEN` from the prod project once the Worker's `SUPABASE_URL` is
+      set to the prod URL exactly as it appears in that token's `iss` (`iss`
+      is `<SUPABASE_URL>/auth/v1`: same scheme and host, so not a custom
+      domain if the token says `<ref>.supabase.co`); any mismatch refuses
+      every account.
 - [ ] **Owner:** confirm the 30-day deletion window, the email identity check and the terms §5 closure clause before pushing gh-pages.
 - [ ] **Support runbook.** Email deletion requests:
       `SUPABASE_URL=... ADMIN_DELETE_SECRET=... scripts/delete-account.sh <user-id | email>`.

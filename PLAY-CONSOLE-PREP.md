@@ -415,7 +415,8 @@ requirements** (email from Basit Minhas, QF Developer Support, and
 - [x] **Postal address filled in** (11 Sep 2026). Compound Dar Misr, Phase 2 —
       Building 49, Apartment 23, El Shorouk, Cairo, Egypt.
 - [x] **Address mirrored into the in-app policy** (11 Sep 2026) — the Contact
-      section of `PRIVACY_SECTIONS` in `Account.tsx`, `bodyAr` and `bodyEn` in
+      section of `PRIVACY_SECTIONS` in `Account.tsx` (since removed — the
+      Account page opens the hosted pages), `bodyAr` and `bodyEn` in
       sync. Arabic uses Arabic-Indic numerals to match the surrounding copy;
       `privacy.html` is transliterated, being an English document read by store
       reviewers. ⚠️ This changed app code — the AAB must be rebuilt (A6).
@@ -428,7 +429,7 @@ requirements** (email from Basit Minhas, QF Developer Support, and
 
       They link to each other with **relative** hrefs, so they must stay in the
       same directory — do not move one without the other. The deletion page is
-      not required (section 4).
+      not required (superseded: §4 — deletion page now REQUIRED).
 - [x] **Processor links checked** (11 Sep 2026). Deepgram, Cloudflare, jsDelivr
       and the QF api-docs link all return 200. **`https://quran.foundation/privacy`
       returned 404** and was replaced with <https://quran.com/privacy> — the
@@ -751,3 +752,13 @@ this is owner work in dashboards; the code is merged and dark behind
 `npx cap add ios`; add `NSMicrophoneUsageDescription` (Arabic + English) to
 `Info.plist`; create the subscription products in App Store Connect and link
 them in RevenueCat; set `REACT_APP_REVENUECAT_IOS_KEY`.
+
+- **Google sign-in on iOS** needs an iOS OAuth client in Google Cloud, and
+  `SocialLogin.initialize` in `auth.service.ts` must pass `iOSClientId` (that
+  iOS client) and `iOSServerClientId` (the same value as the Web client id).
+  Today only `webClientId` is passed, which is all Android needs. Add the iOS
+  client id to the Supabase Google provider's client ids too.
+- **Apple button.** Check the Sign in with Apple glyph and button in
+  `SignInSheet` against Apple's official assets (or switch to the native
+  button) before iOS review — Apple rejects a hand-drawn logo or wrong
+  proportions under its Human Interface Guidelines.
