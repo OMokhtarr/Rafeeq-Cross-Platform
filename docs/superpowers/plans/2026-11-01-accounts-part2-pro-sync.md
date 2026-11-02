@@ -167,7 +167,7 @@
 - **Behaviour details:**
   - **`write` keeps local order where order exists:** surviving items stay in their existing order, and new items are appended in key order.
   - **`write` follows the same dual-write rules as `restoreBackup`:** the Hifz stores go through both the sync and async savers.
-  - **`validate`:** each collection's checks are the minimum shape the store's own loader accepts. For example, Note needs string `id`/`body`, an array `ranges`, and string `updatedAt`. Days need an ISO `YYYY-MM-DD` key. Objects accept any non-null JSON.
+  - **`validate`:** each collection's checks are the minimum shape the store's own loader accepts. For example, Note needs string `id`/`body`, an array `ranges`, and string `updatedAt`. Days need an ISO `YYYY-MM-DD` key. `hifzFreezePool` needs a finite numeric `count`, an object `earnedOn` and an array `spentOn`. `hifzPlan` `current`/archive values need string `createdAt` and an array `sessions`. Other objects accept any non-null JSON.
   - **Tracker `since`:** an object whose merge keeps the **earliest** date. Special-case it in Task 6 by passing the earlier one as the winner.
 
 - [ ] **Step 1: Write the failing tests** (localStorage plus mocked Preferences and Hifz async functions).
@@ -265,7 +265,7 @@
      - Diff against the snapshot.
      - A local item's `editedAt` is `dirtyTime(collection) ?? its own timestamp`, where `Note.updatedAt` or `RecitationSession.recordedAt` exist, or the epoch otherwise.
      - Locally removed items (outside first-merge mode) become `deleted: true` with `editedAt = dirtyTime`.
-  3. Merge each key with `mergeVersioned`, or the custom merges for `hifzPlan`'s `current` key, `hifzFreezePool` and `trackerSince`. `trackerSince` keeps the earlier date. Hifz plan conflicts write the archived plan as item `archive:<createdAt>`. Those archive keys merge as `items`.
+  3. Merge each key with `mergeVersioned`, or the custom merges for `hifzPlan`'s `current` key, `hifzFreezePool` and `trackerSince`. **Call the custom merges only when both sides changed since the last snapshot.** Local changed means local ≠ snapshot; remote changed means a pulled row differs from the snapshot. If only one side changed, that side wins wholesale. The custom merges have no common ancestor, so calling them on an unchanged stale copy would revert a Hifz reset or drop a freeze earned on one device. In first-merge mode there is no snapshot, so both sides count as changed. `trackerSince` keeps the earlier date. Hifz plan conflicts write the archived plan as item `archive:<createdAt>`. Those archive keys merge as `items`.
   4. If any remote values won, write those collections locally inside `suppressHook`, then dispatch `SYNC_APPLIED_EVENT`.
   5. Push every item where the local side won, including deletes. Write the snapshot **only after the push succeeds**, from the stored rows the push returned. Then save the cursor, set `firstMerge: false`, and `clearDirty(…, runStartTime)`.
 
@@ -280,6 +280,8 @@
   - An offline pull → `{status:"offline"}`, local data untouched, the snapshot unchanged.
   - A user switch → `resetSyncState` behaviour: the new user's first merge uploads local data, and nothing is deleted.
   - A corrupt remote note row → skipped, the other notes still apply (Review Focus 5).
+  - A Hifz reset on device A (sessions undone, same `createdAt`), synced while B is unchanged → after B syncs, B's sessions are undone too (the custom merge is not called, and A's copy wins).
+  - A freeze earned on A while B is idle → after both sync, both have the earned count.
   - Two concurrent `syncNow` calls → one network run.
 - [ ] **Step 2: Run, expect FAIL.**
 - [ ] **Step 3: Implement.**
