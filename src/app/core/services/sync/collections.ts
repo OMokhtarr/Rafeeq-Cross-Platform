@@ -4,7 +4,7 @@
  * Each adapter reads its store into a keyed item map and writes a merged map
  * back, so the sync engine treats every store alike and the app's many
  * existing writers stay untouched. Writes mirror `restoreBackup`: the Hifz
- * stores go through both their sync and async savers.
+ * stores go through strict savers that write both localStorage and the platform store.
  *
  * Absent data reads as `{}`. A store that exists but cannot be read or parsed
  * makes `read()` throw, and a failed storage write makes `write()` throw, so a
@@ -16,22 +16,16 @@
 
 import { Preferences } from "@capacitor/preferences";
 import {
-  loadPlanAsync,
-  savePlan,
-  savePlanAsync,
-  clearPlan,
-  clearPlanAsync,
-  loadBestPlanAsync,
-  saveBestPlan,
-  saveBestPlanAsync,
-  loadLatestPlanAsync,
-  saveLatestPlan,
-  saveLatestPlanAsync,
-  loadHifzReadingSessionAsync,
-  saveHifzReadingSession,
-  saveHifzReadingSessionAsync,
-  clearHifzReadingSession,
-  clearHifzReadingSessionAsync,
+  loadPlanStrict,
+  savePlanStrict,
+  clearPlanStrict,
+  loadBestPlanStrict,
+  saveBestPlanStrict,
+  loadLatestPlanStrict,
+  saveLatestPlanStrict,
+  loadHifzReadingSessionStrict,
+  saveHifzReadingSessionStrict,
+  clearHifzReadingSessionStrict,
 } from "../../../features/hifz/hifz.service";
 import { PRESETS_KEY, isPreset } from "../../../features/quiz/services/quiz-presets.service";
 import type { SyncKind } from "./types";
@@ -264,16 +258,17 @@ function singleValue(
 }
 
 /**
- * A Hifz store reached through an async loader and a sync + async saver pair.
- * An absent `value` clears the store when a clearer exists.
+ * A Hifz store reached through the strict loader / saver (localStorage plus the
+ * platform store, throwing on failure). An absent `value` clears the store when
+ * a clearer exists; best and latest have none, so a remote delete of those is
+ * ignored locally.
  */
 function hifzObject<T>(
   id: string,
   key: string,
   load: () => Promise<T | null>,
-  save: (value: T) => void,
-  saveAsync: (value: T) => Promise<void>,
-  clear?: { sync: () => void; async: () => Promise<void> },
+  save: (value: T) => Promise<void>,
+  clear?: () => Promise<void>,
 ): SyncCollection {
   return {
     id,
@@ -286,11 +281,9 @@ function hifzObject<T>(
     async write(items) {
       const value = items[VALUE];
       if (isRecord(value)) {
-        save(value as T);
-        await saveAsync(value as T);
+        await save(value as T);
       } else if (!(VALUE in items) && clear) {
-        clear.sync();
-        await clear.async();
+        await clear();
       }
     },
     validate: isRecord,
@@ -325,7 +318,7 @@ const hifzPlan: SyncCollection = {
   storageKeys: ["rafiq_hifz_v2", PLAN_ARCHIVE_KEY],
   async read() {
     const out: Record<string, unknown> = {};
-    const plan = await loadPlanAsync();
+    const plan = await loadPlanStrict();
     if (plan) out.current = plan;
     for (const [createdAt, p] of Object.entries(readMap(PLAN_ARCHIVE_KEY))) {
       out[ARCHIVE_PREFIX + createdAt] = p;
@@ -335,12 +328,9 @@ const hifzPlan: SyncCollection = {
   async write(items) {
     const current = items.current;
     if (isPlanLike(current)) {
-      const plan = current as Parameters<typeof savePlan>[0];
-      savePlan(plan);
-      await savePlanAsync(plan);
+      await savePlanStrict(current as Parameters<typeof savePlanStrict>[0]);
     } else if (!("current" in items)) {
-      clearPlan();
-      await clearPlanAsync();
+      await clearPlanStrict();
     }
     const wanted: Record<string, unknown> = {};
     for (const k of Object.keys(items)) {
@@ -369,15 +359,14 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
   recordMap("hifzSessionCounts", "days", "rafiq_hifz_session_counts_v1", (v, k) => isDay(k) && isStringArray(v)),
   hifzPlan,
   singleValue("hifzFreezePool", "freezePool", FREEZE_POOL_KEY, "json", isFreezePool),
-  hifzObject("hifzBest", "rafiq_hifz_best_v1", loadBestPlanAsync, saveBestPlan, saveBestPlanAsync),
-  hifzObject("hifzLatest", "rafiq_hifz_latest_v1", loadLatestPlanAsync, saveLatestPlan, saveLatestPlanAsync),
+  hifzObject("hifzBest", "rafiq_hifz_best_v1", loadBestPlanStrict, saveBestPlanStrict),
+  hifzObject("hifzLatest", "rafiq_hifz_latest_v1", loadLatestPlanStrict, saveLatestPlanStrict),
   hifzObject(
     "hifzReading",
     "rafiq_hifz_reading_v1",
-    loadHifzReadingSessionAsync,
-    saveHifzReadingSession,
-    saveHifzReadingSessionAsync,
-    { sync: clearHifzReadingSession, async: clearHifzReadingSessionAsync },
+    loadHifzReadingSessionStrict,
+    saveHifzReadingSessionStrict,
+    clearHifzReadingSessionStrict,
   ),
   singleValue("settings", "object", "rafiq_settings_v1", "json", isRecord),
   singleValue("theme", "object", "rafiq_theme_v1", "string", isString),

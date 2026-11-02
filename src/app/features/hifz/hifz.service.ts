@@ -1300,3 +1300,100 @@ export function getSurahsForUnits(
   filtered.sort((a, b) => a.from - b.from);
   return filtered;
 }
+
+// ─── Strict variants (used only by the sync adapters) ────────────────────────
+// The loaders above treat every failure as "nothing stored". Sync cannot: a
+// transient IndexedDB error read as "no plan" would be pushed as a deletion.
+// These return null ONLY when the data is genuinely absent (no platform record
+// and no localStorage copy) and throw on any other read, parse or write error.
+// Writes keep the dual-write semantics: localStorage + the platform store.
+
+interface HifzSlot {
+  file: string;
+  idbId: string;
+  lsKey: string;
+}
+
+const PLAN_SLOT: HifzSlot = { file: "plan.json", idbId: "plan", lsKey: STORAGE_KEY };
+const BEST_SLOT: HifzSlot = { file: "best-plan.json", idbId: "best-plan", lsKey: BEST_PLAN_KEY };
+const LATEST_SLOT: HifzSlot = { file: "latest-plan.json", idbId: "latest-plan", lsKey: LATEST_PLAN_KEY };
+const READING_SLOT: HifzSlot = {
+  file: "reading-session.json",
+  idbId: "reading-session",
+  lsKey: HIFZ_READING_KEY,
+};
+
+const isAndroid = (): boolean => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+const isNotFound = (err: unknown): boolean =>
+  /not exist|not found|no such file|enoent/i.test(err instanceof Error ? err.message : String(err));
+
+async function readSlotStrict<T>(slot: HifzSlot): Promise<T | null> {
+  let json: string | null = null;
+  if (isAndroid()) {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    try {
+      const { data } = await Filesystem.readFile({
+        path: `${HIFZ_DIR}/${slot.file}`,
+        directory: Directory.Data,
+      });
+      json = typeof data === "string" ? atob(data) : new TextDecoder().decode(data as any);
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+    }
+  } else {
+    const rec = await idb.get<{ data: string }>(HIFZ_STORE, slot.idbId);
+    json = rec ? rec.data : null;
+  }
+  if (!json) json = localStorage.getItem(slot.lsKey);
+  return json ? (JSON.parse(json) as T) : null;
+}
+
+async function writeSlotStrict(slot: HifzSlot, value: unknown): Promise<void> {
+  const json = JSON.stringify(value);
+  localStorage.setItem(slot.lsKey, json);
+  if (isAndroid()) {
+    await ensureHifzDir();
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    await Filesystem.writeFile({
+      path: `${HIFZ_DIR}/${slot.file}`,
+      directory: Directory.Data,
+      data: btoa(json),
+    });
+  } else {
+    await idb.put(HIFZ_STORE, { id: slot.idbId, data: json });
+  }
+}
+
+async function clearSlotStrict(slot: HifzSlot): Promise<void> {
+  localStorage.removeItem(slot.lsKey);
+  if (isAndroid()) {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    try {
+      await Filesystem.deleteFile({ path: `${HIFZ_DIR}/${slot.file}`, directory: Directory.Data });
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+    }
+  } else {
+    await idb.delete(HIFZ_STORE, slot.idbId);
+  }
+}
+
+export const loadPlanStrict = (): Promise<HifzPlan | null> => readSlotStrict<HifzPlan>(PLAN_SLOT);
+export const savePlanStrict = (plan: HifzPlan): Promise<void> => writeSlotStrict(PLAN_SLOT, plan);
+export const clearPlanStrict = (): Promise<void> => clearSlotStrict(PLAN_SLOT);
+
+export const loadBestPlanStrict = (): Promise<BestPlanRecord | null> =>
+  readSlotStrict<BestPlanRecord>(BEST_SLOT);
+export const saveBestPlanStrict = (record: BestPlanRecord): Promise<void> =>
+  writeSlotStrict(BEST_SLOT, record);
+
+export const loadLatestPlanStrict = (): Promise<BestPlanRecord | null> =>
+  readSlotStrict<BestPlanRecord>(LATEST_SLOT);
+export const saveLatestPlanStrict = (record: BestPlanRecord): Promise<void> =>
+  writeSlotStrict(LATEST_SLOT, record);
+
+export const loadHifzReadingSessionStrict = (): Promise<HifzReadingSession | null> =>
+  readSlotStrict<HifzReadingSession>(READING_SLOT);
+export const saveHifzReadingSessionStrict = (s: HifzReadingSession): Promise<void> =>
+  writeSlotStrict(READING_SLOT, s);
+export const clearHifzReadingSessionStrict = (): Promise<void> => clearSlotStrict(READING_SLOT);

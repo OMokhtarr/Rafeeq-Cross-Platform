@@ -8,22 +8,16 @@ jest.mock("@capacitor/preferences", () => ({
   Preferences: { get: jest.fn(), set: jest.fn() },
 }));
 jest.mock("../../../../features/hifz/hifz.service", () => ({
-  loadPlanAsync: jest.fn(),
-  savePlan: jest.fn(),
-  savePlanAsync: jest.fn(),
-  clearPlan: jest.fn(),
-  clearPlanAsync: jest.fn(),
-  loadBestPlanAsync: jest.fn(),
-  saveBestPlan: jest.fn(),
-  saveBestPlanAsync: jest.fn(),
-  loadLatestPlanAsync: jest.fn(),
-  saveLatestPlan: jest.fn(),
-  saveLatestPlanAsync: jest.fn(),
-  loadHifzReadingSessionAsync: jest.fn(),
-  saveHifzReadingSession: jest.fn(),
-  saveHifzReadingSessionAsync: jest.fn(),
-  clearHifzReadingSession: jest.fn(),
-  clearHifzReadingSessionAsync: jest.fn(),
+  loadPlanStrict: jest.fn(),
+  savePlanStrict: jest.fn(),
+  clearPlanStrict: jest.fn(),
+  loadBestPlanStrict: jest.fn(),
+  saveBestPlanStrict: jest.fn(),
+  loadLatestPlanStrict: jest.fn(),
+  saveLatestPlanStrict: jest.fn(),
+  loadHifzReadingSessionStrict: jest.fn(),
+  saveHifzReadingSessionStrict: jest.fn(),
+  clearHifzReadingSessionStrict: jest.fn(),
 }));
 
 const col = (id: string) => {
@@ -54,7 +48,7 @@ beforeEach(() => {
   localStorage.clear();
   (Preferences.get as jest.Mock).mockResolvedValue({ value: null });
   (Preferences.set as jest.Mock).mockResolvedValue(undefined);
-  for (const fn of ["loadPlanAsync", "loadBestPlanAsync", "loadLatestPlanAsync", "loadHifzReadingSessionAsync"]) {
+  for (const fn of ["loadPlanStrict", "loadBestPlanStrict", "loadLatestPlanStrict", "loadHifzReadingSessionStrict"]) {
     (hifz as unknown as Record<string, jest.Mock>)[fn].mockResolvedValue(null);
   }
 });
@@ -140,23 +134,21 @@ describe("write", () => {
     const cur = plan("2026-10-01");
     const old = plan("2026-05-01");
     await col("hifzPlan").write({ current: cur, "archive:2026-05-01": old });
-    expect(hifz.savePlan).toHaveBeenCalledWith(cur);
-    expect(hifz.savePlanAsync).toHaveBeenCalledWith(cur);
+    expect(hifz.savePlanStrict).toHaveBeenCalledWith(cur);
     expect(JSON.parse(localStorage.getItem("rafiq_hifz_plan_archive_v1") as string)).toEqual({ "2026-05-01": old });
     expect(await col("hifzPlan").read()).toEqual({ "archive:2026-05-01": old });
   });
 
   it("hifz plan read maps the active plan to current", async () => {
     const cur = plan("2026-10-01");
-    (hifz.loadPlanAsync as jest.Mock).mockResolvedValue(cur);
+    (hifz.loadPlanStrict as jest.Mock).mockResolvedValue(cur);
     expect(await col("hifzPlan").read()).toEqual({ current: cur });
   });
 
   it("hifz object stores go through both savers", async () => {
     const best = { completedAt: "x", daysToFinish: 1, totalPages: 2, totalSessions: 3 };
     await col("hifzBest").write({ value: best });
-    expect(hifz.saveBestPlan).toHaveBeenCalledWith(best);
-    expect(hifz.saveBestPlanAsync).toHaveBeenCalledWith(best);
+    expect(hifz.saveBestPlanStrict).toHaveBeenCalledWith(best);
   });
 
   it("de-duplicates by id, first occurrence wins", async () => {
@@ -174,15 +166,13 @@ describe("write", () => {
 describe("deletes and failures", () => {
   it("a write without current clears the plan, sync and async", async () => {
     await col("hifzPlan").write({});
-    expect(hifz.clearPlan).toHaveBeenCalled();
-    expect(hifz.clearPlanAsync).toHaveBeenCalled();
-    expect(hifz.savePlan).not.toHaveBeenCalled();
+    expect(hifz.clearPlanStrict).toHaveBeenCalled();
+    expect(hifz.savePlanStrict).not.toHaveBeenCalled();
   });
 
   it("a write without a reading value clears it", async () => {
     await col("hifzReading").write({});
-    expect(hifz.clearHifzReadingSession).toHaveBeenCalled();
-    expect(hifz.clearHifzReadingSessionAsync).toHaveBeenCalled();
+    expect(hifz.clearHifzReadingSessionStrict).toHaveBeenCalled();
   });
 
   it("absent data reads as {}", async () => {
@@ -198,6 +188,22 @@ describe("deletes and failures", () => {
     await expect(col("bookmarks").read()).rejects.toThrow();
     localStorage.setItem("rafiq_hidden_verses_v1", "{oops");
     await expect(col("hiddenVerses").read()).rejects.toThrow();
+  });
+
+  it("a failing Hifz loader makes read reject and nothing is cleared", async () => {
+    (hifz.loadPlanStrict as jest.Mock).mockRejectedValue(new Error("idb down"));
+    (hifz.loadHifzReadingSessionStrict as jest.Mock).mockRejectedValue(new Error("idb down"));
+    await expect(col("hifzPlan").read()).rejects.toThrow("idb down");
+    await expect(col("hifzReading").read()).rejects.toThrow("idb down");
+    expect(hifz.clearPlanStrict).not.toHaveBeenCalled();
+    expect(hifz.clearHifzReadingSessionStrict).not.toHaveBeenCalled();
+  });
+
+  it("a failing Hifz saver makes write reject", async () => {
+    (hifz.savePlanStrict as jest.Mock).mockRejectedValue(new Error("disk full"));
+    await expect(col("hifzPlan").write({ current: plan("x") })).rejects.toThrow("disk full");
+    (hifz.clearPlanStrict as jest.Mock).mockRejectedValue(new Error("disk full"));
+    await expect(col("hifzPlan").write({})).rejects.toThrow("disk full");
   });
 
   it("a failing Preferences.get makes read reject", async () => {
