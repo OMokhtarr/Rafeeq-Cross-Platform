@@ -112,3 +112,74 @@ describe("persistence", () => {
     });
   });
 });
+
+describe("hardening", () => {
+  it("ignores no-op writes and removals of absent keys", () => {
+    localStorage.setItem("rafiq_notes_v1", "[]");
+    localStorage.removeItem("rafiq_sync_dirty_v1");
+    const cb = jest.fn();
+    onLocalChange(cb);
+    localStorage.setItem("rafiq_notes_v1", "[]");
+    localStorage.removeItem("rafiq_bookmarks_v1");
+    expect(cb).not.toHaveBeenCalled();
+    expect(dirtyTime("notes")).toBeNull();
+    expect(dirtyTime("bookmarks")).toBeNull();
+    localStorage.setItem("rafiq_notes_v1", "[1]");
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it("never stamps a write at or before the previous one", () => {
+    markDirty("rafiq_notes_v1");
+    const first = Date.parse(dirtyTime("notes")!);
+    const spy = jest.spyOn(Date, "now").mockReturnValue(first - 5000);
+    markDirty("rafiq_notes_v1");
+    spy.mockRestore();
+    expect(Date.parse(dirtyTime("notes")!)).toBeGreaterThan(first);
+  });
+
+  it("drops unreadable dirty entries and tolerates a corrupt blob", () => {
+    localStorage.setItem(
+      "rafiq_sync_dirty_v1",
+      JSON.stringify({ notes: "garbage", bookmarks: 5, hiddenVerses: "2026-01-01T00:00:00.000Z" }),
+    );
+    expect(dirtyTime("notes")).toBeNull();
+    expect(dirtyTime("bookmarks")).toBeNull();
+    expect(dirtyTime("hiddenVerses")).toBe("2026-01-01T00:00:00.000Z");
+    localStorage.setItem("rafiq_sync_dirty_v1", "{not json");
+    expect(dirtyTime("notes")).toBeNull();
+    localStorage.setItem("rafiq_notes_v1", "[2]");
+    expect(dirtyTime("notes")).not.toBeNull();
+  });
+
+  it("does not record sessionStorage writes", () => {
+    sessionStorage.setItem("rafiq_notes_v1", "[]");
+    expect(dirtyTime("notes")).toBeNull();
+  });
+
+  it("a throwing listener does not break the write", () => {
+    const off = onLocalChange(() => {
+      throw new Error("bad listener");
+    });
+    expect(() => localStorage.setItem("rafiq_notes_v1", "[3]")).not.toThrow();
+    expect(localStorage.getItem("rafiq_notes_v1")).toBe("[3]");
+    off();
+  });
+
+  it("propagates a failing original write and records nothing", () => {
+    jest.isolateModules(() => {
+      const orig = Storage.prototype.setItem;
+      const failing = jest.fn(() => {
+        throw new Error("quota");
+      });
+      Storage.prototype.setItem = failing as unknown as typeof orig;
+      try {
+        const fresh = require("../local-changes");
+        fresh.installWriteHook();
+        expect(() => localStorage.setItem("rafiq_notes_v1", "[9]")).toThrow("quota");
+        expect(fresh.dirtyTime("notes")).toBeNull();
+      } finally {
+        Storage.prototype.setItem = orig;
+      }
+    });
+  });
+});

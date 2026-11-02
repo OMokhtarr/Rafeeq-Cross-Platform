@@ -14,6 +14,7 @@
  */
 
 import { stableStringify } from "./merge";
+import { collectionForStorageKey } from "./collections";
 
 export { stableStringify };
 
@@ -23,19 +24,18 @@ type DirtyTimes = Record<string, string>;
 
 const listeners = new Set<() => void>();
 let suppressDepth = 0;
-let installed = false;
 let rawSetItem: Storage["setItem"] | null = null;
-
-/** Lazy: `collections` imports the quiz presets module, which calls `markDirty` from here. */
-function collectionIdFor(key: string): string | undefined {
-  const mod = require("./collections") as typeof import("./collections");
-  return mod.collectionForStorageKey(key)?.id;
-}
+const HOOKED = Symbol("rafiqSyncWriteHook");
 
 function readDirty(): DirtyTimes {
   try {
     const parsed = JSON.parse(localStorage.getItem(DIRTY_KEY) ?? "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const times: DirtyTimes = {};
+    for (const [id, t] of Object.entries(parsed)) {
+      if (typeof t === "string" && !Number.isNaN(Date.parse(t))) times[id] = t;
+    }
+    return times;
   } catch {
     return {};
   }
@@ -47,17 +47,18 @@ function writeDirty(times: DirtyTimes): void {
     // Bypass the hook: this key must never record itself.
     (rawSetItem ?? Storage.prototype.setItem).call(localStorage, DIRTY_KEY, json);
   } catch {
-    // Best effort: losing a dirty time only delays a push, it never loses data.
+    // Storage full: this edit loses its time, so last-write-wins may misjudge it,
+    // but the change itself is still pushed via the snapshot diff.
   }
 }
 
-function record(key: string): void {
+function record(key: string, id = collectionForStorageKey(key)?.id): void {
   try {
-    if (suppressDepth > 0 || key === DIRTY_KEY) return;
-    const id = collectionIdFor(key);
-    if (!id) return;
+    if (suppressDepth > 0 || key === DIRTY_KEY || !id) return;
     const times = readDirty();
-    times[id] = new Date().toISOString();
+    // Strictly after the previous stamp, whatever the clock does.
+    const prev = times[id] ? Date.parse(times[id]) : -Infinity;
+    times[id] = new Date(Math.max(Date.now(), prev + 1)).toISOString();
     writeDirty(times);
     listeners.forEach((cb) => {
       try {
@@ -73,20 +74,39 @@ function record(key: string): void {
 
 /** Idempotent. Wraps the prototype, which is what jsdom's and browsers' localStorage use. */
 export function installWriteHook(): void {
-  if (installed) return;
-  installed = true;
   const proto = Storage.prototype;
+  if ((proto.setItem as unknown as Record<symbol, boolean>)[HOOKED]) return;
   const origSet = proto.setItem;
   const origRemove = proto.removeItem;
+  const origGet = proto.getItem;
   rawSetItem = origSet;
-  proto.setItem = function (this: Storage, key: string, value: string): void {
+
+  /** Id of the synced collection owning this write, or undefined when it is not a real edit. */
+  const editedCollection = (store: Storage, key: string, next: string | null): string | undefined => {
+    try {
+      if (store !== localStorage) return undefined;
+      const id = collectionForStorageKey(key)?.id;
+      // Contexts rewrite unchanged values on every mount; those are not edits.
+      if (id && origGet.call(store, key) === next) return undefined;
+      return id;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const setItem = function (this: Storage, key: string, value: string): void {
+    const id = editedCollection(this, key, String(value));
     origSet.call(this, key, value);
-    if (this === localStorage) record(key);
+    if (id) record(key, id);
   };
-  proto.removeItem = function (this: Storage, key: string): void {
+  const removeItem = function (this: Storage, key: string): void {
+    const id = editedCollection(this, key, null);
     origRemove.call(this, key);
-    if (this === localStorage) record(key);
+    if (id) record(key, id);
   };
+  (setItem as unknown as Record<symbol, boolean>)[HOOKED] = true;
+  proto.setItem = setItem;
+  proto.removeItem = removeItem;
 }
 
 /** For stores outside localStorage (e.g. Preferences-backed quiz presets). */

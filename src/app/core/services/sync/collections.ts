@@ -27,7 +27,7 @@ import {
   saveHifzReadingSessionStrict,
   clearHifzReadingSessionStrict,
 } from "../../../features/hifz/hifz.service";
-import { PRESETS_KEY, isPreset } from "../../../features/quiz/services/quiz-presets.service";
+import { PRESETS_KEY, isPreset } from "../../../features/quiz/services/quiz-presets.keys";
 import type { SyncKind } from "./types";
 
 export interface SyncCollection {
