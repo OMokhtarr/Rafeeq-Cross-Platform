@@ -37,7 +37,7 @@ const FILE_PREFIX = "rafeeq-backup";
  * localStorage keys carried by a backup. Content caches are intentionally
  * absent — see the module comment.
  */
-const BACKED_UP_KEYS = [
+export const BACKED_UP_KEYS: readonly string[] = [
   // User-created content
   "rafiq_notes_v1",
   "rafiq_bookmarks_v1",
@@ -64,7 +64,7 @@ const BACKED_UP_KEYS = [
   "rafeeq.tracker.settings",
   "rafeeq.tracker.since",
   "azkar:favorites",
-] as const;
+];
 
 export interface BackupFile {
   version: number;
