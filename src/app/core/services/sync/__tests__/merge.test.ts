@@ -167,18 +167,18 @@ describe("mergeVersioned (days)", () => {
     expect(r.winner.value).toBe(true);
   });
 
-  it("returns the other side (not deleted) when one is missing", () => {
+  it("returns the only side as is when it is live", () => {
     const x = v(["2026-10-01"], "2026-10-01T00:00:00Z");
     expect(mergeVersioned("days", x, undefined)).toEqual({
       winner: x,
       pushLocal: true,
       applyRemote: false,
     });
-    const del = v(["2026-10-01"], "2026-10-01T00:00:00Z", true);
-    const r = mergeVersioned("days", undefined, del);
-    expect(r.winner.deleted).toBe(false);
-    expect(r.applyRemote).toBe(true);
-    expect(r.pushLocal).toBe(false);
+    expect(mergeVersioned("days", undefined, x)).toEqual({
+      winner: x,
+      pushLocal: false,
+      applyRemote: true,
+    });
   });
 
   it("is a no-op when both sides already agree", () => {
@@ -318,6 +318,46 @@ describe("mergeHifzPlan", () => {
     expect(r.archived).toBe(a);
   });
 
+  it("compares createdAt as a local calendar day against date-only doneDates (UTC+3)", () => {
+    // Local calendar fields as seen in UTC+3, whatever the machine's own zone.
+    const shifted = (d: Date) => new Date(d.getTime() + 3 * 3600_000);
+    const spies = [
+      jest
+        .spyOn(Date.prototype, "getFullYear")
+        .mockImplementation(function (this: Date) {
+          return shifted(this).getUTCFullYear();
+        }),
+      jest
+        .spyOn(Date.prototype, "getMonth")
+        .mockImplementation(function (this: Date) {
+          return shifted(this).getUTCMonth();
+        }),
+      jest
+        .spyOn(Date.prototype, "getDate")
+        .mockImplementation(function (this: Date) {
+          return shifted(this).getUTCDate();
+        }),
+    ];
+    try {
+      const old = plan("2026-09-01T00:00:00Z", [
+        session("1", { done: true, doneDate: "2026-11-02" }),
+      ]);
+      // 21:30Z on 11-01 is 00:30 on 11-02 local: same day as old's last activity.
+      const fresh = plan("2026-11-01T21:30:00Z", [session("1")]);
+      const r = mergeHifzPlan(fresh, old);
+      expect(r.current).toBe(fresh);
+      expect(r.archived).toBe(old);
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
+  it("only keeps doneDate when the merged session is done", () => {
+    const newer = plan(created, [session("5", { doneDate: "2026-10-05" })]);
+    const older = plan(created, [session("5", { doneDate: "2026-10-02" })]);
+    expect(mergeHifzPlan(newer, older).current.sessions[0].doneDate).toBeUndefined();
+  });
+
   it("different plans with equal activity keep newer as current", () => {
     const newer = plan("2026-09-01T00:00:00Z", [
       session("1", { done: true, doneDate: "2026-10-01" }),
@@ -331,7 +371,68 @@ describe("mergeHifzPlan", () => {
   });
 });
 
+describe("mergeVersioned (edge cases)", () => {
+  it("an unparseable editedAt always loses, in both directions", () => {
+    const bad = v("bad", "not-a-date");
+    const good = v("good", "2020-01-01T00:00:00Z");
+    expect(mergeVersioned("items", bad, good).winner).toBe(good);
+    expect(mergeVersioned("items", good, bad).winner).toBe(good);
+  });
+
+  it("days: unions array values even from a tombstone, both-deleted yields a tombstone", () => {
+    const r = mergeVersioned(
+      "days",
+      v(["2026-10-01"], "2026-10-01T00:00:00Z", true),
+      v(["2026-10-02"], "2026-10-02T00:00:00Z"),
+    );
+    expect(r.winner.value).toEqual(["2026-10-01", "2026-10-02"]);
+    const both = mergeVersioned(
+      "days",
+      v(null, "2026-10-01T00:00:00Z", true),
+      v(null, "2026-10-02T00:00:00Z", true),
+    );
+    expect(both.winner).toEqual({ value: null, editedAt: "2026-10-02T00:00:00Z", deleted: true });
+    expect(both.pushLocal).toBe(false);
+    expect(both.applyRemote).toBe(false);
+  });
+
+  it("days: a remote-only tombstone with a null value stays a tombstone", () => {
+    const r = mergeVersioned("days", undefined, v(null, "2026-10-02T00:00:00Z", true));
+    expect(r.winner.deleted).toBe(true);
+    expect(r.winner.value).toBeNull();
+    expect(r.applyRemote).toBe(false);
+    expect(r.pushLocal).toBe(false);
+  });
+
+  it("throws for kinds that have their own merge function", () => {
+    const x = v("x", "2026-10-01T00:00:00Z");
+    expect(() => mergeVersioned("hifzPlan", x, x)).toThrow();
+    expect(() => mergeVersioned("freezePool", x, x)).toThrow();
+  });
+});
+
 describe("mergeFreezePool", () => {
+  it("is order independent", () => {
+    const a = { count: 1, earnedOn: { a: 1 }, spentOn: ["z", "x"] };
+    const b = { count: 2, earnedOn: { b: 2 }, spentOn: ["y", "x"] };
+    expect(stableStringify(mergeFreezePool(a, b))).toBe(stableStringify(mergeFreezePool(b, a)));
+    expect(mergeFreezePool(a, b).spentOn).toEqual(["x", "y", "z"]);
+  });
+
+  it("sanitizes malformed input without throwing and never mints freezes", () => {
+    const good = { count: 2, earnedOn: { a: 1 }, spentOn: ["x"] };
+    const r = mergeFreezePool(good, {} as never);
+    expect(r).toEqual({ count: 0, earnedOn: { a: 1 }, spentOn: ["x"] });
+    const junk = mergeFreezePool(good, {
+      count: NaN,
+      earnedOn: { a: Infinity, b: "q", c: 3 },
+      spentOn: ["y", 5, null],
+    } as never);
+    expect(junk).toEqual({ count: 0, earnedOn: { a: 1, c: 3 }, spentOn: ["x", "y"] });
+    expect(mergeFreezePool({ count: 99, earnedOn: {}, spentOn: [] }, { count: 99, earnedOn: {}, spentOn: [] }).count).toBe(2);
+    expect(mergeFreezePool({ count: -4, earnedOn: {}, spentOn: [] }, good).count).toBe(0);
+  });
+
   it("takes max earnedOn per day, unions spentOn, and the lower count", () => {
     expect(
       mergeFreezePool(

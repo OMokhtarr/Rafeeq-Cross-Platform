@@ -2,7 +2,9 @@
 // of one item, decide which side wins. No I/O, no storage.
 
 import type { HifzPlan, PlanSession } from "../../../features/hifz/hifz.service";
+import { MAX_FREEZES } from "../storage/streak-freeze.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
+import { localDateStr } from "../../utils/local-date.util";
 import type { SyncKind, Versioned } from "./types";
 
 export interface VersionedMerge {
@@ -27,9 +29,13 @@ export function stableStringify(value: unknown): string {
   });
 }
 
-/** Instants, not strings: Postgres emits microseconds and `+00:00`, JS emits `Z`. */
+/**
+ * Instants, not strings: Postgres emits microseconds and `+00:00`, JS emits `Z`.
+ * An unparseable value maps to -Infinity so a corrupt side always loses.
+ */
 function instant(iso: string): number {
-  return Date.parse(iso);
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? -Infinity : t;
 }
 
 function differs(a: Versioned | undefined, b: Versioned | undefined): boolean {
@@ -47,31 +53,33 @@ function mergeLastWriteWins(local: Versioned, remote: Versioned): VersionedMerge
     : { winner: remote, pushLocal: false, applyRemote: changed };
 }
 
-function unionDays(a: unknown[], b: unknown[]): unknown[] {
+function unionDays(...lists: unknown[][]): unknown[] {
   const byKey = new Map<string, unknown>();
-  for (const item of [...a, ...b]) byKey.set(stableStringify(item), item);
+  for (const item of lists.flat()) byKey.set(stableStringify(item), item);
   return [...byKey.keys()].sort().map((k) => byKey.get(k));
 }
 
 function mergeDays(local: Versioned | undefined, remote: Versioned | undefined): VersionedMerge {
-  // Days are only ever added to, never deleted, so a deleted flag is ignored.
-  const live = (x: Versioned): Versioned => ({ ...x, deleted: false });
-  if (!local && remote) {
-    return { winner: live(remote), pushLocal: false, applyRemote: true };
+  // Days are only ever added to, never removed: a tombstone contributes its
+  // days, and the result is a tombstone only when no side is live.
+  const tombstone = (editedAt: string): Versioned => ({ value: null, editedAt, deleted: true });
+  if (!local && !remote) throw new Error("mergeVersioned: both sides are missing");
+  if (!local || !remote) {
+    const only = (local ?? remote) as Versioned;
+    const winner = only.deleted ? tombstone(only.editedAt) : only;
+    const live = !only.deleted;
+    return { winner, pushLocal: live && !!local, applyRemote: live && !!remote };
   }
-  if (local && !remote) {
-    return { winner: live(local), pushLocal: true, applyRemote: false };
-  }
-  if (!local || !remote) throw new Error("mergeVersioned: both sides are missing");
 
-  // A deleted side carries no days; take the other side's value.
-  const localValue = local.deleted ? remote.value : local.value;
-  const remoteValue = remote.deleted ? local.value : remote.value;
-  const value =
-    Array.isArray(localValue) && Array.isArray(remoteValue)
-      ? unionDays(localValue, remoteValue)
-      : true;
   const editedAt = instant(local.editedAt) > instant(remote.editedAt) ? local.editedAt : remote.editedAt;
+  const sides = [local, remote];
+  const liveSides = sides.filter((x) => !x.deleted);
+  if (liveSides.length === 0) {
+    return { winner: tombstone(editedAt), pushLocal: false, applyRemote: false };
+  }
+  const value = liveSides.every((x) => Array.isArray(x.value))
+    ? unionDays(...sides.map((x) => (Array.isArray(x.value) ? x.value : [])))
+    : true;
   const winner: Versioned = { value, editedAt, deleted: false };
   return {
     winner,
@@ -86,6 +94,9 @@ export function mergeVersioned(
   remote: Versioned | undefined,
 ): VersionedMerge {
   if (!local && !remote) throw new Error("mergeVersioned: both sides are missing");
+  if (kind === "hifzPlan" || kind === "freezePool") {
+    throw new Error(`mergeVersioned: "${kind}" has its own merge function`);
+  }
   if (kind === "days") return mergeDays(local, remote);
   if (!local && remote) return { winner: remote, pushLocal: false, applyRemote: true };
   if (local && !remote) return { winner: local, pushLocal: true, applyRemote: false };
@@ -100,15 +111,15 @@ function sameInstant(a: string, b: string): boolean {
   return Number.isNaN(ta) || Number.isNaN(tb) ? a === b : ta === tb;
 }
 
-/** Latest session `doneDate` of a plan, or its `createdAt` when nothing is done. */
-function lastActiveAt(plan: HifzPlan): number {
-  let latest = NaN;
+/** Day-granular, local-time key: `doneDate` is a date-only local string, `createdAt` an instant. */
+function dayKey(plan: HifzPlan): string {
+  let latest = "";
   for (const s of plan.sessions) {
-    if (!s.doneDate) continue;
-    const t = instant(s.doneDate);
-    if (!Number.isNaN(t) && !(t <= latest)) latest = t;
+    if (s.doneDate && s.doneDate > latest) latest = s.doneDate;
   }
-  return Number.isNaN(latest) ? instant(plan.createdAt) : latest;
+  if (latest) return latest;
+  const created = new Date(plan.createdAt);
+  return Number.isNaN(created.getTime()) ? "" : localDateStr(created);
 }
 
 function earliestDate(a: string | undefined, b: string | undefined): string | undefined {
@@ -120,9 +131,10 @@ function earliestDate(a: string | undefined, b: string | undefined): string | un
 function mergeSession(newer: PlanSession, older: PlanSession | undefined): PlanSession {
   if (!older) return newer;
   const done = newer.done || older.done;
-  const merged: PlanSession = { ...newer, done };
-  const doneDate = earliestDate(newer.doneDate, older.doneDate);
-  if (doneDate) merged.doneDate = doneDate;
+  const { doneDate: _drop, ...rest } = newer;
+  const merged: PlanSession = { ...rest, done };
+  const date = done ? earliestDate(newer.doneDate, older.doneDate) : undefined;
+  if (date) merged.doneDate = date;
   return merged;
 }
 
@@ -130,6 +142,8 @@ function mergeSession(newer: PlanSession, older: PlanSession | undefined): PlanS
  * `newer` is the copy with the greater `editedAt` (the caller decides).
  * The same plan on both devices keeps every completed session; two different
  * plans keep the one with the latest activity and archive the other.
+ * Call only when both sides changed since the last sync; there is no common
+ * ancestor, so a one-sided change must be taken as is instead.
  */
 export function mergeHifzPlan(
   newer: HifzPlan,
@@ -141,19 +155,36 @@ export function mergeHifzPlan(
     const sessions = newer.sessions.map((s) => mergeSession(s, olderById.get(s.id)));
     return { current: { ...newer, sessions }, archived: null };
   }
-  return lastActiveAt(older) > lastActiveAt(newer)
+  return dayKey(older) > dayKey(newer)
     ? { current: older, archived: newer }
     : { current: newer, archived: older };
 }
 
 // ─── Streak freezes ──────────────────────────────────────────────────────────
 
+function cleanPool(pool: Partial<FreezePool> | undefined): FreezePool {
+  const count = Number.isFinite(pool?.count) ? Math.floor(pool?.count as number) : 0;
+  const earnedOn: Record<string, number> = {};
+  for (const [day, n] of Object.entries(pool?.earnedOn ?? {})) {
+    if (typeof n === "number" && Number.isFinite(n)) earnedOn[day] = n;
+  }
+  const spentOn = Array.isArray(pool?.spentOn)
+    ? pool.spentOn.filter((d): d is string => typeof d === "string")
+    : [];
+  return { count: Math.max(0, Math.min(MAX_FREEZES, count)), earnedOn, spentOn };
+}
+
 /**
- * `count` takes the lower of the two so a merge never mints freezes. The cost:
- * a freeze earned concurrently on both devices can be lost, which is acceptable
- * for a safety net.
+ * Malformed input is sanitized first (a missing count is 0, never a full
+ * pool). `count` takes the lower of the two so a merge never mints freezes. The
+ * cost: a freeze earned concurrently on both devices can be lost, which is
+ * acceptable for a safety net.
+ * Call only when both sides changed since the last sync; there is no common
+ * ancestor, so a one-sided change must be taken as is instead.
  */
-export function mergeFreezePool(local: FreezePool, remote: FreezePool): FreezePool {
+export function mergeFreezePool(localPool: FreezePool, remotePool: FreezePool): FreezePool {
+  const local = cleanPool(localPool);
+  const remote = cleanPool(remotePool);
   const earnedOn: Record<string, number> = { ...local.earnedOn };
   for (const [day, n] of Object.entries(remote.earnedOn)) {
     earnedOn[day] = Math.max(earnedOn[day] ?? n, n);
@@ -161,6 +192,6 @@ export function mergeFreezePool(local: FreezePool, remote: FreezePool): FreezePo
   return {
     count: Math.min(local.count, remote.count),
     earnedOn,
-    spentOn: [...new Set([...local.spentOn, ...remote.spentOn])],
+    spentOn: [...new Set([...local.spentOn, ...remote.spentOn])].sort(),
   };
 }
