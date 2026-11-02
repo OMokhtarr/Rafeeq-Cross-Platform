@@ -6,6 +6,10 @@
  * existing writers stay untouched. Writes mirror `restoreBackup`: the Hifz
  * stores go through both their sync and async savers.
  *
+ * Absent data reads as `{}`. A store that exists but cannot be read or parsed
+ * makes `read()` throw, and a failed storage write makes `write()` throw, so a
+ * storage failure is never mistaken for "the user deleted everything".
+ *
  * Item keys: an "object" collection is the single item `"value"`; the Hifz plan
  * is `current` plus `archive:<createdAt>` for archived plans.
  */
@@ -15,6 +19,8 @@ import {
   loadPlanAsync,
   savePlan,
   savePlanAsync,
+  clearPlan,
+  clearPlanAsync,
   loadBestPlanAsync,
   saveBestPlan,
   saveBestPlanAsync,
@@ -24,8 +30,10 @@ import {
   loadHifzReadingSessionAsync,
   saveHifzReadingSession,
   saveHifzReadingSessionAsync,
+  clearHifzReadingSession,
+  clearHifzReadingSessionAsync,
 } from "../../../features/hifz/hifz.service";
-import { PRESETS_KEY } from "../../../features/quiz/services/quiz-presets.service";
+import { PRESETS_KEY, isPreset } from "../../../features/quiz/services/quiz-presets.service";
 import type { SyncKind } from "./types";
 
 export interface SyncCollection {
@@ -33,11 +41,12 @@ export interface SyncCollection {
   kind: SyncKind;
   /** localStorage / Preferences keys this collection owns. */
   storageKeys: string[];
+  /** Throws when the store exists but cannot be read. */
   read(): Promise<Record<string, unknown>>;
-  /** Replace the store's contents with `items`, keeping local order. */
+  /** Replace the store's contents with `items`. Throws when storage fails. */
   write(items: Record<string, unknown>): Promise<void>;
   /** Minimum shape the store's own loader accepts. `key` is the item key. */
-  validate(value: unknown, key?: string): boolean;
+  validate(value: unknown, key: string): boolean;
 }
 
 /** Item key of an "object" collection's single value. */
@@ -53,12 +62,17 @@ const FREEZE_POOL_KEY = "rafiq_hifz_freeze_tokens_v1";
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const isString = (v: unknown): v is string => typeof v === "string";
-const isDay = (k?: string): boolean => k !== undefined && DAY_RE.test(k);
+const isDay = (k: string): boolean => DAY_RE.test(k);
 const isStringArray = (v: unknown): boolean => Array.isArray(v) && v.every(isString);
-const nonNull = (v: unknown): boolean => v !== null && v !== undefined;
+const isArray = (v: unknown): boolean => Array.isArray(v);
+const isDayString = (v: unknown): boolean => isString(v) && DAY_RE.test(v);
+const isPageNumber = (v: unknown): boolean =>
+  (typeof v === "number" && Number.isFinite(v)) || (isString(v) && /^\d+$/.test(v));
 
 const isNote = (v: unknown): boolean =>
   isRecord(v) && isString(v.id) && isString(v.body) && Array.isArray(v.ranges) && isString(v.updatedAt);
+
+const isSession = (v: unknown): boolean => isRecord(v) && isString(v.id);
 
 const isPlanLike = (v: unknown): boolean =>
   isRecord(v) && isString(v.createdAt) && Array.isArray(v.sessions);
@@ -70,41 +84,32 @@ const isFreezePool = (v: unknown): boolean =>
   isRecord(v.earnedOn) &&
   Array.isArray(v.spentOn);
 
-const isPreset = (v: unknown): boolean =>
-  isRecord(v) &&
-  isString(v.id) &&
-  isString(v.name) &&
-  Array.isArray(v.ranges) &&
-  typeof v.createdAt === "number" &&
-  typeof v.updatedAt === "number";
+// ─── Raw storage (errors propagate) ───────────────────────────────────────────
 
-// ─── Raw storage ──────────────────────────────────────────────────────────────
+const readRaw = (key: string): string | null => localStorage.getItem(key);
+const writeRaw = (key: string, value: string): void => localStorage.setItem(key, value);
 
-function readRaw(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeRaw(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {}
-}
-
+/** Parsed value, `undefined` when absent; throws on corrupt JSON. */
 function readJson(key: string): unknown {
   const raw = readRaw(key);
-  if (raw === null) return undefined;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
+  return raw === null ? undefined : JSON.parse(raw);
 }
 
 const writeJson = (key: string, value: unknown): void => writeRaw(key, JSON.stringify(value));
+
+function readArray(key: string): unknown[] {
+  const parsed = readJson(key);
+  if (parsed === undefined) return [];
+  if (!Array.isArray(parsed)) throw new Error(`${key}: expected an array`);
+  return parsed;
+}
+
+function readMap(key: string): Record<string, unknown> {
+  const parsed = readJson(key);
+  if (parsed === undefined) return {};
+  if (!isRecord(parsed)) throw new Error(`${key}: expected an object`);
+  return parsed;
+}
 
 /** Keys of `items` that are not in `existing`, in key order. */
 const newKeys = (existing: Set<string>, items: Record<string, unknown>): string[] =>
@@ -112,32 +117,22 @@ const newKeys = (existing: Set<string>, items: Record<string, unknown>): string[
     .filter((k) => !existing.has(k))
     .sort();
 
-/** Existing entries still in `items` (local order, new value), then new ones. */
-function mergeInOrder(
-  existing: Array<[string, unknown]>,
-  items: Record<string, unknown>,
-): unknown[] {
-  const seen = new Set<string>();
-  const next: unknown[] = [];
-  for (const [k] of existing) {
-    if (k in items) {
-      next.push(items[k]);
-      seen.add(k);
-    }
-  }
-  for (const k of newKeys(seen, items)) next.push(items[k]);
-  return next;
-}
-
 // ─── Adapter builders ─────────────────────────────────────────────────────────
 
-/** An array of objects, keyed by `idOf`. */
+/**
+ * An array of objects keyed by string `id`. Entries without a string id are
+ * invalid for sync: ignored on read and dropped on write. Duplicate ids keep
+ * the first occurrence. With `newestFirst`, the written array is sorted by that
+ * date field descending (ties by id), as the app stores and displays it;
+ * otherwise local order is kept and new items are appended in key order.
+ */
 function objectArray(
   id: string,
-  load: () => Promise<Record<string, unknown>[]>,
-  save: (next: unknown[]) => Promise<void>,
   storageKey: string,
+  load: () => Promise<unknown[]>,
+  save: (next: unknown[]) => Promise<void>,
   validate: (value: unknown) => boolean,
+  newestFirst?: string,
 ): SyncCollection {
   return {
     id,
@@ -145,27 +140,47 @@ function objectArray(
     storageKeys: [storageKey],
     async read() {
       const out: Record<string, unknown> = {};
-      for (const item of await load()) if (isString(item.id)) out[item.id] = item;
+      for (const item of await load()) {
+        if (isRecord(item) && isString(item.id) && !(item.id in out)) out[item.id] = item;
+      }
       return out;
     },
     async write(items) {
-      const existing = (await load()).filter((i) => isString(i.id)).map((i): [string, unknown] => [i.id as string, i]);
-      await save(mergeInOrder(existing, items));
+      const seen = new Set<string>();
+      const next: unknown[] = [];
+      for (const item of await load()) {
+        if (!isRecord(item) || !isString(item.id) || seen.has(item.id) || !(item.id in items)) continue;
+        seen.add(item.id);
+        next.push(items[item.id]);
+      }
+      for (const k of newKeys(seen, items)) next.push(items[k]);
+      if (newestFirst) {
+        const at = (v: unknown) => (isRecord(v) && isString(v[newestFirst]) ? (v[newestFirst] as string) : "");
+        const key = (v: unknown) => (isRecord(v) && isString(v.id) ? v.id : "");
+        next.sort((a, b) => {
+          const d = at(b).localeCompare(at(a));
+          return d !== 0 ? d : key(a).localeCompare(key(b));
+        });
+      }
+      await save(next);
     },
     validate,
   };
 }
 
-const localObjectArray = (id: string, key: string, validate: (v: unknown) => boolean) =>
+const localObjectArray = (
+  id: string,
+  key: string,
+  validate: (v: unknown) => boolean,
+  newestFirst?: string,
+) =>
   objectArray(
     id,
-    async () => {
-      const parsed = readJson(key);
-      return Array.isArray(parsed) ? parsed.filter(isRecord) : [];
-    },
-    async (next) => writeJson(key, next),
     key,
+    async () => readArray(key),
+    async (next) => writeJson(key, next),
     validate,
+    newestFirst,
   );
 
 /** localStorage array of strings, each present item mapping to `true`. */
@@ -173,12 +188,9 @@ function stringSet(
   id: string,
   kind: "items" | "days",
   key: string,
-  validateKey: (k?: string) => boolean,
+  validateKey: (k: string) => boolean,
 ): SyncCollection {
-  const load = (): string[] => {
-    const parsed = readJson(key);
-    return Array.isArray(parsed) ? parsed.filter(isString) : [];
-  };
+  const load = (): string[] => readArray(key).filter(isString);
   return {
     id,
     kind,
@@ -189,7 +201,7 @@ function stringSet(
       return out;
     },
     async write(items) {
-      const kept = load().filter((k) => items[k] === true);
+      const kept = Array.from(new Set(load())).filter((k) => items[k] === true);
       const added = newKeys(new Set(kept), items).filter((k) => items[k] === true);
       writeJson(key, [...kept, ...added]);
     },
@@ -202,22 +214,18 @@ function recordMap(
   id: string,
   kind: "items" | "days",
   key: string,
-  validate: (value: unknown, key?: string) => boolean,
+  validate: (value: unknown, key: string) => boolean,
 ): SyncCollection {
-  const load = (): Record<string, unknown> => {
-    const parsed = readJson(key);
-    return isRecord(parsed) ? parsed : {};
-  };
   return {
     id,
     kind,
     storageKeys: [key],
     async read() {
-      return load();
+      return readMap(key);
     },
     async write(items) {
       const next: Record<string, unknown> = {};
-      for (const k of Object.keys(load())) if (k in items) next[k] = items[k];
+      for (const k of Object.keys(readMap(key))) if (k in items) next[k] = items[k];
       for (const k of newKeys(new Set(Object.keys(next)), items)) next[k] = items[k];
       writeJson(key, next);
     },
@@ -226,15 +234,16 @@ function recordMap(
 }
 
 /**
- * A single-value store at one localStorage key. Stores written as bare strings
- * (theme, language, tracker since-date) are read and written unquoted; anything
- * else is JSON. An absent value leaves the store untouched.
+ * A single-value store at one localStorage key, stored either as JSON or as a
+ * bare string (theme, language, last page, tracker since-date). An absent
+ * `value` leaves the store untouched: no app path removes these keys.
  */
 function singleValue(
   id: string,
   kind: SyncKind,
   key: string,
-  validate: (value: unknown) => boolean = nonNull,
+  format: "json" | "string",
+  validate: (value: unknown) => boolean,
 ): SyncCollection {
   return {
     id,
@@ -243,29 +252,28 @@ function singleValue(
     async read() {
       const raw = readRaw(key);
       if (raw === null) return {};
-      try {
-        const parsed = JSON.parse(raw);
-        return { [VALUE]: isString(parsed) ? raw : parsed };
-      } catch {
-        return { [VALUE]: raw };
-      }
+      return { [VALUE]: format === "json" ? JSON.parse(raw) : raw };
     },
     async write(items) {
       if (!(VALUE in items)) return;
       const v = items[VALUE];
-      writeRaw(key, isString(v) ? v : JSON.stringify(v));
+      writeRaw(key, format === "json" ? JSON.stringify(v) : String(v));
     },
-    validate,
+    validate: (value) => validate(value),
   };
 }
 
-/** A Hifz store reached through an async loader and a sync + async saver pair. */
+/**
+ * A Hifz store reached through an async loader and a sync + async saver pair.
+ * An absent `value` clears the store when a clearer exists.
+ */
 function hifzObject<T>(
   id: string,
   key: string,
   load: () => Promise<T | null>,
   save: (value: T) => void,
   saveAsync: (value: T) => Promise<void>,
+  clear?: { sync: () => void; async: () => Promise<void> },
 ): SyncCollection {
   return {
     id,
@@ -277,9 +285,13 @@ function hifzObject<T>(
     },
     async write(items) {
       const value = items[VALUE];
-      if (!isRecord(value)) return;
-      save(value as T);
-      await saveAsync(value as T);
+      if (isRecord(value)) {
+        save(value as T);
+        await saveAsync(value as T);
+      } else if (!(VALUE in items) && clear) {
+        clear.sync();
+        await clear.async();
+      }
     },
     validate: isRecord,
   };
@@ -290,29 +302,22 @@ function hifzObject<T>(
 /** Quiz presets live in Capacitor Preferences, not localStorage. */
 const quizPresets = objectArray(
   "quizPresets",
+  PRESETS_KEY,
   async () => {
-    try {
-      const { value } = await Preferences.get({ key: PRESETS_KEY });
-      const parsed = value ? JSON.parse(value) : [];
-      return Array.isArray(parsed) ? parsed.filter(isRecord) : [];
-    } catch {
-      return [];
-    }
+    const { value } = await Preferences.get({ key: PRESETS_KEY });
+    if (!value) return [];
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) throw new Error(`${PRESETS_KEY}: expected an array`);
+    return parsed;
   },
   (next) => Preferences.set({ key: PRESETS_KEY, value: JSON.stringify(next) }),
-  PRESETS_KEY,
   isPreset,
 );
-
-const loadArchive = (): Record<string, unknown> => {
-  const parsed = readJson(PLAN_ARCHIVE_KEY);
-  return isRecord(parsed) ? parsed : {};
-};
 
 /**
  * `current` is the active plan (async loader, as backup does); archived plans
  * are `archive:<createdAt>` in a sync-owned localStorage map. An absent
- * `current` leaves the active plan alone.
+ * `current` clears the active plan, in both stores.
  */
 const hifzPlan: SyncCollection = {
   id: "hifzPlan",
@@ -322,7 +327,9 @@ const hifzPlan: SyncCollection = {
     const out: Record<string, unknown> = {};
     const plan = await loadPlanAsync();
     if (plan) out.current = plan;
-    for (const [createdAt, p] of Object.entries(loadArchive())) out[ARCHIVE_PREFIX + createdAt] = p;
+    for (const [createdAt, p] of Object.entries(readMap(PLAN_ARCHIVE_KEY))) {
+      out[ARCHIVE_PREFIX + createdAt] = p;
+    }
     return out;
   },
   async write(items) {
@@ -331,13 +338,18 @@ const hifzPlan: SyncCollection = {
       const plan = current as Parameters<typeof savePlan>[0];
       savePlan(plan);
       await savePlanAsync(plan);
+    } else if (!("current" in items)) {
+      clearPlan();
+      await clearPlanAsync();
     }
     const wanted: Record<string, unknown> = {};
     for (const k of Object.keys(items)) {
       if (k.startsWith(ARCHIVE_PREFIX)) wanted[k.slice(ARCHIVE_PREFIX.length)] = items[k];
     }
+    const existing = readMap(PLAN_ARCHIVE_KEY);
+    if (Object.keys(wanted).length === 0 && Object.keys(existing).length === 0) return;
     const archive: Record<string, unknown> = {};
-    for (const k of Object.keys(loadArchive())) if (k in wanted) archive[k] = wanted[k];
+    for (const k of Object.keys(existing)) if (k in wanted) archive[k] = wanted[k];
     for (const k of newKeys(new Set(Object.keys(archive)), wanted)) archive[k] = wanted[k];
     writeJson(PLAN_ARCHIVE_KEY, archive);
   },
@@ -345,10 +357,10 @@ const hifzPlan: SyncCollection = {
 };
 
 export const SYNC_COLLECTIONS: SyncCollection[] = [
-  localObjectArray("notes", "rafiq_notes_v1", isNote),
-  recordMap("bookmarks", "items", "rafiq_bookmarks_v1", isString),
+  localObjectArray("notes", "rafiq_notes_v1", isNote, "createdAt"),
+  recordMap("bookmarks", "items", "rafiq_bookmarks_v1", (v) => isString(v)),
   stringSet("hiddenVerses", "items", "rafiq_hidden_verses_v1", (k) => !!k),
-  localObjectArray("recitationHistory", "rafiq_recitation_history_v1", (v) => isRecord(v) && isString(v.id)),
+  localObjectArray("recitationHistory", "rafiq_recitation_history_v1", isSession, "recordedAt"),
   stringSet("azkarFavorites", "items", "azkar:favorites", (k) => !!k),
   quizPresets,
   recordMap("trackerDays", "items", "rafeeq.tracker.days", (v, k) => isDay(k) && isStringArray(v)),
@@ -356,7 +368,7 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
   stringSet("hifzBridgedDates", "days", "rafiq_hifz_streak_freeze_v1", isDay),
   recordMap("hifzSessionCounts", "days", "rafiq_hifz_session_counts_v1", (v, k) => isDay(k) && isStringArray(v)),
   hifzPlan,
-  singleValue("hifzFreezePool", "freezePool", FREEZE_POOL_KEY, isFreezePool),
+  singleValue("hifzFreezePool", "freezePool", FREEZE_POOL_KEY, "json", isFreezePool),
   hifzObject("hifzBest", "rafiq_hifz_best_v1", loadBestPlanAsync, saveBestPlan, saveBestPlanAsync),
   hifzObject("hifzLatest", "rafiq_hifz_latest_v1", loadLatestPlanAsync, saveLatestPlan, saveLatestPlanAsync),
   hifzObject(
@@ -365,17 +377,17 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
     loadHifzReadingSessionAsync,
     saveHifzReadingSession,
     saveHifzReadingSessionAsync,
+    { sync: clearHifzReadingSession, async: clearHifzReadingSessionAsync },
   ),
-  singleValue("settings", "object", "rafiq_settings_v1"),
-  singleValue("theme", "object", "rafiq_theme_v1"),
-  singleValue("lang", "object", "rafiq_lang_v1"),
-  singleValue("lastPage", "object", "rafiq_last_page_v1"),
-  singleValue("searchRecents", "object", "rafiq_search_recents_v1"),
-  singleValue("tafsirResources", "object", "rafiq_tafsir_resources_v1"),
-  singleValue("trackerSettings", "object", "rafeeq.tracker.settings"),
+  singleValue("settings", "object", "rafiq_settings_v1", "json", isRecord),
+  singleValue("theme", "object", "rafiq_theme_v1", "string", isString),
+  singleValue("lang", "object", "rafiq_lang_v1", "string", isString),
+  singleValue("lastPage", "object", "rafiq_last_page_v1", "string", isPageNumber),
+  singleValue("searchRecents", "object", "rafiq_search_recents_v1", "json", isArray),
+  singleValue("trackerSettings", "object", "rafeeq.tracker.settings", "json", isRecord),
   // The engine keeps the earliest date on merge (Task 6).
-  singleValue("trackerSince", "object", "rafeeq.tracker.since", (v) => isString(v) && DAY_RE.test(v)),
-  singleValue("trackerWeights", "object", "rafeeq.tracker.weights"),
+  singleValue("trackerSince", "object", "rafeeq.tracker.since", "string", isDayString),
+  singleValue("trackerWeights", "object", "rafeeq.tracker.weights", "json", isRecord),
 ];
 
 export function collectionForStorageKey(key: string): SyncCollection | undefined {

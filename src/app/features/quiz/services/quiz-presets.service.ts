@@ -15,7 +15,7 @@ import type {
 
 export const PRESETS_KEY = "quizRangePresets";
 
-function isPreset(value: unknown): value is QuizRangePreset {
+export function isPreset(value: unknown): value is QuizRangePreset {
   if (!value || typeof value !== "object") return false;
   const p = value as Partial<QuizRangePreset>;
   return (

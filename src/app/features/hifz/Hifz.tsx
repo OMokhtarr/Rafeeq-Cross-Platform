@@ -1922,6 +1922,7 @@ const Hifz: React.FC = () => {
     }));
     const updated = { ...plan, sessions };
     savePlan(updated);
+    savePlanAsync(updated).catch(() => {});
     setPlan(updated);
     // Wipe the saved read-pages cache so every progress bar resets to 0%.
     clearHifzReadingSession();
@@ -1969,6 +1970,7 @@ const Hifz: React.FC = () => {
     }));
     const updated = { ...plan, sessions, createdAt: new Date().toISOString() };
     savePlan(updated);
+    savePlanAsync(updated).catch(() => {});
     setPlan(updated);
     // Wipe the saved read-pages cache so every progress bar resets to 0%.
     clearHifzReadingSession();

@@ -22,6 +22,8 @@ jest.mock("../../../../features/hifz/hifz.service", () => ({
   loadHifzReadingSessionAsync: jest.fn(),
   saveHifzReadingSession: jest.fn(),
   saveHifzReadingSessionAsync: jest.fn(),
+  clearHifzReadingSession: jest.fn(),
+  clearHifzReadingSessionAsync: jest.fn(),
 }));
 
 const col = (id: string) => {
@@ -30,7 +32,23 @@ const col = (id: string) => {
   return c;
 };
 
-const note = (id: string) => ({ id, body: `b${id}`, ranges: [], createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-02T00:00:00Z" });
+const note = (id: string, createdAt = "2026-01-01T00:00:00Z") => ({
+  id,
+  body: `b${id}`,
+  ranges: [],
+  createdAt,
+  updatedAt: "2026-01-02T00:00:00Z",
+});
+const rec = (id: string, recordedAt: string) => ({
+  id,
+  verseKey: "1:1",
+  elapsedSeconds: 0,
+  reciter: "husary",
+  recordedAt,
+});
+const ids = (key: string) =>
+  JSON.parse(localStorage.getItem(key) as string).map((n: { id: string }) => n.id);
+const plan = (createdAt: string) => ({ memorized: [], goal: {}, sessions: [], createdAt });
 
 beforeEach(() => {
   localStorage.clear();
@@ -43,13 +61,16 @@ beforeEach(() => {
 
 describe("round trip", () => {
   const cases: [string, string, unknown][] = [
-    ["notes", "rafiq_notes_v1", [note("a"), note("b")]],
+    ["notes", "rafiq_notes_v1", [note("b", "2026-02-01"), note("a", "2026-01-01")]],
     ["bookmarks", "rafiq_bookmarks_v1", { "1:1": "2026-01-01T00:00:00Z", "2:5": "2026-02-01T00:00:00Z" }],
     ["trackerDays", "rafeeq.tracker.days", { "2026-10-01": ["fajr", "dhuhr"], "2026-10-02": ["fajr"] }],
     ["hifzStreakDates", "rafiq_hifz_streak_dates_v1", ["2026-10-02", "2026-10-01"]],
     ["settings", "rafiq_settings_v1", { fontSize: 3, reciteEngine: "deepgram" }],
     ["hiddenVerses", "rafiq_hidden_verses_v1", ["2:1", "1:1"]],
     ["hifzSessionCounts", "rafiq_hifz_session_counts_v1", { "2026-10-01": ["s1", "s2"] }],
+    ["recitationHistory", "rafiq_recitation_history_v1", [rec("r2", "2026-02-01"), rec("r1", "2026-01-01")]],
+    ["azkarFavorites", "azkar:favorites", ["z2", "z1"]],
+    ["hifzFreezePool", "rafiq_hifz_freeze_tokens_v1", { count: 1, earnedOn: { "2026-10-01": 1 }, spentOn: [] }],
   ];
   it.each(cases)("%s leaves the stored value semantically equal", async (id, key, stored) => {
     localStorage.setItem(key, JSON.stringify(stored));
@@ -68,22 +89,45 @@ describe("round trip", () => {
     expect(localStorage.getItem("rafiq_theme_v1")).toBe("day");
     expect(localStorage.getItem("rafeeq.tracker.since")).toBe("2026-01-05");
   });
+
+  it("quiz presets round-trip through Preferences", async () => {
+    const p = { id: "p1", name: "n", ranges: [], createdAt: 1, updatedAt: 2 };
+    (Preferences.get as jest.Mock).mockResolvedValue({ value: JSON.stringify([p]) });
+    const c = col("quizPresets");
+    await c.write(await c.read());
+    expect(Preferences.set).toHaveBeenCalledWith({ key: "quizRangePresets", value: JSON.stringify([p]) });
+  });
 });
 
 describe("write", () => {
-  it("keeps local order, appends new items in key order, and drops removed ones", async () => {
-    localStorage.setItem("rafiq_notes_v1", JSON.stringify([note("c"), note("a"), note("b")]));
-    const c = col("notes");
-    await c.write({ a: note("a"), c: { ...note("c"), body: "edited" }, z: note("z"), m: note("m") });
-    const out = JSON.parse(localStorage.getItem("rafiq_notes_v1") as string);
-    expect(out.map((n: { id: string }) => n.id)).toEqual(["c", "a", "m", "z"]);
-    expect(out[0].body).toBe("edited");
-  });
-
-  it("orders map stores the same way", async () => {
+  it("keeps local order for sets and maps, appends new items in key order", async () => {
+    localStorage.setItem("rafiq_hidden_verses_v1", JSON.stringify(["3:1", "1:1", "2:1"]));
+    await col("hiddenVerses").write({ "1:1": true, "3:1": true, "9:9": true, "4:4": true });
+    expect(JSON.parse(localStorage.getItem("rafiq_hidden_verses_v1") as string)).toEqual(["3:1", "1:1", "4:4", "9:9"]);
     localStorage.setItem("rafiq_bookmarks_v1", JSON.stringify({ "2:1": "x", "1:1": "y" }));
     await col("bookmarks").write({ "1:1": "y", "3:3": "n", "1:2": "n2" });
     expect(Object.keys(JSON.parse(localStorage.getItem("rafiq_bookmarks_v1") as string))).toEqual(["1:1", "1:2", "3:3"]);
+  });
+
+  it("stores notes newest-first and recitation sessions by recordedAt desc", async () => {
+    localStorage.setItem("rafiq_notes_v1", JSON.stringify([note("b", "2026-03-01"), note("a", "2026-01-01")]));
+    await col("notes").write({
+      a: note("a", "2026-01-01"),
+      b: { ...note("b", "2026-03-01"), body: "edited" },
+      old: note("old", "2025-01-01"),
+      new: note("new", "2026-06-01"),
+    });
+    expect(ids("rafiq_notes_v1")).toEqual(["new", "b", "a", "old"]);
+    expect(JSON.parse(localStorage.getItem("rafiq_notes_v1") as string)[1].body).toBe("edited");
+    await col("recitationHistory").write({ r1: rec("r1", "2026-01-01"), r2: rec("r2", "2026-05-01") });
+    expect(ids("rafiq_recitation_history_v1")).toEqual(["r2", "r1"]);
+  });
+
+  it("breaks date ties by id and drops removed items", async () => {
+    const at = "2026-01-01";
+    localStorage.setItem("rafiq_notes_v1", JSON.stringify([note("a", at), note("gone", at)]));
+    await col("notes").write({ a: note("a", at), c: note("c", at), b: note("b", at) });
+    expect(ids("rafiq_notes_v1")).toEqual(["a", "b", "c"]);
   });
 
   it("quiz presets live in Preferences", async () => {
@@ -93,8 +137,8 @@ describe("write", () => {
   });
 
   it("hifz plan is dual-written and archives go to the archive key", async () => {
-    const cur = { memorized: [], goal: {}, sessions: [], createdAt: "2026-10-01" };
-    const old = { memorized: [], goal: {}, sessions: [], createdAt: "2026-05-01" };
+    const cur = plan("2026-10-01");
+    const old = plan("2026-05-01");
     await col("hifzPlan").write({ current: cur, "archive:2026-05-01": old });
     expect(hifz.savePlan).toHaveBeenCalledWith(cur);
     expect(hifz.savePlanAsync).toHaveBeenCalledWith(cur);
@@ -103,7 +147,7 @@ describe("write", () => {
   });
 
   it("hifz plan read maps the active plan to current", async () => {
-    const cur = { memorized: [], goal: {}, sessions: [], createdAt: "2026-10-01" };
+    const cur = plan("2026-10-01");
     (hifz.loadPlanAsync as jest.Mock).mockResolvedValue(cur);
     expect(await col("hifzPlan").read()).toEqual({ current: cur });
   });
@@ -113,6 +157,69 @@ describe("write", () => {
     await col("hifzBest").write({ value: best });
     expect(hifz.saveBestPlan).toHaveBeenCalledWith(best);
     expect(hifz.saveBestPlanAsync).toHaveBeenCalledWith(best);
+  });
+
+  it("de-duplicates by id, first occurrence wins", async () => {
+    localStorage.setItem("rafiq_notes_v1", JSON.stringify([note("a"), { ...note("a"), body: "dup" }]));
+    await col("notes").write({ a: note("a") });
+    expect(JSON.parse(localStorage.getItem("rafiq_notes_v1") as string)).toHaveLength(1);
+  });
+
+  it("does not create the plan archive key when there is nothing to archive", async () => {
+    await col("hifzPlan").write({ current: plan("x") });
+    expect(localStorage.getItem("rafiq_hifz_plan_archive_v1")).toBeNull();
+  });
+});
+
+describe("deletes and failures", () => {
+  it("a write without current clears the plan, sync and async", async () => {
+    await col("hifzPlan").write({});
+    expect(hifz.clearPlan).toHaveBeenCalled();
+    expect(hifz.clearPlanAsync).toHaveBeenCalled();
+    expect(hifz.savePlan).not.toHaveBeenCalled();
+  });
+
+  it("a write without a reading value clears it", async () => {
+    await col("hifzReading").write({});
+    expect(hifz.clearHifzReadingSession).toHaveBeenCalled();
+    expect(hifz.clearHifzReadingSessionAsync).toHaveBeenCalled();
+  });
+
+  it("absent data reads as {}", async () => {
+    for (const id of ["notes", "bookmarks", "settings", "hifzFreezePool", "hifzPlan", "quizPresets", "theme"]) {
+      expect(await col(id).read()).toEqual({});
+    }
+  });
+
+  it("corrupt JSON makes read reject", async () => {
+    localStorage.setItem("rafiq_notes_v1", "{oops");
+    await expect(col("notes").read()).rejects.toThrow();
+    localStorage.setItem("rafiq_bookmarks_v1", "[1");
+    await expect(col("bookmarks").read()).rejects.toThrow();
+    localStorage.setItem("rafiq_hidden_verses_v1", "{oops");
+    await expect(col("hiddenVerses").read()).rejects.toThrow();
+  });
+
+  it("a failing Preferences.get makes read reject", async () => {
+    (Preferences.get as jest.Mock).mockRejectedValue(new Error("boom"));
+    await expect(col("quizPresets").read()).rejects.toThrow();
+  });
+
+  it("a failing setItem makes write reject", async () => {
+    const spy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota");
+    });
+    try {
+      await expect(col("notes").write({ a: note("a") })).rejects.toThrow();
+      await expect(col("settings").write({ value: { a: 1 } })).rejects.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("a failing Preferences.set makes write reject", async () => {
+    (Preferences.set as jest.Mock).mockRejectedValue(new Error("quota"));
+    await expect(col("quizPresets").write({})).rejects.toThrow();
   });
 });
 
@@ -132,15 +239,24 @@ describe("validate", () => {
   });
   it("checks freeze pool and plan shape", () => {
     const fp = col("hifzFreezePool");
-    expect(fp.validate({ count: 1, earnedOn: {}, spentOn: [] })).toBe(true);
-    expect(fp.validate({ count: NaN, earnedOn: {}, spentOn: [] })).toBe(false);
-    expect(fp.validate({ count: 1, earnedOn: {}, spentOn: {} })).toBe(false);
+    expect(fp.validate({ count: 1, earnedOn: {}, spentOn: [] }, "value")).toBe(true);
+    expect(fp.validate({ count: NaN, earnedOn: {}, spentOn: [] }, "value")).toBe(false);
+    expect(fp.validate({ count: 1, earnedOn: {}, spentOn: {} }, "value")).toBe(false);
     expect(col("hifzPlan").validate({ createdAt: "x", sessions: [] }, "current")).toBe(true);
     expect(col("hifzPlan").validate({ createdAt: "x" }, "current")).toBe(false);
   });
-  it("accepts any non-null JSON for plain objects", () => {
-    expect(col("settings").validate({ a: 1 })).toBe(true);
-    expect(col("settings").validate(null)).toBe(false);
+  it("checks each plain store's own shape", () => {
+    expect(col("settings").validate({ a: 1 }, "value")).toBe(true);
+    expect(col("settings").validate("x", "value")).toBe(false);
+    expect(col("settings").validate(null, "value")).toBe(false);
+    expect(col("theme").validate({}, "value")).toBe(false);
+    expect(col("theme").validate("day", "value")).toBe(true);
+    expect(col("searchRecents").validate({}, "value")).toBe(false);
+    expect(col("searchRecents").validate(["a"], "value")).toBe(true);
+    expect(col("lastPage").validate("12", "value")).toBe(true);
+    expect(col("lastPage").validate(12, "value")).toBe(true);
+    expect(col("lastPage").validate("abc", "value")).toBe(false);
+    expect(col("trackerSince").validate("2026-1-1", "value")).toBe(false);
   });
 });
 
@@ -150,7 +266,12 @@ describe("lookup", () => {
     expect(collectionForStorageKey("rafiq_pro_v1")).toBeUndefined();
   });
   it("covers every backed-up key", () => {
-    const missing = BACKED_UP_KEYS.filter((k) => !collectionForStorageKey(k));
+    // Deliberately not synced.
+    const NOT_SYNCED = [
+      "rafiq_tafsir_resources_v1", // content cache, re-downloadable
+    ];
+    const missing = BACKED_UP_KEYS.filter((k) => !NOT_SYNCED.includes(k) && !collectionForStorageKey(k));
     expect(missing).toEqual([]);
+    expect(collectionForStorageKey("rafiq_tafsir_resources_v1")).toBeUndefined();
   });
 });
