@@ -8,6 +8,7 @@
  */
 
 import { Preferences } from "@capacitor/preferences";
+import { markDirty } from "../../../core/services/sync/local-changes";
 import type {
   QuizRange,
   QuizRangePreset,
@@ -45,6 +46,7 @@ async function readAll(): Promise<QuizRangePreset[]> {
 
 async function writeAll(presets: QuizRangePreset[]): Promise<void> {
   await Preferences.set({ key: PRESETS_KEY, value: JSON.stringify(presets) });
+  markDirty(PRESETS_KEY);
 }
 
 function newId(): string {
