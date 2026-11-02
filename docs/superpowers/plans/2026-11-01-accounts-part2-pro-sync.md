@@ -227,14 +227,16 @@
   - `push(rows: SyncRow[]): Promise<SyncRow[]>`: calls `rpc("sync_push", { items: rows })` in chunks of 200 and returns the stored rows.
     - The server rejects more than 500 items, and PostgREST's `max-rows` caps the rows returned, so never raise the chunk size.
     - `edited_at` must be an ISO-8601 string; the server rejects epoch numbers.
-    - Values over 256 KB are rejected by a CHECK constraint, which fails the whole chunk. Skip oversized items client-side with a `console.warn`.
+    - The server CHECK limits each value to 1 MB of jsonb (`pg_column_size`), which is roughly 2× the JSON text for number-heavy values. Skip items whose JSON text is over 512 KB client-side with a `console.warn`.
+    - If a chunk fails with `23514`/`22001` (a constraint or length violation), retry it one item at a time and skip only the items that still fail. One bad item must never block sync forever.
   - **Errors:** both throw `SyncOfflineError` on network failures and `SyncError` otherwise.
 
 - [ ] **Step 1: Write the failing tests** (mock the Supabase query builder and `rpc`).
   - Paging stops on a short page.
   - The second page's `gt` uses the first page's exact last `server_at` string.
   - The returned cursor is the max `server_at` minus 10 s.
-  - An item whose JSON is over 256 KB is not sent.
+  - An item whose JSON text is over 512 KB is not sent.
+  - A chunk rejected with `23514` is retried per item, and only the failing item is skipped.
   - `null` cursor → no `gt` filter.
   - `push` chunks 450 rows into 3 calls.
   - A `fetch failed` / `TypeError` → `SyncOfflineError`; a PostgREST error → `SyncError`.
