@@ -261,7 +261,8 @@
 - **Algorithm for one run:**
   1. Load the state (reset if `userId` differs) and pull since the cursor.
   2. For each collection:
-     - `read()` the local items and validate them. Skip invalid remote rows with a `console.warn` (Review Focus 5).
+     - `read()` the local items and validate them with `validate(value, itemKey)`; the key is required. Skip invalid remote rows with a `console.warn` (Review Focus 5).
+     - If a collection's `read()` or `write()` throws (unreadable or full storage), skip that whole collection for this run: no tombstones, no snapshot update, no cursor change for it. Never treat a failed read as an empty store.
      - Diff against the snapshot.
      - A local item's `editedAt` is `dirtyTime(collection) ?? its own timestamp`, where `Note.updatedAt` or `RecitationSession.recordedAt` exist, or the epoch otherwise.
      - Locally removed items (outside first-merge mode) become `deleted: true` with `editedAt = dirtyTime`.
@@ -280,6 +281,7 @@
   - An offline pull → `{status:"offline"}`, local data untouched, the snapshot unchanged.
   - A user switch → `resetSyncState` behaviour: the new user's first merge uploads local data, and nothing is deleted.
   - A corrupt remote note row → skipped, the other notes still apply (Review Focus 5).
+  - The notes collection's `read()` throws → notes are skipped this run, no tombstones are pushed, and the other collections still sync.
   - A Hifz reset on device A (sessions undone, same `createdAt`), synced while B is unchanged → after B syncs, B's sessions are undone too (the custom merge is not called, and A's copy wins).
   - A freeze earned on A while B is idle → after both sync, both have the earned count.
   - Two concurrent `syncNow` calls → one network run.
