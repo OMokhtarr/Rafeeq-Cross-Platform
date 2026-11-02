@@ -9,34 +9,54 @@ export class SyncError extends Error {}
 const PULL_PAGE_SIZE = 500;
 /** The server rejects >500 items and caps returned rows; never raise this. */
 const PUSH_CHUNK_SIZE = 200;
-/** Matches the server's CHECK on pg_column_size(value). */
-const MAX_VALUE_BYTES = 262144;
+/**
+ * Client-side cap on the JSON text of a value. The server CHECK is 1 MB of
+ * jsonb, which is roughly 2x the text for number-heavy objects.
+ */
+const MAX_VALUE_BYTES = 524288;
+const MAX_COLLECTION_LENGTH = 64;
+const MAX_ITEM_KEY_LENGTH = 256;
 /** >= the `authenticated` statement_timeout (8 s), so late-committed rows are re-read. */
 const CURSOR_OVERLAP_MS = 10_000;
+/** check_violation / string_data_right_truncation: this row can never be stored. */
+const CONSTRAINT_CODES = ["23514", "22001"];
 
 interface RemoteError {
   message?: string;
   code?: string;
 }
 
+interface RemoteResult {
+  data: unknown;
+  error: RemoteError | null;
+  status?: number;
+}
+
 const NETWORK_MESSAGE = /failed to fetch|fetch failed|networkerror|network request failed|load failed/i;
 
 /** supabase-js returns fetch failures as `{ error }` with status 0, not as a throw. */
-function toSyncError(err: unknown, status?: number): Error {
-  if (err instanceof SyncError || err instanceof SyncOfflineError) return err;
-  if (err instanceof TypeError) return new SyncOfflineError(err.message);
-  const e = (err ?? {}) as RemoteError;
-  const message = e.message ?? String(err);
+function toSyncError(err: RemoteError, status?: number): Error {
+  const message = err.message ?? String(err);
   if (status === 0 || NETWORK_MESSAGE.test(message)) {
     return new SyncOfflineError(message);
   }
-  return new SyncError(e.code ? `${message} (${e.code})` : message);
+  return new SyncError(err.code ? `${message} (${err.code})` : message);
 }
 
 function requireClient() {
   const client = getSupabase();
   if (!client) throw new SyncError("Supabase is not configured");
   return client;
+}
+
+/** Awaits one client call; only a TypeError thrown by the call itself means offline. */
+async function callClient(call: () => PromiseLike<unknown>): Promise<RemoteResult> {
+  try {
+    return (await call()) as RemoteResult;
+  } catch (err) {
+    if (err instanceof TypeError) throw new SyncOfflineError(err.message);
+    throw new SyncError(err instanceof Error ? err.message : String(err));
+  }
 }
 
 function toSyncRow(r: SyncRow & { user_id?: string }): SyncRow {
@@ -50,59 +70,122 @@ function toSyncRow(r: SyncRow & { user_id?: string }): SyncRow {
   };
 }
 
+function rowId(r: SyncRow): string {
+  return `${r.collection}\u0000${r.item_key}\u0000${r.server_at}`;
+}
+
 /** Pulls every row changed after `cursor` (null = everything). */
 export async function pullSince(
   cursor: string | null
 ): Promise<{ rows: SyncRow[]; cursor: string | null }> {
   const client = requireClient();
   const rows: SyncRow[] = [];
+  const seen = new Set<string>();
   let after = cursor;
-  try {
-    for (;;) {
-      let query = client.from("sync_items").select("*");
-      if (after !== null) query = query.gt("server_at", after);
-      const { data, error, status } = await query
-        .order("server_at")
-        .limit(PULL_PAGE_SIZE);
-      if (error) throw toSyncError(error, status);
-      const page = (data ?? []) as SyncRow[];
-      rows.push(...page.map(toSyncRow));
-      if (page.length < PULL_PAGE_SIZE) break;
-      // Exact PostgREST string: a JS Date round-trip would drop microseconds.
-      after = page[page.length - 1].server_at as string;
+  let firstPage = true;
+  for (;;) {
+    let query = client.from("sync_items").select("*");
+    if (after !== null) {
+      // Later pages use gte so rows tied on server_at across the boundary are
+      // not lost; the duplicates are dropped below.
+      query = firstPage
+        ? query.gt("server_at", after)
+        : query.gte("server_at", after);
     }
-  } catch (err) {
-    throw toSyncError(err);
+    const { data, error, status } = await callClient(() =>
+      query.order("server_at").limit(PULL_PAGE_SIZE)
+    );
+    if (error) throw toSyncError(error, status);
+    const page = ((data ?? []) as SyncRow[]).map(toSyncRow);
+    const before = rows.length;
+    for (const row of page) {
+      const id = rowId(row);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      rows.push(row);
+    }
+    if (page.length < PULL_PAGE_SIZE) break;
+    if (rows.length === before) {
+      throw new SyncError("Sync pull made no progress (page full of ties)");
+    }
+    // Exact PostgREST string: a JS Date round-trip would drop microseconds.
+    after = page[page.length - 1].server_at as string;
+    firstPage = false;
   }
   if (rows.length === 0) return { rows, cursor };
-  const maxMs = Math.max(...rows.map((r) => Date.parse(r.server_at as string)));
-  return { rows, cursor: new Date(maxMs - CURSOR_OVERLAP_MS).toISOString() };
+  const lastMs = Date.parse(rows[rows.length - 1].server_at as string);
+  if (Number.isNaN(lastMs)) throw new SyncError("Unparseable server_at in pulled rows");
+  return { rows, cursor: new Date(lastMs - CURSOR_OVERLAP_MS).toISOString() };
 }
 
-function withinSizeLimit(row: SyncRow): boolean {
+function isPushable(row: SyncRow): boolean {
+  const { collection, item_key } = row;
+  if (
+    collection.length < 1 ||
+    collection.length > MAX_COLLECTION_LENGTH ||
+    item_key.length < 1 ||
+    item_key.length > MAX_ITEM_KEY_LENGTH
+  ) {
+    console.warn(`[sync] skipping item with out-of-range key ${collection}/${item_key}`);
+    return false;
+  }
   const bytes = new TextEncoder().encode(JSON.stringify(row.value)).length;
-  if (bytes <= MAX_VALUE_BYTES) return true;
-  console.warn(
-    `[sync] skipping oversized item ${row.collection}/${row.item_key} (${bytes} bytes)`
+  if (bytes > MAX_VALUE_BYTES) {
+    console.warn(`[sync] skipping oversized item ${collection}/${item_key} (${bytes} bytes)`);
+    return false;
+  }
+  return true;
+}
+
+function toPushItem(r: SyncRow) {
+  return {
+    collection: r.collection,
+    item_key: r.item_key,
+    value: r.value,
+    edited_at: r.edited_at,
+    deleted: r.deleted,
+  };
+}
+
+async function pushChunk(
+  client: NonNullable<ReturnType<typeof getSupabase>>,
+  items: SyncRow[]
+): Promise<{ stored: SyncRow[]; error: RemoteError | null; status?: number }> {
+  const { data, error, status } = await callClient(() =>
+    client.rpc("sync_push", { items: items.map(toPushItem) })
   );
-  return false;
+  if (error) return { stored: [], error, status };
+  return { stored: ((data ?? []) as SyncRow[]).map(toSyncRow), error: null };
 }
 
 /** Pushes local rows through `sync_push`; returns the rows the server stored. */
 export async function push(rows: SyncRow[]): Promise<SyncRow[]> {
   const client = requireClient();
-  const sendable = rows.filter(withinSizeLimit);
+  const sendable = rows.filter(isPushable);
   const stored: SyncRow[] = [];
-  try {
-    for (let i = 0; i < sendable.length; i += PUSH_CHUNK_SIZE) {
-      const { data, error, status } = await client.rpc("sync_push", {
-        items: sendable.slice(i, i + PUSH_CHUNK_SIZE),
-      });
-      if (error) throw toSyncError(error, status);
-      stored.push(...((data ?? []) as SyncRow[]).map(toSyncRow));
+  for (let i = 0; i < sendable.length; i += PUSH_CHUNK_SIZE) {
+    const chunk = sendable.slice(i, i + PUSH_CHUNK_SIZE);
+    const result = await pushChunk(client, chunk);
+    if (!result.error) {
+      stored.push(...result.stored);
+      continue;
     }
-  } catch (err) {
-    throw toSyncError(err);
+    if (!CONSTRAINT_CODES.includes(result.error.code ?? "")) {
+      throw toSyncError(result.error, result.status);
+    }
+    // A constraint failure rolls back the whole chunk: find the poison item(s).
+    for (const item of chunk) {
+      const single = await pushChunk(client, [item]);
+      if (!single.error) {
+        stored.push(...single.stored);
+      } else if (CONSTRAINT_CODES.includes(single.error.code ?? "")) {
+        console.warn(
+          `[sync] server rejected ${item.collection}/${item.item_key} (${single.error.code}); skipping`
+        );
+      } else {
+        throw toSyncError(single.error, single.status);
+      }
+    }
   }
   return stored;
 }

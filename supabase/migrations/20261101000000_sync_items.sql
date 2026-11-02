@@ -22,8 +22,9 @@
 -- app, not here: the database only enforces "own rows".
 --
 -- Size bounds: collection 1-64 characters, item_key 1-256, value at most
--- 256 KB (a recitation-history session can carry a whole-Quran queue, about
--- 125 KB), and at most 500 items per push. There is deliberately no per-user
+-- 1 MB of jsonb (a recitation-history session can carry a whole-Quran queue:
+-- about 143 KB of JSON text, and jsonb is roughly 2x the text for number-heavy
+-- objects), and at most 500 items per push. There is deliberately no per-user
 -- row quota yet (Pro is enforced in the app, per the spec); the bounds cap
 -- what any one account can store per row and per call.
 --
@@ -50,7 +51,7 @@ create table public.sync_items (
   constraint sync_items_item_key_length
     check (char_length(item_key) between 1 and 256),
   constraint sync_items_value_size
-    check (pg_column_size(value) <= 262144)
+    check (pg_column_size(value) <= 1048576)
 );
 
 -- The pull: one user's rows after the cursor, in server_at order. (The
