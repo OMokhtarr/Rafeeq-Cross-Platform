@@ -166,7 +166,9 @@ function localSide(r: CollectionRun, key: string): Versioned | undefined {
     if (!r.c.validate(value, key)) return undefined;
     const field = OWN_TIME[r.c.id];
     const own = field && isRecord(value) && typeof value[field] === "string" ? (value[field] as string) : null;
-    const editedAt = r.dirtyAt ?? (own && !Number.isNaN(Date.parse(own)) ? own : EPOCH);
+    // An item's own edit time beats the collection-wide dirty time, which a
+    // later edit of a different item would otherwise lend to this one.
+    const editedAt = own && !Number.isNaN(Date.parse(own)) ? own : r.dirtyAt ?? EPOCH;
     return { value, editedAt, deleted: false };
   }
   if (!r.firstMerge && r.base[key] !== undefined) {
@@ -455,12 +457,15 @@ async function run(userId: string): Promise<SyncResult> {
     if (Object.keys(r.rejected).length > 0) rejected[r.c.id] = r.rejected;
     else delete rejected[r.c.id];
   }
+  const incomplete = skipped || done.length < runs.length;
   const next: SyncState = {
     userId,
     // A skipped collection's rows must be pulled again next run.
-    cursor: skipped || done.length < runs.length ? state.cursor : pulled.cursor,
+    cursor: incomplete ? state.cursor : pulled.cursor,
     snapshot,
-    firstMerge: resets !== resetsAtStart,
+    // A first merge that skipped a collection is repeated until every
+    // collection has merged once; repeating it is harmless.
+    firstMerge: resets !== resetsAtStart || (state.firstMerge && incomplete),
     rejected,
   };
   localStorage.setItem(STATE_KEY, JSON.stringify(next));

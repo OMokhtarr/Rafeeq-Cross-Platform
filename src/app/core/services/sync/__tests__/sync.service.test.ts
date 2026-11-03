@@ -320,7 +320,56 @@ describe("lost pushes", () => {
   });
 });
 
+describe("edit times", () => {
+  it("a note's own edit time decides, not a later edit of another note", async () => {
+    setNotes(note("x", "v0", "2026-10-01T00:00:00.000Z"));
+    await syncNow("u1");
+    await useDevice("B");
+    await syncNow("u1");
+
+    await useDevice("A");
+    setNotes(note("x", "a-edit", "2026-10-20T00:00:00.000Z"));
+    await syncNow("u1");
+    // B, offline: edited x at t10, then y at t30. Its notes dirty time is the
+    // latest stamp of all, but x's own edit is older than A's.
+    await useDevice("B");
+    setNotes(note("x", "b-edit", "2026-10-10T00:00:00.000Z"), note("y", "y", "2026-10-30T00:00:00.000Z"));
+    await syncNow("u1");
+
+    expect(localNotes().find((n) => n.id === "x")?.body).toBe("a-edit");
+    expect((cloud.get("notes/x") as SyncRow).value).toMatchObject({ body: "a-edit" });
+    expect(cloudLive("notes")).toEqual(["x", "y"]);
+  });
+
+  it("a first merge keeps the cloud's newer copy over a stale local note", async () => {
+    seed("notes", "x", note("x", "cloud", "2026-10-05T00:00:00.000Z"), "2026-10-05T00:00:00.000Z");
+    setNotes(note("x", "stale", "2026-10-01T00:00:00.000Z"));
+
+    await syncNow("u1");
+
+    expect(localNotes()[0].body).toBe("cloud");
+    expect((cloud.get("notes/x") as SyncRow).value).toMatchObject({ body: "cloud" });
+  });
+});
+
 describe("first merge again", () => {
+  it("a first merge that skipped a collection stays a first merge until it completes", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const firstMerge = () => JSON.parse(localStorage.getItem(STATE) as string).firstMerge;
+    localStorage.setItem(NOTES, "{corrupt");
+    localStorage.setItem("rafiq_bookmarks_v1", JSON.stringify({ "1:1": "2026-10-01T00:00:00Z" }));
+
+    await syncNow("u1");
+    expect(cloudLive("bookmarks")).toEqual(["1:1"]);
+    expect(firstMerge()).toBe(true);
+
+    setNotes(note("a"));
+    await syncNow("u1");
+    expect(firstMerge()).toBe(false);
+    expect(cloudLive("notes")).toEqual(["a"]);
+    warn.mockRestore();
+  });
+
   it("a user switch merges into the new account without deleting anything", async () => {
     setNotes(note("a"), note("b"));
     await syncNow("u1");
