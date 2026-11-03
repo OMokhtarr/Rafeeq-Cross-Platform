@@ -1,18 +1,25 @@
 /**
  * Pro sync engine.
  *
- * One run pulls the cloud's changes since the cursor, reconciles every key of
- * every collection against the snapshot of the last synced state, writes the
- * remote winners into the local stores, then pushes the local winners. The
- * snapshot is saved only after the push succeeds, so a run that dies after
- * writing locally leaves the dirty times and the old snapshot behind and the
- * next run pushes again.
+ * One run reads the local stores, pulls the cloud's changes since the cursor,
+ * reconciles every key of every collection against the snapshot of the last
+ * synced state, writes the remote winners into the local stores, then pushes the
+ * local winners. The snapshot is saved only after the push succeeds, so a run
+ * that dies after writing locally leaves the dirty times and the old snapshot
+ * behind and the next run pushes again.
  *
  * Per key, "changed" means different from the snapshot. A side that alone
  * changed wins wholesale; the per-kind merges run only when both sides changed
  * (there is no common ancestor to merge against otherwise). Day sets always
- * union. First-merge mode (new device, new user, reset) has no snapshot: both
- * sides count as changed and nothing is ever deleted.
+ * union. Each collection stays in first-merge mode (new device, new user, reset)
+ * until it completes one merge: it has no snapshot, both sides count as changed
+ * and nothing is ever deleted.
+ *
+ * A collection whose store can't be read or written is skipped; the others
+ * finish and save, and the run reports an error. The cursor still moves, so the
+ * skipped collection is pulled from the start once it can be read again. A store
+ * the app changed during the run is skipped the same way, but silently: that
+ * edit already schedules another run.
  *
  * The server keeps the newer `edited_at`. A pushed key whose stored row comes
  * back different lost to the cloud; it is reconciled once more against that row
@@ -22,7 +29,7 @@
 
 import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
-import { SYNC_COLLECTIONS, type SyncCollection } from "./collections";
+import { ARCHIVE_PREFIX, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
 import { SYNC_APPLIED_EVENT } from "./sync-events";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
 import { mergeFreezePool, mergeHifzPlan, mergeVersioned, stableStringify } from "./merge";
@@ -39,7 +46,6 @@ export { SYNC_APPLIED_EVENT };
 const STATE_KEY = "rafiq_sync_state_v1";
 const EPOCH = new Date(0).toISOString();
 const CURRENT_PLAN = "current";
-const ARCHIVE_PREFIX = "archive:";
 /** Item fields holding the item's own edit time, for collections that have one. */
 const OWN_TIME: Record<string, string> = { notes: "updatedAt", recitationHistory: "recordedAt" };
 /** The app's own change events, and the collections whose arrival should fire them. */
@@ -48,16 +54,19 @@ const DISPLAY_EVENTS: [string, string[]][] = [
   ["hifz-streak-changed", ["hifzStreakDates", "hifzBridgedDates", "hifzSessionCounts", "hifzFreezePool"]],
 ];
 
-/** collectionId -> itemKey -> stable JSON. */
-type KeyedJson = Record<string, Record<string, string>>;
+/** collectionId -> itemKey -> fingerprint of the stable JSON. */
+type KeyedFingerprints = Record<string, Record<string, string>>;
 
 interface SyncState {
   userId: string;
   cursor: string | null;
-  snapshot: KeyedJson;
-  firstMerge: boolean;
+  snapshot: KeyedFingerprints;
+  /** Collections that completed a merge for this user; every other one is in first merge. */
+  merged: string[];
+  /** Collections the last run skipped after moving the cursor; they need a full pull. */
+  behind: string[];
   /** Rows the server refused, as `rejectionKey`; not pushed again until the item changes. */
-  rejected: KeyedJson;
+  rejected: KeyedFingerprints;
   /** When the last run for this user finished; null before the first one. */
   lastSyncedAt: string | null;
 }
@@ -67,9 +76,11 @@ interface SyncState {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 
-const isKeyedJson = (v: unknown): v is KeyedJson =>
+const isKeyedFingerprints = (v: unknown): v is KeyedFingerprints =>
   isRecord(v) &&
   Object.values(v).every((m) => isRecord(m) && Object.values(m).every((s) => typeof s === "string"));
+
+const isStringList = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === "string");
 
 function loadState(userId: string): SyncState {
   let saved: unknown = null;
@@ -78,11 +89,11 @@ function loadState(userId: string): SyncState {
   } catch {
     saved = null;
   }
-  if (!isSavedState(saved, userId)) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected: {}, lastSyncedAt: null };
-  const rejected = isKeyedJson(saved.rejected) ? saved.rejected : {};
-  // First merge ignores the old snapshot and pulls everything.
+  if (!isSavedState(saved, userId)) {
+    return { userId, cursor: null, snapshot: {}, merged: [], behind: [], rejected: {}, lastSyncedAt: null };
+  }
+  const rejected = isKeyedFingerprints(saved.rejected) ? saved.rejected : {};
   const lastSyncedAt = typeof saved.lastSyncedAt === "string" ? saved.lastSyncedAt : null;
-  if (saved.firstMerge) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected, lastSyncedAt };
   return { ...saved, rejected, lastSyncedAt };
 }
 
@@ -96,8 +107,9 @@ function isSavedState(v: unknown, userId: string): v is SyncState {
     isRecord(v) &&
     v.userId === userId &&
     (v.cursor === null || typeof v.cursor === "string") &&
-    isKeyedJson(v.snapshot) &&
-    typeof v.firstMerge === "boolean"
+    isKeyedFingerprints(v.snapshot) &&
+    isStringList(v.merged) &&
+    isStringList(v.behind)
   );
 }
 
@@ -109,7 +121,7 @@ export function resetSyncState(): void {
   resets++;
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY) ?? "null");
-    if (isRecord(saved)) localStorage.setItem(STATE_KEY, JSON.stringify({ ...saved, firstMerge: true, lastSyncedAt: null }));
+    if (isRecord(saved)) localStorage.setItem(STATE_KEY, JSON.stringify({ ...saved, merged: [], lastSyncedAt: null }));
   } catch {
     try {
       localStorage.removeItem(STATE_KEY);
@@ -136,7 +148,34 @@ const sameContent = (a: Versioned | undefined, b: Versioned | undefined): boolea
 
 const fromRow = (row: SyncRow): Versioned => ({ value: row.value, editedAt: row.edited_at, deleted: row.deleted });
 
-const rejectionKey = (row: SyncRow): string => stableStringify([row.deleted, row.value]);
+/** cyrb53: a small non-crypto 53-bit string hash. */
+function hash53(text: string): number {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
+/**
+ * Saved state only ever compares content for equality, so it keeps this instead
+ * of the JSON: a second full copy of the user's data would crowd localStorage,
+ * and the app's own writers lose edits silently once it is full.
+ */
+const fingerprint = (json: string): string => `${hash53(json).toString(36)}:${json.length}`;
+
+/** Fingerprint of a live value; undefined for a delete or an absent side. */
+const snapshotOf = (v: Versioned | undefined): string | undefined => {
+  const json = contentOf(v);
+  return json === undefined ? undefined : fingerprint(json);
+};
+
+const rejectionKey = (row: SyncRow): string => fingerprint(stableStringify([row.deleted, row.value]));
 
 const rowId = (collection: string, key: string): string => `${collection}\u0000${key}`;
 
@@ -237,6 +276,14 @@ function decide(
   if (sameContent(local, theirs)) return { winner: theirs, pushLocal: false, applyRemote: false };
   // A first merge never deletes: a live local item beats a cloud delete.
   if (r.firstMerge && theirs.deleted) return { winner: local, pushLocal: true, applyRemote: false };
+  // Both sides changed and one deleted: the edit wins whatever the times say. A
+  // delete only has its collection's last edit time, which a later edit of another
+  // item would lend it. A wrongly kept item is the safe way to be wrong.
+  if (r.c.kind === "items" && local.deleted !== theirs.deleted) {
+    return local.deleted
+      ? { winner: theirs, pushLocal: false, applyRemote: true }
+      : { winner: local, pushLocal: true, applyRemote: false };
+  }
   const custom = customMerge(r, key, local, theirs);
   if (custom) return custom;
   const kind = r.c.kind === "hifzPlan" || r.c.kind === "freezePool" ? "object" : r.c.kind;
@@ -244,9 +291,9 @@ function decide(
 }
 
 function setSnapshot(r: CollectionRun, key: string, v: Versioned): void {
-  const json = contentOf(v);
-  if (json === undefined) delete r.snapshot[key];
-  else r.snapshot[key] = json;
+  const entry = snapshotOf(v);
+  if (entry === undefined) delete r.snapshot[key];
+  else r.snapshot[key] = entry;
 }
 
 /** The row to push; a winner not newer than the cloud's copy is stamped just after it so the server keeps it. */
@@ -267,8 +314,8 @@ function outgoingRow(collection: string, key: string, winner: Versioned, remote:
 /** Reconciles one key; returns the archive key it created, if any. */
 function reconcile(r: CollectionRun, key: string, row: SyncRow | undefined, local: Versioned | undefined): string | null {
   const remote = row && fromRow(row);
-  const localChanged = !!local && (r.firstMerge || contentOf(local) !== r.base[key]);
-  const remoteChanged = !!remote && (r.firstMerge || contentOf(remote) !== r.base[key]);
+  const localChanged = !!local && (r.firstMerge || snapshotOf(local) !== r.base[key]);
+  const remoteChanged = !!remote && (r.firstMerge || snapshotOf(remote) !== r.base[key]);
   const d = decide(r, key, local, remote, localChanged, remoteChanged);
   if (!d) return null;
 
@@ -316,10 +363,12 @@ async function openRun(c: SyncCollection, state: SyncState): Promise<CollectionR
     console.warn(`[sync] skipping ${c.id} this run: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
-  const base = state.snapshot[c.id] ?? {};
+  // First merge ignores any old snapshot.
+  const firstMerge = !state.merged.includes(c.id);
+  const base = firstMerge ? {} : state.snapshot[c.id] ?? {};
   return {
     c,
-    firstMerge: state.firstMerge,
+    firstMerge,
     dirtyAt,
     stored,
     items: { ...stored },
@@ -358,21 +407,24 @@ interface LostPush {
   stored: SyncRow;
 }
 
-/** Writes the remote winners locally (step 4); dispatches SYNC_APPLIED_EVENT. */
-async function applyLocally(runs: CollectionRun[], appliedOut: Set<string>): Promise<void> {
+/** Writes the remote winners locally (step 4); dispatches SYNC_APPLIED_EVENT. Storage failures land in `failures`. */
+async function applyLocally(runs: CollectionRun[], appliedOut: Set<string>, failures: string[]): Promise<void> {
   const written: string[] = [];
   for (const r of runs) {
     if (r.failed || r.applied.size === 0) continue;
     try {
       // A store the app changed since this run read it is left for the next run.
       if (stableStringify(await r.c.read()) !== stableStringify(r.stored)) {
-        throw new Error("changed during sync");
+        console.warn(`[sync] skipping ${r.c.id} this run: changed during sync`);
+        r.failed = true;
+        continue;
       }
       await suppressHook(() => r.c.write(r.items));
       r.stored = await r.c.read();
     } catch (err) {
       console.warn(`[sync] skipping ${r.c.id} this run: ${err instanceof Error ? err.message : String(err)}`);
       r.failed = true;
+      failures.push(r.c.id);
       continue;
     }
     // A key the store does not keep (written by a newer app version) is not
@@ -432,24 +484,27 @@ async function run(userId: string): Promise<SyncResult> {
   const resetsAtStart = resets;
   const runStart = new Date().toISOString();
   const state = loadState(userId);
-  const pulled = await pullSince(state.cursor);
-  const remote = groupRows(pulled.rows);
+  const failures: string[] = [];
 
   const runs: CollectionRun[] = [];
-  let skipped = false;
   for (const c of SYNC_COLLECTIONS) {
     const r = await openRun(c, state);
-    if (!r) {
-      skipped = true;
-      continue;
-    }
-    const rows = remote.get(c.id) ?? {};
+    if (r) runs.push(r);
+    else failures.push(c.id);
+  }
+
+  // Read first: a broken store must not force a full pull on every run, only the
+  // run after it can be read again.
+  const fullPull = runs.some((r) => r.firstMerge || state.behind.includes(r.c.id));
+  const pulled = await pullSince(fullPull ? null : state.cursor);
+  const remote = groupRows(pulled.rows);
+  for (const r of runs) {
+    const rows = remote.get(r.c.id) ?? {};
     reconcileKeys(r, [...Object.keys(r.items), ...Object.keys(rows), ...Object.keys(r.base)], rows);
-    runs.push(r);
   }
 
   const applied = new Set<string>();
-  await applyLocally(runs, applied);
+  await applyLocally(runs, applied, failures);
   const lost = await pushOutgoing(runs);
 
   if (lost.length > 0) {
@@ -457,7 +512,7 @@ async function run(userId: string): Promise<SyncResult> {
     for (const { r, key, sent, stored } of lost) {
       if (!r.failed) reconcileKeys(r, [key], { [key]: stored }, new Map([[key, fromRow(sent)]]));
     }
-    await applyLocally(runs, applied);
+    await applyLocally(runs, applied, failures);
     for (const { r, key } of await pushOutgoing(runs)) {
       r.unsettled = true;
       if (r.base[key] === undefined) delete r.snapshot[key];
@@ -466,28 +521,29 @@ async function run(userId: string): Promise<SyncResult> {
   }
 
   const done = runs.filter((r) => !r.failed);
-  const snapshot: KeyedJson = { ...state.snapshot };
-  const rejected: KeyedJson = { ...state.rejected };
+  const snapshot: KeyedFingerprints = { ...state.snapshot };
+  const rejected: KeyedFingerprints = { ...state.rejected };
   for (const r of done) {
     snapshot[r.c.id] = r.snapshot;
     if (Object.keys(r.rejected).length > 0) rejected[r.c.id] = r.rejected;
     else delete rejected[r.c.id];
   }
-  const incomplete = skipped || done.length < runs.length;
+  const doneIds = done.map((r) => r.c.id);
+  const wasReset = resets !== resetsAtStart;
   const next: SyncState = {
     userId,
-    // A skipped collection's rows must be pulled again next run.
-    cursor: incomplete ? state.cursor : pulled.cursor,
+    cursor: pulled.cursor,
     snapshot,
-    // A first merge that skipped a collection is repeated until every
-    // collection has merged once; repeating it is harmless.
-    firstMerge: resets !== resetsAtStart || (state.firstMerge && incomplete),
+    merged: wasReset ? [] : [...new Set([...state.merged, ...doneIds])],
+    behind: SYNC_COLLECTIONS.map((c) => c.id).filter((id) => !doneIds.includes(id)),
     rejected,
-    lastSyncedAt: resets !== resetsAtStart ? null : new Date().toISOString(),
+    lastSyncedAt: wasReset ? null : new Date().toISOString(),
   };
+  // A failed save throws: the run is an error and the old state and dirty times stay.
   localStorage.setItem(STATE_KEY, JSON.stringify(next));
   for (const r of done) if (!r.unsettled) clearDirty(r.c.id, runStart);
 
+  if (failures.length > 0) return { status: "error", message: `Could not sync ${failures.join(", ")}` };
   return { status: "synced", appliedCollections: [...applied] };
 }
 

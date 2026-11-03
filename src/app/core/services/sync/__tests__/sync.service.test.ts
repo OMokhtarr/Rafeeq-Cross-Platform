@@ -1,7 +1,7 @@
 import { Preferences } from "@capacitor/preferences";
 import { idb } from "../../storage/idb.service";
 import { loadPlanStrict, savePlanStrict, type HifzPlan } from "../../../../features/hifz/hifz.service";
-import { installWriteHook, suppressHook } from "../local-changes";
+import { dirtyTime, installWriteHook, suppressHook } from "../local-changes";
 import { pullSince, push, SyncOfflineError } from "../sync-remote";
 import { getLastSyncedAt, resetSyncState, syncNow, SYNC_APPLIED_EVENT } from "../sync.service";
 import type { SyncRow } from "../types";
@@ -268,7 +268,7 @@ describe("failures", () => {
     warn.mockRestore();
   });
 
-  it("skips notes when their store cannot be read, and still syncs the rest", async () => {
+  it("skips notes when their store cannot be read, syncs the rest, and reports the error", async () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     setNotes(note("a"));
     await syncNow("u1");
@@ -278,16 +278,89 @@ describe("failures", () => {
     localStorage.setItem(NOTES, "{corrupt");
     localStorage.setItem("rafiq_bookmarks_v1", JSON.stringify({ "1:1": "2026-10-01T00:00:00Z" }));
 
-    expect((await syncNow("u1")).status).toBe("synced");
+    const result = await syncNow("u1");
+    expect(result.status).toBe("error");
+    expect((result as { message: string }).message).toContain("notes");
     expect(cloud.get("notes/a")?.deleted).toBe(false);
     expect(cloudLive("bookmarks")).toEqual(["1:1"]);
     expect(localStorage.getItem(NOTES)).toBe("{corrupt");
+    expect(JSON.parse(localStorage.getItem("rafiq_hidden_verses_v1") as string)).toEqual(["2:255"]);
 
-    // The cursor did not move past the notes it skipped.
+    // Its rows are pulled again once the store can be read, though the cursor moved on.
     setNotes(note("a"));
-    await syncNow("u1");
+    expect((await syncNow("u1")).status).toBe("synced");
     expect(localNoteIds()).toEqual(["a", "c"]);
     warn.mockRestore();
+  });
+
+  it("a write failure skips only that collection, reports the error and applies it next run", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    setNotes(note("a"));
+    await syncNow("u1");
+    seed("notes", "c", note("c"), "2026-10-03T00:00:00.000Z");
+    tick += 10;
+    seed("hiddenVerses", "2:255", true, "2026-10-03T00:00:00.000Z");
+    const realSet = Storage.prototype.setItem;
+    const spy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k, v) {
+      if (k === NOTES) throw new Error("quota");
+      realSet.call(this, k, v);
+    });
+
+    const result = await syncNow("u1");
+    spy.mockRestore();
+
+    expect(result.status).toBe("error");
+    expect(localNoteIds()).toEqual(["a"]);
+    expect(JSON.parse(localStorage.getItem("rafiq_hidden_verses_v1") as string)).toEqual(["2:255"]);
+
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(localNoteIds()).toEqual(["a", "c"]);
+    warn.mockRestore();
+  });
+
+  it("a store changed during the run is left alone without an error, and applied next run", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    setNotes(note("a"));
+    await syncNow("u1");
+    seed("notes", "c", note("c"), "2026-10-03T00:00:00.000Z");
+    (pullSince as jest.Mock).mockImplementationOnce(async (cursor: string | null) => {
+      setNotes(note("a"), note("typed-during-sync"));
+      return fakePull(cursor);
+    });
+
+    const result = await syncNow("u1");
+
+    expect(result.status).toBe("synced");
+    expect(localNoteIds()).toEqual(["a", "typed-during-sync"]);
+    expect(cloudLive("notes")).toEqual(["a", "c"]);
+
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(localNoteIds()).toEqual(["a", "c", "typed-during-sync"]);
+    expect(cloudLive("notes")).toEqual(["a", "c", "typed-during-sync"]);
+    warn.mockRestore();
+  });
+
+  it("a state save that fails is an error and leaves the old state and dirty times", async () => {
+    setNotes(note("a"));
+    await syncNow("u1");
+    const before = localStorage.getItem(STATE);
+    setNotes(note("a"), note("b"));
+    const realSet = Storage.prototype.setItem;
+    const spy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k, v) {
+      if (k === STATE) throw new Error("quota");
+      realSet.call(this, k, v);
+    });
+
+    const result = await syncNow("u1");
+    spy.mockRestore();
+
+    expect(result.status).toBe("error");
+    expect(localStorage.getItem(STATE)).toBe(before);
+    expect(dirtyTime("notes")).not.toBeNull();
+
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(cloudLive("notes")).toEqual(["a", "b"]);
+    expect(dirtyTime("notes")).toBeNull();
   });
 
   it("does not re-push an item the server rejected until it changes", async () => {
@@ -345,6 +418,85 @@ describe("lost pushes", () => {
   });
 });
 
+describe("a delete against an edit", () => {
+  const LONG_AGO = "2026-10-03T00:00:00.000Z";
+
+  async function twoPhonesWithNotes() {
+    setNotes(note("n"), note("other"));
+    await syncNow("u1");
+    await useDevice("B");
+    await syncNow("u1");
+  }
+
+  it("the edit in the cloud beats a pending delete with a later collection time", async () => {
+    await twoPhonesWithNotes();
+    setNotes(note("n", "edited on B", LONG_AGO), note("other"));
+    await syncNow("u1");
+
+    // A, offline: deleted n, then edited another note, so its delete looks recent.
+    await useDevice("A");
+    setNotes(note("other", "edited on A"));
+    await syncNow("u1");
+
+    expect(localNotes().find((n) => n.id === "n")?.body).toBe("edited on B");
+    expect(cloud.get("notes/n")?.deleted).toBe(false);
+    expect(cloud.get("notes/n")?.value).toMatchObject({ body: "edited on B" });
+  });
+
+  it("a pending edit beats a delete already in the cloud, and the note returns to the deleter", async () => {
+    await twoPhonesWithNotes();
+    await useDevice("A");
+    setNotes(note("other"));
+    await syncNow("u1");
+    expect(cloud.get("notes/n")?.deleted).toBe(true);
+
+    await useDevice("B");
+    setNotes(note("n", "edited on B", LONG_AGO), note("other"));
+    await syncNow("u1");
+    expect(cloud.get("notes/n")?.deleted).toBe(false);
+    expect(localNotes().find((n) => n.id === "n")?.body).toBe("edited on B");
+
+    await useDevice("A");
+    await syncNow("u1");
+    expect(localNotes().find((n) => n.id === "n")?.body).toBe("edited on B");
+  });
+
+  it("a delete the other phone did not edit still removes the note there", async () => {
+    await twoPhonesWithNotes();
+    await useDevice("A");
+    setNotes(note("other", "edited on A"));
+    await syncNow("u1");
+
+    await useDevice("B");
+    setNotes(note("n"), note("other"), note("new on B"));
+    await syncNow("u1");
+
+    expect(localNoteIds()).toEqual(["new on B", "other"]);
+    expect(cloud.get("notes/n")?.deleted).toBe(true);
+  });
+});
+
+describe("the snapshot", () => {
+  it("holds no item content, and still tells changed from unchanged", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    rejectKeys.add("notes/big");
+    setNotes(note("a", "private words"), note("big", "refused words"));
+    await syncNow("u1");
+    const state = localStorage.getItem(STATE) as string;
+    expect(state).not.toContain("private words");
+    expect(state).not.toContain("refused words");
+
+    (push as jest.Mock).mockClear();
+    await syncNow("u1");
+    expect(push).not.toHaveBeenCalled();
+
+    setNotes(note("a", "private words, edited"), note("big", "refused words"));
+    await syncNow("u1");
+    expect(pushedKeys(0)).toEqual(["a"]);
+    warn.mockRestore();
+  });
+});
+
 describe("edit times", () => {
   it("a note's own edit time decides, not a later edit of another note", async () => {
     setNotes(note("x", "v0", "2026-10-01T00:00:00.000Z"));
@@ -378,21 +530,86 @@ describe("edit times", () => {
 });
 
 describe("first merge again", () => {
-  it("a first merge that skipped a collection stays a first merge until it completes", async () => {
+  it("a collection skipped by its first merge is still in first merge once it can be read", async () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
-    const firstMerge = () => JSON.parse(localStorage.getItem(STATE) as string).firstMerge;
+    seed("notes", "a", null, "2026-10-01T00:00:00.000Z", true);
     localStorage.setItem(NOTES, "{corrupt");
     localStorage.setItem("rafiq_bookmarks_v1", JSON.stringify({ "1:1": "2026-10-01T00:00:00Z" }));
 
-    await syncNow("u1");
+    expect((await syncNow("u1")).status).toBe("error");
     expect(cloudLive("bookmarks")).toEqual(["1:1"]);
-    expect(firstMerge()).toBe(true);
+
+    // A first merge never deletes: the live note beats the cloud's delete.
+    setNotes(note("a"));
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(localNoteIds()).toEqual(["a"]);
+    expect(cloudLive("notes")).toEqual(["a"]);
+    warn.mockRestore();
+  });
+
+  it("an unreadable store does not stop other collections leaving first merge", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const BOOKMARKS = "rafiq_bookmarks_v1";
+    const marks = (...keys: string[]) =>
+      localStorage.setItem(BOOKMARKS, JSON.stringify(Object.fromEntries(keys.map((k) => [k, "2026-10-01T00:00:00Z"]))));
+    const localMarks = () => Object.keys(JSON.parse(localStorage.getItem(BOOKMARKS) as string)).sort();
+    marks("1:1", "2:2");
+    setNotes(note("a"));
+    await syncNow("u1");
+
+    await useDevice("B");
+    localStorage.setItem(NOTES, "{corrupt");
+    marks("1:1", "2:2");
+    expect((await syncNow("u1")).status).toBe("error");
+
+    // A healthy phone deletes a bookmark; B must not bring it back.
+    await useDevice("A");
+    marks("2:2");
+    await syncNow("u1");
+    expect(cloud.get("bookmarks/1:1")?.deleted).toBe(true);
+    tick += 10;
+
+    await useDevice("B");
+    expect((await syncNow("u1")).status).toBe("error");
+    expect(localMarks()).toEqual(["2:2"]);
+    expect(cloud.get("bookmarks/1:1")?.deleted).toBe(true);
+
+    // B's own delete goes up too, rather than coming straight back.
+    marks();
+    expect((await syncNow("u1")).status).toBe("error");
+    expect(cloud.get("bookmarks/2:2")?.deleted).toBe(true);
+    expect(localMarks()).toEqual([]);
+
+    // The pull stays incremental while the store is broken.
+    (pullSince as jest.Mock).mockClear();
+    await syncNow("u1");
+    expect((pullSince as jest.Mock).mock.calls[0][0]).not.toBeNull();
+
+    // Repaired: the next run pulls everything again and merges the notes.
+    setNotes(note("b"));
+    (pullSince as jest.Mock).mockClear();
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect((pullSince as jest.Mock).mock.calls[0][0]).toBeNull();
+    expect(localNoteIds()).toEqual(["a", "b"]);
+    expect(cloudLive("notes")).toEqual(["a", "b"]);
+    expect(cloud.get("notes/a")?.deleted).toBe(false);
+    warn.mockRestore();
+  });
+
+  it("a reset during a run still makes the next run a first merge", async () => {
+    setNotes(note("a"), note("b"));
+    await syncNow("u1");
+    (pullSince as jest.Mock).mockImplementationOnce(async (cursor: string | null) => {
+      resetSyncState();
+      return fakePull(cursor);
+    });
+    await syncNow("u1");
 
     setNotes(note("a"));
     await syncNow("u1");
-    expect(firstMerge()).toBe(false);
-    expect(cloudLive("notes")).toEqual(["a"]);
-    warn.mockRestore();
+
+    expect(cloud.get("notes/b")?.deleted).toBe(false);
+    expect(localNoteIds()).toEqual(["a", "b"]);
   });
 
   it("a user switch merges into the new account without deleting anything", async () => {

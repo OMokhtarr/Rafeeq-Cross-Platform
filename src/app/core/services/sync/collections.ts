@@ -46,7 +46,8 @@ export interface SyncCollection {
 /** Item key of an "object" collection's single value. */
 const VALUE = "value";
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const ARCHIVE_PREFIX = "archive:";
+/** Prefix of an archived plan's item key; the sync engine creates these keys. */
+export const ARCHIVE_PREFIX = "archive:";
 /** Sync-owned: archived Hifz plans, createdAt -> HifzPlan. */
 const PLAN_ARCHIVE_KEY = "rafiq_hifz_plan_archive_v1";
 const FREEZE_POOL_KEY = "rafiq_hifz_freeze_tokens_v1";
