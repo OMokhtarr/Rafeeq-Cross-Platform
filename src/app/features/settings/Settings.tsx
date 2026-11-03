@@ -7,11 +7,12 @@
  * - All other prefs are persisted to localStorage under STORAGE_KEY.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useTheme } from "../../core/context/ThemeContext";
 import { useLang } from "../../core/context/LanguageContext";
+import { useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
@@ -639,9 +640,23 @@ const Settings: React.FC = () => {
   const [tipsReset, setTipsReset] = useState(false);
   usePageTour(["settings"]);
 
+  // What the store already holds, so only a real change is saved: a save on
+  // opening the page would stamp defaults as an edit that beats the cloud.
+  const loaded = useRef(s);
+
+  // Sync applied newer settings: show them, so the next toggle here does not
+  // write this copy back over them on every device.
+  useSyncRefresh(["settings"], () => {
+    const fresh = loadSettings();
+    loaded.current = fresh;
+    setS(fresh);
+    setSaved(false);
+  });
+
   // Debounced auto-save — avoids hammering localStorage during slider drags
   // and prevents the "saved ✓" flag from flicker-restarting on every tick.
   useEffect(() => {
+    if (s === loaded.current) return;
     const writeT = setTimeout(() => {
       saveSettings(s);
       setSaved(true);

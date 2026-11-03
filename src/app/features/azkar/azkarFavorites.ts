@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useState } from "react";
+import { useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 
 const FAVORITES_KEY = "azkar:favorites";
 
@@ -19,18 +20,21 @@ function loadFavorites(): string[] {
 export function useAzkarFavorites() {
   const [favorites, setFavorites] = useState<string[]>(loadFavorites);
 
+  useSyncRefresh(["azkarFavorites"], () => setFavorites(loadFavorites()));
+
   const toggleFavorite = useCallback((zikrId: string) => {
-    setFavorites((prev) => {
-      const next = prev.includes(zikrId)
-        ? prev.filter((id) => id !== zikrId)
-        : [...prev, zikrId];
-      try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-      } catch {
-        // ignore quota errors
-      }
-      return next;
-    });
+    // Read fresh: sync may have added a favourite since this copy was loaded,
+    // and writing without it would delete it on every device.
+    const current = loadFavorites();
+    const next = current.includes(zikrId)
+      ? current.filter((id) => id !== zikrId)
+      : [...current, zikrId];
+    try {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+    } catch {
+      // ignore quota errors
+    }
+    setFavorites(next);
   }, []);
 
   return { favorites, toggleFavorite };

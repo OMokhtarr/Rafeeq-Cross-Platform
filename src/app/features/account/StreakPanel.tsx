@@ -22,6 +22,7 @@ import {
   loadStreakDates,
   type PlanSession,
 } from "../hifz/hifz.service";
+import { useStreakRefresh } from "../../core/hooks/useSyncRefresh";
 import { loadFreezePool } from "../../core/services/storage/streak-freeze.service";
 import FreezeSnowflake from "./FreezeSnowflake";
 import StreakFreezeMeter from "./StreakFreezeMeter";
@@ -48,6 +49,7 @@ function latestDate(dates: string[]): string | null {
 const StreakPanel: React.FC<Props> = ({ sessions, lang }) => {
   const [freezeSheet, setFreezeSheet] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  useStreakRefresh();
 
   // Cheap synchronous reads over localStorage, recomputed on each render so a
   // session completed while a host page is mounted is reflected on reopen.

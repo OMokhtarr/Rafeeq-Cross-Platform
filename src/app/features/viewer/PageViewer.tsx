@@ -298,9 +298,13 @@ const PageViewer: React.FC = () => {
   const totalPages = 604;
 
   useEffect(() => {
-    const onFocus = () => setSettings(readSettings());
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    const refresh = () => setSettings(readSettings());
+    window.addEventListener("focus", refresh);
+    window.addEventListener("rafiq-settings-changed", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("rafiq-settings-changed", refresh);
+    };
   }, []);
 
   useEffect(() => {

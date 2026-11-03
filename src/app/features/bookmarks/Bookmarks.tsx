@@ -25,6 +25,7 @@ import {
 } from "../../core/services/api/quran-api.client";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
+import { useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 import "./Bookmarks.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,6 +134,8 @@ const Bookmarks: React.FC = () => {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useSyncRefresh(["bookmarks", "recitationHistory"], reload);
 
   useEffect(() => {
     fetchRecitations().then(setRecitations).catch(() => {});

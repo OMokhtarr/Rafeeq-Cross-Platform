@@ -1301,7 +1301,7 @@ export function getSurahsForUnits(
   return filtered;
 }
 
-// ─── Strict variants (used only by the sync adapters) ────────────────────────
+// ─── Strict variants (for sync: its adapters and the refresh after it applies) ─
 // The loaders above treat every failure as "nothing stored". Sync cannot: a
 // transient IndexedDB error read as "no plan" would be pushed as a deletion.
 // These return null ONLY when the data is genuinely absent (no platform record

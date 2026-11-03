@@ -42,6 +42,11 @@ const CURRENT_PLAN = "current";
 const ARCHIVE_PREFIX = "archive:";
 /** Item fields holding the item's own edit time, for collections that have one. */
 const OWN_TIME: Record<string, string> = { notes: "updatedAt", recitationHistory: "recordedAt" };
+/** The app's own change events, and the collections whose arrival should fire them. */
+const DISPLAY_EVENTS: [string, string[]][] = [
+  ["rafiq-settings-changed", ["settings"]],
+  ["hifz-streak-changed", ["hifzStreakDates", "hifzBridgedDates", "hifzSessionCounts", "hifzFreezePool"]],
+];
 
 /** collectionId -> itemKey -> stable JSON. */
 type KeyedJson = Record<string, Record<string, string>>;
@@ -379,6 +384,9 @@ async function applyLocally(runs: CollectionRun[], appliedOut: Set<string>): Pro
   if (written.length === 0) return;
   written.forEach((id) => appliedOut.add(id));
   window.dispatchEvent(new CustomEvent(SYNC_APPLIED_EVENT, { detail: { collections: written } }));
+  for (const [event, ids] of DISPLAY_EVENTS) {
+    if (ids.some((id) => written.includes(id))) window.dispatchEvent(new CustomEvent(event));
+  }
 }
 
 /** Pushes the local winners (step 5); returns the pushes that lost to a different cloud copy. */

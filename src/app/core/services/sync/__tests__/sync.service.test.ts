@@ -176,6 +176,31 @@ describe("first merge", () => {
   });
 });
 
+describe("display events", () => {
+  it("fires the app's own change events only when their collections were applied", async () => {
+    const heard: string[] = [];
+    const settings = () => heard.push("settings");
+    const streak = () => heard.push("streak");
+    window.addEventListener("rafiq-settings-changed", settings);
+    window.addEventListener("hifz-streak-changed", streak);
+
+    seed("notes", "a", note("a"), "2026-10-01T00:00:00.000Z");
+    await syncNow("u1");
+    expect(heard).toEqual([]);
+
+    seed("settings", "value", { soundEffects: false }, "2026-10-01T00:00:00.000Z");
+    await syncNow("u1");
+    expect(heard).toEqual(["settings"]);
+
+    seed("hifzStreakDates", "2026-10-01", true, "2026-10-01T00:00:00.000Z");
+    await syncNow("u1");
+    expect(heard).toEqual(["settings", "streak"]);
+
+    window.removeEventListener("rafiq-settings-changed", settings);
+    window.removeEventListener("hifz-streak-changed", streak);
+  });
+});
+
 describe("deletes", () => {
   it("pushes a tombstone after the first merge and a second device removes the note", async () => {
     setNotes(note("a"), note("b"));

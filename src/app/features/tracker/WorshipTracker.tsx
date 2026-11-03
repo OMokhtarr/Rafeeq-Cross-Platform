@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
+import { useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import { loadPrayerDay } from "../../core/services/prayer/prayer-times.service";
 import type { PrayerDay } from "../../core/services/prayer/prayer-times.types";
@@ -50,6 +51,14 @@ const WorshipTracker: React.FC = () => {
   const [viewed, setViewed] = useState<Date | null>(null);
   const pressTimer = useRef<number>();
   const longPressed = useRef(false);
+
+  // Sync applied newer data: follow it, so saving settings or weights here does
+  // not write this copy back over it on every device.
+  useSyncRefresh(["trackerDays", "trackerSettings", "trackerWeights"], () => {
+    setDays(loadDays());
+    setSettings(loadSettings());
+    setWeights(loadWeights());
+  });
 
   const reloadTimes = () => {
     loadPrayerDay().then(setPrayer).catch(() => setPrayer({ hasLocation: false, times: null, next: null }));
