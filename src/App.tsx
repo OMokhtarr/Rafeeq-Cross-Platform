@@ -59,6 +59,8 @@ import { AuthProvider } from "./app/core/context/AuthContext";
 import { completeOAuthRedirect } from "./app/core/services/auth/auth.service";
 import { isAccountsOn } from "./app/core/services/auth/accounts-switch";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
+import { SyncProvider } from "./app/core/context/SyncContext";
+import { installWriteHook } from "./app/core/services/sync/local-changes";
 import ProNote from "./app/features/subscription/ProNote";
 import SignInSheet from "./app/features/account/SignInSheet";
 
@@ -77,6 +79,9 @@ import SignInSheet from "./app/features/account/SignInSheet";
 // uses no IonModal/IonAlert/IonActionSheet/IonMenu, and its own sheets close
 // through the overlay registry.
 setupIonicReact({ mode: "md", hardwareBackButton: false });
+
+// Records which synced store each write touches, so Pro sync knows what changed.
+installWriteHook();
 
 // Main tab destinations that must never go back: disable the edge swipe-back
 // gesture while one of them is the active route, so an accidental edge swipe
@@ -295,27 +300,29 @@ const App: React.FC = () => {
           <PlaybackProvider>
             <AuthProvider>
               <SubscriptionProvider>
-                <IonApp>
-                  {preloading && preloadProgress.done < preloadProgress.total && (
-                    <div className="global-preload-bar">
-                      <div
-                        className="global-preload-fill"
-                        style={{
-                          width: `${
-                            (preloadProgress.done / preloadProgress.total) * 100
-                          }%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                  <IonReactRouter>
-                    <TourProvider initial={onboarding}>
-                      <MainRouterOutlet />
-                    </TourProvider>
-                    <ProNote />
-                    <SignInSheet />
-                  </IonReactRouter>
-                </IonApp>
+                <SyncProvider>
+                  <IonApp>
+                    {preloading && preloadProgress.done < preloadProgress.total && (
+                      <div className="global-preload-bar">
+                        <div
+                          className="global-preload-fill"
+                          style={{
+                            width: `${
+                              (preloadProgress.done / preloadProgress.total) * 100
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                    <IonReactRouter>
+                      <TourProvider initial={onboarding}>
+                        <MainRouterOutlet />
+                      </TourProvider>
+                      <ProNote />
+                      <SignInSheet />
+                    </IonReactRouter>
+                  </IonApp>
+                </SyncProvider>
               </SubscriptionProvider>
             </AuthProvider>
           </PlaybackProvider>

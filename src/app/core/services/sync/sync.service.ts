@@ -23,6 +23,7 @@
 import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
 import { SYNC_COLLECTIONS, type SyncCollection } from "./collections";
+import { SYNC_APPLIED_EVENT } from "./sync-events";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
 import { mergeFreezePool, mergeHifzPlan, mergeVersioned, stableStringify } from "./merge";
 import { pullSince, push, SyncOfflineError } from "./sync-remote";
@@ -33,8 +34,7 @@ export type SyncResult =
   | { status: "offline" }
   | { status: "error"; message: string };
 
-/** Dispatched on `window` with `detail: { collections: string[] }` after remote changes are written locally. */
-export const SYNC_APPLIED_EVENT = "rafeeq:sync-applied";
+export { SYNC_APPLIED_EVENT };
 
 const STATE_KEY = "rafiq_sync_state_v1";
 const EPOCH = new Date(0).toISOString();
@@ -53,6 +53,8 @@ interface SyncState {
   firstMerge: boolean;
   /** Rows the server refused, as `rejectionKey`; not pushed again until the item changes. */
   rejected: KeyedJson;
+  /** When the last run for this user finished; null before the first one. */
+  lastSyncedAt: string | null;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -71,11 +73,17 @@ function loadState(userId: string): SyncState {
   } catch {
     saved = null;
   }
-  if (!isSavedState(saved, userId)) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected: {} };
+  if (!isSavedState(saved, userId)) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected: {}, lastSyncedAt: null };
   const rejected = isKeyedJson(saved.rejected) ? saved.rejected : {};
   // First merge ignores the old snapshot and pulls everything.
-  if (saved.firstMerge) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected };
-  return { ...saved, rejected };
+  const lastSyncedAt = typeof saved.lastSyncedAt === "string" ? saved.lastSyncedAt : null;
+  if (saved.firstMerge) return { userId, cursor: null, snapshot: {}, firstMerge: true, rejected, lastSyncedAt };
+  return { ...saved, rejected, lastSyncedAt };
+}
+
+/** When the last sync for `userId` finished, or null (never synced, another user's state, or after a reset). */
+export function getLastSyncedAt(userId: string): string | null {
+  return loadState(userId).lastSyncedAt;
 }
 
 function isSavedState(v: unknown, userId: string): v is SyncState {
@@ -96,7 +104,7 @@ export function resetSyncState(): void {
   resets++;
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY) ?? "null");
-    if (isRecord(saved)) localStorage.setItem(STATE_KEY, JSON.stringify({ ...saved, firstMerge: true }));
+    if (isRecord(saved)) localStorage.setItem(STATE_KEY, JSON.stringify({ ...saved, firstMerge: true, lastSyncedAt: null }));
   } catch {
     try {
       localStorage.removeItem(STATE_KEY);
@@ -467,6 +475,7 @@ async function run(userId: string): Promise<SyncResult> {
     // collection has merged once; repeating it is harmless.
     firstMerge: resets !== resetsAtStart || (state.firstMerge && incomplete),
     rejected,
+    lastSyncedAt: resets !== resetsAtStart ? null : new Date().toISOString(),
   };
   localStorage.setItem(STATE_KEY, JSON.stringify(next));
   for (const r of done) if (!r.unsettled) clearDirty(r.c.id, runStart);

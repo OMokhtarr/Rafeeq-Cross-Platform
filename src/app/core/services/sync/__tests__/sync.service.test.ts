@@ -3,7 +3,7 @@ import { idb } from "../../storage/idb.service";
 import { loadPlanStrict, savePlanStrict, type HifzPlan } from "../../../../features/hifz/hifz.service";
 import { installWriteHook, suppressHook } from "../local-changes";
 import { pullSince, push, SyncOfflineError } from "../sync-remote";
-import { resetSyncState, syncNow, SYNC_APPLIED_EVENT } from "../sync.service";
+import { getLastSyncedAt, resetSyncState, syncNow, SYNC_APPLIED_EVENT } from "../sync.service";
 import type { SyncRow } from "../types";
 
 jest.mock("../sync-remote", () => ({
@@ -396,6 +396,27 @@ describe("first merge again", () => {
 
     expect(cloud.get("notes/b")?.deleted).toBe(false);
     expect(localNoteIds()).toEqual(["a", "b"]);
+  });
+});
+
+describe("lastSyncedAt", () => {
+  it("is set by a run, kept for the same user, and cleared by a user switch and by resetSyncState", async () => {
+    expect(getLastSyncedAt("u1")).toBeNull();
+    await syncNow("u1");
+    const first = getLastSyncedAt("u1");
+    expect(Number.isNaN(Date.parse(first as string))).toBe(false);
+    expect(getLastSyncedAt("u2")).toBeNull();
+
+    resetSyncState();
+    expect(getLastSyncedAt("u1")).toBeNull();
+
+    await syncNow("u1");
+    expect(getLastSyncedAt("u1")).not.toBeNull();
+    (pullSince as jest.Mock).mockRejectedValueOnce(new SyncOfflineError());
+    await syncNow("u1");
+    expect(getLastSyncedAt("u1")).not.toBeNull();
+    await syncNow("u2");
+    expect(getLastSyncedAt("u1")).toBeNull();
   });
 });
 

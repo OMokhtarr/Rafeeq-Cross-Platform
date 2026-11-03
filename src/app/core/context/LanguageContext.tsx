@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { STRINGS, Lang, AppStrings } from "../i18n/strings";
 import { useWidgetLanguage } from "../hooks/useWidgetTheme";
+import { SYNC_APPLIED_EVENT } from "../services/sync/sync-events";
 
 interface LanguageCtx {
   lang: Lang;
@@ -41,6 +42,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.setItem(STORAGE_KEY, lang);
     } catch (_) {}
   }, [lang]);
+
+  // Cloud sync wrote a newer value: show it.
+  useEffect(() => {
+    const onApplied = (e: Event) => {
+      const { collections } = (e as CustomEvent<{ collections: string[] }>).detail;
+      if (collections.includes("lang")) setLangState(loadLang());
+    };
+    window.addEventListener(SYNC_APPLIED_EVENT, onApplied);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, onApplied);
+  }, []);
 
   const setLang = useCallback((l: Lang) => setLangState(l), []);
   const toggle = useCallback(() => setLangState(l => (l === "ar" ? "en" : "ar")), []);
