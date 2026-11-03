@@ -284,7 +284,7 @@ describe("push", () => {
     for (const chunk of chunks) expect(JSON.stringify(chunk).length).toBeLessThanOrEqual(2 * 1024 * 1024);
   });
 
-  it("sends a row that would overflow the chunk in the next one, in order", async () => {
+  it("keeps rows that fit under the byte limit in one chunk, in order", async () => {
     mockRpc.mockResolvedValue({ data: [], error: null });
 
     await push([localRow("a", "x".repeat(500000)), localRow("small"), localRow("b", "x".repeat(500000))]);
