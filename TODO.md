@@ -82,7 +82,18 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       `<LEGAL_BASE_URL>/delete-account.html`), App access with the reviewer
       account, and re-run the content rating if not done for Pro.
 - [ ] **Supabase Free to Pro** before real subscribers' data accumulates (Free
-      has no backups).
+      has no backups). This now matters most for Pro sync: `sync_items` holds
+      subscribers' notes, bookmarks, progress and settings.
+- [ ] **Device check: sync, two phones.** Same Pro account on both. Edit the
+      same note offline on each, reconnect, sync, and confirm both phones end
+      with one copy holding the later edit.
+- [ ] **Device check: backup import on a synced phone.** Import a backup and
+      confirm nothing disappears (locally or on the other phone); the import
+      only adds and overwrites.
+- [ ] **Data safety for synced data.** In the same redo: App activity → user
+      content (notes) and app interactions (Hifz progress, tracker) now
+      collected for Pro subscribers; app functionality; encrypted in transit;
+      deletable (`PLAY-CONSOLE-PREP.md` §2).
 - [ ] **Device check: offline launch.** Sign in, wait until the access token
       has expired (over an hour), then launch offline: the app must show the
       account as signed in and keep Pro.

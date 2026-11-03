@@ -183,7 +183,12 @@ email, name and provider; on iOS Apple's refresh token is kept server-side
 (`apple_tokens`) only so deletion can revoke it. Without the switch the app
 has no accounts, and the token broker only fetches machine-to-machine tokens
 for the content API. Notes, bookmarks, and the Hifz streak are local-only
-either way (no sync exists yet).
+unless the user is a signed-in Rafeeq Pro subscriber: Pro sync (builds with
+`REACT_APP_ACCOUNTS=on`) copies the backup categories to Supabase `sync_items`
+(notes, bookmarks, hidden verses, Hifz plans/progress/streak days/freezes,
+recitation history, worship tracker, favourite azkar, quiz range sets, and
+settings such as theme, language, last page and recent searches). Never synced:
+the Pro/account/onboarding state, downloaded tafsirs, content caches. See §2.
 
 ---
 
@@ -233,10 +238,19 @@ switch is off).
   (confirm against Play's current rule when filling the form; answer Yes if in
   doubt) · **Optional** · Purpose **App functionality** (subscription status).
 
-### App activity → Other user-generated content
-- Notes, bookmarks, and the Hifz streak stay on the device and are never
-  transmitted, so under Play's definition this is **not collected**.
-- Collected: **No**
+### App activity → Other user-generated content, App interactions
+- **Applies only to the build with `REACT_APP_ACCOUNTS=on`, and only to Rafeeq
+  Pro subscribers** (redo the form before it ships). The currently submitted
+  form says "No", which is right only while accounts are off.
+- **Other user-generated content** (notes) and **App interactions** (Hifz
+  progress and streaks, recitation history, worship tracker, bookmarks, quiz
+  range sets, settings): Collected **Yes** · Shared **No** (held by Supabase as
+  our service provider) · Processed ephemerally **No** · **Optional** (Pro
+  sync only) · Purpose **App functionality**.
+- Encrypted in transit **Yes**. Deletable **Yes**: removed with Account →
+  Delete account (kept after Pro ends, until then).
+- Without a Pro subscription nothing is transmitted, so a build with accounts
+  off collects none of this.
 
 ### Not collected
 No location, contacts, photos, files, financial info, health data, or advertising
@@ -249,8 +263,8 @@ on-device (IndexedDB + Capacitor Preferences), signed in or not.
 - Data encrypted in transit: **Yes** (all endpoints HTTPS/WSS)
 - Users can request data deletion: **Yes** — in the app (Account → Delete
   account) and on the web at the deletion URL in §4. Uninstalling or clearing
-  storage removes the on-device data. Deleting the account removes the account
-  and the RevenueCat record.
+  storage removes the on-device data. Deleting the account removes the account,
+  the synced data (`sync_items`) and the RevenueCat record.
 - **Delete-account URL** (Play Console → App content → Data safety → "Add a
   link that users can use to request account and data deletion"):
   `<LEGAL_BASE_URL>/delete-account.html`.
@@ -736,7 +750,16 @@ this is owner work in dashboards; the code is merged and dark behind
    registered in the Android project (see the stale-plugins gotcha: until
    synced, ALL npm plugins can fail to register).
 8. **Supabase plan:** move the prod project from Free to **Pro** before real
-   subscribers' data accumulates — the Free plan has no backups.
+   subscribers' data accumulates — the Free plan has no backups, and
+   `sync_items` now holds subscribers' notes and progress.
+9. **Privacy pages:** `privacy.html` / `privacy-ar.html` and
+   `delete-account.html` / `delete-account-ar.html` on `gh-pages` now describe
+   synced data (what syncs, Pro only, kept after Pro ends until Delete account,
+   merge behaviour). Still replace `[REGION]` before pushing.
+10. **Device checks for sync** (two phones, same Pro account): edit one note
+    offline on each, reconnect, sync, and confirm the later edit wins on both.
+    Then import a backup on a synced phone and confirm nothing disappears.
+    Listed in `TODO.md`.
 
 ### Release order
 1. Supabase prod project, Google (and Apple, when ready) set up as above.
