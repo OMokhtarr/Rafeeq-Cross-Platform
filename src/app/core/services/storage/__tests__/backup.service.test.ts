@@ -1,4 +1,5 @@
 import { createBackup, parseBackup, restoreBackup } from "../backup.service";
+import { PRESETS_KEY } from "../../../../features/quiz/services/quiz-presets.service";
 import { resetSyncState } from "../../sync/sync.service";
 import { freezeCount, MAX_FREEZES } from "../streak-freeze.service";
 
@@ -57,6 +58,18 @@ describe("restoring a backup", () => {
     localStorage.setItem("rafeeq.tracker.since", "2026-03-01");
     const json = JSON.stringify(await createBackup());
     await restoreBackup(parseBackup(json));
+    expect(resetSyncState).toHaveBeenCalledTimes(1);
+  });
+
+  it("still resets sync state when a step fails after the stores were overwritten", async () => {
+    const data = new Proxy({ "rafeeq.tracker.since": "2026-03-01" } as Record<string, string>, {
+      get: (target, key) => {
+        if (key === PRESETS_KEY) throw new Error("boom");
+        return Reflect.get(target, key);
+      },
+    });
+    await expect(restoreBackup({ version: 1, exportedAt: "", data } as never)).rejects.toThrow("boom");
+    expect(localStorage.getItem("rafeeq.tracker.since")).toBe("2026-03-01");
     expect(resetSyncState).toHaveBeenCalledTimes(1);
   });
 });

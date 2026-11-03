@@ -246,34 +246,38 @@ export function parseBackup(json: string): BackupFile {
  * from a newer minor version still restores what this build understands.
  */
 export async function restoreBackup(backup: BackupFile): Promise<void> {
-  const known = new Set<string>(BACKED_UP_KEYS);
+  // Once the first write has landed the device differs from its sync snapshot, so
+  // the reset below must run even if a later step throws.
+  try {
+    const known = new Set<string>(BACKED_UP_KEYS);
 
-  for (const [key, value] of Object.entries(backup.data)) {
-    if (!known.has(key) || typeof value !== "string") continue;
-    try {
-      localStorage.setItem(key, value);
-    } catch (err) {
-      console.warn(`[backup] could not restore ${key}:`, err);
+    for (const [key, value] of Object.entries(backup.data)) {
+      if (!known.has(key) || typeof value !== "string") continue;
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {
+        console.warn(`[backup] could not restore ${key}:`, err);
+      }
     }
-  }
 
-  // Hifz stores are dual-written, so push the restored copies through the async
-  // writers too — otherwise Android/iOS would keep reading the old plan.
-  await restoreHifzStores(backup.data);
+    // Hifz stores are dual-written, so push the restored copies through the async
+    // writers too — otherwise Android/iOS would keep reading the old plan.
+    await restoreHifzStores(backup.data);
 
-  const presets = backup.data[PRESETS_KEY];
-  if (typeof presets === "string") {
-    try {
-      await Preferences.set({ key: PRESETS_KEY, value: presets });
-    } catch (err) {
-      console.warn("[backup] could not restore quiz range sets:", err);
+    const presets = backup.data[PRESETS_KEY];
+    if (typeof presets === "string") {
+      try {
+        await Preferences.set({ key: PRESETS_KEY, value: presets });
+      } catch (err) {
+        console.warn("[backup] could not restore quiz range sets:", err);
+      }
     }
+  } finally {
+    // The file is not a sync change: make the next sync a first merge so items the
+    // file lacks come back from the cloud instead of becoming deletes. Done even
+    // when sync is off, since a lapsed-Pro device keeps its snapshot.
+    resetSyncState();
   }
-
-  // The file is not a sync change: make the next sync a first merge so items the
-  // file lacks come back from the cloud instead of becoming deletes. Done even
-  // when sync is off, since a lapsed-Pro device keeps its snapshot.
-  resetSyncState();
 }
 
 async function restoreHifzStores(data: Record<string, string>): Promise<void> {
