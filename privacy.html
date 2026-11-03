@@ -73,7 +73,7 @@
   <body>
     <h1>Privacy Policy</h1>
     <p class="updated">
-      <strong>Last updated:</strong> 29 October 2026 &nbsp;·&nbsp;
+      <strong>Last updated:</strong> 4 November 2026 &nbsp;·&nbsp;
       <strong>Effective:</strong> 29 October 2026
     </p>
 
@@ -109,7 +109,9 @@
     <h2>1. Data stored on your device</h2>
     <p>
       The following are stored locally on your device and are not transmitted to
-      us or to anyone else:
+      us or to anyone else, except that if you are a signed-in Rafeeq Pro
+      subscriber, a copy of your notes, bookmarks, memorisation progress and
+      settings is also kept in your account (section 7):
     </p>
     <ul>
       <li>App preferences (language, night mode, mushaf style, font size)</li>
@@ -284,8 +286,10 @@
       <li>
         <strong>Nothing sensitive is processed by default.</strong> Reading,
         memorisation, quiz, azkar, and worship tracker activity (including the
-        prayers and fasts you record) never leave your device at all, so no
-        consent is needed for them — there is no collection to consent to.
+        prayers and fasts you record) stay on your device unless you are a
+        signed-in Rafeeq Pro subscriber, in which case a copy is kept in your
+        account so your phones stay in step (section 7). For everyone else
+        nothing leaves the device, so there is no collection to consent to.
       </li>
       <li>
         <strong>Recite Mode is strictly opt-in.</strong> It is the only feature
@@ -340,10 +344,34 @@
         name from your sign-in provider, and the sign-in method. On iPhone,
         when you sign in with Apple, we also keep the token Apple issues for
         the app, only so that it can be revoked if you delete your account.
-        Notes, bookmarks, and other personal data are not part of your account
-        today; they stay on your device (section 1). If we add the option to
-        sync data to your account, this policy will say exactly what is
-        synced before it takes effect.
+        If you are not a Rafeeq Pro subscriber, your notes, bookmarks, and
+        other personal data are not part of your account; they stay on your
+        device (section 1). Rafeeq Pro subscribers also have synced data,
+        described next.
+      </li>
+      <li>
+        <strong>What syncs (Rafeeq Pro only).</strong> While you are signed in
+        and subscribed to Rafeeq Pro, the App keeps a copy of the following in
+        your account: notes; bookmarks; hidden verses; memorisation (Hifz)
+        plans, progress, session counts, streak days, and freezes; recitation
+        history; worship tracker entries and settings; favourite azkar; saved
+        quiz range sets; and settings such as theme, language, your last page,
+        and recent searches. This is the same set as the backup file in
+        section 12. It does not include your subscription, your location,
+        downloaded tafsirs or audio, cached Quran content, or the App's own
+        bookkeeping. It is sent over an encrypted connection, only for the App
+        to restore and combine your data across your phones, and used for
+        nothing else.
+      </li>
+      <li>
+        <strong>Who syncs.</strong> Only signed-in Rafeeq Pro subscribers.
+        Without a subscription, or when signed out, nothing is synced.
+      </li>
+      <li>
+        <strong>How phones are combined.</strong> When you sign in on a new
+        phone, the data on the phone and the data in your account are combined;
+        if the same item was changed on two phones, the most recent edit wins;
+        and the first sync deletes nothing.
       </li>
       <li>
         <strong>Where it is held.</strong> Accounts are run by
@@ -353,7 +381,9 @@
       </li>
       <li>
         <strong>How long.</strong> Until you delete your account. Signing out
-        does not delete it.
+        does not delete it. If your Rafeeq Pro subscription ends, syncing
+        stops but the synced data stays in your account until you delete your
+        account.
       </li>
       <li>
         <strong>Deleting it.</strong> In the App, Account → Delete account, or
@@ -366,8 +396,9 @@
     <p>
       These are every external service the App contacts, what each one is for,
       and what it receives. Each operates under its own privacy policy, linked
-      below. None of them is given access to your notes, bookmarks, or
-      memorisation data, because that data stays on your device.
+      below. Apart from Supabase, which holds the synced data described in
+      section 7 for Rafeeq Pro subscribers, none of them is given access to
+      your notes, bookmarks, or memorisation data.
     </p>
     <table>
       <thead>
@@ -516,7 +547,8 @@
       States, and Cloudflare serves requests from data centres worldwide, so if
       you use Recite Mode outside the US your audio is processed there, and a
       Rafeeq Pro purchase record is held there. Your Rafeeq account, if you
-      create one, is held by Supabase in the [REGION] region. The safeguards
+      create one, and the data synced to it for Rafeeq Pro subscribers, is held by
+      Supabase in the [REGION] region. The safeguards
       that apply to audio:
       audio travels only over an encrypted connection (WSS), is transcribed in
       the moment and never stored by us, is not linked to your account (it is
@@ -559,7 +591,8 @@
         Quran content are held in the App's private storage area, which Android
         isolates from other apps and encrypts at the OS level on any device with
         device encryption enabled. The only user data we hold on a server is
-        your Rafeeq account (section 7), if you create one, which is held by
+        your Rafeeq account (section 7), if you create one, plus the synced
+        data of Rafeeq Pro subscribers, which is held by
         Supabase, accessible only to us and our hosting provider (Supabase), and encrypted in transit.
       </li>
       <li>
@@ -585,8 +618,9 @@
 
     <h2>12. Backing up your data</h2>
     <p>
-      Your notes and progress are not stored in your account, so the App gives
-      you a file for backing them up. In
+      Unless you are a Rafeeq Pro subscriber with sync (section 7), your notes
+      and progress are not stored in your account, so the App gives you a file
+      for backing them up. In
       <strong>Account → Backup</strong>, "Export My Data" writes your data
       to a JSON file you control; "Restore From File"
       loads it back on another device. The file stays wherever you save it — the
@@ -600,13 +634,19 @@
       subscription, which comes back when you sign in to your account on the
       new device (or with "Restore purchases").
     </p>
+    <p>
+      If you restore a backup on a phone that syncs, it adds to and overwrites
+      what is there but never deletes anything, and the result then syncs to
+      your account.
+    </p>
 
     <h2>13. Accessing, correcting, and deleting your data</h2>
     <p>
       <strong>Access and correction.</strong> Everything the App holds about you
       is on your device and directly visible in the App — your notes, bookmarks,
       memorisation progress, and streaks can be read, edited, or removed
-      individually at any time in the App itself. "Export My Data" in
+      individually at any time in the App itself. For Rafeeq Pro subscribers,
+      edits and removals sync to your account. "Export My Data" in
       <strong>Account → Backup</strong> gives you the whole set as a portable
       file.
     </p>
@@ -614,7 +654,9 @@
       <strong>Deletion.</strong> Uninstall the App, or clear its storage from
       Android Settings → Apps → Rafeeq → Storage. Deletion is immediate and
       permanent — for the data held on your device there is no server-side
-      copy and no request to send us. If you want to keep your notes and streaks first,
+      copy and no request to send us. If you synced it as a Rafeeq Pro
+      subscriber, uninstalling does not remove the copy in your account; delete
+      your account to remove it. If you want to keep your notes and streaks first,
       export them from <strong>Account → Backup</strong> before uninstalling.
     </p>
     <p>
@@ -623,8 +665,9 @@
       <strong>Account → Delete account</strong>, or email
       <a href="mailto:or.mokhtar@gmail.com">or.mokhtar@gmail.com</a> from the
       address on the account and we will delete it within 30 days. Deleting it
-      permanently removes your account (including your email address and name)
-      and your RevenueCat subscription record, and, on iPhone, revokes the
+      permanently removes your account (including your email address and name),
+      everything synced to it (notes, bookmarks, memorisation progress, worship
+      tracker, and settings), and your RevenueCat subscription record, and, on iPhone, revokes the
       app's Sign in with Apple grant. If you signed in with Apple through the
       Android app, we hold no Apple token for you; you can remove Rafeeq from
       your Apple ID settings (Sign in with Apple) yourself. Full steps are on
@@ -644,9 +687,11 @@
       <strong>Quran Foundation accounts.</strong> Rafeeq does not use Quran
       Foundation user accounts and requests no OAuth permission from you, so
       there is no Quran Foundation authorisation to revoke. Your notes,
-      bookmarks, and other content are not held on any server, so apart from
-      your Rafeeq account and subscription record described above there is
-      nothing else for us to delete on request.
+      bookmarks, and other content are not held on any server unless you are a
+      Rafeeq Pro subscriber with sync, in which case they are removed with your
+      account. Apart from your Rafeeq account, its synced data and your
+      subscription record described above, there is nothing else for us to
+      delete on request.
     </div>
 
     <h2>14. Children's privacy</h2>
