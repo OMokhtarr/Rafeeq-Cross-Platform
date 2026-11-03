@@ -256,8 +256,10 @@ switch is off).
 No location, contacts, photos, files, financial info, health data, or advertising
 identifiers. No analytics or ad SDKs are present. (This changes with the first
 build that carries a RevenueCat key: purchase history and an app-user id go
-to RevenueCat — see §9.) All reading progress, bookmarks, and cached audio stay
-on-device (IndexedDB + Capacitor Preferences), signed in or not.
+to RevenueCat — see §9.) Reading progress, bookmarks and notes stay on-device
+(IndexedDB + Capacitor Preferences) unless the user is a signed-in Pro
+subscriber, whose synced data is declared under App activity above. Cached
+audio and other content caches are never synced.
 
 ### Security practices
 - Data encrypted in transit: **Yes** (all endpoints HTTPS/WSS)
@@ -365,7 +367,9 @@ Supabase → Authentication → Users if you only have the email and want the id
 
 **Data deletion (as distinct from account deletion):** on-device data
 (notes, bookmarks, streaks, settings) is still removed by uninstalling or
-clearing storage, which the privacy policy states in section 13.
+clearing storage, which the privacy policy states in section 13. A Pro
+subscriber's synced copy is not removed by uninstalling; only Delete account
+removes it.
 
 For the full design and task history of the accounts work, see the Accounts
 Part 1 plan (`docs/superpowers/plans/2026-10-29-accounts-part1.md`) and the
