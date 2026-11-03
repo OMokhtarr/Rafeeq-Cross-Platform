@@ -166,7 +166,7 @@ const Account: React.FC = () => {
     setRestoring(true);
     setBackupError(null);
     try {
-      await restoreBackup(parseBackup(pendingRestore.json));
+      await restoreBackup(parseBackup(pendingRestore.json), { keepLocal: syncActive });
       setModal(null);
       setPendingRestore(null);
       await loadLocalData();
@@ -184,7 +184,7 @@ const Account: React.FC = () => {
     } finally {
       setRestoring(false);
     }
-  }, [pendingRestore, lang, loadLocalData]);
+  }, [pendingRestore, lang, loadLocalData, syncActive]);
 
   const formatDate = (iso: string) => {
     try {

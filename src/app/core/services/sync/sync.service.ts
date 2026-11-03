@@ -29,7 +29,7 @@
 
 import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
-import { ARCHIVE_PREFIX, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
+import { ARCHIVE_PREFIX, OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
 import { SYNC_APPLIED_EVENT } from "./sync-events";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
 import { mergeFreezePool, mergeHifzPlan, mergeVersioned, stableStringify } from "./merge";
@@ -46,8 +46,6 @@ export { SYNC_APPLIED_EVENT };
 const STATE_KEY = "rafiq_sync_state_v1";
 const EPOCH = new Date(0).toISOString();
 const CURRENT_PLAN = "current";
-/** Item fields holding the item's own edit time, for collections that have one. */
-const OWN_TIME: Record<string, string> = { notes: "updatedAt", recitationHistory: "recordedAt" };
 /** The app's own change events, and the collections whose arrival should fire them. */
 const DISPLAY_EVENTS: [string, string[]][] = [
   ["rafiq-settings-changed", ["settings"]],

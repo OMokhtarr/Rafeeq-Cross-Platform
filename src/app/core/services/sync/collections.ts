@@ -43,6 +43,9 @@ export interface SyncCollection {
   validate(value: unknown, key: string): boolean;
 }
 
+/** Item fields holding the item's own edit time, for collections that have one. */
+export const OWN_TIME: Record<string, string> = { notes: "updatedAt", recitationHistory: "recordedAt" };
+
 /** Item key of an "object" collection's single value. */
 const VALUE = "value";
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;

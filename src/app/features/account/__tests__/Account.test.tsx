@@ -4,7 +4,7 @@ import Account from "../Account";
 import { useSync } from "../../../core/context/SyncContext";
 import { loadPlanAsync } from "../../hifz/hifz.service";
 import { fetchAllNotes } from "../../../core/services/storage/notes.service";
-import { parseBackup, readBackupFile, summarizeBackup } from "../../../core/services/storage/backup.service";
+import { parseBackup, readBackupFile, restoreBackup, summarizeBackup } from "../../../core/services/storage/backup.service";
 import { STRINGS } from "../../../core/i18n/strings";
 
 jest.mock("../../../core/context/SyncContext", () => ({ useSync: jest.fn() }));
@@ -84,4 +84,13 @@ it("shows no extra line when sync is not active", async () => {
   await openRestoreConfirm(false);
   expect(document.body.textContent).toContain("سيحل محتوى هذا الملف");
   expect(document.body.textContent).not.toContain(KEEP_NOTE);
+});
+
+it.each([true, false])("asks the restore to keep local items only while syncing (active: %s)", async (active) => {
+  await openRestoreConfirm(active);
+  const confirm = document.body.querySelector(".amod-request-submit") as HTMLButtonElement;
+
+  await act(async () => confirm.click());
+
+  expect(restoreBackup).toHaveBeenCalledWith(expect.anything(), { keepLocal: active });
 });
