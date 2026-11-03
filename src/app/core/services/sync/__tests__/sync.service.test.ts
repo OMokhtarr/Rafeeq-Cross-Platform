@@ -607,6 +607,62 @@ describe("first merge again", () => {
     warn.mockRestore();
   });
 
+  it("notes that recover from corruption merge: no tombstones, and the cloud's notes come back", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    setNotes(note("a"), note("b"), note("c"));
+    await syncNow("u1");
+    expect(cloudLive("notes")).toEqual(["a", "b", "c"]);
+
+    localStorage.setItem(NOTES, "{corrupt");
+    expect((await syncNow("u1")).status).toBe("error");
+    expect(cloudLive("notes")).toEqual(["a", "b", "c"]);
+
+    // The app reads bad JSON as [], so the next added note overwrites the store.
+    setNotes(note("d"));
+    (push as jest.Mock).mockClear();
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(cloudRows("notes").filter((r) => r.deleted)).toEqual([]);
+    expect(cloudLive("notes")).toEqual(["a", "b", "c", "d"]);
+    expect(localNoteIds()).toEqual(["a", "b", "c", "d"]);
+    warn.mockRestore();
+  });
+
+  it("a Hifz plan that recovers from corruption archives a different plan instead of replacing it", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    await savePlanStrict(plan(true));
+    await syncNow("u1");
+    expect(cloudLive("hifzPlan")).toEqual(["current"]);
+
+    devices.A.idb.set("plan", { id: "plan", data: "{corrupt" });
+    expect((await syncNow("u1")).status).toBe("error");
+
+    await savePlanStrict({ ...plan(false), createdAt: "2026-10-05T08:00:00.000Z" } as HifzPlan);
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(cloudLive("hifzPlan")).toEqual(["archive:2026-10-01T08:00:00.000Z", "current"]);
+    expect((cloud.get("hifzPlan/current")?.value as HifzPlan).createdAt).toBe("2026-10-05T08:00:00.000Z");
+    warn.mockRestore();
+  });
+
+  it("a like-for-like repair ends with no tombstones, and a later delete propagates", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    setNotes(note("a"), note("b"));
+    await syncNow("u1");
+
+    const saved = localStorage.getItem(NOTES) as string;
+    localStorage.setItem(NOTES, "{corrupt");
+    expect((await syncNow("u1")).status).toBe("error");
+    localStorage.setItem(NOTES, saved);
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(cloudRows("notes").filter((r) => r.deleted)).toEqual([]);
+
+    // Back in normal merging: a plain delete goes up.
+    setNotes(note("b"));
+    await syncNow("u1");
+    expect(cloud.get("notes/a")?.deleted).toBe(true);
+    expect(cloudLive("notes")).toEqual(["b"]);
+    warn.mockRestore();
+  });
+
   it("a reset during a run still makes the next run a first merge", async () => {
     setNotes(note("a"), note("b"));
     await syncNow("u1");

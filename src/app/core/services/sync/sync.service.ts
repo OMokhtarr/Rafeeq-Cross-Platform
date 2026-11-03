@@ -483,12 +483,16 @@ async function run(userId: string): Promise<SyncResult> {
   const runStart = new Date().toISOString();
   const state = loadState(userId);
   const failures: string[] = [];
+  const unreadable = new Set<string>();
 
   const runs: CollectionRun[] = [];
   for (const c of SYNC_COLLECTIONS) {
     const r = await openRun(c, state);
     if (r) runs.push(r);
-    else failures.push(c.id);
+    else {
+      failures.push(c.id);
+      unreadable.add(c.id);
+    }
   }
 
   // Read first: a broken store must not force a full pull on every run, only the
@@ -532,7 +536,9 @@ async function run(userId: string): Promise<SyncResult> {
     userId,
     cursor: pulled.cursor,
     snapshot,
-    merged: wasReset ? [] : [...new Set([...state.merged, ...doneIds])],
+    // An unreadable store leaves `merged`: it recovers as a first merge, so the
+    // notes it lost are not read as deletes and a different plan is archived.
+    merged: wasReset ? [] : [...new Set([...state.merged, ...doneIds])].filter((id) => !unreadable.has(id)),
     behind: SYNC_COLLECTIONS.map((c) => c.id).filter((id) => !doneIds.includes(id)),
     rejected,
     lastSyncedAt: wasReset ? null : new Date().toISOString(),
