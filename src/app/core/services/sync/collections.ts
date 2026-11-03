@@ -41,6 +41,8 @@ export interface SyncCollection {
   write(items: Record<string, unknown>): Promise<void>;
   /** Minimum shape the store's own loader accepts. `key` is the item key. */
   validate(value: unknown, key: string): boolean;
+  /** Edits are stamped and go up with the next run, but do not schedule one. */
+  passive?: boolean;
 }
 
 /** Item fields holding the item's own edit time, for collections that have one. */
@@ -375,7 +377,8 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
   singleValue("settings", "object", "rafiq_settings_v1", "json", isRecord),
   singleValue("theme", "object", "rafiq_theme_v1", "string", isString),
   singleValue("lang", "object", "rafiq_lang_v1", "string", isString),
-  singleValue("lastPage", "object", "rafiq_last_page_v1", "string", isPageNumber),
+  // Saved on every page turn; reading slowly must not mean a full sync per page.
+  { ...singleValue("lastPage", "object", "rafiq_last_page_v1", "string", isPageNumber), passive: true },
   singleValue("searchRecents", "object", "rafiq_search_recents_v1", "json", isArray),
   singleValue("trackerSettings", "object", "rafeeq.tracker.settings", "json", isRecord),
   // The engine keeps the earliest date on merge (Task 6).

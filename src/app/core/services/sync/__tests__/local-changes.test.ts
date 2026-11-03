@@ -28,6 +28,20 @@ describe("write hook", () => {
     expect(Object.keys(JSON.parse(localStorage.getItem("rafiq_sync_dirty_v1")!))).toEqual(["notes"]);
   });
 
+  it("stamps the last page without scheduling a sync, so reading does not trigger runs", () => {
+    const cb = jest.fn();
+    const off = onLocalChange(cb);
+
+    localStorage.setItem("rafiq_last_page_v1", "7");
+
+    expect(dirtyTime("lastPage")).not.toBeNull();
+    expect(cb).not.toHaveBeenCalled();
+
+    localStorage.setItem("rafiq_notes_v1", "[]");
+    expect(cb).toHaveBeenCalledTimes(1);
+    off();
+  });
+
   it("counts removeItem as an edit", () => {
     localStorage.setItem("rafiq_bookmarks_v1", "{}");
     localStorage.removeItem("rafiq_sync_dirty_v1");

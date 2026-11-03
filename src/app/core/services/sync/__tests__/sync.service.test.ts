@@ -176,6 +176,17 @@ describe("first merge", () => {
   });
 });
 
+describe("the last page", () => {
+  it("goes up with the next run, on its own stamp", async () => {
+    await syncNow("u1");
+
+    localStorage.setItem("rafiq_last_page_v1", "42");
+    await syncNow("u1");
+
+    expect(cloud.get("lastPage/value")?.value).toBe("42");
+  });
+});
+
 describe("display events", () => {
   it("fires the app's own change events only when their collections were applied", async () => {
     const heard: string[] = [];

@@ -60,6 +60,7 @@ function record(key: string, id = collectionForStorageKey(key)?.id): void {
     const prev = times[id] ? Date.parse(times[id]) : -Infinity;
     times[id] = new Date(Math.max(Date.now(), prev + 1)).toISOString();
     writeDirty(times);
+    if (collectionForStorageKey(key)?.passive) return;
     listeners.forEach((cb) => {
       try {
         cb();

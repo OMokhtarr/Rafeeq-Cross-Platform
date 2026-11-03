@@ -272,7 +272,28 @@ describe("push", () => {
     warn.mockRestore();
   });
 
-  it.each(["23514", "22001"])(
+  it("also splits chunks at 2 MB of JSON, however few rows they hold", async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null });
+    const rows = Array.from({ length: 10 }, (_, i) => localRow(`k${i}`, "x".repeat(500000)));
+
+    await push(rows);
+
+    const chunks = mockRpc.mock.calls.map((c) => c[1].items as SyncRow[]);
+    expect(chunks.map((c) => c.length)).toEqual([4, 4, 2]);
+    expect(chunks.flat().map((r) => r.item_key)).toEqual(rows.map((r) => r.item_key));
+    for (const chunk of chunks) expect(JSON.stringify(chunk).length).toBeLessThanOrEqual(2 * 1024 * 1024);
+  });
+
+  it("sends a row that would overflow the chunk in the next one, in order", async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null });
+
+    await push([localRow("a", "x".repeat(500000)), localRow("small"), localRow("b", "x".repeat(500000))]);
+
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc.mock.calls[0][1].items.map((r: SyncRow) => r.item_key)).toEqual(["a", "small", "b"]);
+  });
+
+  it.each(["23514", "22001", "22007", "22008", "23502", "22P05"])(
     "retries a chunk failing with %s one item at a time and skips the bad item",
     async (code) => {
       const warn = jest.spyOn(console, "warn").mockImplementation(() => {});

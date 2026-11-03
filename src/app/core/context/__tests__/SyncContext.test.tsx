@@ -104,6 +104,30 @@ describe("SyncProvider", () => {
     expect(latest.lastSyncedAt).toBe("2026-11-01T00:00:00.000Z");
   });
 
+  it("syncs once on sign-in, once the user appears", async () => {
+    mockAuth.current = { enabled: true, user: null };
+    await render();
+    await flush();
+    expect(sync).not.toHaveBeenCalled();
+    expect(latest.active).toBe(false);
+
+    mockAuth.current = { enabled: true, user: { id: "u1" } };
+    await render();
+    await flush();
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync).toHaveBeenCalledWith("u1");
+    expect(latest.active).toBe(true);
+    expect(latest.status).toBe("synced");
+  });
+
+  it("syncs once on a launch that is already signed in and Pro", async () => {
+    await render();
+    await flush();
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync).toHaveBeenCalledWith("u1");
+    expect(latest.status).toBe("synced");
+  });
+
   it("syncs 5 s after a local change, and three changes inside 5 s make one sync", async () => {
     await render();
     await flush();
