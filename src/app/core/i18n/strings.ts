@@ -630,6 +630,12 @@ export interface AppStrings {
     deleting: string;
     deleteFailed: string;
     deleted: string;
+    syncSynced: (when: string) => string;
+    syncJustNow: string;
+    syncSyncing: string;
+    syncOffline: string;
+    syncError: string;
+    syncKeepNote: string;
   };
 
   hifz: {
@@ -1359,13 +1365,19 @@ const ar: AppStrings = {
     sectionTitle: "الحساب",
     deleteTitle: "حذف حسابك؟",
     deleteLede: "لا يمكن التراجع عن الحذف. سيُحذف نهائياً:",
-    deleteWhat: ["حسابك في رفيق", "البيانات المخزّنة مع حسابك", "سجل اشتراكك"],
+    deleteWhat: ["حسابك في رفيق", "البيانات المتزامنة المخزّنة مع حسابك", "سجل اشتراكك"],
     deleteStoreNote:
       "حذف الحساب لا يُلغي اشتراكك في Google Play أو App Store. ألغِه من هناك حتى لا يستمر التجديد.",
     deleteKeep: "الإبقاء على الحساب",
     deleting: "جارٍ الحذف…",
     deleteFailed: "تعذّر حذف حسابك. تحقّق من الاتصال وحاول مرة أخرى.",
     deleted: "تم حذف الحساب",
+    syncSynced: (when: string) => `تمت المزامنة · ${when}`,
+    syncJustNow: "الآن",
+    syncSyncing: "جارٍ المزامنة…",
+    syncOffline: "بانتظار الاتصال",
+    syncError: "تعذّرت المزامنة، اضغط للمحاولة مرة أخرى",
+    syncKeepNote: "البيانات المتزامنة مع حسابك تبقى كما هي، والملف يُضاف إليها.",
   },
 
   hifz: {
@@ -2102,13 +2114,19 @@ const en: AppStrings = {
     sectionTitle: "Account",
     deleteTitle: "Delete your account?",
     deleteLede: "This can't be undone. It permanently deletes:",
-    deleteWhat: ["Your Rafeeq account", "Data stored with your account", "Your subscription record"],
+    deleteWhat: ["Your Rafeeq account", "Synced data stored with your account", "Your subscription record"],
     deleteStoreNote:
       "Deleting your account doesn't cancel your Google Play or App Store subscription. Cancel it there so it stops renewing.",
     deleteKeep: "Keep account",
     deleting: "Deleting…",
     deleteFailed: "Couldn't delete your account. Check your connection and try again.",
     deleted: "Account deleted",
+    syncSynced: (when: string) => `Synced · ${when}`,
+    syncJustNow: "just now",
+    syncSyncing: "Syncing…",
+    syncOffline: "Waiting for connection",
+    syncError: "Couldn't sync — tap to retry",
+    syncKeepNote: "Synced data on your account is kept; the file adds to it.",
   },
 
   hifz: {

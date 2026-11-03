@@ -407,6 +407,7 @@ ion-content::part(scroll) {
 }
 .ac-row:active { background: var(--color-gold-faint); }
 .ac-row--static { cursor: default; }
+.ac-row:disabled { cursor: default; color: var(--color-text-primary); }
 .ac-row--static:active { background: none; }
 
 /* Subscription plan: free reads as a quiet gold-outlined pill; Rafeeq Pro is

@@ -63,7 +63,7 @@ it("renders nothing while closed and does not take Back", () => {
 it("lists what gets deleted: the account, its stored data and the subscription record", () => {
   mount(true);
   const items = Array.from(sheet()!.querySelectorAll("li"), (li) => li.textContent);
-  expect(items).toEqual(["حسابك في رفيق", "البيانات المخزّنة مع حسابك", "سجل اشتراكك"]);
+  expect(items).toEqual(["حسابك في رفيق", "البيانات المتزامنة المخزّنة مع حسابك", "سجل اشتراكك"]);
 });
 
 it("says deleting does not cancel the store subscription", () => {

@@ -27,6 +27,7 @@ import {
   saveHifzReadingSessionAsync,
 } from "../../../features/hifz/hifz.service";
 import { PRESETS_KEY } from "../../../features/quiz/services/quiz-presets.service";
+import { resetSyncState } from "../sync/sync.service";
 
 /** Bump only on a breaking change to the file layout. */
 const BACKUP_VERSION = 1;
@@ -268,6 +269,11 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
       console.warn("[backup] could not restore quiz range sets:", err);
     }
   }
+
+  // The file is not a sync change: make the next sync a first merge so items the
+  // file lacks come back from the cloud instead of becoming deletes. Done even
+  // when sync is off, since a lapsed-Pro device keeps its snapshot.
+  resetSyncState();
 }
 
 async function restoreHifzStores(data: Record<string, string>): Promise<void> {

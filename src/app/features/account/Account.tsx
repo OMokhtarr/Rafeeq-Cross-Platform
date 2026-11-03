@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
+import { useSync } from "../../core/context/SyncContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   fetchAllNotes,
@@ -43,7 +44,8 @@ const LEGAL_BASE_URL = "https://omokhtarr.github.io/Rafeeq-Cross-Platform";
 const Account: React.FC = () => {
   usePageTour(["account"]);
   const history = useHistory();
-  const { lang, isRTL } = useLang();
+  const { lang, isRTL, t: strings } = useLang();
+  const { active: syncActive } = useSync();
 
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
@@ -521,6 +523,7 @@ const Account: React.FC = () => {
           <AccountModal title={t.restoreTitle} onClose={() => { setModal(null); setPendingRestore(null); }}>
             <div className="amod-request">
               <p className="amod-request-label">{t.restoreWarn}</p>
+              {syncActive && <p className="amod-request-label">{strings.account.syncKeepNote}</p>}
               <ul className="ac-restore-summary">
                 <li>
                   <span>{t.notes}</span>

@@ -2,11 +2,14 @@ import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import AccountIdentityRow from "../AccountIdentityRow";
 import { useAuth } from "../../../core/context/AuthContext";
+import { useSync } from "../../../core/context/SyncContext";
 
 jest.mock("../../../core/context/AuthContext", () => ({ useAuth: jest.fn() }));
+jest.mock("../../../core/context/SyncContext", () => ({ useSync: jest.fn() }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+const syncNow = jest.fn();
 const requestSignIn = jest.fn();
 const signOut = jest.fn();
 let host: HTMLDivElement;
@@ -25,12 +28,17 @@ function mount(auth: AuthState, onDelete?: () => void) {
   act(() => root.render(<AccountIdentityRow onDelete={onDelete} />));
 }
 
+function setSync(sync: { active?: boolean; status?: string; lastSyncedAt?: string | null }) {
+  (useSync as jest.Mock).mockReturnValue({ active: false, status: "off", lastSyncedAt: null, syncNow, ...sync });
+}
+
 const button = (text: string) =>
   Array.from(host.querySelectorAll("button")).find((b) => b.textContent?.includes(text));
 
 const USER = { id: "u1", email: "sara@example.com", name: "Sara", provider: "google" as const };
 
 beforeEach(() => {
+  setSync({});
   requestSignIn.mockResolvedValue(true);
   signOut.mockResolvedValue(undefined);
 });
@@ -91,4 +99,44 @@ it("calls onDelete from the Delete account row, and hides it when no handler is 
 it("never shows the email when signed out", () => {
   mount({ enabled: true, user: null });
   expect(host.textContent).not.toContain("@");
+});
+
+describe("sync status row", () => {
+  const rows = () => Array.from(host.querySelectorAll("button")).map((b) => b.textContent);
+
+  it("is absent when sync is not active", () => {
+    setSync({ active: false, status: "synced", lastSyncedAt: new Date().toISOString() });
+    mount({ enabled: true, user: USER });
+    expect(host.textContent).not.toContain("تمت المزامنة");
+    expect(host.querySelectorAll("button")).toHaveLength(1);
+  });
+
+  it.each([
+    ["synced", "تمت المزامنة · الآن"],
+    ["syncing", "جارٍ المزامنة…"],
+    ["offline", "بانتظار الاتصال"],
+    ["error", "تعذّرت المزامنة، اضغط للمحاولة مرة أخرى"],
+  ])("shows the %s label", (status, label) => {
+    setSync({ active: true, status, lastSyncedAt: new Date().toISOString() });
+    mount({ enabled: true, user: USER });
+    expect(rows()).toContain(label);
+  });
+
+  it("shows Syncing while active but not yet run, and a time once known", () => {
+    setSync({ active: true, status: "off", lastSyncedAt: null });
+    mount({ enabled: true, user: USER });
+    expect(button("جارٍ المزامنة…")).toBeDefined();
+    act(() => root.unmount());
+    host.remove();
+    setSync({ active: true, status: "off", lastSyncedAt: new Date(Date.now() - 3 * 3600000).toISOString() });
+    mount({ enabled: true, user: USER });
+    expect(host.textContent).toMatch(/تمت المزامنة · .*3|تمت المزامنة · .*٣/);
+  });
+
+  it("tapping it syncs now", () => {
+    setSync({ active: true, status: "error", lastSyncedAt: null });
+    mount({ enabled: true, user: USER });
+    act(() => button("تعذّرت المزامنة")!.click());
+    expect(syncNow).toHaveBeenCalledTimes(1);
+  });
 });

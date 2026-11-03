@@ -1,5 +1,8 @@
 import { createBackup, parseBackup, restoreBackup } from "../backup.service";
+import { resetSyncState } from "../../sync/sync.service";
 import { freezeCount, MAX_FREEZES } from "../streak-freeze.service";
+
+jest.mock("../../sync/sync.service", () => ({ resetSyncState: jest.fn() }));
 
 beforeEach(() => {
   localStorage.clear();
@@ -46,5 +49,14 @@ describe("backup carries the worship tracker", () => {
     expect(localStorage.getItem("rafeeq.tracker.days")).toBe(JSON.stringify({ "2026-03-02": ["fajr"] }));
     expect(localStorage.getItem("rafeeq.tracker.settings")).toBe(JSON.stringify({ azkar: false }));
     expect(localStorage.getItem("rafeeq.tracker.since")).toBe("2026-03-01");
+  });
+});
+
+describe("restoring a backup", () => {
+  it("resets sync state so the next sync is a first merge that deletes nothing", async () => {
+    localStorage.setItem("rafeeq.tracker.since", "2026-03-01");
+    const json = JSON.stringify(await createBackup());
+    await restoreBackup(parseBackup(json));
+    expect(resetSyncState).toHaveBeenCalledTimes(1);
   });
 });
