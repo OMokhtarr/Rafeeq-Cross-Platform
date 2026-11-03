@@ -764,6 +764,13 @@ this is owner work in dashboards; the code is merged and dark behind
     offline on each, reconnect, sync, and confirm the later edit wins on both.
     Then import a backup on a synced phone and confirm nothing disappears.
     Listed in `TODO.md`.
+11. **Release gates for sync, not yet run anywhere.** Run the SQL self-check from
+    item 1 on the dev project: the migration has never executed on any database.
+    Then test a fresh install on an Android device, signed in to a Pro account
+    with a Hifz plan: the strict Hifz path has never run on a device, so confirm
+    Account shows synced, not an error, and that the Hifz collections (plan, best
+    and latest records, read pages) sync rather than being skipped. Listed in
+    `TODO.md`.
 
 ### Release order
 1. Supabase prod project, Google (and Apple, when ready) set up as above.

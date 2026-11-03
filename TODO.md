@@ -90,6 +90,14 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 - [ ] **Device check: backup import on a synced phone.** Import a backup and
       confirm nothing disappears (locally or on the other phone); the import
       only adds and overwrites.
+- [ ] **Release gate: run the sync_items SQL self-check on the dev project.** The
+      migration has never executed on any database. Steps in
+      `PLAY-CONSOLE-PREP.md` §9, Accounts, item 1.
+- [ ] **Release gate: fresh install on an Android device.** The strict Hifz read
+      and write path has never run on a device. Sign in on a fresh install with a
+      Pro account that has a Hifz plan: Account must show synced, not an error, and
+      the plan, best and latest records and read pages must arrive rather than
+      being skipped.
 - [ ] **Data safety for synced data.** In the same redo: App activity → user
       content (notes) and app interactions (Hifz progress, tracker) now
       collected for Pro subscribers; app functionality; encrypted in transit;
