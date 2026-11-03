@@ -36,7 +36,13 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 6 / versionName
 
 ## 0. Status at a glance
 
-Last updated 11 Sep 2026. Section numbers link to the detail below.
+Last updated 29 Oct 2026. Section numbers link to the detail below.
+
+> **Accounts (sign-in with Google / Apple, Supabase) are built but ship dark**
+> behind `REACT_APP_ACCOUNTS=on`. Everything in §1, §2, §4, §8 and §9 below
+> that mentions accounts describes the build that goes out with that switch on.
+> Until then the app still has no accounts. The owner setup list and the
+> release order are in §9; the same list is in `TODO.md`.
 
 ### Outstanding
 
@@ -111,7 +117,9 @@ video (A5).
 > "no digital purchases" and "no user interaction" are correct for versionCode 2
 > only. When the RevenueCat Pro tier ships, digital purchases becomes **Yes**
 > and the rating questionnaire must be re-run *before* that build goes out.
-> Same for §4's account-deletion scope the moment sign-in is added.
+> Sign-in is now built, so §4's account-deletion requirement applies to the
+> first build with `REACT_APP_ACCOUNTS=on`: the hosted deletion page and the
+> redone Data safety form must be live before that build is released.
 
 ### Done
 
@@ -123,7 +131,7 @@ video (A5).
 | Recite mode smoke-tested against the live broker | 15 Aug 2026 |
 | ~~Signed AAB~~ — built, but **now stale**: predates Content Sync. Rebuild required (A6) | — |
 | Listing assets — icon, feature graphic, 4 × 9:16 screenshots in `play-assets/` | — |
-| Account deletion confirmed out of scope (no sign-in) | — |
+| Account deletion was out of scope while the app had no sign-in; now required, see §4 | 29 Oct 2026 |
 | Privacy policy rewritten, incl. the QF developer-privacy pass | Aug 2026 |
 | Source TODOs — Settings persisted data, Mushaf page layout | 15 Aug 2026 |
 | Listing copy + questionnaires (C1, C2, C5, C6, C7) — `PLAY-LISTING-COPY.md` | 20 Aug 2026 |
@@ -142,8 +150,9 @@ video (A5).
 
 ## 1. What the app actually collects
 
-Established by auditing the manifest and every outbound host. The app has no
-sign-in, so there are no user OAuth scopes to audit.
+Established by auditing the manifest and every outbound host. Sign-in is
+optional and asks only for the basic profile (name, email); it requests no
+Google or Apple API scopes beyond that.
 
 **Permissions declared** (`AndroidManifest.xml`):
 
@@ -162,12 +171,24 @@ sign-in, so there are no user OAuth scopes to audit.
 | `verses.quran.foundation` | recitation audio files | none |
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
 | `stt-rt.soniox.com` (wss) | recite mode speech-to-text (if selected in Settings) | **live microphone audio** |
-| `api.revenuecat.com` | Rafeeq Pro subscription status (builds with a RevenueCat key) | anonymous app-user id, purchase history |
+| `api.revenuecat.com` | Rafeeq Pro subscription status (builds with a RevenueCat key) | app-user id (the account id once signed in, else anonymous), purchase history |
+| `<project>.supabase.co` | accounts: sign-in, `delete-account` and `apple-token` edge functions (builds with `REACT_APP_ACCOUNTS=on`) | account id, email, name, sign-in provider; on iOS the Sign in with Apple authorization code |
+| Google / Apple sign-in | proving identity when the user signs in | handled by the Google / Apple sign-in UI; we receive name + email |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
-**User sign-in:** none. The app has no accounts and requests no OAuth user
-scopes — the token broker only ever fetches machine-to-machine tokens for the
-content API. Notes, bookmarks, and the Hifz streak are local-only.
+**User sign-in:** optional, only for Rafeeq Pro, and only in builds with
+`REACT_APP_ACCOUNTS=on`. Google (Android) or Apple (iOS; Android when
+`REACT_APP_APPLE_SIGNIN=on`) through Supabase Auth. The account holds an id,
+email, name and provider; on iOS Apple's refresh token is kept server-side
+(`apple_tokens`) only so deletion can revoke it. Without the switch the app
+has no accounts, and the token broker only fetches machine-to-machine tokens
+for the content API. Notes, bookmarks, and the Hifz streak are local-only
+unless the user is a signed-in Rafeeq Pro subscriber: Pro sync (builds with
+`REACT_APP_ACCOUNTS=on`) copies the backup categories to Supabase `sync_items`
+(notes, bookmarks, hidden verses, Hifz plans/progress/streak days/freezes,
+recitation history, worship tracker, favourite azkar, quiz range sets, and
+settings such as theme, language, last page and recent searches). Never synced:
+the Pro/account/onboarding state, downloaded tafsirs, content caches. See §2.
 
 ---
 
@@ -199,28 +220,64 @@ content API. Notes, bookmarks, and the Hifz streak are local-only.
 >       engines and RevenueCat / Google Play for Rafeeq Pro; the terms gained a
 >       subscription section.
 
-### Personal info → Name / Email
-- Collected: **No** — the app has no sign-in and never asks for a name or email.
+### Personal info → Name, Email address, User IDs
+Applies to the build with `REACT_APP_ACCOUNTS=on` (redo the form before it
+ships; the currently submitted form says "No", which is right only while the
+switch is off).
+- **Name** and **Email address**: Collected **Yes** · Shared **No** (held by
+  Supabase as our service provider, which Play does not count as sharing) ·
+  Processed ephemerally **No** · **Optional** (sign-in is only needed for
+  Rafeeq Pro) · Purpose **Account management**.
+- **User IDs** (the Supabase account id, also used as the RevenueCat app-user
+  id): same answers, Purpose **Account management** (add **App
+  functionality** — it links the Pro subscription to the account).
 
-### App activity → Other user-generated content
-- Notes, bookmarks, and the Hifz streak stay on the device and are never
-  transmitted, so under Play's definition this is **not collected**.
-- Collected: **No**
+### Financial info → Purchase history
+- Collected **Yes** (subscription purchases, via Google Play billing and
+  RevenueCat) · Shared **No** if RevenueCat is treated as a service provider
+  (confirm against Play's current rule when filling the form; answer Yes if in
+  doubt) · **Optional** · Purpose **App functionality** (subscription status).
+
+### App activity → Other user-generated content, App interactions
+- **Applies only to the build with `REACT_APP_ACCOUNTS=on`, and only to Rafeeq
+  Pro subscribers** (redo the form before it ships). The currently submitted
+  form says "No", which is right only while accounts are off.
+- **Other user-generated content** (notes) and **App interactions** (Hifz
+  progress and streaks, recitation history, worship tracker, bookmarks, quiz
+  range sets, settings): Collected **Yes** · Shared **No** (held by Supabase as
+  our service provider) · Processed ephemerally **No** · **Optional** (Pro
+  sync only) · Purpose **App functionality**.
+- Encrypted in transit **Yes**. Deletable **Yes**: removed with Account →
+  Delete account (kept after Pro ends, until then).
+- Without a Pro subscription nothing is transmitted, so a build with accounts
+  off collects none of this.
 
 ### Not collected
 No location, contacts, photos, files, financial info, health data, or advertising
 identifiers. No analytics or ad SDKs are present. (This changes with the first
-build that carries a RevenueCat key: purchase history and an anonymous app-user
-id go to RevenueCat — see §9.) All reading progress, bookmarks,
-and cached audio for signed-out users stay on-device (IndexedDB + Capacitor
-Preferences).
+build that carries a RevenueCat key: purchase history and an app-user id go
+to RevenueCat — see §9.) Reading progress, bookmarks and notes stay on-device
+(IndexedDB + Capacitor Preferences) unless the user is a signed-in Pro
+subscriber, whose synced data is declared under App activity above. Cached
+audio and other content caches are never synced.
 
 ### Security practices
 - Data encrypted in transit: **Yes** (all endpoints HTTPS/WSS)
-- Users can request data deletion: **Yes** — uninstall or clear storage removes
-  everything; nothing is stored off-device. See section 4. (Once a build carries
-  a RevenueCat key, RevenueCat holds purchase records for an anonymous id —
-  revisit this answer then; see §9.)
+- Users can request data deletion: **Yes** — in the app (Account → Delete
+  account) and on the web at the deletion URL in §4. Uninstalling or clearing
+  storage removes the on-device data. Deleting the account removes the account,
+  the synced data (`sync_items`) and the RevenueCat record.
+- **Delete-account URL** (Play Console → App content → Data safety → "Add a
+  link that users can use to request account and data deletion"):
+  `<LEGAL_BASE_URL>/delete-account.html`.
+
+### App access (App content → App access)
+Part of the app is behind a login (Rafeeq Pro), so Play's reviewers need
+credentials. Choose "All or some functionality is restricted", and give a
+**reviewer test Google account** that has been granted **promotional Pro** in
+RevenueCat (Customers → the account's id → Grant promotional entitlement), plus
+instructions: *Account → Sign in with Google → use the account above; Recite
+Mode is unlocked.* Keep that Google account's password out of the repo.
 
 ---
 
@@ -242,65 +299,83 @@ Required because the app declares `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
 
 ---
 
-## 4. Account deletion — NOT REQUIRED (no account creation)
+## 4. Account deletion — REQUIRED (once `REACT_APP_ACCOUNTS=on` ships)
 
-Play's deletion requirement is triggered by **account creation**, not by storing
-data. Rafeeq has no sign-in and creates no user identity, so neither the in-app
-deletion path nor the public deletion URL applies. Google's definition:
+Play's rule is triggered by **account creation**. Signing in with Google or
+Apple creates a Rafeeq account (Supabase), so the first build with
+`REACT_APP_ACCOUNTS=on` needs both an in-app deletion path and a public
+deletion URL; Apple's Guideline 5.1.1(v) requires the same on iOS, including
+revoking the Sign in with Apple grant. Builds without the switch still have
+no accounts and need neither. (Adding Google also obliges offering Sign in
+with Apple on iOS — Guideline 4.8 — which the app does.)
 
-> "If your app allows users to create an account from within your app, our User
-> data policy requires that it must also allow users to request for their account
-> to be deleted." … "Accounts that are created and operated offline are not app
-> accounts and do not fall within policy scope."
+**In-app path:** Account page → Account section (shows name + email) →
+**Delete account** → "Delete your account?" sheet listing what is removed →
+**Delete account** to confirm (**Keep account** cancels) → "Account deleted".
+The sheet's note tells the user the store subscription is not cancelled.
 
-Apple's Guideline 5.1.1(v) uses the same trigger, so the iOS build is equally
-out of scope.
+**Public URL (paste into the Data safety form):**
+`<LEGAL_BASE_URL>/delete-account.html`, Arabic at `delete-account-ar.html`.
+`LEGAL_BASE_URL` is the constant in `src/app/features/account/Account.tsx`
+(`https://omokhtarr.github.io/Rafeeq-Cross-Platform`). The page lives on the
+`gh-pages` branch alongside `privacy.html` and `terms.html`; it is not live
+until `gh-pages` is pushed. It describes the in-app steps, the email route
+(`or.mokhtar@gmail.com`), what is deleted and that the store subscription must
+be cancelled separately.
 
-The in-app "Delete Account & Data" row and its modal have been removed, along
-with `delete-account.html` and the OAuth relay `index.html`. All of it is
-recoverable from git history — see below.
+**What the `delete-account` Edge Function deletes, in order**
+(`supabase/functions/delete-account/handler.ts`):
+1. **Apple revoke**: if `apple_tokens` holds a refresh token for the user, it
+   is revoked with Apple. Uses `APPLE_TEAM_ID`, `APPLE_KEY_ID`,
+   `APPLE_PRIVATE_KEY`; without them a stored token makes the call fail
+   (502) rather than delete the account with Apple's grant left live.
+2. **RevenueCat**: `DELETE /v1/subscribers/<account id>` using
+   `REVENUECAT_SECRET_KEY` (an already-missing customer counts as success).
+3. **The auth user** (Supabase `auth.admin.deleteUser`). Foreign keys cascade
+   to every per-user table, including `apple_tokens` and `sync_items`.
 
-> ⚠️ **This reverses the moment sign-in is added.** Sign in with Google or Apple
-> counts as account creation on both stores (Google names "SSO" in its list of
-> account mechanisms; Apple treats social login the same as email signup). If
-> sign-in ships — especially with any server-side backup of user data — you must
-> restore: an in-app deletion path, a hosted public deletion URL for Play, actual
-> deletion of the server-side record, and **Apple token revocation via their REST
-> API** for Sign in with Apple.
->
-> Note also **Apple Guideline 4.8**: adding Google Sign-In *alone* obliges you to
-> offer Sign in with Apple as an equivalent option. Adding one means adding both.
+The auth user goes last and any failing step returns 502 with nothing after it
+run, so a retry still finds the account and can finish the job.
 
-### Recovering the sign-in code
-
-All sign-in files were deleted from the working tree but remain in git history.
-To restore them:
+**Email-request runbook.** A user who cannot open the app emails
+`or.mokhtar@gmail.com`. Reply to the sender and ask them to confirm from the
+email address registered on the account (or otherwise confirm the account is
+theirs) **before** running anything. Complete the deletion within 30 days of the
+request, then:
 
 ```bash
-# The last commit where the auth stack was intact:
-git show d1aba6f --stat
-
-git checkout d1aba6f -- src/app/core/services/auth/oauth.service.ts
-git checkout d1aba6f -- src/app/core/services/auth/AuthCallback.tsx
-git checkout d1aba6f -- src/app/core/services/api/user-api.client.ts   # QF user API
-git checkout d1aba6f -- delete-account.html                            # deletion page
-git checkout d1aba6f -- index.html                                     # OAuth relay page
+SUPABASE_URL=https://<project-ref>.supabase.co \
+ADMIN_DELETE_SECRET=<the Edge Function secret of the same name> \
+  scripts/delete-account.sh <user-id | email>
 ```
 
-Also needed when re-adding sign-in:
-- The `com.rafeeq.quranquiz` deep-link `<intent-filter>` in
-  `android/app/src/main/AndroidManifest.xml` (removed; see history).
-- The `appUrlOpen` listener and `/auth/callback` route in `src/App.tsx`.
-- `token-broker/src/index.ts` still exposes `/oauth2/token` — it was left in
-  place and is simply unused, so no broker redeploy is needed to restore it.
+The script posts to the same function with an `x-admin-secret` header (the
+function's gateway JWT check is off; the function authenticates both paths
+itself), prints the HTTP status and body, and exits non-zero unless 2xx.
+Respond within 30 days (the privacy policy's promise). Look the user up in
+Supabase → Authentication → Users if you only have the email and want the id.
 
-Bear in mind the old stack was **Quran Foundation OAuth**, not Google/Apple. It
-is a reference for the wiring (PKCE, token storage, deep-link callback), not a
-drop-in for a different identity provider.
+> **Known limit — Apple accounts created through the Android web flow.**
+> Apple token revocation covers iOS sign-ins only. On iOS the app sends Apple's
+> authorization code to the `apple-token` edge function, which stores the
+> refresh token (with the client id it was issued to) in `apple_tokens`;
+> `delete-account` revokes it. On Android, Sign in with Apple runs through
+> Supabase's web flow in a browser tab, which never gives the app a code, so
+> those accounts have no stored token and deletion skips the revoke for them.
+> The account is still deleted; Apple's grant stays until the user removes it
+> in their Apple ID settings. The hosted deletion page tells users so.
 
-**Data deletion (as distinct from account deletion)** is still answered on the
-data-safety form: users uninstall or clear storage, which removes everything,
-since nothing leaves the device. `privacy.html` §6 states this.
+**Data deletion (as distinct from account deletion):** on-device data
+(notes, bookmarks, streaks, settings) is still removed by uninstalling or
+clearing storage, which the privacy policy states in section 13. A Pro
+subscriber's synced copy is not removed by uninstalling; only Delete account
+removes it.
+
+For the full design and task history of the accounts work, see the Accounts
+Part 1 plan (`docs/superpowers/plans/2026-10-29-accounts-part1.md`) and the
+design (`docs/superpowers/specs/2026-10-29-accounts-and-pro-sync-design.md`).
+The old Quran Foundation OAuth stack that used to be recoverable from git is
+unrelated to this and is not needed.
 
 ---
 
@@ -312,15 +387,27 @@ microphone, speech recognition, or Deepgram — a direct contradiction with the 
 safety answers above, and a likely rejection.
 
 Now covered: on-device storage, the Deepgram audio stream (opt-in, live-only, never
-stored), an explicit "no account required" section, a table of every outbound host,
-an explicit "what the app does not do", and deletion routes. The same corrected
-text is mirrored in-app (`PRIVACY_SECTIONS` in `Account.tsx`), and the bracketed
-date/contact placeholders are fixed here and in `terms.html`.
+stored), a "no account required for the free app" section, a table of every outbound
+host, an explicit "what the app does not do", and deletion routes. The Account
+page opens the hosted pages (via `LEGAL_BASE_URL`), so the hosted files are the
+only copy; the bracketed date/contact placeholders are fixed here and in
+`terms.html`.
+
+**29 Oct 2026 — accounts pass** (on the `gh-pages` branch, local until the
+owner pushes it): "no account required" became "no account required for the
+free app"; new §7 "Accounts and sign-in" names Supabase, Google / Apple
+sign-in, the data held (account id, email, name, provider; Apple token on
+iOS), retention until deletion and how to delete; RevenueCat is now linked to
+the account id; §13 gained account deletion; the terms gained an account
+section (§5, later sections renumbered); new `delete-account.html` /
+`delete-account-ar.html`. ⚠️ The Supabase region appears as the placeholder
+`[REGION]` in `privacy.html` and `privacy-ar.html` (§7 and §9) — replace it
+with the real region of the production project **before** pushing.
 
 **Aug 2026 — second pass, against the Quran Foundation developer-privacy
 requirements** (email from Basit Minhas, QF Developer Support, and
 <https://api-docs.quran.foundation/legal/developer-privacy/>). Added to
-`privacy.html`, `terms.html`, and the in-app AR/EN mirror:
+`privacy.html` and `terms.html` (an in-app mirror existed then; it has since been removed):
 
 - QF attribution + an explicit "Rafeeq is an independent app, not an official
   Quran Foundation application" disclaimer.
@@ -346,7 +433,8 @@ requirements** (email from Basit Minhas, QF Developer Support, and
 - [x] **Postal address filled in** (11 Sep 2026). Compound Dar Misr, Phase 2 —
       Building 49, Apartment 23, El Shorouk, Cairo, Egypt.
 - [x] **Address mirrored into the in-app policy** (11 Sep 2026) — the Contact
-      section of `PRIVACY_SECTIONS` in `Account.tsx`, `bodyAr` and `bodyEn` in
+      section of `PRIVACY_SECTIONS` in `Account.tsx` (since removed — the
+      Account page opens the hosted pages), `bodyAr` and `bodyEn` in
       sync. Arabic uses Arabic-Indic numerals to match the surrounding copy;
       `privacy.html` is transliterated, being an English document read by store
       reviewers. ⚠️ This changed app code — the AAB must be rebuilt (A6).
@@ -359,7 +447,7 @@ requirements** (email from Basit Minhas, QF Developer Support, and
 
       They link to each other with **relative** hrefs, so they must stay in the
       same directory — do not move one without the other. The deletion page is
-      not required (section 4).
+      not required (superseded: §4 — deletion page now REQUIRED).
 - [x] **Processor links checked** (11 Sep 2026). Deepgram, Cloudflare, jsDelivr
       and the QF api-docs link all return 200. **`https://quran.foundation/privacy`
       returned 404** and was replaced with <https://quran.com/privacy> — the
@@ -556,6 +644,9 @@ grep -c "clientSecret\|QuranClient" build/static/js/main.*.js
 7. Create the Play listing, complete Data safety + foreground service declarations
 8. Start the closed test — ~12 testers × 14 continuous days (personal accounts)
 9. Apply for production access
+10. Accounts and the Pro gate go out later, in the order in §9 ("Release
+    order"): they are not part of the first production submission unless the
+    owner decides otherwise.
 
 ---
 
@@ -591,7 +682,9 @@ ships dark: the paywall only appears when the app is built with
 4. `npx cap sync`, build, and test purchases from Account → Subscription
    (works while the paywall is off): View subscription → paywall → buy →
    status "active"; reinstall → Restore; Manage subscription opens the
-   Customer Center.
+   Customer Center. View and Restore only appear in a **debug build** or a
+   build with `REACT_APP_ACCOUNTS=on` (sign in first): a release build with
+   accounts off offers no way to buy, since Pro always belongs to an account.
 
 ### Store declarations — redo before the first build that carries a RevenueCat key
 
@@ -608,13 +701,106 @@ RevenueCat. Builds without the key send nothing.
 - ~~**Privacy policy:** add RevenueCat as a processor~~ — done 24 Oct 2026
   (privacy + terms, English and Arabic, live on GitHub Pages).
 
+### Accounts — owner setup
+
+Pro now lives on a signed-in account (Supabase Auth; Google + Apple). All of
+this is owner work in dashboards; the code is merged and dark behind
+`REACT_APP_ACCOUNTS=on`.
+
+1. **Supabase projects:** one dev, one prod. In each, Settings → JWT Keys must
+   use the **asymmetric ES256 signing keys** (the broker refuses legacy HS256
+   tokens). Put the prod project URL in `token-broker/wrangler.toml`
+   `SUPABASE_URL` and the dev one in `[env.dev.vars]`; put the project ref in
+   `supabase/config.toml` `project_id`. Apply both migrations
+   (`supabase db push` after `supabase link --project-ref <ref>`):
+   `20261029000000_apple_tokens.sql` creates `apple_tokens`, and
+   `20261101000000_sync_items.sql` creates `sync_items` and the `sync_push`
+   function (Pro sync). Then run the self-check at the bottom of
+   `20261101000000_sync_items.sql` in the SQL editor (copy the `do $$ … $$;`
+   block out of the comment). A run that finishes with no error means it
+   passed (the `sync_items self-check: PASS` notice shows if your client
+   displays notices).
+2. **Google:** in Google Cloud, OAuth clients — a **Web** client (its id goes
+   in `REACT_APP_GOOGLE_WEB_CLIENT_ID` and in Supabase's Google provider) and
+   an **Android** client for `com.rafeeq.quranquiz` with the **debug SHA-1
+   and the Play App Signing SHA-1** (Play Console → Setup → App signing; the
+   upload-key SHA-1 is not enough for Play-distributed builds).
+3. **Apple** (when ready — iOS needs a Mac; Android can show it too): an Apple
+   **Services ID** and a Sign in with Apple **key**. In Supabase's Apple
+   provider set the Services ID and add the **iOS bundle id** among the
+   client ids; add `rafeeq://auth/callback` to Supabase's redirect allow-list
+   (URL Configuration). Set the Edge Function secrets `APPLE_TEAM_ID`,
+   `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_BUNDLE_ID`. Set
+   `REACT_APP_APPLE_SIGNIN=on` to show Apple on Android (iOS always shows it).
+4. **Edge Function secrets and deploy:** `SUPABASE_SERVICE_ROLE_KEY` (Supabase
+   provides it automatically), `REVENUECAT_SECRET_KEY`, and
+   `ADMIN_DELETE_SECRET` (a long random value, at least 32 characters; the
+   function refuses the admin path without it). Then
+   `supabase functions deploy delete-account` and
+   `supabase functions deploy apple-token`.
+5. **App env** (`.env.production`): `REACT_APP_SUPABASE_URL`,
+   `REACT_APP_SUPABASE_PUBLISHABLE_KEY`, `REACT_APP_GOOGLE_WEB_CLIENT_ID`, and
+   — only in the build that goes out after the paperwork is live —
+   `REACT_APP_ACCOUNTS=on`.
+6. **RevenueCat dashboard:** set the transfer behaviour so a purchase stays
+   with the account that bought it — "Keep with original App User ID", or
+   whatever the dashboard calls it today (verify the name in Project settings
+   → Restore behavior) — instead of moving to whichever account restores.
+   Create the **reviewer test Google account** and grant it **promotional
+   Pro** (Customers → Grant promotional entitlement) for the Play review (§2,
+   App access).
+7. **`npx cap sync` before the next build.** Two new native plugins,
+   `@capacitor/browser` and `@capgo/capacitor-social-login`, are not yet
+   registered in the Android project (see the stale-plugins gotcha: until
+   synced, ALL npm plugins can fail to register).
+8. **Supabase plan:** move the prod project from Free to **Pro** before real
+   subscribers' data accumulates — the Free plan has no backups, and
+   `sync_items` now holds subscribers' notes and progress.
+9. **Privacy pages:** `privacy.html` / `privacy-ar.html` and
+   `delete-account.html` / `delete-account-ar.html` on `gh-pages` now describe
+   synced data (what syncs, Pro only, kept after Pro ends until Delete account,
+   merge behaviour). Still replace `[REGION]` before pushing.
+10. **Device checks for sync** (two phones, same Pro account): edit one note
+    offline on each, reconnect, sync, and confirm the later edit wins on both.
+    Then import a backup on a synced phone and confirm nothing disappears.
+    Listed in `TODO.md`.
+11. **Release gates for sync, not yet run anywhere.** Run the SQL self-check from
+    item 1 on the dev project: the migration has never executed on any database.
+    Then test a fresh install on an Android device, signed in to a Pro account
+    with a Hifz plan: the strict Hifz path has never run on a device, so confirm
+    Account shows synced, not an error, and that the Hifz collections (plan, best
+    and latest records, read pages) sync rather than being skipped. Listed in
+    `TODO.md`.
+
 ### Release order
-1. Ship a build with `REACT_APP_PRO_GATE=on` in `.env.production`.
-2. Then set `REQUIRE_PRO = "true"` in `wrangler.toml` and `npx wrangler deploy`.
-3. `PRO_USER_ID=<a subscriber's Support ID> bash token-broker/verify-deploy.sh`
-   — expect "PASS (enforcement on)" and every route PASS.
+1. Supabase prod project, Google (and Apple, when ready) set up as above.
+2. Worker `SUPABASE_URL` set and deployed; Edge Function secrets set and both
+   functions deployed.
+3. Legal pages and the deletion page live: replace `[REGION]` in the privacy
+   pages, then push `gh-pages`; check `delete-account.html`, `privacy.html`
+   and `terms.html` load at `LEGAL_BASE_URL` (and the Arabic ones).
+4. Play Data safety redone (§2), including the delete-account URL and the
+   App access test account; content rating re-run if not already.
+5. Ship a build with `REACT_APP_ACCOUNTS=on` (and the `goog_` RevenueCat key).
+6. Then ship a build with `REACT_APP_PRO_GATE=on` in `.env.production`
+   (this can be the same build as step 5 once everything above is verified).
+7. Then set `REQUIRE_PRO = "true"` in `wrangler.toml` and `npx wrangler deploy`.
+8. `PRO_TOKEN=<access token of a signed-in Pro account> bash token-broker/verify-deploy.sh`
+   — expect "PASS (enforcement on)" and every route PASS. `PRO_TOKEN` is a real
+   Supabase access token for a Pro account (for example the reviewer account),
+   not a user id; it expires in about an hour, so use a fresh one.
 
 ### iPhone (later, needs a Mac)
 `npx cap add ios`; add `NSMicrophoneUsageDescription` (Arabic + English) to
 `Info.plist`; create the subscription products in App Store Connect and link
 them in RevenueCat; set `REACT_APP_REVENUECAT_IOS_KEY`.
+
+- **Google sign-in on iOS** needs an iOS OAuth client in Google Cloud, and
+  `SocialLogin.initialize` in `auth.service.ts` must pass `iOSClientId` (that
+  iOS client) and `iOSServerClientId` (the same value as the Web client id).
+  Today only `webClientId` is passed, which is all Android needs. Add the iOS
+  client id to the Supabase Google provider's client ids too.
+- **Apple button.** Check the Sign in with Apple glyph and button in
+  `SignInSheet` against Apple's official assets (or switch to the native
+  button) before iOS review — Apple rejects a hand-drawn logo or wrong
+  proportions under its Human Interface Guidelines.

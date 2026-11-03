@@ -1,37 +1,41 @@
 /**
- * Quran Foundation OAuth2 & Content token broker, plus speech-to-text keys
+ * Quran Foundation Content token broker, plus speech-to-text keys
  * (Deepgram ephemeral tokens, Soniox temporary API keys).
  *
  * Runs as a Cloudflare Worker. Holds the client_id/secret as Worker secrets,
  * and can exchange:
  *   - Client credentials for a machine‑to‑machine content token (default)
- *   - Authorization code for a user access token ( /oauth2/token )
  *   - The Deepgram API key for a short‑lived JWT ( /deepgram/token )
  *   - The Soniox API key for a short‑lived temporary key ( /soniox/token )
+ *
+ * With REQUIRE_PRO="true" the two speech routes need the app's Rafeeq account
+ * token (`authorization: Bearer <Supabase access token>`), verified against
+ * SUPABASE_URL's published keys, and the account must be Rafeeq Pro.
  *
  * Deploy:
  *   wrangler secret put QF_CLIENT_ID
  *   wrangler secret put QF_CLIENT_SECRET
  *   wrangler secret put QF_TOKEN_URL        # e.g. https://oauth2.quran.foundation/oauth2/token
- *   wrangler secret put QF_OAUTH_CLIENT_ID  # (optional) same as QF_CLIENT_ID for OAuth2
  *   wrangler secret put DEEPGRAM_API_KEY    # for recite mode's speech-to-text
  *   wrangler secret put SONIOX_API_KEY      # for recite mode's Soniox engine
  *   wrangler secret put REVENUECAT_SECRET_KEY # Rafeeq Pro check (REQUIRE_PRO="true")
  *   wrangler secret put ALLOWED_ORIGIN      # e.g. https://rafeeq.app, http://localhost:3000
+ *   SUPABASE_URL and REQUIRE_PRO are [vars] in wrangler.toml
  *   wrangler deploy
  */
+
+import { verifyAccountToken } from "./account-token.ts";
 
 export interface Env {
   QF_CLIENT_ID: string;
   QF_CLIENT_SECRET: string;
   QF_TOKEN_URL: string; // for client credentials (content)
-  QF_OAUTH_CLIENT_ID?: string; // for OAuth2 user login (defaults to QF_CLIENT_ID)
-  QF_OAUTH_TOKEN_URL?: string; // defaults to QF_TOKEN_URL
   DEEPGRAM_API_KEY?: string; // recite mode STT; never shipped to the client
   SONIOX_API_KEY?: string; // recite mode Soniox engine; never shipped to the client
   ALLOWED_ORIGIN: string;
   REQUIRE_PRO?: string; // "true" = speech routes are Rafeeq Pro only (wrangler.toml [vars])
   REVENUECAT_SECRET_KEY?: string; // RevenueCat REST secret, for the Pro check
+  SUPABASE_URL?: string; // https://<ref>.supabase.co; whose account tokens are accepted
 }
 
 interface CachedToken {
@@ -50,7 +54,7 @@ export default {
     const corsHeaders = {
       "access-control-allow-origin": corsOrigin,
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type, x-rafeeq-user",
+      "access-control-allow-headers": "content-type, authorization",
       "access-control-max-age": "86400",
     };
 
@@ -66,11 +70,6 @@ export default {
     }
 
     const url = new URL(req.url);
-
-    // ── OAuth2 User Token Exchange ( /oauth2/token ) ──────────────────────
-    if (url.pathname === "/oauth2/token") {
-      return handleOAuthToken(req, env, corsHeaders);
-    }
 
     // ── Speech routes: Rafeeq Pro only when REQUIRE_PRO is "true" ─────────
     if (SPEECH_ROUTES.has(url.pathname)) {
@@ -168,7 +167,7 @@ const PRO_CACHE_MS = 5 * 60 * 1000;
  *  PRO_ENTITLEMENT). */
 const PRO_ENTITLEMENT = "com_rafeeq_quranquiz_pro";
 
-/** app-user id → time (ms) its Pro answer stops being trusted. Only Pro
+/** account id → time (ms) its Pro answer stops being trusted. Only Pro
  *  answers are cached: a "not Pro" answer from a minute ago must never block
  *  someone who has just bought. Per isolate — a cold isolate just asks again. */
 const proCache = new Map<string, number>();
@@ -209,9 +208,10 @@ function isProSubscriber(body: unknown, nowMs: number): boolean {
   return graceUntil != null && Date.parse(graceUntil) > nowMs;
 }
 
-/** RevenueCat app-user ids — anonymous ("$RCAnonymousID:<hex>") or custom —
- *  use these characters. Anything else, or "." / "..", is refused before it
- *  can shape the RevenueCat URL. */
+/** RevenueCat app-user ids — anonymous ("$RCAnonymousID:<hex>") or custom,
+ *  such as the Supabase account id (a UUID) the app logs in with — use these
+ *  characters. Anything else, or "." / "..", is refused before it can shape
+ *  the RevenueCat URL. */
 function isPlausibleAppUserId(id: string): boolean {
   return /^[A-Za-z0-9_$:.-]{1,100}$/.test(id) && id !== "." && id !== "..";
 }
@@ -220,12 +220,15 @@ function isPlausibleAppUserId(id: string): boolean {
  * Null when the request may use a speech route; otherwise the 402 to send.
  *
  * Off unless REQUIRE_PRO is exactly "true", so the owner turns enforcement
- * on only once store purchases work. The app sends its RevenueCat app-user id
- * as `x-rafeeq-user`. Only a real RevenueCat outage — the request throwing
- * or a 5xx — lets the request through (logged), so an outage there doesn't
- * lock out paying users. Everything else refuses: a malformed id, a missing
- * or wrong secret (401), a crafted id RevenueCat rejects (4xx), or its rate
- * limit (429), so neither a crafted header nor a misconfigured deploy can
+ * on only once store purchases work. The app sends its Rafeeq account token
+ * (a Supabase access token) as `authorization: Bearer <token>`; the account
+ * id is taken from the verified token, never from anything the request merely
+ * states, and is the RevenueCat app-user id. Only a real RevenueCat outage —
+ * the request throwing or a 5xx — lets the request through (logged), so an
+ * outage there doesn't lock out paying users. Everything else refuses: no
+ * token or one that doesn't verify, SUPABASE_URL unset, a malformed id, a
+ * missing or wrong secret (401), an id RevenueCat rejects (4xx), or its rate
+ * limit (429), so neither a crafted request nor a misconfigured deploy can
  * quietly turn enforcement off.
  */
 async function requirePro(
@@ -241,10 +244,16 @@ async function requirePro(
       headers: { "content-type": "application/json", ...corsHeaders },
     });
 
-  const id = req.headers.get("x-rafeeq-user");
-  if (!id || !isPlausibleAppUserId(id)) return refuse();
+  if (!env.SUPABASE_URL) {
+    console.error("REQUIRE_PRO is on but SUPABASE_URL is not set; refusing");
+    return refuse();
+  }
 
   const now = Date.now();
+  const bearer = /^Bearer +(\S+)$/i.exec(req.headers.get("authorization") ?? "");
+  const id = bearer ? await verifyAccountToken(bearer[1], env.SUPABASE_URL, now) : null;
+  if (!id || !isPlausibleAppUserId(id)) return refuse();
+
   const trustedUntil = proCache.get(id);
   if (trustedUntil !== undefined && trustedUntil > now) return null;
 
@@ -277,69 +286,6 @@ async function requirePro(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function handleOAuthToken(
-  req: Request,
-  env: Env,
-  corsHeaders: Record<string, string>,
-): Promise<Response> {
-  try {
-    const payload = (await req.json()) as {
-      code?: string;
-      grant_type?: string;
-      redirect_uri?: string;
-      code_verifier?: string;
-      refresh_token?: string;
-      client_id?: string;
-    };
-
-    const clientId =
-      payload.client_id || env.QF_OAUTH_CLIENT_ID || env.QF_CLIENT_ID;
-    const tokenUrl = env.QF_OAUTH_TOKEN_URL || env.QF_TOKEN_URL;
-    const basic = btoa(`${clientId}:${env.QF_CLIENT_SECRET}`);
-
-    const params = new URLSearchParams();
-
-    if (payload.grant_type === "refresh_token") {
-      params.set("grant_type", "refresh_token");
-      params.set("refresh_token", payload.refresh_token || "");
-    } else {
-      params.set("grant_type", "authorization_code");
-      params.set("code", payload.code || "");
-      params.set("redirect_uri", payload.redirect_uri || "");
-      params.set("code_verifier", payload.code_verifier || "");
-    }
-
-    const res = await fetch(tokenUrl, {
-      method: "POST",
-      headers: {
-        authorization: `Basic ${basic}`,
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("OAuth token error", JSON.stringify(data));
-      return new Response(JSON.stringify(data), {
-        status: res.status,
-        headers: { "content-type": "application/json", ...corsHeaders },
-      });
-    }
-
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "content-type": "application/json", ...corsHeaders },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Invalid request" }), {
-      status: 400,
-      headers: { "content-type": "application/json", ...corsHeaders },
-    });
-  }
-}
 
 /**
  * Mint a short-lived Deepgram JWT for recite mode.

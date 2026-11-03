@@ -3,9 +3,10 @@ import { createRoot, Root } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { RevenueCatUI } from "@revenuecat/purchases-capacitor-ui";
+import { resetRevenueCatForTests } from "../../services/subscription/revenuecat.service";
+import { hasCachedAccount } from "../../services/auth/auth.service";
 import { SubscriptionProvider, useSubscription } from "../SubscriptionContext";
 import { LanguageProvider, useLang } from "../LanguageContext";
-import { brokerHeaders, brokerUserIdSettled, setBrokerUserId } from "../../services/audio/stt/broker";
 
 // isNativePlatform/registerPlugin serve LanguageContext's widget sync, which
 // stays a no-op here.
@@ -22,8 +23,20 @@ jest.mock("@revenuecat/purchases-capacitor", () => ({
     getAppUserID: jest.fn(),
     restorePurchases: jest.fn(),
     overridePreferredUILocale: jest.fn(),
+    logIn: jest.fn(),
+    logOut: jest.fn(),
+    isAnonymous: jest.fn(),
   },
 }));
+// Accounts state is driven per test; the default is accounts switched off.
+const mockAuth: { current: { enabled: boolean; ready: boolean; user: { id: string } | null } } = {
+  current: { enabled: false, ready: true, user: null },
+};
+// currentUserId reads the live state, like AuthContext's ref, not the last render.
+const currentUserId = () => mockAuth.current.user?.id ?? null;
+jest.mock("../AuthContext", () => ({ useAuth: () => ({ ...mockAuth.current, currentUserId }) }));
+// Whether an account is cached on the phone (auth.service's own cache).
+jest.mock("../../services/auth/auth.service", () => ({ hasCachedAccount: jest.fn() }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
   RevenueCatUI: { presentPaywall: jest.fn(), presentCustomerCenter: jest.fn() },
   PAYWALL_RESULT: {
@@ -61,26 +74,39 @@ const Probe = () => {
 
 let root: Root;
 let listener: ((ci: unknown) => void) | null;
+let sdkAnonymous = true;
 
 const flush = () => act(async () => {
   await new Promise((r) => setTimeout(r, 0));
 });
 
+// A fresh element per render, so React re-renders instead of bailing out.
+const tree = () => (
+  <SubscriptionProvider>
+    <Probe />
+  </SubscriptionProvider>
+);
+
 async function mount() {
   root = createRoot(document.createElement("div"));
   await act(async () => {
-    root.render(
-      <SubscriptionProvider>
-        <Probe />
-      </SubscriptionProvider>,
-    );
+    root.render(tree());
+  });
+  await flush();
+}
+
+/** Changes the accounts state and re-renders the provider. */
+async function setAuth(next: Partial<typeof mockAuth.current>) {
+  mockAuth.current = { ...mockAuth.current, ...next };
+  await act(async () => {
+    root.render(tree());
   });
   await flush();
 }
 
 beforeEach(() => {
+  resetRevenueCatForTests();
   localStorage.clear();
-  setBrokerUserId(null);
   listener = null;
   platform.mockReturnValue("android");
   rc.configure.mockResolvedValue(undefined);
@@ -92,6 +118,19 @@ beforeEach(() => {
   rc.removeCustomerInfoUpdateListener.mockResolvedValue({ wasRemoved: true });
   rc.overridePreferredUILocale.mockResolvedValue(undefined);
   rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:abc" });
+  // A stateful SDK: it is anonymous until a logIn finishes, like the real one.
+  sdkAnonymous = true;
+  rc.isAnonymous.mockImplementation(async () => ({ isAnonymous: sdkAnonymous }));
+  rc.logIn.mockImplementation(async () => {
+    sdkAnonymous = false;
+    return { customerInfo: info(false).customerInfo, created: false };
+  });
+  rc.logOut.mockImplementation(async () => {
+    sdkAnonymous = true;
+    return info(false);
+  });
+  mockAuth.current = { enabled: false, ready: true, user: null };
+  (hasCachedAccount as jest.Mock).mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -128,36 +167,9 @@ it("applies listener updates live", async () => {
   expect(sub.isPro).toBe(true);
 });
 
-it("exposes the app-user id and hands it to the broker", async () => {
+it("exposes the app-user id", async () => {
   await mount();
   expect(sub.appUserId).toBe("$RCAnonymousID:abc");
-  expect(brokerHeaders()).toEqual({ "x-rafeeq-user": "$RCAnonymousID:abc" });
-});
-
-/** Whether a speech request starting now would go ahead without waiting. */
-async function brokerGoesAhead(): Promise<boolean> {
-  let settled = false;
-  void brokerUserIdSettled().then(() => {
-    settled = true;
-  });
-  await flush();
-  return settled;
-}
-
-it("holds speech requests while the app-user id is on its way", async () => {
-  let giveId!: (v: { appUserID: string }) => void;
-  rc.getAppUserID.mockReturnValue(new Promise((r) => (giveId = r)));
-  await mount();
-  expect(await brokerGoesAhead()).toBe(false);
-  await act(async () => giveId({ appUserID: "$RCAnonymousID:late" }));
-  expect(await brokerGoesAhead()).toBe(true);
-  expect(brokerHeaders()).toEqual({ "x-rafeeq-user": "$RCAnonymousID:late" });
-});
-
-it("lets speech requests go when the app-user id can't be fetched", async () => {
-  rc.getAppUserID.mockRejectedValue(new Error("offline"));
-  await mount();
-  expect(await brokerGoesAhead()).toBe(true);
 });
 
 it("markNotPro flips isPro for the session without touching the cache", async () => {
@@ -283,4 +295,259 @@ it("shows RevenueCat's screens in the app's language and follows a switch", asyn
   await act(async () => setLang("en"));
   await flush();
   expect(rc.overridePreferredUILocale).toHaveBeenLastCalledWith({ locale: "en" });
+});
+
+describe("accounts", () => {
+  it("configures with the account id at launch, after auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(rc.configure).not.toHaveBeenCalled();
+    await setAuth({ ready: true, user: { id: "u1" } });
+    expect(rc.configure).toHaveBeenCalledWith({ apiKey: "goog_test_key", appUserID: "u1" });
+    expect(rc.logIn).not.toHaveBeenCalled();
+  });
+
+  it("logs in on a later sign-in and takes Pro from its result", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    rc.logIn.mockResolvedValue({ customerInfo: info(true).customerInfo, created: false });
+    await setAuth({ user: { id: "u1" } });
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(sub.isPro).toBe(true);
+    expect(sub.appUserId).toBe("u1");
+  });
+
+  it("logs out on sign-out and clears the Pro cache", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    rc.getCustomerInfo.mockResolvedValue(info(true));
+    await mount();
+    expect(sub.isPro).toBe(true);
+    sdkAnonymous = false; // configured as u1
+    rc.getAppUserID.mockResolvedValue({ appUserID: "$RCAnonymousID:new" });
+    await setAuth({ user: null });
+    expect(rc.logOut).toHaveBeenCalled();
+    expect(sub.isPro).toBe(false);
+    expect(localStorage.getItem("rafiq_pro_v1")).toBe("0");
+    expect(sub.appUserId).toBe("$RCAnonymousID:new");
+  });
+
+  it("never shows one account's Pro to the next account on the same phone", async () => {
+    const seen: boolean[] = [];
+    const Spy = () => {
+      seen.push(useSubscription().isPro);
+      return null;
+    };
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    rc.getCustomerInfo.mockResolvedValue(info(true));
+    root = createRoot(document.createElement("div"));
+    const spied = () => (
+      <SubscriptionProvider>
+        <Probe />
+        <Spy />
+      </SubscriptionProvider>
+    );
+    await act(async () => {
+      root.render(spied());
+    });
+    await flush();
+    expect(sub.isPro).toBe(true);
+
+    // u2 is not Pro: after the switch every rendered frame must say so.
+    rc.getCustomerInfo.mockResolvedValue(info(false));
+    seen.length = 0;
+    for (const user of [null, { id: "u2" }]) {
+      mockAuth.current = { ...mockAuth.current, user };
+      await act(async () => {
+        root.render(spied());
+      });
+      await flush();
+    }
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u2" });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((p) => p === false)).toBe(true);
+    expect(sub.isPro).toBe(false);
+  });
+
+  it("lets the later change win when sign-in and sign-out overlap", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let resolveLogIn!: (v: unknown) => void;
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolveLogIn = (v) => {
+            sdkAnonymous = false;
+            r(v);
+          };
+        }),
+    );
+    await setAuth({ user: { id: "u1" } });
+    await setAuth({ user: null });
+    // The SDK is still anonymous while logIn is pending, so a naive logOut skips.
+    expect(rc.logOut).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveLogIn({ customerInfo: info(true).customerInfo, created: false });
+      // RevenueCat tells the listener about the account it just logged in.
+      listener?.(info(true).customerInfo);
+    });
+    await flush();
+    expect(rc.logOut).toHaveBeenCalledTimes(1);
+    expect(rc.logOut.mock.invocationCallOrder[0]).toBeGreaterThan(rc.logIn.mock.invocationCallOrder[0]);
+    expect(sdkAnonymous).toBe(true);
+    expect(sub.isPro).toBe(false);
+    expect(localStorage.getItem("rafiq_pro_v1")).toBe("0");
+  });
+
+  it("ends on the latest account when sign-out and a new sign-in overlap", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: { id: "u1" } };
+    await mount();
+    await setAuth({ user: null });
+    await setAuth({ user: { id: "u2" } });
+    expect(rc.logIn).toHaveBeenLastCalledWith({ appUserID: "u2" });
+    expect(sdkAnonymous).toBe(false);
+  });
+
+  it("puts a still-identified SDK back to anonymous on a signed-out launch", async () => {
+    sdkAnonymous = false;
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    rc.logOut.mockImplementation(async () => {
+      sdkAnonymous = true;
+      return info(true);
+    });
+    await mount();
+    expect(rc.logOut).toHaveBeenCalledTimes(1);
+    expect(rc.logIn).not.toHaveBeenCalled();
+    expect(sub.isPro).toBe(true);
+    expect(sub.ready).toBe(true);
+  });
+
+  it("starts signed-out launches from not-Pro, ignoring a cached Pro flag", async () => {
+    localStorage.setItem("rafiq_pro_v1", "1");
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(sub.isPro).toBe(false);
+  });
+
+  it("starts from the cached Pro flag when an account is cached", async () => {
+    localStorage.setItem("rafiq_pro_v1", "1");
+    (hasCachedAccount as jest.Mock).mockReturnValue(true);
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    expect(sub.isPro).toBe(true);
+  });
+
+  it("refuses the Customer Center until auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    await act(async () => {
+      await expect(sub.showCustomerCenter()).rejects.toThrow();
+    });
+    expect(ui.presentCustomerCenter).not.toHaveBeenCalled();
+    expect(rc.configure).not.toHaveBeenCalled();
+  });
+
+  it("reports the paywall unavailable until auth is ready", async () => {
+    mockAuth.current = { enabled: true, ready: false, user: null };
+    await mount();
+    let outcome: string | undefined;
+    await act(async () => {
+      outcome = await sub.showPaywall();
+    });
+    expect(outcome).toBe("unavailable");
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.configure).not.toHaveBeenCalled();
+  });
+
+  it("with accounts off, configures anonymously and never logs in or out", async () => {
+    await mount();
+    expect(rc.configure).toHaveBeenCalledWith({ apiKey: "goog_test_key" });
+    expect(rc.logIn).not.toHaveBeenCalled();
+    expect(rc.logOut).not.toHaveBeenCalled();
+  });
+  it("waits for the account switch to settle before showing the paywall or restoring", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let finishLogIn!: () => void;
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLogIn = () => resolve({ customerInfo: info(false).customerInfo, created: false });
+        }),
+    );
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    rc.restorePurchases.mockResolvedValue(info(false));
+    // The paywall is requested right as the sign-in lands, before the render.
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
+    let paywall!: Promise<string>;
+    let restoring!: Promise<boolean>;
+    await act(async () => {
+      paywall = sub.showPaywall();
+      restoring = sub.restore();
+    });
+    await setAuth({});
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.restorePurchases).not.toHaveBeenCalled();
+    await act(async () => {
+      finishLogIn();
+      await Promise.all([paywall, restoring]);
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+    expect(rc.restorePurchases).toHaveBeenCalledTimes(1);
+  });
+  it("waits for logIn even before the account-change effect has run", async () => {
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    let finishLogIn!: () => void;
+    rc.logIn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLogIn = () => resolve({ customerInfo: info(false).customerInfo, created: false });
+        }),
+    );
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    // The user flips with no re-render, so only the live read can see it.
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
+    let paywall!: Promise<string>;
+    await act(async () => {
+      paywall = sub.showPaywall();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(rc.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    await act(async () => {
+      finishLogIn();
+      await paywall;
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show the paywall, or restore, when logIn fails", async () => {
+    const errors = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockAuth.current = { enabled: true, ready: true, user: null };
+    await mount();
+    rc.logIn.mockRejectedValue(new Error("offline"));
+    mockAuth.current = { ...mockAuth.current, user: { id: "u1" } };
+    let outcome: string | undefined;
+    let restoreError: unknown;
+    await act(async () => {
+      outcome = await sub.showPaywall();
+      await sub.restore().catch((e) => (restoreError = e));
+    });
+    expect(outcome).toBe("failed");
+    expect(restoreError).toBeDefined();
+    expect(ui.presentPaywall).not.toHaveBeenCalled();
+    expect(rc.restorePurchases).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it("does not wait for any account switch when accounts are off", async () => {
+    ui.presentPaywall.mockResolvedValue({ result: "CANCELLED" });
+    await mount();
+    await act(async () => {
+      await sub.showPaywall();
+    });
+    expect(ui.presentPaywall).toHaveBeenCalledTimes(1);
+    expect(rc.logIn).not.toHaveBeenCalled();
+  });
 });

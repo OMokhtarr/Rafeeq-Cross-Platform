@@ -20,6 +20,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Sign in with Apple's browser flow returns here as
+                 rafeeq://auth/callback?code=…; Capacitor hands it to the
+                 WebView as appUrlOpen. singleTask brings back the running
+                 activity (onNewIntent) rather than starting a second one. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="rafeeq" android:host="auth" />
+            </intent-filter>
         </activity>
 
         <provider

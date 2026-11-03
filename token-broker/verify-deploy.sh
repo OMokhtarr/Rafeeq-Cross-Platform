@@ -11,30 +11,34 @@
 #
 #   BROKER_URL=<url>       check another deployment, e.g. the dev copy
 #                          (npx wrangler deploy --env dev)
-#   PRO_USER_ID=<id>       a subscriber's Support ID (Account -> Subscription).
-#                          Needed once REQUIRE_PRO is "true": the speech routes
-#                          then refuse requests that don't carry a Pro id.
+#   PRO_TOKEN=<token>      the Supabase access token of a signed-in account
+#                          that has Rafeeq Pro. Needed once REQUIRE_PRO is
+#                          "true": the speech routes then refuse requests
+#                          without a valid Pro account token. (A bare account
+#                          or Support ID no longer works: the broker trusts
+#                          only a token Supabase signed.) Access tokens expire
+#                          after an hour by default, so use a fresh one.
 
 set -uo pipefail
 B="${BROKER_URL:-https://rafeeq-token-broker.rafeeqapp.workers.dev}"
 
-# Identity header for the speech-route checks below.
+# Account token header for the speech-route checks below.
 UH=()
-if [ -n "${PRO_USER_ID:-}" ]; then
-  UH=(-H "x-rafeeq-user: $PRO_USER_ID")
+if [ -n "${PRO_TOKEN:-}" ]; then
+  UH=(-H "Authorization: Bearer $PRO_TOKEN")
 fi
 
 echo "broker: $B"
 
 # Rafeeq Pro enforcement: with REQUIRE_PRO="true" a speech route refuses a
-# request without a subscriber id. Informational either way - the switch is
-# the owner's to set.
+# request without a Pro account token. Informational either way - the switch
+# is the owner's to set.
 pro_resp=$(curl -s -m 25 -w $'\n%{http_code}' -X POST -H "Origin: https://localhost" "$B/deepgram/token")
 pro_code=${pro_resp##*$'\n'}
 if [ "$pro_code" = "402" ] && echo "$pro_resp" | grep -q 'not_subscribed'; then
-  echo "PASS (enforcement on) — speech routes refuse requests without a subscriber id."
+  echo "PASS (enforcement on) — speech routes refuse requests without an account token."
   if [ ${#UH[@]} -eq 0 ]; then
-    echo "  The route checks below will be refused too; rerun with PRO_USER_ID=<a subscriber's Support ID>."
+    echo "  The route checks below will be refused too; rerun with PRO_TOKEN=<a Pro account's access token>."
   fi
 else
   echo "INFO (enforcement off) — REQUIRE_PRO is not \"true\"; speech routes are open (HTTP $pro_code)."
@@ -60,12 +64,14 @@ if ! echo "$body" | grep -q "access_token"; then
   echo "FAIL — no access_token in response:"
   echo "  $body"
   if echo "$body" | grep -q 'not_subscribed'; then
-    if [ -n "${PRO_USER_ID:-}" ]; then
-      echo "The broker refused PRO_USER_ID as not subscribed. Check that the id is a"
-      echo "current subscriber's Support ID and that REVENUECAT_SECRET_KEY is set and"
-      echo "correct: with REQUIRE_PRO on, a missing or wrong secret refuses everyone."
+    if [ -n "${PRO_TOKEN:-}" ]; then
+      echo "The broker refused PRO_TOKEN. Check that the token is fresh (access"
+      echo "tokens expire), belongs to an account with an active Rafeeq Pro"
+      echo "subscription, and comes from the project in the Worker's SUPABASE_URL;"
+      echo "and that REVENUECAT_SECRET_KEY is set and correct: with REQUIRE_PRO on,"
+      echo "an unset SUPABASE_URL or a missing or wrong secret refuses everyone."
     else
-      echo "Enforcement is on; rerun with PRO_USER_ID=<a subscriber's Support ID>."
+      echo "Enforcement is on; rerun with PRO_TOKEN=<a Pro account's access token>."
     fi
   fi
   exit 1

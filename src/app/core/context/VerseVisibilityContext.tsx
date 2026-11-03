@@ -21,6 +21,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { SYNC_APPLIED_EVENT } from "../services/sync/sync-events";
 
 const STORAGE_KEY = "rafiq_hidden_verses_v1";
 
@@ -76,6 +77,16 @@ export const VerseVisibilityProvider: React.FC<{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(hidden)));
     } catch (_) {}
   }, [hidden]);
+
+  // Cloud sync wrote a newer value: show it.
+  useEffect(() => {
+    const onApplied = (e: Event) => {
+      const { collections } = (e as CustomEvent<{ collections: string[] }>).detail;
+      if (collections.includes("hiddenVerses")) setHidden(loadHidden());
+    };
+    window.addEventListener(SYNC_APPLIED_EVENT, onApplied);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, onApplied);
+  }, []);
 
   const isSelected = useCallback((k: VerseKey) => selected.has(k), [selected]);
   const isHidden = useCallback((k: VerseKey) => hidden.has(k), [hidden]);

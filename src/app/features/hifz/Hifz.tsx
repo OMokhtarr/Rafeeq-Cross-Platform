@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import { IonPage, IonContent, useIonViewDidEnter } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
@@ -39,6 +39,10 @@ import {
   saveHifzReadingSessionAsync,
   loadHifzReadingSession,
   loadHifzReadingSessionAsync,
+  loadPlanStrict,
+  loadBestPlanStrict,
+  loadLatestPlanStrict,
+  loadHifzReadingSessionStrict,
   clearHifzReadingSession,
   clearHifzReadingSessionAsync,
   sessionReadProgress,
@@ -64,6 +68,7 @@ import {
 } from "../../core/services/data/metadata.service";
 import { todayStr } from "../../core/utils/local-date.util";
 import { useFreezeToast } from "../../core/hooks/useFreezeToast";
+import { useStreakRefresh, useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
 import "./Hifz.css";
@@ -1055,6 +1060,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   readPages,
 }) => {
   const h = t.hifz;
+  useStreakRefresh();
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [showStreakInfo, setShowStreakInfo] = useState(false);
   const [showStreakPanel, setShowStreakPanel] = useState(false);
@@ -1743,6 +1749,44 @@ const Hifz: React.FC = () => {
     }
   }, [readPages, plan, chapters, toastFrozen, toastEarned]);
 
+  // Sync wrote newer data to the stores. This page must follow it: every save
+  // here writes its whole copy back, so a stale plan would undo the other
+  // phone's progress on all devices. A plan that arrives on the setup screen
+  // takes over from it, or creating one there would replace the cloud's plan.
+  const planRef = useRef(plan);
+  planRef.current = plan;
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useSyncRefresh(["hifzPlan", "hifzBest", "hifzLatest", "hifzReading"], async () => {
+    let stores: [HifzPlan | null, BestPlanRecord | null, BestPlanRecord | null, { readPages: number[] } | null];
+    try {
+      stores = await Promise.all([
+        loadPlanStrict(),
+        loadBestPlanStrict(),
+        loadLatestPlanStrict(),
+        loadHifzReadingSessionStrict(),
+      ]);
+    } catch {
+      return; // Unreadable right now: sync reports that store; keep what is on screen.
+    }
+    const [saved, best, latest, reading] = stores;
+    const hadPlan = planRef.current !== null;
+    const editing = hadPlan && viewRef.current === "setup";
+    setPlan(saved);
+    setBestPlan(best);
+    setLatestPlan(latest);
+    setReadPages(reading?.readPages ?? []);
+    if (saved && !editing) {
+      setMemorized(saved.memorized);
+      setGoal(saved.goal);
+    }
+    if (saved && !hadPlan) setView("plan");
+    if (!saved && hadPlan) {
+      setMemorized([]);
+      setView("setup");
+    }
+  });
+
   useEffect(() => {
     // Load saved plan from storage (web localStorage or native Capacitor Preferences)
     const loadInitial = async () => {
@@ -1922,6 +1966,7 @@ const Hifz: React.FC = () => {
     }));
     const updated = { ...plan, sessions };
     savePlan(updated);
+    savePlanAsync(updated).catch(() => {});
     setPlan(updated);
     // Wipe the saved read-pages cache so every progress bar resets to 0%.
     clearHifzReadingSession();
@@ -1955,7 +2000,7 @@ const Hifz: React.FC = () => {
     };
     const existing = loadBestPlan();
     if (!existing || days < existing.daysToFinish) {
-      saveBestPlan(record);
+      persistBestPlan(record);
       setBestPlan(record);
     }
     // The latest run is always the most recent completion.
@@ -1969,6 +2014,7 @@ const Hifz: React.FC = () => {
     }));
     const updated = { ...plan, sessions, createdAt: new Date().toISOString() };
     savePlan(updated);
+    savePlanAsync(updated).catch(() => {});
     setPlan(updated);
     // Wipe the saved read-pages cache so every progress bar resets to 0%.
     clearHifzReadingSession();

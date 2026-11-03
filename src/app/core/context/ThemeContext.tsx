@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 
 import { useSystemBarsTheme } from "../hooks/useSystemBarsTheme";
 import { useWidgetTheme } from "../hooks/useWidgetTheme";
+import { SYNC_APPLIED_EVENT } from "../services/sync/sync-events";
 
 export type Theme = "day" | "night";
 
@@ -36,9 +37,24 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     try {
-      localStorage.setItem(STORAGE_KEY, theme);
+      // An untouched default stays unwritten: stored, it would count as a fresh
+      // edit and beat the theme this person chose on another device.
+      if (theme !== DEFAULT_THEME || localStorage.getItem(STORAGE_KEY) !== null) {
+        localStorage.setItem(STORAGE_KEY, theme);
+      }
     } catch (_) {}
   }, [theme]);
+
+
+  // Cloud sync wrote a newer value: show it.
+  useEffect(() => {
+    const onApplied = (e: Event) => {
+      const { collections } = (e as CustomEvent<{ collections: string[] }>).detail;
+      if (collections.includes("theme")) setThemeState(loadTheme());
+    };
+    window.addEventListener(SYNC_APPLIED_EVENT, onApplied);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, onApplied);
+  }, []);
 
   // Match the OS status bar and navigation/gesture bar to the active theme.
   useSystemBarsTheme(theme);

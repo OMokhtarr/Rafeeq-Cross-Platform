@@ -27,6 +27,8 @@ import {
   saveHifzReadingSessionAsync,
 } from "../../../features/hifz/hifz.service";
 import { PRESETS_KEY } from "../../../features/quiz/services/quiz-presets.service";
+import { OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "../sync/collections";
+import { resetSyncState } from "../sync/sync.service";
 
 /** Bump only on a breaking change to the file layout. */
 const BACKUP_VERSION = 1;
@@ -37,7 +39,7 @@ const FILE_PREFIX = "rafeeq-backup";
  * localStorage keys carried by a backup. Content caches are intentionally
  * absent — see the module comment.
  */
-const BACKED_UP_KEYS = [
+export const BACKED_UP_KEYS: readonly string[] = [
   // User-created content
   "rafiq_notes_v1",
   "rafiq_bookmarks_v1",
@@ -64,7 +66,7 @@ const BACKED_UP_KEYS = [
   "rafeeq.tracker.settings",
   "rafeeq.tracker.since",
   "azkar:favorites",
-] as const;
+];
 
 export interface BackupFile {
   version: number;
@@ -243,29 +245,87 @@ export function parseBackup(json: string): BackupFile {
  * are equivalent, and a straight replace stays predictable — re-importing the
  * same file always yields the same result. Unknown keys are ignored so a file
  * from a newer minor version still restores what this build understands.
+ *
+ * With `keepLocal` (a device that syncs) the file only adds and overwrites: items
+ * it lacks stay, and so does a local copy with a newer edit time of its own.
+ * Those may not have reached the cloud, so a later sync could not bring them back.
  */
-export async function restoreBackup(backup: BackupFile): Promise<void> {
-  const known = new Set<string>(BACKED_UP_KEYS);
+export async function restoreBackup(backup: BackupFile, options: { keepLocal?: boolean } = {}): Promise<void> {
+  // A sync that starts during the import, or after the app dies during it, must
+  // not read the half-written stores as deletes: reset before the first write.
+  resetSyncState();
+  const local = options.keepLocal ? await readSyncedStores() : null;
+  // Once the first write has landed the device differs from its sync snapshot, so
+  // the reset below must run even if a later step throws.
+  try {
+    const known = new Set<string>(BACKED_UP_KEYS);
 
-  for (const [key, value] of Object.entries(backup.data)) {
-    if (!known.has(key) || typeof value !== "string") continue;
+    for (const [key, value] of Object.entries(backup.data)) {
+      if (!known.has(key) || typeof value !== "string") continue;
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {
+        console.warn(`[backup] could not restore ${key}:`, err);
+      }
+    }
+
+    // Hifz stores are dual-written, so push the restored copies through the async
+    // writers too — otherwise Android/iOS would keep reading the old plan.
+    await restoreHifzStores(backup.data);
+
+    const presets = backup.data[PRESETS_KEY];
+    if (typeof presets === "string") {
+      try {
+        await Preferences.set({ key: PRESETS_KEY, value: presets });
+      } catch (err) {
+        console.warn("[backup] could not restore quiz range sets:", err);
+      }
+    }
+  } finally {
+    if (local) await keepLocalItems(local);
+    // The file is not a sync change: make the next sync a first merge so items the
+    // file lacks come back from the cloud instead of becoming deletes. Done even
+    // when sync is off, since a lapsed-Pro device keeps its snapshot.
+    resetSyncState();
+  }
+}
+
+type SyncedStores = Map<SyncCollection, Record<string, unknown>>;
+
+/** Every synced store's items; a store that can't be read is left out. */
+async function readSyncedStores(): Promise<SyncedStores> {
+  const stores: SyncedStores = new Map();
+  for (const c of SYNC_COLLECTIONS) {
     try {
-      localStorage.setItem(key, value);
+      stores.set(c, await c.read());
     } catch (err) {
-      console.warn(`[backup] could not restore ${key}:`, err);
+      console.warn(`[backup] could not read ${c.id} before the import:`, err);
     }
   }
+  return stores;
+}
 
-  // Hifz stores are dual-written, so push the restored copies through the async
-  // writers too — otherwise Android/iOS would keep reading the old plan.
-  await restoreHifzStores(backup.data);
+function hasNewerOwnTime(collectionId: string, local: unknown, fromFile: unknown): boolean {
+  const field = OWN_TIME[collectionId];
+  if (!field) return false;
+  const editedAt = (item: unknown) => Date.parse(String((item as Record<string, unknown>)?.[field]));
+  return editedAt(local) > editedAt(fromFile);
+}
 
-  const presets = backup.data[PRESETS_KEY];
-  if (typeof presets === "string") {
+/** Puts back what the restore replaced and shouldn't have. Writes stay stamped as edits: a sync should follow. */
+async function keepLocalItems(before: SyncedStores): Promise<void> {
+  for (const [c, localItems] of before) {
     try {
-      await Preferences.set({ key: PRESETS_KEY, value: presets });
+      const restored = await c.read();
+      const kept = Object.keys(localItems).filter(
+        (key) => !(key in restored) || hasNewerOwnTime(c.id, localItems[key], restored[key]),
+      );
+      if (kept.length === 0) continue;
+      const items = { ...restored };
+      for (const key of kept) items[key] = localItems[key];
+      await c.write(items);
     } catch (err) {
-      console.warn("[backup] could not restore quiz range sets:", err);
+      console.warn(`[backup] could not keep local ${c.id} after the import:`, err);
     }
   }
 }

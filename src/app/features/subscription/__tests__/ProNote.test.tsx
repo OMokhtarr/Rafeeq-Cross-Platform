@@ -6,6 +6,9 @@ import { useSubscription } from "../../../core/context/SubscriptionContext";
 import { closeTopOverlay } from "../../../core/utils/overlay-registry";
 
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
+jest.mock("../../../core/context/AuthContext", () => ({
+  useAuth: () => ({ enabled: false, user: null, requestSignIn: jest.fn() }),
+}));
 const mockOpenPaywall = jest.fn();
 jest.mock("../usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
 

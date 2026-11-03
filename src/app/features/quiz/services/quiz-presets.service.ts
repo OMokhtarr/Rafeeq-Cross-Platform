@@ -8,24 +8,14 @@
  */
 
 import { Preferences } from "@capacitor/preferences";
+import { PRESETS_KEY, isPreset } from "./quiz-presets.keys";
+import { markDirty } from "../../../core/services/sync/local-changes";
 import type {
   QuizRange,
   QuizRangePreset,
 } from "../../../shared/models/verse.model";
 
-export const PRESETS_KEY = "quizRangePresets";
-
-function isPreset(value: unknown): value is QuizRangePreset {
-  if (!value || typeof value !== "object") return false;
-  const p = value as Partial<QuizRangePreset>;
-  return (
-    typeof p.id === "string" &&
-    typeof p.name === "string" &&
-    Array.isArray(p.ranges) &&
-    typeof p.createdAt === "number" &&
-    typeof p.updatedAt === "number"
-  );
-}
+export { PRESETS_KEY, isPreset };
 
 /**
  * Every read funnels through here. Absent, malformed or partially corrupt
@@ -45,6 +35,7 @@ async function readAll(): Promise<QuizRangePreset[]> {
 
 async function writeAll(presets: QuizRangePreset[]): Promise<void> {
   await Preferences.set({ key: PRESETS_KEY, value: JSON.stringify(presets) });
+  markDirty(PRESETS_KEY);
 }
 
 function newId(): string {

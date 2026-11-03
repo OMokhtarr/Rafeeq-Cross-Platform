@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IonPage, IonContent, useIonViewWillEnter } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
+import { useSync } from "../../core/context/SyncContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
 import {
   fetchAllNotes,
@@ -24,6 +25,8 @@ import {
   type BackupSummary,
 } from "../../core/services/storage/backup.service";
 import AccountModal from "./AccountModal";
+import AccountIdentityRow from "./AccountIdentityRow";
+import DeleteAccountSheet from "./DeleteAccountSheet";
 import SubscriptionRow from "./SubscriptionRow";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
@@ -41,10 +44,14 @@ const LEGAL_BASE_URL = "https://omokhtarr.github.io/Rafeeq-Cross-Platform";
 const Account: React.FC = () => {
   usePageTour(["account"]);
   const history = useHistory();
-  const { lang, isRTL } = useLang();
+  const { lang, isRTL, t: strings } = useLang();
+  const { active: syncActive } = useSync();
 
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const openDelete = useCallback(() => setDeleteOpen(true), []);
+  const closeDelete = useCallback(() => setDeleteOpen(false), []);
   const [featureText, setFeatureText] = useState("");
   const [featureSent, setFeatureSent] = useState(false);
   const featureRef = useRef<HTMLTextAreaElement>(null);
@@ -159,7 +166,7 @@ const Account: React.FC = () => {
     setRestoring(true);
     setBackupError(null);
     try {
-      await restoreBackup(parseBackup(pendingRestore.json));
+      await restoreBackup(parseBackup(pendingRestore.json), { keepLocal: syncActive });
       setModal(null);
       setPendingRestore(null);
       await loadLocalData();
@@ -177,7 +184,7 @@ const Account: React.FC = () => {
     } finally {
       setRestoring(false);
     }
-  }, [pendingRestore, lang, loadLocalData]);
+  }, [pendingRestore, lang, loadLocalData, syncActive]);
 
   const formatDate = (iso: string) => {
     try {
@@ -351,6 +358,9 @@ const Account: React.FC = () => {
                 )}
             </div>
 
+            {/* ── Sign-in / signed-in identity ── */}
+            <AccountIdentityRow onDelete={openDelete} />
+
             {/* ── Rafeeq Pro subscription ── */}
             <SubscriptionRow />
 
@@ -513,6 +523,7 @@ const Account: React.FC = () => {
           <AccountModal title={t.restoreTitle} onClose={() => { setModal(null); setPendingRestore(null); }}>
             <div className="amod-request">
               <p className="amod-request-label">{t.restoreWarn}</p>
+              {syncActive && <p className="amod-request-label">{strings.account.syncKeepNote}</p>}
               <ul className="ac-restore-summary">
                 <li>
                   <span>{t.notes}</span>
@@ -558,6 +569,8 @@ const Account: React.FC = () => {
             </div>
           </AccountModal>
         )}
+
+        <DeleteAccountSheet open={deleteOpen} onClose={closeDelete} />
 
       </IonContent>
       <BottomNavBar active="more" fixed />

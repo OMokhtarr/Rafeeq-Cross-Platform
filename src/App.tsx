@@ -55,8 +55,14 @@ import { ThemeProvider } from "./app/core/context/ThemeContext";
 import { LanguageProvider } from "./app/core/context/LanguageContext";
 import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityContext";
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
+import { AuthProvider } from "./app/core/context/AuthContext";
+import { completeOAuthRedirect } from "./app/core/services/auth/auth.service";
+import { isAccountsOn } from "./app/core/services/auth/accounts-switch";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
+import { SyncProvider } from "./app/core/context/SyncContext";
+import { installWriteHook } from "./app/core/services/sync/local-changes";
 import ProNote from "./app/features/subscription/ProNote";
+import SignInSheet from "./app/features/account/SignInSheet";
 
 // `hardwareBackButton: false` is load-bearing, not cosmetic.
 //
@@ -73,6 +79,9 @@ import ProNote from "./app/features/subscription/ProNote";
 // uses no IonModal/IonAlert/IonActionSheet/IonMenu, and its own sheets close
 // through the overlay registry.
 setupIonicReact({ mode: "md", hardwareBackButton: false });
+
+// Records which synced store each write touches, so Pro sync knows what changed.
+installWriteHook();
 
 // Main tab destinations that must never go back: disable the edge swipe-back
 // gesture while one of them is the active route, so an accidental edge swipe
@@ -137,9 +146,16 @@ const MainRouterOutlet: React.FC = () => {
 
   // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
   // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
-  // running app receives it as appUrlOpen.
+  // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
+  // Android's Apple sign-in in the browser; a cold start there means the
+  // app was killed while the tab was open, and the code still signs in.
+  // With accounts off there is no sign-in to finish, so it is ignored.
   useEffect(() => {
     const open = (url: string | undefined) => {
+      if (url?.startsWith("rafeeq://auth/")) {
+        if (isAccountsOn()) void completeOAuthRedirect(url);
+        return;
+      }
       const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);
       if (m) historyRef.current.push(`/azkar/${m[1]}`);
     };
@@ -282,28 +298,33 @@ const App: React.FC = () => {
       <LanguageProvider>
         <VerseVisibilityProvider>
           <PlaybackProvider>
-            <SubscriptionProvider>
-              <IonApp>
-                {preloading && preloadProgress.done < preloadProgress.total && (
-                  <div className="global-preload-bar">
-                    <div
-                      className="global-preload-fill"
-                      style={{
-                        width: `${
-                          (preloadProgress.done / preloadProgress.total) * 100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                )}
-                <IonReactRouter>
-                  <TourProvider initial={onboarding}>
-                    <MainRouterOutlet />
-                  </TourProvider>
-                  <ProNote />
-                </IonReactRouter>
-              </IonApp>
-            </SubscriptionProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <SyncProvider>
+                  <IonApp>
+                    {preloading && preloadProgress.done < preloadProgress.total && (
+                      <div className="global-preload-bar">
+                        <div
+                          className="global-preload-fill"
+                          style={{
+                            width: `${
+                              (preloadProgress.done / preloadProgress.total) * 100
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                    <IonReactRouter>
+                      <TourProvider initial={onboarding}>
+                        <MainRouterOutlet />
+                      </TourProvider>
+                      <ProNote />
+                      <SignInSheet />
+                    </IonReactRouter>
+                  </IonApp>
+                </SyncProvider>
+              </SubscriptionProvider>
+            </AuthProvider>
           </PlaybackProvider>
         </VerseVisibilityProvider>
       </LanguageProvider>

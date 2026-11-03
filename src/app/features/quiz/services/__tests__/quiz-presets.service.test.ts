@@ -9,6 +9,8 @@ jest.mock("@capacitor/preferences", () => ({
   Preferences: { get: jest.fn(), set: jest.fn() },
 }));
 
+jest.mock("../../../hifz/hifz.service", () => ({}));
+
 import { Preferences } from "@capacitor/preferences";
 import {
   PRESETS_KEY,

@@ -1,7 +1,7 @@
 export {};
 
 jest.mock("@capacitor/core", () => ({ Capacitor: { getPlatform: jest.fn(), DEBUG: false } }));
-jest.mock("@revenuecat/purchases-capacitor", () => ({ Purchases: { configure: jest.fn() } }));
+jest.mock("@revenuecat/purchases-capacitor", () => ({ Purchases: { configure: jest.fn(), logIn: jest.fn(), logOut: jest.fn(), isAnonymous: jest.fn(), getCustomerInfo: jest.fn() } }));
 jest.mock("@revenuecat/purchases-capacitor-ui", () => ({
   RevenueCatUI: { presentPaywall: jest.fn() },
   PAYWALL_RESULT: {
@@ -22,7 +22,7 @@ afterEach(() => {
 // configureRevenueCat memoises its first call, so each case loads a fresh copy.
 function load({ debug = false } = {}) {
   let mod!: typeof import("../revenuecat.service");
-  let sdk!: { Purchases: { configure: jest.Mock } };
+  let sdk!: { Purchases: Record<"configure" | "logIn" | "logOut" | "isAnonymous" | "getCustomerInfo", jest.Mock> };
   let ui!: { RevenueCatUI: { presentPaywall: jest.Mock } };
   let core!: { Capacitor: { getPlatform: jest.Mock; DEBUG: boolean } };
   jest.isolateModules(() => {
@@ -34,7 +34,7 @@ function load({ debug = false } = {}) {
   core.Capacitor.getPlatform.mockReturnValue("android");
   core.Capacitor.DEBUG = debug;
   sdk.Purchases.configure.mockResolvedValue(undefined);
-  return { mod, configure: sdk.Purchases.configure, presentPaywall: ui.RevenueCatUI.presentPaywall };
+  return { mod, sdk, configure: sdk.Purchases.configure, presentPaywall: ui.RevenueCatUI.presentPaywall };
 }
 
 it("sends nothing to RevenueCat when the build has no key", async () => {
@@ -84,4 +84,38 @@ it.each([
   const { mod, presentPaywall } = load();
   presentPaywall.mockResolvedValue({ result: native });
   await expect(mod.presentPaywall()).resolves.toBe(expected);
+});
+
+it("configures with the account id when one is given", async () => {
+  process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_public_key";
+  const { mod, configure } = load();
+  await mod.configureRevenueCat("u1");
+  await mod.configureRevenueCat("u2");
+  expect(configure).toHaveBeenCalledTimes(1);
+  expect(configure).toHaveBeenCalledWith({ apiKey: "goog_public_key", appUserID: "u1" });
+});
+
+it("logs in and returns the customer info", async () => {
+  process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_public_key";
+  const { mod, sdk } = load();
+  sdk.Purchases.logIn.mockResolvedValue({ customerInfo: { id: "ci" }, created: false });
+  await expect(mod.logInRevenueCat("u1")).resolves.toEqual({ id: "ci" });
+  expect(sdk.Purchases.logIn).toHaveBeenCalledWith({ appUserID: "u1" });
+});
+
+it("logs out an identified user", async () => {
+  process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_public_key";
+  const { mod, sdk } = load();
+  sdk.Purchases.isAnonymous.mockResolvedValue({ isAnonymous: false });
+  sdk.Purchases.logOut.mockResolvedValue({ customerInfo: { id: "out" } });
+  await expect(mod.logOutRevenueCat()).resolves.toEqual({ id: "out" });
+});
+
+it("skips logOut for an anonymous user, which would throw", async () => {
+  process.env.REACT_APP_REVENUECAT_ANDROID_KEY = "goog_public_key";
+  const { mod, sdk } = load();
+  sdk.Purchases.isAnonymous.mockResolvedValue({ isAnonymous: true });
+  sdk.Purchases.getCustomerInfo.mockResolvedValue({ customerInfo: { id: "current" } });
+  await expect(mod.logOutRevenueCat()).resolves.toEqual({ id: "current" });
+  expect(sdk.Purchases.logOut).not.toHaveBeenCalled();
 });

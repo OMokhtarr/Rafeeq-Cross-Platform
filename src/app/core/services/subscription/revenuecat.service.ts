@@ -6,8 +6,10 @@
  * it is the source of truth for "is this person Pro?"; the app only caches
  * its answer.
  *
- * There is no login: RevenueCat's anonymous app-user id is the identity, and
- * "Restore purchases" re-attaches a store purchase to it on a new device.
+ * The identity is the signed-in account's id (logIn/logOut follow the
+ * account), so Pro belongs to the account. Without an account, RevenueCat's
+ * anonymous app-user id is the identity, and "Restore purchases" re-attaches
+ * a store purchase to it on a new device.
  * Buying happens on RevenueCat's Paywall and managing an active subscription
  * in its Customer Center — both native screens designed in the RevenueCat
  * dashboard, so plans and wording change without an app release.
@@ -36,8 +38,9 @@ let configured: Promise<void> | null = null;
  *  a key never starts RevenueCat, so it sends nothing to it (the privacy
  *  declarations change only for builds that carry a key). A Test Store key is
  *  refused outside debug builds, which then behave like a build without a key
- *  instead of crashing at launch. */
-export function configureRevenueCat(): Promise<void> {
+ *  instead of crashing at launch. The first call wins: `appUserId`, when
+ *  given, is the identity the SDK starts with. */
+export function configureRevenueCat(appUserId?: string | null): Promise<void> {
   if (!configured) {
     const apiKey =
       Capacitor.getPlatform() === "ios"
@@ -50,10 +53,15 @@ export function configureRevenueCat(): Promise<void> {
         new Error("A RevenueCat Test Store key only works in debug builds — use the store key for release"),
       );
     } else {
-      configured = Purchases.configure({ apiKey });
+      configured = Purchases.configure(appUserId ? { apiKey, appUserID: appUserId } : { apiKey });
     }
   }
   return configured;
+}
+
+/** Forgets the memoised configure call so a test can configure afresh. */
+export function resetRevenueCatForTests(): void {
+  configured = null;
 }
 
 /** RevenueCat's screens follow the phone's language unless told otherwise.
@@ -66,6 +74,21 @@ export async function setRevenueCatLocale(lang: "ar" | "en"): Promise<void> {
 
 export async function fetchCustomerInfo(): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.getCustomerInfo();
+  return customerInfo;
+}
+
+/** Moves RevenueCat to the signed-in account; resolves its customer info. */
+export async function logInRevenueCat(id: string): Promise<CustomerInfo> {
+  const { customerInfo } = await Purchases.logIn({ appUserID: id });
+  return customerInfo;
+}
+
+/** Back to an anonymous id. RevenueCat's logOut throws for a user that is
+ *  already anonymous, so that case just resolves the current info. */
+export async function logOutRevenueCat(): Promise<CustomerInfo> {
+  const { isAnonymous } = await Purchases.isAnonymous();
+  if (isAnonymous) return fetchCustomerInfo();
+  const { customerInfo } = await Purchases.logOut();
   return customerInfo;
 }
 
