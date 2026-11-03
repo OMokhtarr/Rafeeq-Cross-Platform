@@ -39,7 +39,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     document.documentElement.setAttribute("lang", lang);
     document.documentElement.setAttribute("dir", t.dir);
     try {
-      localStorage.setItem(STORAGE_KEY, lang);
+      // An untouched default stays unwritten: stored, it would count as a fresh
+      // edit and beat the language this person chose on another device.
+      if (lang !== DEFAULT_LANG || localStorage.getItem(STORAGE_KEY) !== null) {
+        localStorage.setItem(STORAGE_KEY, lang);
+      }
     } catch (_) {}
   }, [lang]);
 

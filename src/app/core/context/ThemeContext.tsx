@@ -37,7 +37,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     try {
-      localStorage.setItem(STORAGE_KEY, theme);
+      // An untouched default stays unwritten: stored, it would count as a fresh
+      // edit and beat the theme this person chose on another device.
+      if (theme !== DEFAULT_THEME || localStorage.getItem(STORAGE_KEY) !== null) {
+        localStorage.setItem(STORAGE_KEY, theme);
+      }
     } catch (_) {}
   }, [theme]);
 
