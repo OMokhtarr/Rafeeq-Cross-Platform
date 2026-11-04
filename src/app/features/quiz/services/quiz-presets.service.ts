@@ -10,6 +10,7 @@
 import { Preferences } from "@capacitor/preferences";
 import { PRESETS_KEY, isPreset } from "./quiz-presets.keys";
 import { markDirty } from "../../../core/services/sync/local-changes";
+import { markStoreBroken } from "../../../core/services/sync/broken-stores";
 import type {
   QuizRange,
   QuizRangePreset,
@@ -26,9 +27,13 @@ async function readAll(): Promise<QuizRangePreset[]> {
     const { value } = await Preferences.get({ key: PRESETS_KEY });
     if (!value) return [];
     const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      markStoreBroken("quizPresets");
+      return [];
+    }
     return parsed.filter(isPreset);
   } catch {
+    markStoreBroken("quizPresets");
     return [];
   }
 }

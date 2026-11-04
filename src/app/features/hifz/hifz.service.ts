@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { idb } from "../../core/services/storage/idb.service";
+import { markStoreBroken } from "../../core/services/sync/broken-stores";
 import {
   getRubBoundaries,
   getHizbBoundaries,
@@ -203,7 +204,9 @@ export async function loadPlanAsync(): Promise<HifzPlan | null> {
     }
 
     return plan;
-  } catch {
+  } catch (err) {
+    // Unreadable, not absent: the next save would stand in for the whole store.
+    if (!isNotFound(err)) markStoreBroken("hifzPlan");
     return null;
   }
 }
@@ -281,7 +284,9 @@ export async function loadBestPlanAsync(): Promise<BestPlanRecord | null> {
     }
 
     return record;
-  } catch {
+  } catch (err) {
+    // Unreadable, not absent: the next save would stand in for the whole store.
+    if (!isNotFound(err)) markStoreBroken("hifzBest");
     return null;
   }
 }
@@ -337,7 +342,9 @@ export async function loadLatestPlanAsync(): Promise<BestPlanRecord | null> {
     }
 
     return record;
-  } catch {
+  } catch (err) {
+    // Unreadable, not absent: the next save would stand in for the whole store.
+    if (!isNotFound(err)) markStoreBroken("hifzLatest");
     return null;
   }
 }
@@ -420,7 +427,9 @@ export async function loadHifzReadingSessionAsync(): Promise<HifzReadingSession 
     }
 
     return session;
-  } catch {
+  } catch (err) {
+    // Unreadable, not absent: the next save would stand in for the whole store.
+    if (!isNotFound(err)) markStoreBroken("hifzReading");
     return null;
   }
 }

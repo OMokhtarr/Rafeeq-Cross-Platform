@@ -31,6 +31,7 @@ import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
 import { ARCHIVE_PREFIX, OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
 import { SYNC_APPLIED_EVENT } from "./sync-events";
+import { brokenStores, clearBroken, markStoreBroken } from "./broken-stores";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
 import { mergeFreezePool, mergeHifzPlan, mergeVersioned, stableStringify } from "./merge";
 import { pullSince, push, SyncOfflineError } from "./sync-remote";
@@ -406,13 +407,26 @@ interface LostPush {
 }
 
 /** Writes the remote winners locally (step 4); dispatches SYNC_APPLIED_EVENT. Storage failures land in `failures`. */
-async function applyLocally(runs: CollectionRun[], appliedOut: Set<string>, failures: string[]): Promise<void> {
+async function applyLocally(
+  runs: CollectionRun[],
+  appliedOut: Set<string>,
+  failures: string[],
+  unreadable: Set<string>,
+): Promise<void> {
   const written: string[] = [];
   for (const r of runs) {
     if (r.failed || r.applied.size === 0) continue;
     try {
+      let now: Record<string, unknown>;
+      try {
+        now = await r.c.read();
+      } catch (err) {
+        unreadable.add(r.c.id);
+        markStoreBroken(r.c.id);
+        throw err;
+      }
       // A store the app changed since this run read it is left for the next run.
-      if (stableStringify(await r.c.read()) !== stableStringify(r.stored)) {
+      if (stableStringify(now) !== stableStringify(r.stored)) {
         console.warn(`[sync] skipping ${r.c.id} this run: changed during sync`);
         r.failed = true;
         continue;
@@ -482,6 +496,9 @@ async function run(userId: string): Promise<SyncResult> {
   const resetsAtStart = resets;
   const runStart = new Date().toISOString();
   const state = loadState(userId);
+  // A marked store is not merged, whatever the saved state says (see broken-stores.ts).
+  const marked = brokenStores();
+  state.merged = state.merged.filter((id) => !marked.includes(id));
   const failures: string[] = [];
   const unreadable = new Set<string>();
 
@@ -492,6 +509,7 @@ async function run(userId: string): Promise<SyncResult> {
     else {
       failures.push(c.id);
       unreadable.add(c.id);
+      markStoreBroken(c.id);
     }
   }
 
@@ -506,7 +524,7 @@ async function run(userId: string): Promise<SyncResult> {
   }
 
   const applied = new Set<string>();
-  await applyLocally(runs, applied, failures);
+  await applyLocally(runs, applied, failures, unreadable);
   const lost = await pushOutgoing(runs);
 
   if (lost.length > 0) {
@@ -514,7 +532,7 @@ async function run(userId: string): Promise<SyncResult> {
     for (const { r, key, sent, stored } of lost) {
       if (!r.failed) reconcileKeys(r, [key], { [key]: stored }, new Map([[key, fromRow(sent)]]));
     }
-    await applyLocally(runs, applied, failures);
+    await applyLocally(runs, applied, failures, unreadable);
     for (const { r, key } of await pushOutgoing(runs)) {
       r.unsettled = true;
       if (r.base[key] === undefined) delete r.snapshot[key];
@@ -536,8 +554,7 @@ async function run(userId: string): Promise<SyncResult> {
     userId,
     cursor: pulled.cursor,
     snapshot,
-    // An unreadable store leaves `merged`: it recovers as a first merge, so the
-    // notes it lost are not read as deletes and a different plan is archived.
+    // An unreadable store leaves `merged`: it recovers as a first merge.
     merged: wasReset ? [] : [...new Set([...state.merged, ...doneIds])].filter((id) => !unreadable.has(id)),
     behind: SYNC_COLLECTIONS.map((c) => c.id).filter((id) => !doneIds.includes(id)),
     rejected,
@@ -545,6 +562,8 @@ async function run(userId: string): Promise<SyncResult> {
   };
   // A failed save throws: the run is an error and the old state and dirty times stay.
   localStorage.setItem(STATE_KEY, JSON.stringify(next));
+  // Only now, and only marks that were there at the start: a mark made during the run stays.
+  clearBroken(marked.filter((id) => doneIds.includes(id)));
   for (const r of done) if (!r.unsettled) clearDirty(r.c.id, runStart);
 
   if (failures.length > 0) return { status: "error", message: `Could not sync ${failures.join(", ")}` };

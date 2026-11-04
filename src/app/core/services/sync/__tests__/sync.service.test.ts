@@ -1,7 +1,12 @@
 import { Preferences } from "@capacitor/preferences";
 import { idb } from "../../storage/idb.service";
-import { loadPlanStrict, savePlanStrict, type HifzPlan } from "../../../../features/hifz/hifz.service";
+import { loadPlanAsync, loadPlanStrict, savePlanStrict, type HifzPlan } from "../../../../features/hifz/hifz.service";
 import { dirtyTime, installWriteHook, suppressHook } from "../local-changes";
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+import { VerseVisibilityProvider } from "../../../context/VerseVisibilityContext";
+import { listPresets, savePreset } from "../../../../features/quiz/services/quiz-presets.service";
+import { brokenStores } from "../broken-stores";
 import { pullSince, push, SyncOfflineError } from "../sync-remote";
 import { getLastSyncedAt, resetSyncState, syncNow, SYNC_APPLIED_EVENT } from "../sync.service";
 import type { SyncRow } from "../types";
@@ -21,7 +26,11 @@ jest.mock("../../storage/idb.service", () => ({
   idb: { get: jest.fn(), put: jest.fn(), delete: jest.fn() },
 }));
 
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+// Taken before any test installs the write hook: a write the hook never sees.
+const rawSetItem = Storage.prototype.setItem;
 const NOTES = "rafiq_notes_v1";
+const HIDDEN = "rafiq_hidden_verses_v1";
 const STATE = "rafiq_sync_state_v1";
 const FREEZES = "rafiq_hifz_freeze_tokens_v1";
 
@@ -619,7 +628,6 @@ describe("first merge again", () => {
 
     // The app reads bad JSON as [], so the next added note overwrites the store.
     setNotes(note("d"));
-    (push as jest.Mock).mockClear();
     expect((await syncNow("u1")).status).toBe("synced");
     expect(cloudRows("notes").filter((r) => r.deleted)).toEqual([]);
     expect(cloudLive("notes")).toEqual(["a", "b", "c", "d"]);
@@ -661,6 +669,194 @@ describe("first merge again", () => {
     expect(cloud.get("notes/a")?.deleted).toBe(true);
     expect(cloudLive("notes")).toEqual(["b"]);
     warn.mockRestore();
+  });
+
+  describe("a broken store is remembered until it has merged", () => {
+    const NOTES_COLLECTION = "notes";
+    const noTombstones = () => expect(cloudRows(NOTES_COLLECTION).filter((r) => r.deleted)).toEqual([]);
+    const quiet = () => jest.spyOn(console, "warn").mockImplementation(() => {});
+    const seedAbc = async () => {
+      setNotes(note("a"), note("b"), note("c"));
+      await syncNow("u1");
+    };
+    const expectAllFour = () => {
+      noTombstones();
+      expect(cloudLive("notes")).toEqual(["a", "b", "c", "d"]);
+      expect(localNoteIds()).toEqual(["a", "b", "c", "d"]);
+    };
+    const failStateSave = () => {
+      const realSet = Storage.prototype.setItem;
+      return jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k, v) {
+        if (k === STATE) throw new Error("quota");
+        realSet.call(this, k, v);
+      });
+    };
+
+    it("survives an offline bad run", async () => {
+      const warn = quiet();
+      await seedAbc();
+      localStorage.setItem(NOTES, "{corrupt");
+      (pullSince as jest.Mock).mockRejectedValueOnce(new SyncOfflineError());
+      expect((await syncNow("u1")).status).toBe("offline");
+
+      setNotes(note("d"));
+      expect((await syncNow("u1")).status).toBe("synced");
+      expectAllFour();
+      warn.mockRestore();
+    });
+
+    it("survives a failed state save during the bad run", async () => {
+      const warn = quiet();
+      await seedAbc();
+      localStorage.setItem(NOTES, "{corrupt");
+      const spy = failStateSave();
+      expect((await syncNow("u1")).status).toBe("error");
+      spy.mockRestore();
+
+      setNotes(note("d"));
+      expect((await syncNow("u1")).status).toBe("synced");
+      expectAllFour();
+      warn.mockRestore();
+    });
+
+    it("covers corruption no run ever saw, and pulls everything on recovery", async () => {
+      await seedAbc();
+      localStorage.setItem(NOTES, "{corrupt");
+      setNotes(note("d"));
+      (pullSince as jest.Mock).mockClear();
+      expect((await syncNow("u1")).status).toBe("synced");
+      expect((pullSince as jest.Mock).mock.calls[0][0]).toBeNull();
+      expectAllFour();
+    });
+
+    it.each([
+      ["corrupt JSON", "{corrupt"],
+      ["a non-array", '{"1:1":true}'],
+    ])("covers hidden verses read as empty and overwritten on mount (%s)", async (_name, bad) => {
+      localStorage.setItem(HIDDEN, JSON.stringify(["1:1", "2:2", "3:3"]));
+      await syncNow("u1");
+      localStorage.setItem(HIDDEN, bad);
+
+      const root = createRoot(document.createElement("div"));
+      await act(async () => root.render(React.createElement(VerseVisibilityProvider, null, null)));
+      expect(localStorage.getItem(HIDDEN)).toBe("[]");
+      await act(async () => root.unmount());
+
+      expect((await syncNow("u1")).status).toBe("synced");
+      expect(cloudRows("hiddenVerses").filter((r) => r.deleted)).toEqual([]);
+      expect(cloudLive("hiddenVerses")).toEqual(["1:1", "2:2", "3:3"]);
+      expect(JSON.parse(localStorage.getItem(HIDDEN) as string).sort()).toEqual(["1:1", "2:2", "3:3"]);
+    });
+
+    it("covers a Hifz plan the non-strict loader could not read", async () => {
+      await savePlanStrict(plan(true));
+      await syncNow("u1");
+      devices.A.idb.set("plan", { id: "plan", data: "{corrupt" });
+      expect(await loadPlanAsync()).toBeNull();
+
+      await savePlanStrict({ ...plan(false), createdAt: "2026-10-05T08:00:00.000Z" } as HifzPlan);
+      expect((await syncNow("u1")).status).toBe("synced");
+      expect(cloudLive("hifzPlan")).toEqual(["archive:2026-10-01T08:00:00.000Z", "current"]);
+    });
+
+    it("covers quiz presets that could not be parsed", async () => {
+      await savePreset([], "one");
+      await savePreset([], "two");
+      await syncNow("u1");
+      expect(cloudLive("quizPresets")).toHaveLength(2);
+      devices.A.prefs.set("quizRangePresets", "{corrupt");
+      expect(await listPresets()).toEqual([]);
+
+      await savePreset([], "three");
+      expect((await syncNow("u1")).status).toBe("synced");
+      expect(cloudRows("quizPresets").filter((r) => r.deleted)).toEqual([]);
+      expect(cloudLive("quizPresets")).toHaveLength(3);
+      expect(JSON.parse(devices.A.prefs.get("quizRangePresets") as string)).toHaveLength(3);
+    });
+
+    it("covers a store that cannot be read while applying remote changes", async () => {
+      const warn = quiet();
+      await seedAbc();
+      seed("notes", "e", note("e"), "2026-10-03T00:00:00.000Z");
+      // Corrupted after the run read it, before it applies the cloud's note.
+      (pullSince as jest.Mock).mockImplementationOnce(async (cursor: string | null) => {
+        rawSetItem.call(localStorage, NOTES, "{corrupt");
+        return fakePull(cursor);
+      });
+      expect((await syncNow("u1")).status).toBe("error");
+
+      rawSetItem.call(localStorage, NOTES, JSON.stringify([note("d")]));
+      expect((await syncNow("u1")).status).toBe("synced");
+      noTombstones();
+      expect(cloudLive("notes")).toEqual(["a", "b", "c", "d", "e"]);
+      warn.mockRestore();
+    });
+
+    it("archives the old plan when saving the archive fails first, and keeps the plan meanwhile", async () => {
+      const warn = quiet();
+      await savePlanStrict(plan(true));
+      await syncNow("u1");
+      // Both sides changed: a different plan in the cloud, a session edit here.
+      await savePlanStrict(plan(false));
+      seed("hifzPlan", "current", { ...plan(false), createdAt: "2026-10-05T08:00:00.000Z" }, "2099-01-01T00:00:00.000Z");
+      const realSet = Storage.prototype.setItem;
+      const spy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k, v) {
+        if (k === "rafiq_hifz_plan_archive_v1") throw new Error("quota");
+        realSet.call(this, k, v);
+      });
+      expect((await syncNow("u1")).status).toBe("error");
+      spy.mockRestore();
+      expect((await loadPlanStrict())?.createdAt).toBe("2026-10-01T08:00:00.000Z");
+
+      expect((await syncNow("u1")).status).toBe("synced");
+      expect((await loadPlanStrict())?.createdAt).toBe("2026-10-05T08:00:00.000Z");
+      expect(cloudLive("hifzPlan")).toEqual(["archive:2026-10-01T08:00:00.000Z", "current"]);
+      expect(Object.keys(JSON.parse(localStorage.getItem("rafiq_hifz_plan_archive_v1") as string))).toEqual([
+        "2026-10-01T08:00:00.000Z",
+      ]);
+      warn.mockRestore();
+    });
+
+    it("keeps the mark while the store is unreadable, and when the state save fails", async () => {
+      const warn = quiet();
+      await seedAbc();
+      localStorage.setItem(NOTES, "{corrupt");
+      await syncNow("u1");
+      await syncNow("u1");
+      expect(brokenStores()).toEqual(["notes"]);
+
+      setNotes(note("d"));
+      const spy = failStateSave();
+      expect((await syncNow("u1")).status).toBe("error");
+      spy.mockRestore();
+      expect(brokenStores()).toEqual(["notes"]);
+      warn.mockRestore();
+    });
+
+    it("clears the mark after a completed merge, and a later delete then propagates", async () => {
+      const warn = quiet();
+      await seedAbc();
+      localStorage.setItem(NOTES, "{corrupt");
+      setNotes(note("d"));
+      expect(brokenStores()).toEqual(["notes"]);
+      await syncNow("u1");
+      expect(brokenStores()).toEqual([]);
+      expectAllFour();
+
+      setNotes(note("b"), note("c"), note("d"));
+      await syncNow("u1");
+      expect(cloud.get("notes/a")?.deleted).toBe(true);
+      warn.mockRestore();
+    });
+
+    it("sets no mark when an intact store is overwritten, and deletes propagate", async () => {
+      await seedAbc();
+      setNotes(note("a"), note("b"));
+      expect(brokenStores()).toEqual([]);
+      await syncNow("u1");
+      expect(cloud.get("notes/c")?.deleted).toBe(true);
+      expect(cloudLive("notes")).toEqual(["a", "b"]);
+    });
   });
 
   it("a reset during a run still makes the next run a first merge", async () => {

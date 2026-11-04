@@ -14,7 +14,8 @@
  */
 
 import { stableStringify } from "./merge";
-import { collectionForStorageKey } from "./collections";
+import { collectionForStorageKey, isBrokenRaw } from "./collections";
+import { markStoreBroken } from "./broken-stores";
 
 export { stableStringify };
 
@@ -88,7 +89,11 @@ export function installWriteHook(): void {
       if (store !== localStorage) return undefined;
       const id = collectionForStorageKey(key)?.id;
       // Contexts rewrite unchanged values on every mount; those are not edits.
-      if (id && origGet.call(store, key) === next) return undefined;
+      if (!id) return undefined;
+      const old = origGet.call(store, key);
+      if (old === next) return undefined;
+      // Replacing a value the app could not read: sync must not take what is left for the whole store.
+      if (isBrokenRaw(key, old)) markStoreBroken(id);
       return id;
     } catch {
       return undefined;

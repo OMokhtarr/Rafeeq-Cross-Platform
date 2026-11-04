@@ -332,22 +332,25 @@ const hifzPlan: SyncCollection = {
     return out;
   },
   async write(items) {
+    // The archive first: if the current plan then fails to save, the next run
+    // still holds the old plan locally and archives it, instead of losing it.
+    const wanted: Record<string, unknown> = {};
+    for (const k of Object.keys(items)) {
+      if (k.startsWith(ARCHIVE_PREFIX)) wanted[k.slice(ARCHIVE_PREFIX.length)] = items[k];
+    }
+    const existing = readMap(PLAN_ARCHIVE_KEY);
+    if (Object.keys(wanted).length > 0 || Object.keys(existing).length > 0) {
+      const archive: Record<string, unknown> = {};
+      for (const k of Object.keys(existing)) if (k in wanted) archive[k] = wanted[k];
+      for (const k of newKeys(new Set(Object.keys(archive)), wanted)) archive[k] = wanted[k];
+      writeJson(PLAN_ARCHIVE_KEY, archive);
+    }
     const current = items.current;
     if (isPlanLike(current)) {
       await savePlanStrict(current as Parameters<typeof savePlanStrict>[0]);
     } else if (!("current" in items)) {
       await clearPlanStrict();
     }
-    const wanted: Record<string, unknown> = {};
-    for (const k of Object.keys(items)) {
-      if (k.startsWith(ARCHIVE_PREFIX)) wanted[k.slice(ARCHIVE_PREFIX.length)] = items[k];
-    }
-    const existing = readMap(PLAN_ARCHIVE_KEY);
-    if (Object.keys(wanted).length === 0 && Object.keys(existing).length === 0) return;
-    const archive: Record<string, unknown> = {};
-    for (const k of Object.keys(existing)) if (k in wanted) archive[k] = wanted[k];
-    for (const k of newKeys(new Set(Object.keys(archive)), wanted)) archive[k] = wanted[k];
-    writeJson(PLAN_ARCHIVE_KEY, archive);
   },
   validate: isPlanLike,
 };
@@ -385,6 +388,41 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
   singleValue("trackerSince", "object", "rafeeq.tracker.since", "string", isDayString),
   singleValue("trackerWeights", "object", "rafeeq.tracker.weights", "json", isRecord),
 ];
+
+/** Top-level JSON shape each localStorage store keeps; the string stores (theme, language...) have none. */
+const JSON_SHAPES: Record<string, "array" | "record"> = {
+  rafiq_notes_v1: "array",
+  rafiq_bookmarks_v1: "record",
+  rafiq_hidden_verses_v1: "array",
+  rafiq_recitation_history_v1: "array",
+  "azkar:favorites": "array",
+  "rafeeq.tracker.days": "record",
+  rafiq_hifz_streak_dates_v1: "array",
+  rafiq_hifz_streak_freeze_v1: "array",
+  rafiq_hifz_session_counts_v1: "record",
+  rafiq_hifz_v2: "record",
+  [PLAN_ARCHIVE_KEY]: "record",
+  [FREEZE_POOL_KEY]: "record",
+  rafiq_hifz_best_v1: "record",
+  rafiq_hifz_latest_v1: "record",
+  rafiq_hifz_reading_v1: "record",
+  rafiq_settings_v1: "record",
+  rafiq_search_recents_v1: "array",
+  "rafeeq.tracker.settings": "record",
+  "rafeeq.tracker.weights": "record",
+};
+
+/** True when `raw`, a value stored under `key`, is not JSON of the shape its collection keeps. */
+export function isBrokenRaw(key: string, raw: string | null): boolean {
+  const shape = JSON_SHAPES[key];
+  if (!shape || raw === null) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    return shape === "array" ? !Array.isArray(parsed) : !isRecord(parsed);
+  } catch {
+    return true;
+  }
+}
 
 export function collectionForStorageKey(key: string): SyncCollection | undefined {
   return SYNC_COLLECTIONS.find((c) => c.storageKeys.includes(key));
