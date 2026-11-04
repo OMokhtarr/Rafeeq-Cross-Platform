@@ -117,6 +117,28 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 
 ## Later
 
+- [ ] **Pro sync follow-ups (none block launch).** Small or rare cases left from
+      the Nov 2026 reviews:
+      - Exclude the two native reminder flags from settings sync; phones with
+        different reminders overwrite each other when Settings opens.
+      - A corrupt Hifz archive map never recovers on that device: treat it as
+        empty and marked, since the cloud holds the archives.
+      - Items that lose their id (numeric ids, `[null, null]`) or a plan holding
+        JSON `null` still read as deletes. No writer I read produces these.
+      - Settings or Hifz best corrupted, then defaults written: the defaults
+        replace the cloud copy once on all devices.
+      - Android: file read error, no localStorage mirror, Pro lapsed, new plan:
+        the old cloud plan is lost with no archive.
+      - A store corrupted twice within one run, or with storage too full to save
+        the broken-store mark, can still send deletes.
+      - A corrupted best, latest or reading record stops the Hifz plan refreshing
+        on that device.
+      - A settings toggle is lost if a sync lands within its 250 ms save delay.
+      - A delete and an edit within one run's pull-to-push window can lose the
+        edit; a newer push can overwrite a row stored after our pull.
+      - After an app update, rows the old build couldn't read aren't re-fetched
+        until they change: reset the cursor on a schema change.
+      - `diffAgainstSnapshot` in `local-changes.ts` is dead code.
 - [ ] **Ionic version mismatch.** `@ionic/react` is on 7.8.6 (`^7.0.0`) but
       `@ionic/react-router` is on 8.8.19 (`^8.7.18`). Mixed majors work today
       but aren't a supported pairing. Align both on Ionic 8 (`@ionic/react`
