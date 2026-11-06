@@ -54,7 +54,9 @@ export default {
     const corsHeaders = {
       "access-control-allow-origin": corsOrigin,
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type, authorization",
+      // x-rafeeq-user is still allowed (and ignored) so app versions installed
+      // before sign-in, which send it, aren't blocked at preflight.
+      "access-control-allow-headers": "content-type, authorization, x-rafeeq-user",
       "access-control-max-age": "86400",
     };
 
