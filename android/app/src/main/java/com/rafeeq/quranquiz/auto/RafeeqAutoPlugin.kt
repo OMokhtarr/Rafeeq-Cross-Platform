@@ -104,10 +104,12 @@ class RafeeqAutoPlugin : Plugin() {
         context.startService(Intent(context, RafeeqMediaService::class.java))
     }
 
+    @androidx.media3.common.util.UnstableApi
     override fun handleOnDestroy() {
         instance = null
         jsReady = false
         pendingEvent = null
+        RafeeqMediaService.instance?.onBrainGone()
         super.handleOnDestroy()
     }
 
@@ -122,46 +124,47 @@ class RafeeqAutoPlugin : Plugin() {
     fun jsReady(call: PluginCall) {
         jsReady = true
 
-        // If native cold-start is currently playing a surah (the car started playback while the
-        // app was closed), the brain must adopt THAT surah + position on wake — regardless of
-        // what event happens to be pending. Otherwise a bare 'play' with an empty in-app queue
-        // makes the brain default to Al-Fatiha (the "header switches to الفاتحة, bar stuck at
-        // 0:00" bug). So synthesize a selectSurah from the live native state and flush that.
-        val svc = RafeeqMediaService.instance
-        val liveSura = svc?.nativeCurrentColdSura() ?: 0
-        val eventToFlush: JSObject? = if (liveSura > 0) {
-            val liveIdx = svc?.nativeCurrentColdIndex() ?: 0
-            val reciter = svc?.nativeCurrentReciter() ?: ""
-            pendingEvent = null
-            JSObject().apply {
-                put("action", "selectSurah")
-                put("surah", liveSura)
-                put("aya", if (liveIdx >= 0) liveIdx else 0)
-                if (reciter.isNotEmpty()) put("reciter", reciter)
-            }
-        } else {
+        // notifyListeners must run on the main thread; PluginMethod threads vary.
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        main.post {
+            val svc = RafeeqMediaService.instance
+            // Native is still holding a session (the app was closed and reopened, or the car started
+            // it). It wins over whatever is pending: this brain has an empty queue, so a bare 'play'
+            // would default to Al-Fatiha. Sent with no delay, so it reaches JS before any verse-end
+            // that now routes to the brain.
+            val live = svc?.handLiveSessionToBrain()
             val pending = pendingEvent
-            if (pending != null) {
-                pendingEvent = null
-                // Refresh a selectSurah/play adopt-index to the live position (falls through here
-                // only when native isn't the current cold-start driver, e.g. JS already drove).
-                val action = pending.getString("action")
-                if (action == "selectSurah" || action == "play") {
-                    val liveIdx = svc?.nativeCurrentColdIndex() ?: -1
-                    if (liveIdx >= 0) pending.put("aya", liveIdx)
+            pendingEvent = null
+            when {
+                live != null -> {
+                    Log.d("RafeeqAuto", "jsReady: handing over session index=${live.index} of ${live.verses.size} playing=${live.playing}")
+                    notifyListeners("carAction", adoptNativeEvent(live))
+                }
+                // Native-driven but not adoptable (a finished range, or a range persisted before
+                // verse keys were stored). Starting anything here would replace it or replay it.
+                svc?.isNativeDriving() == true ->
+                    Log.d("RafeeqAuto", "jsReady: native session not adoptable, leaving it alone")
+                pending != null -> {
+                    Log.d("RafeeqAuto", "jsReady: flushing ${pending.getString("action")} surah=${pending.optInt("surah", -1)} aya=${pending.optInt("aya", -1)}")
+                    main.postDelayed({ notifyListeners("carAction", pending) }, 100)
                 }
             }
-            pending
-        }
-
-        if (eventToFlush != null) {
-            Log.d("RafeeqAuto", "jsReady: flushing ${eventToFlush.getString("action")} surah=${eventToFlush.optInt("surah", -1)} aya=${eventToFlush.optInt("aya", -1)}")
-            // notifyListeners must run on the main thread; PluginMethod threads vary.
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                notifyListeners("carAction", eventToFlush)
-            }, 100)
         }
         call.resolve()
+    }
+
+    private fun adoptNativeEvent(live: RafeeqMediaService.LiveSession) = JSObject().apply {
+        put("action", "adoptNative")
+        put("verses", live.verses.joinToString(","))
+        put("aya", live.index)
+        put("positionMs", live.positionMs)
+        put("playing", live.playing)
+        put("rangeRemainingPasses", live.rangeRemainingPasses)
+        put("repeatPageActive", live.repeatPageActive)
+        put("speed", live.speed.toDouble())
+        put("started", live.started)
+        put("needsUrls", live.needsUrls)
+        if (live.reciter.isNotEmpty()) put("reciter", live.reciter)
     }
 
     /**
@@ -306,7 +309,8 @@ class RafeeqAutoPlugin : Plugin() {
         val autoplay = call.getBoolean("autoplay") ?: true
         val sura = call.getInt("sura") ?: 0
         val reciter = call.getString("reciter") ?: ""
-        service.setNativeQueue(urls, startIndex, title, autoplay, sura, reciter)
+        val verses = call.getString("verses") ?: ""
+        service.setNativeQueue(urls, startIndex, title, autoplay, sura, reciter, verses)
         call.resolve()
     }
 
@@ -321,6 +325,13 @@ class RafeeqAutoPlugin : Plugin() {
     @PluginMethod
     fun nativePause(call: PluginCall) {
         RafeeqMediaService.instance?.nativePause()
+        call.resolve()
+    }
+
+    @androidx.media3.common.util.UnstableApi
+    @PluginMethod
+    fun nativeStop(call: PluginCall) {
+        RafeeqMediaService.instance?.nativeStop()
         call.resolve()
     }
 
@@ -404,9 +415,7 @@ class RafeeqAutoPlugin : Plugin() {
         // every verse-end to relaunch the activity and let rapid events overwrite each
         // other's pendingEvent (so advance() silently dropped → playback stalled after
         // the first ayah).
-        if (action == "nativePosition" || action == "nativeTrackEnded" ||
-            action == "nativeIntroEnded" || action == "nativePlaying" ||
-            action == "setSpeed") {
+        if (RafeeqCarEvents.isBrainOnly(action)) {
             // setSpeed is a live sync (native already applied the speed); if JS isn't ready there's
             // nothing to sync and we must NOT wake the activity for a speed tap.
             if (jsReady) notifyListeners("carAction", data)

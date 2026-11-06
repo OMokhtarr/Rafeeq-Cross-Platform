@@ -575,8 +575,10 @@ function pickAudioUrl(d: AudioApiResponse): string | null {
   return null;
 }
 
-function absoluteAudioUrl(u: string): string {
+export function absoluteAudioUrl(u: string): string {
   if (/^https?:\/\//i.test(u)) return u;
+  // Protocol-relative (the API uses this for reciters hosted on the everyayah mirror).
+  if (u.startsWith("//")) return `https:${u}`;
   return `https://verses.quran.foundation/${u.replace(/^\/+/, "")}`;
 }
 

@@ -9,6 +9,7 @@ jest.mock("../../services/audio/native-audio-output", () => ({
   nativePlayVerse: jest.fn(),
   nativeBismillahIntro: jest.fn(),
   nativePause: jest.fn(),
+  nativeStop: jest.fn(),
   nativeResume: jest.fn(),
   nativeSeek: jest.fn(),
   nativeSetSpeed: jest.fn(),

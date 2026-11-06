@@ -54,6 +54,36 @@ export async function pushNativeQueue(
   startIndex: number,
   title: string,
 ): Promise<void> {
+  // Announce the queue straight away. Resolving the urls below takes one request per uncached verse,
+  // and if the app is closed before that finishes, native must not continue the PREVIOUS queue.
+  // With no urls, native builds them itself where it can.
+  void DrivingMode.setNativeQueue({
+    urls: [],
+    startIndex,
+    title,
+    autoplay: false,
+    sura: queue[0]?.sura ?? 0,
+    reciter,
+    verses: verseKeys(queue),
+  }).catch(() => {});
+  await resolveNativeQueue(reciter, queue, startIndex, title);
+}
+
+function verseKeys(queue: Array<{ sura: number; aya: number }>): string {
+  return queue.map(({ sura, aya }) => `${sura}:${aya}`).join(",");
+}
+
+// The latest resolve wins, so an older queue's slow urls can't overwrite a newer queue.
+let latestResolve = 0;
+
+/** Replace native's persisted urls with the resolved ones (cached files where available). */
+export async function resolveNativeQueue(
+  reciter: string,
+  queue: Array<{ sura: number; aya: number }>,
+  startIndex: number,
+  title: string,
+): Promise<void> {
+  const resolve = ++latestResolve;
   const uris = await Promise.all(
     queue.map(async ({ sura, aya }) => {
       try {
@@ -63,6 +93,7 @@ export async function pushNativeQueue(
       }
     }),
   );
+  if (resolve !== latestResolve) return;
   // Keep index alignment: only drop entries if ALL are empty (nothing resolved).
   const anyResolved = uris.some((u) => u.length > 0);
   if (!anyResolved) return; // nothing to persist; leave any prior queue intact
@@ -77,6 +108,9 @@ export async function pushNativeQueue(
     // The reciter (numeric id or slug), so a native stall fallback keeps the SAME reciter when
     // it rebuilds the surah URLs — otherwise it could switch to the default reciter.
     reciter,
+    // Which verses the URLs are, so a brain reopened mid-playback can adopt this exact range.
+    // Native drops empty URLs, so an unresolved verse must be left out here too to stay aligned.
+    verses: verseKeys(queue.filter((_, i) => uris[i].length > 0)),
   });
 }
 
@@ -84,23 +118,29 @@ export async function pushNativeQueue(
  * Play the bismillah (1:1) as a one-shot intro on ExoPlayer and resolve when it ends.
  * Uses a one-time listener on the 'nativeIntroEnded' carAction. Falls back to a timeout
  * so a missing/failed intro never blocks the first verse.
+ *
+ * Resolves true if native already moved on without us (this WebView was frozen when the intro
+ * ended, so its watchdog started the queue). The caller must then re-sync, not play verse 1.
  */
-export async function nativeBismillahIntro(reciter: string): Promise<void> {
+export async function nativeBismillahIntro(reciter: string): Promise<boolean> {
   let uri: string;
   try {
     uri = await getNativeAudioUri(reciter, 1, 1);
   } catch {
-    return; // can't fetch bismillah — skip silently
+    return false; // can't fetch bismillah — skip silently
   }
 
-  await new Promise<void>((resolve) => {
+  return new Promise<boolean>((resolve) => {
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
       handle?.remove();
       clearTimeout(timer);
-      resolve();
+      // Tell native we're alive before fetching verse 1, so its watchdog waits for a slow download.
+      DrivingMode.ackTrackEnded()
+        .then((r) => resolve(r?.stale === true))
+        .catch(() => resolve(false));
     };
     let handle: { remove: () => void } | undefined;
     // Safety timeout: bismillah is short; never wait more than 15s.
@@ -117,6 +157,10 @@ export async function nativeBismillahIntro(reciter: string): Promise<void> {
 
 export function nativePause(): void {
   void DrivingMode.nativePause().catch(() => {});
+}
+
+export function nativeStop(): void {
+  void DrivingMode.nativeStop().catch(() => {});
 }
 
 export function nativeResume(): void {

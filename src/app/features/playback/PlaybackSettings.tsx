@@ -37,16 +37,16 @@ import { isNetworkReachable } from "../../core/services/api/network.service";
 import { useOfflineGuard } from "../../core/hooks/useOfflineGuard";
 import { toHindiNumbers } from "../../core/utils/arabic.util";
 import { tourAttr } from "../onboarding/tourCatalog";
+import {
+  applyPlaybackPrefs,
+  useApplyPlaybackPrefs,
+  type PlaybackPrefs,
+} from "./usePlaybackPrefs";
 import "./PlaybackSettings.css";
 
 const SETTINGS_KEY = "rafiq_settings_v1";
 
-interface StoredPlaybackPrefs {
-  reciter: string;
-  playbackRate: number;
-  repeatVerse: RepeatMode;
-  repeatRange: RepeatMode;
-}
+type StoredPlaybackPrefs = PlaybackPrefs;
 
 const DEFAULT_PREFS: StoredPlaybackPrefs = {
   reciter: "4",
@@ -216,6 +216,13 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     pageEnd(startPageQuery),
   );
   const [activeQuick, setActiveQuick] = useState<string | null>(null);
+  // The range the sheet opened on. Once the user picks another one, the main button plays it.
+  const [openedRange] = useState(() => ({ start: startVerse, end: endVerse }));
+  const sameVerse = (a: VerseKeyLocal, b: VerseKeyLocal) => a.sura === b.sura && a.aya === b.aya;
+  const rangePicked =
+    activeQuick !== null ||
+    !sameVerse(startVerse, openedRange.start) ||
+    !sameVerse(endVerse, openedRange.end);
 
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [surahDownloads, setSurahDownloads] = useState<
@@ -255,23 +262,7 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     };
   }, [lang]);
 
-  // These depend ONLY on the pref value, NOT on `queue`. The queue object is a fresh
-  // reference every render, so including it re-ran each effect on EVERY render — which
-  // fired setPlaybackRate (→ nativeSetSpeed over the bridge) dozens of times per second.
-  // The setters are stable callbacks, so it's safe to omit `queue` from the deps.
-  const { setReciter, setPlaybackRate, setRepeatVerse, setRepeatRange } = queue;
-  useEffect(() => {
-    setReciter(prefs.reciter);
-  }, [prefs.reciter, setReciter]);
-  useEffect(() => {
-    setPlaybackRate(prefs.playbackRate);
-  }, [prefs.playbackRate, setPlaybackRate]);
-  useEffect(() => {
-    setRepeatVerse(prefs.repeatVerse);
-  }, [prefs.repeatVerse, setRepeatVerse]);
-  useEffect(() => {
-    setRepeatRange(prefs.repeatRange);
-  }, [prefs.repeatRange, setRepeatRange]);
+  useApplyPlaybackPrefs(queue, prefs);
 
   const updatePref = <K extends keyof StoredPlaybackPrefs>(
     key: K,
@@ -291,6 +282,8 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     const page = estimatePageForVerse(first.sura, first.aya);
     const verseKey = `${first.sura}:${first.aya}`;
     history.replace(`/viewer?page=${page}&v=${encodeURIComponent(verseKey)}`);
+    // A new queue plays with the settings the sheet shows.
+    applyPlaybackPrefs(queue, prefs);
     await queue.start(verses);
     onClose?.();
   };
@@ -523,12 +516,18 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
   const playingLabel = queue.state.currentVerse
     ? `${tp.nowPlaying}: ${queue.state.currentVerse}`
     : null;
-  const ctaLabel = queue.state.isPlaying
+  // Pause/resume only concern the session already loaded. A range the user just picked always plays,
+  // replacing that session (the "Now playing" row above keeps its own pause/resume).
+  const ctaLabel = rangePicked
+    ? tp.playAudio
+    : queue.state.isPlaying
     ? tp.pause
     : queue.state.currentVerse
     ? tp.resume
     : tp.playAudio;
-  const handleCta = queue.state.isPlaying
+  const handleCta = rangePicked
+    ? handlePlay
+    : queue.state.isPlaying
     ? () => { queue.pause(); }
     : queue.state.currentVerse
     ? () => { queue.resume(); onClose?.(); }

@@ -69,7 +69,11 @@ export type CarActionType =
   | "nativeIntroEnded"
   // Fired when ExoPlayer's actual play/pause state changes (e.g. user paused from the
   // notification), so the in-app play/pause button stays in sync. `surah`: 1=playing,0=paused.
-  | "nativePlaying";
+  | "nativePlaying"
+  // Sent once to a brand-new brain (the app was closed, then reopened) when native is still
+  // holding a session. `verses` is the queue, `aya` the queue index and `positionMs` the in-verse
+  // position. Native has already handed control over, so the brain must NOT reload the audio.
+  | "adoptNative";
 
 export interface CarActionEvent {
   action: CarActionType;
@@ -80,6 +84,20 @@ export interface CarActionEvent {
   durationMs?: number;
   /** Native wall-clock time (ms) the event was sent; used to spot events that sat queued while the WebView was frozen. */
   sentAtMs?: number;
+  /** adoptNative: the queue as comma-separated "sura:aya" keys, e.g. "2:142,2:143". */
+  verses?: string;
+  /** adoptNative: whether the native player is playing (false = paused). */
+  playing?: boolean;
+  /** adoptNative: full range passes left including this one; -1 = loop. */
+  rangeRemainingPasses?: number;
+  /** adoptNative: whether native is looping the current page. */
+  repeatPageActive?: boolean;
+  /** adoptNative: the native player's current speed. */
+  speed?: number;
+  /** adoptNative: false when the queue hasn't reached its first verse, so it must be started. */
+  started?: boolean;
+  /** adoptNative: native couldn't build this queue's urls; the brain should resolve them. */
+  needsUrls?: boolean;
 }
 
 export interface DrivingModePlugin {
@@ -122,10 +140,15 @@ export interface DrivingModePlugin {
     sura?: number;
     /** Reciter (numeric id or slug) so a native stall fallback keeps the same reciter. */
     reciter?: string;
+    /** The queue's verses as comma-separated "sura:aya" keys, in the same order as the non-empty
+     *  `urls` (native drops empty ones). A new brain needs them to re-adopt a partial range. */
+    verses?: string;
   }): Promise<void>;
 
   nativePlay(): Promise<void>;
   nativePause(): Promise<void>;
+  /** End the session: unlike a pause, nothing is left to resume or to hand to a reopened app. */
+  nativeStop(): Promise<void>;
   nativeSeek(options: { positionMs: number }): Promise<void>;
   nativeSetSpeed(options: { speed: number }): Promise<void>;
 
@@ -167,6 +190,7 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
     setNativeQueue: async () => {},
     nativePlay: async () => {},
     nativePause: async () => {},
+    nativeStop: async () => {},
     nativeSeek: async () => {},
     nativeSetSpeed: async () => {},
     getNativeState: async () => ({

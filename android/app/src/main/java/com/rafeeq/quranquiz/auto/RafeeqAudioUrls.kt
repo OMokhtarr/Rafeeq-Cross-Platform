@@ -71,6 +71,11 @@ object RafeeqAudioUrls {
         // Husary (id 6) — DIFFERENT HOST (full template with SSSAAA placeholder)
         "husary" to "https://mirrors.quranicaudio.com/everyayah/Husary_64kbps/SSSAAA.mp3",
         "6" to "https://mirrors.quranicaudio.com/everyayah/Husary_64kbps/SSSAAA.mp3",
+        // In the in-app catalog but not the car's list, so they have numeric ids only. Needed when
+        // the app is closed mid-playback and native has to continue. HEAD-verified as above.
+        "10" to "$QF_BASE/Shuraym/mp3",
+        "11" to "https://mirrors.quranicaudio.com/everyayah/Mohammad_al_Tablaway_128kbps/SSSAAA.mp3",
+        "12" to "https://mirrors.quranicaudio.com/everyayah/Husary_Muallim_128kbps/SSSAAA.mp3",
     )
 
     /** The reciter used when the car event carries none / an unknown one. */
@@ -113,6 +118,57 @@ object RafeeqAudioUrls {
             out.add(u)
         }
         return out
+    }
+
+    /**
+     * The "sura:aya" keys of a persisted queue, or null if they can't be named. [stored] is what the
+     * JS brain sent with the queue, and may come without [urls] when native can't build them for its
+     * reciter. Queues built natively store nothing, and neither did ranges saved by older versions,
+     * so those are named from their urls. A full surah's worth of unreadable urls is that surah.
+     */
+    fun queueVerseKeys(stored: String, sura: Int, urls: List<String>): List<String>? {
+        if (stored.isNotEmpty()) {
+            val keys = stored.split(",")
+            return keys.takeIf { urls.isEmpty() || it.size == urls.size }
+        }
+        if (urls.isEmpty()) return null
+        val fromUrls = urls.map { verseKeyFromUrl(it) }
+        if (fromUrls.all { it != null }) return fromUrls.filterNotNull()
+        val count = SURAH_VERSE_COUNTS[sura] ?: return null
+        if (count != urls.size) return null
+        return (1..count).map { aya -> "$sura:$aya" }
+    }
+
+    private val CDN_FILE = Regex("^(\\d{3})(\\d{3})\\.mp3$")
+    private val CACHED_FILE = Regex("_(\\d{1,3})_(\\d{1,3})\\.mp3$")
+
+    /**
+     * The "sura:aya" a verse audio url or cached file is for, or null if it can't be read. CDN files
+     * are named SSSAAA.mp3 and cached files {reciter}_{sura}_{aya}.mp3 (see fileName in
+     * audio-file-cache.service.ts). Anything that isn't a real verse is rejected.
+     */
+    fun verseKeyFromUrl(url: String): String? {
+        val file = url.substringBefore('?').substringAfterLast('/')
+        val match = CDN_FILE.find(file) ?: CACHED_FILE.find(file) ?: return null
+        val sura = match.groupValues[1].toInt()
+        val aya = match.groupValues[2].toInt()
+        val count = SURAH_VERSE_COUNTS[sura] ?: return null
+        return if (aya in 1..count) "$sura:$aya" else null
+    }
+
+    /**
+     * Public urls for comma-separated "sura:aya" [verses], in order. Empty when the reciter isn't
+     * one we can build urls for: its verses must not be played in the default reciter's voice.
+     */
+    fun buildQueueUrls(reciter: String, verses: String): List<String> {
+        if (!isKnownReciter(reciter) || verses.isEmpty()) return emptyList()
+        return verses.split(",").map { key ->
+            val parts = key.split(":")
+            val sura = parts.getOrNull(0)?.toIntOrNull()
+            val aya = parts.getOrNull(1)?.toIntOrNull()
+            if (parts.size != 2 || sura == null || aya == null) return emptyList()
+            buildVerseUrl(reciter, sura, aya) ?: return emptyList()
+        }
     }
 
     /** True when we can resolve audio for this reciter natively. */
