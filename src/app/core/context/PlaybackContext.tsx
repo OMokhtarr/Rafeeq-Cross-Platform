@@ -82,6 +82,10 @@ const RECITER_DISPLAY_NAME: Record<string, string> = {
   "6": "الحصري — Al-Husary",
   alafasy: "العفاسي — Al-Afasy",
   "7": "العفاسي — Al-Afasy",
+  // In the in-app catalog only (not offered in the car's reciter list).
+  "10": "الشريم — Ash-Shuraym",
+  "11": "الطبلاوي — At-Tablawi",
+  "12": "الحصري (معلم) — Al-Husary (Muallim)",
 };
 
 // The car browse tree exposes reciters by SLUG (see CAR_RECITERS), but the audio API
@@ -138,6 +142,23 @@ function getQueuePageMarkers(
   // Single page — no navigation needed
   if (markers.length <= 1) return [];
   return markers;
+}
+
+/** Merge into the saved settings the playback sheet reads when it opens. */
+function savePlaybackSettings(patch: { reciter?: string; playbackRate?: number }) {
+  try {
+    const raw = localStorage.getItem("rafiq_settings_v1");
+    const base = raw ? JSON.parse(raw) : {};
+    localStorage.setItem("rafiq_settings_v1", JSON.stringify({ ...base, ...patch }));
+  } catch {}
+}
+
+/** "2:142,2:143" → [{sura: 2, aya: 142}, {sura: 2, aya: 143}] */
+function parseVerseKeys(keys: string): VerseKey[] {
+  return keys.split(",").map((key) => {
+    const [sura, aya] = key.split(":").map(Number);
+    return { sura, aya };
+  });
 }
 
 export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -313,7 +334,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         isPlaying,
         surahName,
         verseKey,
-        reciterName: RECITER_DISPLAY_NAME[currentReciterId] ?? currentReciterId,
+        // Read from the queue: it's the reciter actually playing, however it was chosen.
+        reciterName: RECITER_DISPLAY_NAME[queue.getReciter()] ?? queue.getReciter(),
         positionMs,
         durationMs,
         pageMarkers,
@@ -343,7 +365,12 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [pushPlaybackState]);
 
   // Sync the notification on verse/play-pause/duration changes (NOT on every position tick).
+  // Nothing is pushed until this brain has a session: native may still hold one from before the app
+  // was closed, and this brain's defaults would erase its speed, repeat and range-pass state.
+  const hasSessionRef = useRef(false);
   useEffect(() => {
+    if (queue.state.currentVerse) hasSessionRef.current = true;
+    if (!hasSessionRef.current) return;
     pushSeekedPositionRef.current();
   }, [
     isNative,
@@ -364,6 +391,15 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
     DrivingMode.addListener("carAction", (event) => {
       const q = queueRef.current;
       if (!q) return;
+      // Native is playing this reciter (a car slug OR a numeric id, whichever was persisted). Resolve
+      // it to the numeric recitation id and use it for audio, display and the saved setting, so
+      // opening the app or its playback sheet can't switch to a different voice.
+      const adoptReciter = (reciter: string) => {
+        const numericId = CAR_RECITER_SLUG_TO_ID[reciter] ?? reciter;
+        q.setReciter(numericId);
+        setCurrentReciterIdRef.current(numericId);
+        if (/^\d+$/.test(numericId)) savePlaybackSettings({ reciter: numericId });
+      };
       switch (event.action) {
         case "play":
           if (currentVerseRef.current) {
@@ -401,6 +437,39 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
         case "stop":
           q.stop();
           break;
+        case "adoptNative": {
+          // The app was closed and reopened while native kept playing: continue that exact
+          // session (range, verse, reciter, repeat, speed) instead of starting anything.
+          if (!event.verses) break;
+          if (event.reciter) adoptReciter(event.reciter);
+          if (event.speed != null && event.speed > 0) {
+            q.setPlaybackRate(event.speed);
+            savePlaybackSettings({ playbackRate: event.speed });
+          }
+          const remainingPasses = event.rangeRemainingPasses ?? -1;
+          const repeatRange =
+            remainingPasses < 0 ? "loop" : Math.max(1, remainingPasses);
+          const verses = parseVerseKeys(event.verses);
+          const index = event.aya ?? 0;
+          if (event.started === false) {
+            // The closed app had chosen this queue but never reached its first verse (the audio
+            // is its bismillah or the previous queue), so there's no position to keep: start it.
+            q.setRepeatRange(repeatRange);
+            const begin = index > 0 ? q.startAt(verses, index) : q.start(verses);
+            begin.catch(() => {});
+            break;
+          }
+          q.adoptNative({
+            queue: verses,
+            index,
+            positionMs: event.positionMs ?? 0,
+            playing: event.playing ?? false,
+            repeatRange,
+            needsUrls: event.needsUrls ?? false,
+          });
+          if (event.repeatPageActive) setRepeatPageEnabled(true);
+          break;
+        }
         case "selectSurah": {
           if (event.surah == null) break;
           const surahNum = event.surah;
@@ -412,17 +481,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
               aya: i + 1,
             }),
           );
-          if (event.reciter) {
-            // event.reciter is the reciter native is actually playing (a car slug OR a numeric id,
-            // whichever was persisted with the queue). Resolve to the numeric recitation id and use
-            // it for BOTH audio and the displayed reciter, so opening the phone app adopts the car's
-            // reciter exactly and the in-app dropdown (which is keyed by numeric id) matches — no
-            // switch to the default reciter.
-            const numericId =
-              CAR_RECITER_SLUG_TO_ID[event.reciter] ?? event.reciter;
-            q.setReciter(numericId);
-            setCurrentReciterIdRef.current(numericId);
-          }
+          if (event.reciter) adoptReciter(event.reciter);
           // `aya` carries the cold-list index the native player is already on. When the brain
           // wakes up later (e.g. the user opens the phone app after selecting in the car), adopt
           // that position via startAt() so playback continues from where the car is — NOT a
@@ -473,14 +532,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({
           const rate = event.positionMs / 1000;
           if (rate <= 0) break;
           q.setPlaybackRate(rate);
-          try {
-            const raw = localStorage.getItem("rafiq_settings_v1");
-            const base = raw ? JSON.parse(raw) : {};
-            localStorage.setItem(
-              "rafiq_settings_v1",
-              JSON.stringify({ ...base, playbackRate: rate }),
-            );
-          } catch {}
+          savePlaybackSettings({ playbackRate: rate });
           break;
         }
         case "nativeTrackEnded": {

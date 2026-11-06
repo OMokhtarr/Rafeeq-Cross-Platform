@@ -198,6 +198,8 @@ class RafeeqPlayer(
         main.post {
             coldList = emptyList()
             coldRepeatRange = -1 to -1
+            // A verse replacing an unfinished intro must not end up firing that intro's callback.
+            introCallback = null
             loadInternal(listOf(source), 0, playWhenReady, indexOverride = index)
         }
     }
@@ -225,6 +227,7 @@ class RafeeqPlayer(
     fun loadList(sources: List<String>, startIndex: Int, playWhenReady: Boolean = true) {
         main.post {
             coldList = sources
+            introCallback = null
             loadInternal(sources, startIndex, playWhenReady)
         }
     }
@@ -259,6 +262,17 @@ class RafeeqPlayer(
     fun setColdRepeatRange(first: Int, last: Int) {
         main.post { coldRepeatRange = first to last }
     }
+
+    /** Stop walking the cold list but keep the current track playing, so verse-ends go to the JS
+     *  brain from here on. MUST be called on the main thread, in the same step as the caller's
+     *  switch to brain-driven mode, so a track ending in between can't advance twice. */
+    fun detachColdList() {
+        coldList = emptyList()
+        coldRepeatRange = -1 to -1
+    }
+
+    /** True while a one-shot intro (bismillah) is loaded rather than a queue verse. Main thread. */
+    fun isPlayingIntro(): Boolean = introCallback != null
 
     private fun loadInternal(
         sources: List<String>,
@@ -296,6 +310,19 @@ class RafeeqPlayer(
     fun pause() = main.post {
         player?.playWhenReady = false
         cachedIsPlaying = false
+    }
+
+    /** End playback and unload the track, so nothing is left to resume ([isResumable] is false). */
+    fun stop() = main.post {
+        coldList = emptyList()
+        coldRepeatRange = -1 to -1
+        introCallback = null
+        player?.stop()
+        player?.clearMediaItems()
+        cachedIsPlaying = false
+        cachedHasMediaItem = false
+        cachedPlaybackState = Player.STATE_IDLE
+        cachedPositionMs = 0L
     }
 
     fun seekTo(positionMs: Long) = main.post { player?.seekTo(positionMs) }

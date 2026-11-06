@@ -35,10 +35,13 @@ import {
   nativePlayVerse,
   nativeBismillahIntro,
   nativePause as nativeOutPause,
+  nativeStop as nativeOutStop,
   nativeResume as nativeOutResume,
   nativeSeek as nativeOutSeek,
   nativeSetSpeed as nativeOutSetSpeed,
   nativeGetState as nativeOutGetState,
+  pushNativeQueue,
+  resolveNativeQueue,
 } from "../services/audio/native-audio-output";
 import { recordRecitationSession } from "../services/storage/recitation-history.service";
 
@@ -72,6 +75,21 @@ export interface PlaybackControls {
    * index WITHOUT reloading/restarting the track, then arms progression for the rest.
    */
   startAt: (queue: VerseKey[], startIndex: number) => Promise<void>;
+  /**
+   * Attach a brand-new brain (the app was closed, then reopened) to the session native is still
+   * holding. Native keeps the audio it has loaded, so nothing is reloaded or restarted. Ignored
+   * if this brain already owns a queue.
+   */
+  adoptNative: (session: {
+    queue: VerseKey[];
+    index: number;
+    positionMs: number;
+    playing: boolean;
+    repeatRange: RepeatMode;
+    /** Native could name this queue but not build its urls; resolve them so it can carry on
+     *  by itself if the app is closed again. */
+    needsUrls: boolean;
+  }) => void;
   pause: () => void;
   resume: () => Promise<void>;
   stop: () => void;
@@ -101,6 +119,7 @@ export interface PlaybackControls {
   setPlaybackRate: (rate: number) => void;
   getPlaybackRate: () => number;
   setReciter: (reciter: string) => void;
+  getReciter: () => string;
   setRepeatVerse: (mode: RepeatMode) => void;
   setRepeatRange: (mode: RepeatMode) => void;
   /** Current range-repeat mode (1..3 | "loop"), read for syncing native fallback behavior. */
@@ -194,6 +213,8 @@ export function usePlaybackQueue(
 
   // Ref to store the playIndex function to break circular dependency
   const playIndexRef = useRef<(idx: number) => Promise<void>>(async () => {});
+  // Same for syncFromNative, which start() needs but which is defined after it.
+  const syncFromNativeRef = useRef<PlaybackControls["syncFromNative"]>(async () => {});
 
   const ensureEl = useCallback((): HTMLAudioElement => {
     if (audioRef.current) return audioRef.current;
@@ -306,7 +327,8 @@ export function usePlaybackQueue(
           queueRef.current.length > 0 ? queueRef.current : undefined,
         );
       }
-      nativeOutPause();
+      // A real stop, not a pause: a paused track is resumable, so a reopened app would adopt it.
+      nativeOutStop();
     } else {
       const el = audioRef.current;
       if (el && currentVerseKeyRef.current) {
@@ -691,6 +713,49 @@ export function usePlaybackQueue(
     }
   }, [ensureEl]);
 
+  // Keep native's persisted queue identical to what the brain is playing: native continues from it
+  // when the brain goes away, and hands it back to the next brain.
+  const persistNativeQueue = useCallback((queue: VerseKey[], index: number) => {
+    if (!isNativeOutput()) return;
+    pushNativeQueue(
+      reciterRef.current,
+      queue,
+      index,
+      getSurahNameArabic(queue[index].sura),
+    ).catch(() => {});
+  }, []);
+
+  // Resolve durations from the timestamp endpoint so the slider total is correct when the brain
+  // adopts playback mid-range. Audio is already playing, so this runs in the background and
+  // corrects the bar once resolved. `offsetMs` is the position within the adopted verse.
+  const resolveAdoptedDurations = useCallback(
+    (queue: VerseKey[], index: number, offsetMs: number, signal: AbortSignal) => {
+      const reciter = reciterRef.current;
+      void (async () => {
+        const { perVerseSec, totalSec } = await getRangeDurations(
+          reciter,
+          queue,
+          signal,
+        );
+        if (signal.aborted) return;
+        for (let i = 0; i < perVerseSec.length; i++) {
+          if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
+        }
+        totalRangeDurationRef.current = totalSec;
+        // Position reflects all verses before the adopted index.
+        let elapsed = 0;
+        for (let i = 0; i < index; i++) elapsed += verseDurationsRef.current[i] ?? 0;
+        elapsedBeforeCurrentVerseRef.current = elapsed;
+        setState((s) => ({
+          ...s,
+          positionMs: Math.round(elapsed * 1000) + offsetMs,
+          durationMs: Math.round(totalRangeDurationRef.current * 1000),
+        }));
+      })();
+    },
+    [],
+  );
+
   // start: initiate playback and background prefetch
   const start = useCallback(
     async (queue: VerseKey[]) => {
@@ -710,6 +775,9 @@ export function usePlaybackQueue(
 
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
+
+      // Before anything can play or wait: the app may be closed at any point from here on.
+      persistNativeQueue(queue, 0);
 
       // Bismillah intro plays when starting at aya 1 of any surah except Al-Fatiha
       // (sura 1, whose verse 1 is already the bismillah) and At-Tawbah (sura 9, which
@@ -774,8 +842,12 @@ export function usePlaybackQueue(
             currentVerse: `${first.sura}:${first.aya}`,
             isLoading: true,
           }));
-          await nativeBismillahIntro(reciterRef.current);
+          const nativeMovedOn = await nativeBismillahIntro(reciterRef.current);
           if (queueRef.current.length === 0) return; // stopped during intro
+          if (nativeMovedOn) {
+            await syncFromNativeRef.current({ afterStall: true });
+            return;
+          }
         }
       } else {
         ensureEl();
@@ -792,24 +864,8 @@ export function usePlaybackQueue(
       }
 
       await playIndex(0);
-
-      // On native, persist the full resolved queue so a future cold-start car play
-      // can begin instantly from the saved list (see RafeeqMediaService cold start).
-      if (isNativeOutput()) {
-        const titleSura = queue[0].sura;
-        void import("../services/audio/native-audio-output").then((m) =>
-          m
-            .pushNativeQueue(
-              reciterRef.current,
-              queue,
-              0,
-              getSurahNameArabic(titleSura),
-            )
-            .catch(() => {}),
-        );
-      }
     },
-    [ensureEl, playIndex, playBismillahIntro],
+    [ensureEl, playIndex, playBismillahIntro, persistNativeQueue],
   );
 
   // startAt: cold-start handoff (Android). ExoPlayer is already playing queue[startIndex];
@@ -836,46 +892,71 @@ export function usePlaybackQueue(
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
 
+      persistNativeQueue(queue, idx);
+
       await playIndex(idx);
 
-      // Persist the queue with the adopted start index for the next cold start.
-      if (isNativeOutput()) {
-        const titleSura = queue[idx].sura;
-        void import("../services/audio/native-audio-output").then((m) =>
-          m
-            .pushNativeQueue(reciterRef.current, queue, idx, getSurahNameArabic(titleSura))
-            .catch(() => {}),
-        );
+      resolveAdoptedDurations(queue, idx, 0, controller.signal);
+    },
+    [playIndex, persistNativeQueue, resolveAdoptedDurations],
+  );
+
+  // adoptNative: unlike startAt, native hands over the verse it already has loaded, so the audio
+  // carries on untouched. It runs synchronously so a verse-end right behind this event finds the
+  // queue in place.
+  const adoptNative = useCallback<PlaybackControls["adoptNative"]>(
+    ({ queue, index, positionMs, playing, repeatRange, needsUrls }) => {
+      if (queueRef.current.length > 0) return;
+      if (index < 0 || index >= queue.length) return;
+      const { sura, aya } = queue[index];
+      const verseKey = `${sura}:${aya}`;
+
+      prefetchAbortRef.current?.abort();
+      queueRef.current = queue.slice();
+      setActiveQueue(queue.slice());
+      indexRef.current = index;
+      currentVerseKeyRef.current = verseKey;
+      // This verse is already on its first pass. Leaving 0 would replay it when it ends.
+      verseRepeatCountRef.current = 1;
+      rangePassCountRef.current = 0;
+      repeatRangeRef.current = repeatRange;
+      elapsedBeforeCurrentVerseRef.current = 0;
+      verseDurationsRef.current = {};
+      totalRangeDurationRef.current = 0;
+      lastNativeVerseDurationSecRef.current = 0;
+      isVerseTransitioningRef.current = false;
+      isLoadingRef.current = false;
+      setState((s) => ({
+        ...s,
+        currentIndex: index,
+        currentVerse: verseKey,
+        isPlaying: playing,
+        isLoading: false,
+        error: null,
+        verseRepeatCount: 1,
+        rangePassCount: 0,
+        positionMs,
+      }));
+
+      const controller = new AbortController();
+      prefetchAbortRef.current = controller;
+      resolveAdoptedDurations(queue, index, positionMs, controller.signal);
+
+      if (needsUrls) {
+        resolveNativeQueue(
+          reciterRef.current,
+          queue,
+          index,
+          getSurahNameArabic(sura),
+        ).catch(() => {});
       }
 
-      // Resolve durations from the timestamp endpoint so the slider total is correct.
-      // Cold start prioritizes instant audio, so this runs in the background (we've already
-      // started playing the adopted verse above) and corrects the bar once resolved.
-      const reciter = reciterRef.current;
-      const signal = controller.signal;
-      void (async () => {
-        const { perVerseSec, totalSec } = await getRangeDurations(
-          reciter,
-          queue,
-          signal,
-        );
-        if (signal.aborted) return;
-        for (let i = 0; i < perVerseSec.length; i++) {
-          if (perVerseSec[i] > 0) verseDurationsRef.current[i] = perVerseSec[i];
-        }
-        totalRangeDurationRef.current = totalSec;
-        // Position reflects all verses before the adopted index.
-        let elapsed = 0;
-        for (let i = 0; i < idx; i++) elapsed += verseDurationsRef.current[i] ?? 0;
-        elapsedBeforeCurrentVerseRef.current = elapsed;
-        setState((s) => ({
-          ...s,
-          positionMs: Math.round(elapsed * 1000),
-          durationMs: Math.round(totalRangeDurationRef.current * 1000),
-        }));
-      })();
+      if (index + 1 < queue.length) {
+        const { sura: ns, aya: na } = queue[index + 1];
+        downloadAndCache(reciterRef.current, ns, na).catch(() => {});
+      }
     },
-    [playIndex],
+    [resolveAdoptedDurations],
   );
 
   const pause = useCallback(() => {
@@ -1126,6 +1207,8 @@ export function usePlaybackQueue(
       const controller = new AbortController();
       prefetchAbortRef.current = controller;
 
+      persistNativeQueue(queue, indexRef.current);
+
       await playIndex(indexRef.current);
 
       // Seek to saved time after playback starts
@@ -1153,7 +1236,7 @@ export function usePlaybackQueue(
       };
       prefetchAll();
     },
-    [stop, playIndex],
+    [stop, playIndex, persistNativeQueue],
   );
 
   // ─── syncFromNative ──────────────────────────────────────────────────────────
@@ -1201,6 +1284,7 @@ export function usePlaybackQueue(
     await playIndex(idx);
     if (st.positionMs > 0) nativeOutSeek(Math.round(st.positionMs));
   }, [playIndex, stop]);
+  syncFromNativeRef.current = syncFromNative;
 
   const setRepeatPageRange = useCallback(
     (range: { first: number; last: number } | null) => {
@@ -1226,6 +1310,7 @@ export function usePlaybackQueue(
   const setReciter = useCallback((r: string) => {
     reciterRef.current = r;
   }, []);
+  const getReciter = useCallback(() => reciterRef.current, []);
   const setRepeatVerse = useCallback((m: RepeatMode) => {
     repeatVerseRef.current = m;
   }, []);
@@ -1247,6 +1332,7 @@ export function usePlaybackQueue(
     queue: activeQueue,
     start,
     startAt,
+    adoptNative,
     pause,
     resume,
     stop,
@@ -1261,6 +1347,7 @@ export function usePlaybackQueue(
     setPlaybackRate,
     getPlaybackRate,
     setReciter,
+    getReciter,
     setRepeatVerse,
     setRepeatRange,
     getRepeatRange,

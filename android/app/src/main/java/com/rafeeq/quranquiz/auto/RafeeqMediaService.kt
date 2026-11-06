@@ -51,7 +51,6 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         const val ROOT_ID = "__root__"
         const val RECITERS_LIST_ID = "__reciters__"
         const val RECITER_PREFIX = "reciter:"
-        const val SURAH_PREFIX = "surah:"
         // Android Auto's browser client. Only this client gets an eager foreground promote on
         // connect (see onGetRoot) — every other media browser (Bluetooth AVRCP, Assistant,
         // System UI) browses without causing a notification card to appear.
@@ -75,6 +74,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // The surah of the persisted queue, so a native fallback (brain died) can restore page
         // markers / repeat-page / duration without the JS brain. 0 when unknown.
         private const val KEY_QUEUE_SURA = "queue_sura"
+        private const val KEY_QUEUE_VERSES = "queue_verses"
         // The reciter of the persisted queue. The persisted URLs already embed the reciter's CDN
         // path (so cold-start car playback SOUNDS right), but currentReciter resets to "" when the
         // service restarts — so the car→phone handoff reported an empty reciter and the phone app
@@ -210,6 +210,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     // continues the range and stops/loops at its end rather than overrunning it into the surah.
     private var brainQueueIndex: Int = -1
     private var brainQueueLength: Int = 0
+    // The index a queue the brain announced will start at, until a verse from it is loaded (-1 = no
+    // such queue). Until then the player still holds the previous queue or a bismillah, so its index
+    // says nothing about the announced queue.
+    @Volatile private var pendingQueueStart: Int = -1
     private var brainRangeLoops: Boolean = true
     // Full range passes still to play for a finite Nx range (includes the pass in progress);
     // -1 = loop (infinite). The stall fallback decrements this at each range end and stops at 0.
@@ -497,12 +501,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * Persist the last flat queue (resolved URLs/files + display title) so a cold-start
      * car play can begin immediately. Called by the plugin when JS pushes a native queue.
      */
-    fun persistQueue(urls: List<String>, startIndex: Int, title: String, sura: Int = 0, reciter: String = "") {
+    fun persistQueue(urls: List<String>, startIndex: Int, title: String, sura: Int = 0, reciter: String = "", verses: String = "") {
         val e = prefs.edit()
             .putString(KEY_QUEUE_URLS, urls.joinToString("\n"))
             .putInt(KEY_QUEUE_INDEX, startIndex)
             .putString(KEY_QUEUE_TITLE, title)
             .putInt(KEY_QUEUE_SURA, sura)
+            .putString(KEY_QUEUE_VERSES, verses)
         // Only overwrite the persisted reciter when the caller actually knows it. An empty reciter
         // (e.g. a page-jump re-persist that doesn't carry it) must NOT wipe a good stored value.
         if (reciter.isNotEmpty()) e.putString(KEY_QUEUE_RECITER, reciter)
@@ -532,12 +537,41 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      * stalling playback after the first ayah.)
      */
     @androidx.media3.common.util.UnstableApi
-    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean, sura: Int = 0, reciter: String = "") {
-        jsDriving = true
+    fun setNativeQueue(urls: List<String>, startIndex: Int, title: String, autoplay: Boolean, sura: Int = 0, reciter: String = "", verses: String = "") {
+        // Does NOT flip jsDriving: this now arrives before the queue's first verse, while the player
+        // may still be walking a cold list. loadNativeTrack switches modes when a verse really loads.
         // Remember the reciter the brain is playing so a stall fallback (locked screen / closed
         // app) rebuilds the surah URLs with the SAME reciter instead of the default.
         if (reciter.isNotEmpty()) currentReciter = reciter
-        persistQueue(urls, startIndex, title, sura, reciter)
+        if (urls.isEmpty()) {
+            // The brain announcing a new queue, before its slow per-verse url lookup. From now on
+            // this is the queue to continue if the brain goes away, not the previous one.
+            persistQueue(RafeeqAudioUrls.buildQueueUrls(reciter, verses), startIndex, title, sura, reciter, verses)
+            pendingQueueStart = startIndex
+            // The user just pressed play, so go foreground now: while the app is on screen it's
+            // allowed, and it keeps this process alive if the app is closed before audio starts.
+            try {
+                promoteToForeground(title, true)
+            } catch (e: IllegalStateException) {
+                // Not allowed from the background (e.g. the next surah starting behind a closed
+                // screen). Promotion still happens the normal way once audio plays.
+                Log.w("RafeeqMedia", "setNativeQueue: can't go foreground yet: ${e.message}")
+            }
+        } else {
+            persistQueue(urls, startIndex, title, sura, reciter, verses)
+        }
+    }
+
+    /**
+     * The JS brain is gone (the app was closed). If it had just started a queue but no verse of it
+     * loaded yet, nothing else will ever load one, so start it here. An intro still playing handles
+     * this itself when it ends.
+     */
+    @androidx.media3.common.util.UnstableApi
+    fun onBrainGone() {
+        if (pendingQueueStart < 0 || player?.isPlayingIntro() == true) return
+        Log.d("RafeeqMedia", "onBrainGone: starting announced queue at $pendingQueueStart")
+        fallbackToNativeAdvance(nextIndexHint = pendingQueueStart + 1)
     }
 
     /** JS brain feeds a single resolved URL for one verse (it owns progression). */
@@ -549,6 +583,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // notification play/pause resume — that guard is only meant to block a bare onPlay() that
         // a head unit fires on connect, never a real phone playback resume.
         userInteracted = true
+        pendingQueueStart = -1
         // The brain responded with the next verse — cancel any pending stall watchdog.
         cancelBrainWatchdog()
         // JS brain is now driving — stop the native page-marker derivation; JS owns page
@@ -566,9 +601,18 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun playNativeIntro(url: String) {
         jsDriving = true
+        nativeHandledThisEnd = false
         requestAudioFocus()
         player?.playIntro(url) {
-            dispatchCarEvent("nativeIntroEnded")
+            if (RafeeqAutoPlugin.brainAlive()) {
+                // Armed first so the brain's ack can't arrive before it. A frozen brain (locked
+                // screen) never acks, so the watchdog starts the queue instead of stalling here.
+                armBrainWatchdog(0)
+                dispatchCarEvent("nativeIntroEnded")
+            } else {
+                // The app was closed during the bismillah: nothing is left to feed the first verse.
+                fallbackToNativeAdvance(nextIndexHint = 0)
+            }
         }
     }
 
@@ -601,20 +645,80 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     @androidx.media3.common.util.UnstableApi
     fun nativeIsResumable(): Boolean = player?.isResumable() ?: false
 
-    /** The surah native cold-start is currently playing, or 0 if native isn't driving. Used so
-     *  the brain, on wake, adopts the RIGHT surah instead of defaulting to Al-Fatiha. */
-    @androidx.media3.common.util.UnstableApi
-    fun nativeCurrentColdSura(): Int = if (!jsDriving) nativeColdStartSura else 0
+    /** What the player holds when a new brain starts, so it can continue instead of starting over. */
+    data class LiveSession(
+        val verses: List<String>,
+        val index: Int,
+        val positionMs: Long,
+        val playing: Boolean,
+        val reciter: String,
+        val rangeRemainingPasses: Int,
+        val repeatPageActive: Boolean,
+        val speed: Float,
+        /** False when the queue hasn't reached its first verse, so the brain must start it. */
+        val started: Boolean,
+        /** True when native has no urls for this queue, so the brain must resolve them. */
+        val needsUrls: Boolean,
+    )
 
-    /** The reciter native cold-start is using, so the brain adopts the same reciter on wake and
-     *  never switches to the default on app open. Falls back to the PERSISTED reciter if the
-     *  in-memory value was cleared by a service restart (the persisted URLs are that reciter). */
-    fun nativeCurrentReciter(): String = currentReciter.ifEmpty { persistedReciter() }
+    /**
+     * A new JS brain just started (the app was closed, then reopened). If a session is still loaded
+     * (playing or paused), hand it over: the current track keeps playing and later verse-ends go to
+     * the brain. This must not depend on [jsDriving], which stays true until the next verse boundary
+     * after the old brain died. Returns null when there's nothing to continue: a finished range,
+     * nothing loaded, an intro for a queue never announced, or a queue that can't be named.
+     *
+     * MUST run on the main thread: the handover and the player's index have to be read as one step,
+     * or a verse ending in between would leave the brain a verse behind.
+     */
+    @androidx.media3.common.util.UnstableApi
+    fun handLiveSessionToBrain(): LiveSession? {
+        val p = player ?: return null
+        if (!p.isResumable()) return null
+        val started = pendingQueueStart < 0
+        if (started && p.isPlayingIntro()) return null
+        val urls = loadPersistedQueue()?.first ?: emptyList()
+        val verses = RafeeqAudioUrls.queueVerseKeys(
+            prefs.getString(KEY_QUEUE_VERSES, "") ?: "",
+            prefs.getInt(KEY_QUEUE_SURA, 0),
+            urls,
+        ) ?: return null
+        val index = if (started) p.currentIndex() else pendingQueueStart
+        if (index !in verses.indices) return null
+
+        jsDriving = true
+        nativeColdStartSura = 0
+        brainQueueIndex = index
+        p.detachColdList()
+
+        return LiveSession(
+            verses = verses,
+            index = index,
+            positionMs = if (started) p.currentPositionMs() else 0L,
+            playing = p.isPlaying(),
+            // The persisted URLs ARE this reciter.
+            reciter = persistedReciter().ifEmpty { currentReciter },
+            rangeRemainingPasses = brainRangeRemainingPasses,
+            repeatPageActive = repeatPageActive,
+            speed = currentSpeed,
+            started = started,
+            needsUrls = urls.isEmpty(),
+        )
+    }
 
     @androidx.media3.common.util.UnstableApi
     fun nativePlay() { requestAudioFocus(); player?.play() }
     @androidx.media3.common.util.UnstableApi
     fun nativePause() { resumeOnFocusGain = false; cancelBrainWatchdog(); player?.pause() }
+    /** The brain ended the session (stop button, or the range finished). Unlike a pause, nothing is
+     *  left to resume, to hand to a reopened app, or to start if the app is closed now. */
+    @androidx.media3.common.util.UnstableApi
+    fun nativeStop() {
+        resumeOnFocusGain = false
+        pendingQueueStart = -1
+        cancelBrainWatchdog()
+        player?.stop()
+    }
     @androidx.media3.common.util.UnstableApi
     fun nativeSeek(positionMs: Long) { player?.seekTo(positionMs) }
     @androidx.media3.common.util.UnstableApi
@@ -627,6 +731,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
      */
     @androidx.media3.common.util.UnstableApi
     private fun coldStartPlay() {
+        pendingQueueStart = -1
         val persisted = loadPersistedQueue()
         if (persisted != null) {
             val (urls, idx, title) = persisted
@@ -713,8 +818,11 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
 
         // Where are we within the range? Prefer the brain's live queue index; else fall back to
         // the ended cold index (they're the same numbering when native is walking the queue).
+        // A queue that hasn't reached its first verse starts where it was announced to start: the
+        // track that just ended is its bismillah or the previous queue.
         val curIdx = if (brainQueueIndex >= 0) brainQueueIndex else nextIndexHint - 1
-        var nextIdx = curIdx + 1
+        var nextIdx = if (pendingQueueStart >= 0) pendingQueueStart else curIdx + 1
+        pendingQueueStart = -1
 
         if (nextIdx >= urls.size) {
             // Reached the END of the selected range on the very first stalled boundary. Decide
@@ -759,7 +867,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         else player?.setColdRepeatRange(-1, -1)
 
         requestAudioFocus()
-        persistQueue(urls, nextIdx, title, sura, currentReciter)
+        prefs.edit().putInt(KEY_QUEUE_INDEX, nextIdx).apply()
         player?.loadList(urls, nextIdx, playWhenReady = true)
         updateTitleMetadata(title)
     }
@@ -803,8 +911,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         val (urls, _, title) = persisted
         if (urls.isEmpty()) return
         brainQueueIndex = 0
-        val sura = prefs.getInt(KEY_QUEUE_SURA, 0)
-        persistQueue(urls, 0, title, sura)
+        prefs.edit().putInt(KEY_QUEUE_INDEX, 0).apply()
         player?.setColdRepeatRange(-1, -1) // finite: no internal loop; we drive each lap
         player?.loadList(urls, 0, playWhenReady = true)
         updateTitleMetadata(title)
@@ -1339,12 +1446,13 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             }
             parentId.startsWith(RECITER_PREFIX) -> {
                 userInteracted = true
-                currentReciter = parentId.removePrefix(RECITER_PREFIX)
+                // Listing a folder must not touch what's playing: Android Auto also reloads folders
+                // by itself, e.g. whenever the phone app opens and refreshes the content tree.
                 if (surahs.isEmpty()) {
                     result.detach()
                     pendingSurahs[parentId] = result
                 } else {
-                    result.sendResult(buildSurahItems())
+                    result.sendResult(buildSurahItems(parentId.removePrefix(RECITER_PREFIX)))
                 }
             }
             else -> result.sendResult(emptyList())
@@ -1364,8 +1472,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
     fun setSurahs(list: List<SurahItem>) {
         surahs = list
         reciters.forEach { notifyChildrenChanged("$RECITER_PREFIX${it.id}") }
-        val items = buildSurahItems()
-        pendingSurahs.values.forEach { it.sendResult(items) }
+        pendingSurahs.forEach { (parentId, result) ->
+            result.sendResult(buildSurahItems(parentId.removePrefix(RECITER_PREFIX)))
+        }
         pendingSurahs.clear()
     }
 
@@ -1378,10 +1487,10 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
             MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE)
         }
 
-    private fun buildSurahItems(): List<MediaBrowserCompat.MediaItem> =
+    private fun buildSurahItems(reciter: String): List<MediaBrowserCompat.MediaItem> =
         surahs.map { surah ->
             val desc = MediaDescriptionCompat.Builder()
-                .setMediaId("$SURAH_PREFIX${surah.number}")
+                .setMediaId(RafeeqCarEvents.surahMediaId(surah.number, reciter))
                 .setTitle(surah.arabicName)
                 .setSubtitle(surah.name)
                 .build()
@@ -1648,6 +1757,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         val plugin = RafeeqAutoPlugin.instance
         if (plugin != null) {
             plugin.sendCarEvent(action, reciter, surah, aya, positionMs, durationMs)
+        } else if (RafeeqCarEvents.isBrainOnly(action)) {
+            // The app is closed: there's no brain to tell, and this must not open it.
+            return
         } else {
             // Plugin not loaded yet — store as pending and wake the activity.
             Log.d("RafeeqMedia", "dispatchCarEvent: plugin null, storing pending '$action' and waking MainActivity")
@@ -1847,8 +1959,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         @androidx.media3.common.util.UnstableApi
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
             if (mediaId == null) return
-            if (mediaId.startsWith(SURAH_PREFIX)) {
-                val surahNumber = mediaId.removePrefix(SURAH_PREFIX).toIntOrNull() ?: return
+            val selection = RafeeqCarEvents.parseSurahMediaId(mediaId)
+            if (selection != null) {
+                val surahNumber = selection.surah
 
                 // Explicit user selection — any onPlay() from here on is a real press.
                 userInteracted = true
@@ -1871,7 +1984,9 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                 // now. This is the fix for the cold-start "no sound" bug: resolving audio no
                 // longer depends on waking the WebView (which MIUI and other OEMs block from
                 // a background service), so the car plays whether the phone is locked or not.
-                val reciter = currentReciter.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+                val reciter = selection.reciter
+                    ?: currentReciter.ifEmpty { persistedReciter() }.ifEmpty { RafeeqAudioUrls.DEFAULT_RECITER }
+                currentReciter = reciter
                 val urls = RafeeqAudioUrls.buildSurahUrls(reciter, surahNumber)
                 if (urls.isNotEmpty()) {
                     val title = surahArabicName(surahNumber)
@@ -1880,6 +1995,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
                     // is the sole MediaSession writer (publishPlaybackState). If the WebView is
                     // alive (or wakes), the brain can still take over via dispatchCarEvent below.
                     jsDriving = false
+                    pendingQueueStart = -1
                     nativeRangeBounded = false // whole surah selected in the car — may roll over
                     // Compute the page-nav markers natively so prev/next-page + repeat-page
                     // buttons appear even without the WebView/brain (cold start).
