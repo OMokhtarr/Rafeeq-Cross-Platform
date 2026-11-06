@@ -25,7 +25,7 @@ compatibility_date = "2026-01-15"
 # REQUIRE_PRO is "true", every speech request is refused.
 [vars]
 REQUIRE_PRO = "false"
-SUPABASE_URL = ""
+SUPABASE_URL = "https://fmoqvreblkfomfhpghzg.supabase.co"
 
 # Dev copy of the broker for `npm start` (browser development), deployed with
 #   npx wrangler deploy --env dev
@@ -39,4 +39,4 @@ name = "rafeeq-token-broker-dev"
 
 [env.dev.vars]
 REQUIRE_PRO = "false"
-SUPABASE_URL = ""
+SUPABASE_URL = "https://fmoqvreblkfomfhpghzg.supabase.co"

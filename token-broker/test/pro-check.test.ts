@@ -232,11 +232,14 @@ test("the old QF user-login route /oauth2/token is gone", async () => {
   assert.equal(calls.length, 0);
 });
 
-test("CORS preflight allows the authorization header, and no longer x-rafeeq-user", async () => {
+test("CORS preflight allows the authorization header, and x-rafeeq-user for older installs", async () => {
   const res = await worker.fetch(
     new Request("https://broker.test/soniox/token", { method: "OPTIONS" }),
     env(),
   );
   assert.equal(res.status, 204);
-  assert.equal(res.headers.get("access-control-allow-headers"), "content-type, authorization");
+  assert.equal(
+    res.headers.get("access-control-allow-headers"),
+    "content-type, authorization, x-rafeeq-user",
+  );
 });

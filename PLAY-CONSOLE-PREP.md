@@ -38,9 +38,9 @@ App: **Rafeeq** · package `com.rafeeq.quranquiz` · versionCode 6 / versionName
 
 Last updated 29 Oct 2026. Section numbers link to the detail below.
 
-> **Accounts (sign-in with Google / Apple, Supabase) are built but ship dark**
-> behind `REACT_APP_ACCOUNTS=on`. Everything in §1, §2, §4, §8 and §9 below
-> that mentions accounts describes the build that goes out with that switch on.
+> **Accounts (sign-in with Google / Apple, Supabase) are built and on in every**
+> **build that has the Supabase URL and key.** Everything in §1, §2, §4, §8 and §9
+> below that mentions accounts describes the first release with sign-in.
 > Until then the app still has no accounts. The owner setup list and the
 > release order are in §9; the same list is in `TODO.md`.
 
@@ -118,7 +118,7 @@ video (A5).
 > only. When the RevenueCat Pro tier ships, digital purchases becomes **Yes**
 > and the rating questionnaire must be re-run *before* that build goes out.
 > Sign-in is now built, so §4's account-deletion requirement applies to the
-> first build with `REACT_APP_ACCOUNTS=on`: the hosted deletion page and the
+> first build with sign-in: the hosted deletion page and the
 > redone Data safety form must be live before that build is released.
 
 ### Done
@@ -172,19 +172,16 @@ Google or Apple API scopes beyond that.
 | `api.deepgram.com` (wss) | recite mode speech-to-text | **live microphone audio** |
 | `stt-rt.soniox.com` (wss) | recite mode speech-to-text (if selected in Settings) | **live microphone audio** |
 | `api.revenuecat.com` | Rafeeq Pro subscription status (builds with a RevenueCat key) | app-user id (the account id once signed in, else anonymous), purchase history |
-| `<project>.supabase.co` | accounts: sign-in, `delete-account` and `apple-token` edge functions (builds with `REACT_APP_ACCOUNTS=on`) | account id, email, name, sign-in provider; on iOS the Sign in with Apple authorization code |
+| `<project>.supabase.co` | accounts: sign-in, `delete-account` and `apple-token` edge functions (builds with sign-in) | account id, email, name, sign-in provider; on iOS the Sign in with Apple authorization code |
 | Google / Apple sign-in | proving identity when the user signs in | handled by the Google / Apple sign-in UI; we receive name + email |
 | `cdn.jsdelivr.net` | QPC mushaf fonts | none |
 
-**User sign-in:** optional, only for Rafeeq Pro, and only in builds with
-`REACT_APP_ACCOUNTS=on`. Google (Android) or Apple (iOS; Android when
+**User sign-in:** optional, and needed only for Rafeeq Pro. Google (Android) or Apple (iOS; Android when
 `REACT_APP_APPLE_SIGNIN=on`) through Supabase Auth. The account holds an id,
 email, name and provider; on iOS Apple's refresh token is kept server-side
-(`apple_tokens`) only so deletion can revoke it. Without the switch the app
-has no accounts, and the token broker only fetches machine-to-machine tokens
-for the content API. Notes, bookmarks, and the Hifz streak are local-only
-unless the user is a signed-in Rafeeq Pro subscriber: Pro sync (builds with
-`REACT_APP_ACCOUNTS=on`) copies the backup categories to Supabase `sync_items`
+(`apple_tokens`) only so deletion can revoke it. Signed out, the token broker
+only fetches machine-to-machine tokens for the content API. Notes, bookmarks, and the Hifz streak are local-only
+unless the user is a signed-in Rafeeq Pro subscriber: Pro sync copies the backup categories to Supabase `sync_items`
 (notes, bookmarks, hidden verses, Hifz plans/progress/streak days/freezes,
 recitation history, worship tracker, favourite azkar, quiz range sets, and
 settings such as theme, language, last page and recent searches). Never synced:
@@ -221,7 +218,7 @@ the Pro/account/onboarding state, downloaded tafsirs, content caches. See §2.
 >       subscription section.
 
 ### Personal info → Name, Email address, User IDs
-Applies to the build with `REACT_APP_ACCOUNTS=on` (redo the form before it
+Applies to the build with sign-in (redo the form before it
 ships; the currently submitted form says "No", which is right only while the
 switch is off).
 - **Name** and **Email address**: Collected **Yes** · Shared **No** (held by
@@ -239,7 +236,7 @@ switch is off).
   doubt) · **Optional** · Purpose **App functionality** (subscription status).
 
 ### App activity → Other user-generated content, App interactions
-- **Applies only to the build with `REACT_APP_ACCOUNTS=on`, and only to Rafeeq
+- **Applies only to the build with sign-in, and only to Rafeeq
   Pro subscribers** (redo the form before it ships). The currently submitted
   form says "No", which is right only while accounts are off.
 - **Other user-generated content** (notes) and **App interactions** (Hifz
@@ -299,11 +296,11 @@ Required because the app declares `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
 
 ---
 
-## 4. Account deletion — REQUIRED (once `REACT_APP_ACCOUNTS=on` ships)
+## 4. Account deletion — REQUIRED (once sign-in ships)
 
 Play's rule is triggered by **account creation**. Signing in with Google or
 Apple creates a Rafeeq account (Supabase), so the first build with
-`REACT_APP_ACCOUNTS=on` needs both an in-app deletion path and a public
+sign-in needs both an in-app deletion path and a public
 deletion URL; Apple's Guideline 5.1.1(v) requires the same on iOS, including
 revoking the Sign in with Apple grant. Builds without the switch still have
 no accounts and need neither. (Adding Google also obliges offering Sign in
@@ -682,9 +679,8 @@ ships dark: the paywall only appears when the app is built with
 4. `npx cap sync`, build, and test purchases from Account → Subscription
    (works while the paywall is off): View subscription → paywall → buy →
    status "active"; reinstall → Restore; Manage subscription opens the
-   Customer Center. View and Restore only appear in a **debug build** or a
-   build with `REACT_APP_ACCOUNTS=on` (sign in first): a release build with
-   accounts off offers no way to buy, since Pro always belongs to an account.
+   Customer Center. The subscription card only appears once signed in, since
+   Pro always belongs to an account.
 
 ### Store declarations — redo before the first build that carries a RevenueCat key
 
@@ -704,8 +700,8 @@ RevenueCat. Builds without the key send nothing.
 ### Accounts — owner setup
 
 Pro now lives on a signed-in account (Supabase Auth; Google + Apple). All of
-this is owner work in dashboards; the code is merged and dark behind
-`REACT_APP_ACCOUNTS=on`.
+this is owner work in dashboards; the code is merged and sign-in is on in
+any build with the Supabase URL and key.
 
 1. **Supabase projects:** one dev, one prod. In each, Settings → JWT Keys must
    use the **asymmetric ES256 signing keys** (the broker refuses legacy HS256
@@ -739,9 +735,8 @@ this is owner work in dashboards; the code is merged and dark behind
    `supabase functions deploy delete-account` and
    `supabase functions deploy apple-token`.
 5. **App env** (`.env.production`): `REACT_APP_SUPABASE_URL`,
-   `REACT_APP_SUPABASE_PUBLISHABLE_KEY`, `REACT_APP_GOOGLE_WEB_CLIENT_ID`, and
-   — only in the build that goes out after the paperwork is live —
-   `REACT_APP_ACCOUNTS=on`.
+   `REACT_APP_SUPABASE_PUBLISHABLE_KEY` and `REACT_APP_GOOGLE_WEB_CLIENT_ID`
+   (prod values) — and ship that release only after the paperwork is live.
 6. **RevenueCat dashboard:** set the transfer behaviour so a purchase stays
    with the account that bought it — "Keep with original App User ID", or
    whatever the dashboard calls it today (verify the name in Project settings
@@ -781,7 +776,7 @@ this is owner work in dashboards; the code is merged and dark behind
    and `terms.html` load at `LEGAL_BASE_URL` (and the Arabic ones).
 4. Play Data safety redone (§2), including the delete-account URL and the
    App access test account; content rating re-run if not already.
-5. Ship a build with `REACT_APP_ACCOUNTS=on` (and the `goog_` RevenueCat key).
+5. Ship a build with sign-in (and the `goog_` RevenueCat key).
 6. Then ship a build with `REACT_APP_PRO_GATE=on` in `.env.production`
    (this can be the same build as step 5 once everything above is verified).
 7. Then set `REQUIRE_PRO = "true"` in `wrangler.toml` and `npx wrangler deploy`.

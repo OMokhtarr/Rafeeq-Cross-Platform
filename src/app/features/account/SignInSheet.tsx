@@ -13,7 +13,7 @@ import { useIonToast } from "@ionic/react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../core/context/AuthContext";
 import { useLang } from "../../core/context/LanguageContext";
-import { isAppleSignInOn } from "../../core/services/auth/accounts-switch";
+import { isAppleSignInOn } from "../../core/services/auth/apple-signin-switch";
 import { AuthProviderId } from "../../core/services/auth/auth.service";
 import { registerOverlay } from "../../core/utils/overlay-registry";
 import "./SignInSheet.css";

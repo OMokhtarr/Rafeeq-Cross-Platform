@@ -3,13 +3,13 @@ import { createRoot, Root } from "react-dom/client";
 import { MemoryRouter, Route } from "react-router-dom";
 import SignInSheet from "../SignInSheet";
 import { useAuth } from "../../../core/context/AuthContext";
-import { isAppleSignInOn } from "../../../core/services/auth/accounts-switch";
+import { isAppleSignInOn } from "../../../core/services/auth/apple-signin-switch";
 import { closeTopOverlay } from "../../../core/utils/overlay-registry";
 
 const mockPresentToast = jest.fn();
 jest.mock("@ionic/react", () => ({ useIonToast: () => [mockPresentToast] }));
 jest.mock("../../../core/context/AuthContext", () => ({ useAuth: jest.fn() }));
-jest.mock("../../../core/services/auth/accounts-switch", () => ({ isAppleSignInOn: jest.fn() }));
+jest.mock("../../../core/services/auth/apple-signin-switch", () => ({ isAppleSignInOn: jest.fn() }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

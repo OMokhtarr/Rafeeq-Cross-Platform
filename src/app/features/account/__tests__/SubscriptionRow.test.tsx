@@ -6,20 +6,13 @@ import { useSubscription } from "../../../core/context/SubscriptionContext";
 const mockPresentToast = jest.fn();
 jest.mock("@ionic/react", () => ({ useIonToast: () => [mockPresentToast] }));
 jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: jest.fn() }));
-let mockAuthEnabled = false;
-let mockDebugBuild = true;
+let mockUser: { id: string } | null = { id: "u1" };
 jest.mock("@capacitor/core", () => ({
   registerPlugin: () => ({}),
-  Capacitor: {
-    getPlatform: () => "android",
-    isNativePlatform: () => false,
-    get DEBUG() {
-      return mockDebugBuild;
-    },
-  },
+  Capacitor: { getPlatform: () => "android", isNativePlatform: () => false },
 }));
 jest.mock("../../../core/context/AuthContext", () => ({
-  useAuth: () => ({ enabled: mockAuthEnabled, user: null, requestSignIn: jest.fn() }),
+  useAuth: () => ({ enabled: true, user: mockUser, requestSignIn: jest.fn() }),
 }));
 const mockOpenPaywall = jest.fn();
 jest.mock("../../subscription/usePaywall", () => ({ usePaywall: () => mockOpenPaywall }));
@@ -48,8 +41,7 @@ const button = (text: string) =>
   Array.from(host.querySelectorAll("button")).find((b) => b.textContent?.includes(text));
 
 beforeEach(() => {
-  mockAuthEnabled = false;
-  mockDebugBuild = true;
+  mockUser = { id: "u1" };
   localStorage.clear();
   Object.assign(navigator, { clipboard: { writeText } });
   writeText.mockResolvedValue(undefined);
@@ -61,10 +53,17 @@ afterEach(() => {
 
 const ID = "$RCAnonymousID:0123456789abcdef";
 
+it("is hidden while signed out, since Pro always lives on an account", () => {
+  mockUser = null;
+  mount({ isPro: false, appUserId: ID });
+  expect(host.innerHTML).toBe("");
+});
+
 it("shows active + Manage for Pro and opens the Customer Center", async () => {
   showCustomerCenter.mockResolvedValue(undefined);
   mount({ isPro: true, appUserId: ID });
-  expect(host.querySelector(".ac-plan-pill--pro")?.textContent).toBe("رفيق برو");
+  expect(host.querySelector(".ac-pro--active")).not.toBeNull();
+  expect(host.querySelector(".ac-plan-pill--pro")?.textContent).toBe("مفعّل");
   expect(button("عرض الاشتراك")).toBeUndefined();
   expect(button("استعادة المشتريات")).toBeUndefined();
   await act(async () => button("إدارة الاشتراك")!.click());
@@ -82,12 +81,12 @@ it("says so when the Customer Center can't open", async () => {
   );
 });
 
-it("shows Free + View subscription + Restore for non-Pro", async () => {
+it("offers View subscription + Restore when signed in without Pro", async () => {
   restore.mockResolvedValue(false);
   mount({ isPro: false, appUserId: ID });
-  const pill = host.querySelector(".ac-plan-pill");
-  expect(pill?.textContent).toBe("مجاني");
-  expect(pill?.classList.contains("ac-plan-pill--pro")).toBe(false);
+  expect(host.querySelector(".ac-pro--active")).toBeNull();
+  expect(host.querySelector(".ac-plan-pill--pro")).toBeNull();
+  expect(button("إدارة الاشتراك")).toBeUndefined();
   await act(async () => button("استعادة المشتريات")!.click());
   await flush();
   expect(mockPresentToast).toHaveBeenCalledWith(
@@ -120,30 +119,4 @@ it("shows a shortened Support ID and copies the full app-user id", async () => {
 it("hides Support ID when there is no app-user id", () => {
   mount({ isPro: false, appUserId: null });
   expect(host.textContent).not.toContain("معرّف الدعم");
-});
-
-describe("release build with accounts off", () => {
-  beforeEach(() => {
-    mockDebugBuild = false;
-  });
-
-  it("offers no way to buy or restore Pro without an account", () => {
-    mount({ isPro: false, appUserId: ID });
-    expect(host.querySelector(".ac-plan-pill")?.textContent).toBe("مجاني");
-    expect(button("عرض الاشتراك")).toBeUndefined();
-    expect(button("استعادة المشتريات")).toBeUndefined();
-    expect(host.querySelectorAll(".ac-row-divider")).toHaveLength(1);
-  });
-
-  it("still lets an existing subscriber manage their subscription", () => {
-    mount({ isPro: true, appUserId: ID });
-    expect(button("إدارة الاشتراك")).toBeDefined();
-  });
-
-  it("offers View and Restore once accounts are on", () => {
-    mockAuthEnabled = true;
-    mount({ isPro: false, appUserId: ID });
-    expect(button("عرض الاشتراك")).toBeDefined();
-    expect(button("استعادة المشتريات")).toBeDefined();
-  });
 });

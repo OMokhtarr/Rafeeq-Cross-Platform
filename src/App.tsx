@@ -57,7 +57,7 @@ import { VerseVisibilityProvider } from "./app/core/context/VerseVisibilityConte
 import { PlaybackProvider } from "./app/core/context/PlaybackContext";
 import { AuthProvider } from "./app/core/context/AuthContext";
 import { completeOAuthRedirect } from "./app/core/services/auth/auth.service";
-import { isAccountsOn } from "./app/core/services/auth/accounts-switch";
+import { isAuthConfigured } from "./app/core/services/auth/supabase.client";
 import { SubscriptionProvider } from "./app/core/context/SubscriptionContext";
 import { SyncProvider } from "./app/core/context/SyncContext";
 import { installWriteHook } from "./app/core/services/sync/local-changes";
@@ -149,11 +149,11 @@ const MainRouterOutlet: React.FC = () => {
   // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
   // Android's Apple sign-in in the browser; a cold start there means the
   // app was killed while the tab was open, and the code still signs in.
-  // With accounts off there is no sign-in to finish, so it is ignored.
+  // A build without sign-in configured has nothing to finish, so it is ignored.
   useEffect(() => {
     const open = (url: string | undefined) => {
       if (url?.startsWith("rafeeq://auth/")) {
-        if (isAccountsOn()) void completeOAuthRedirect(url);
+        if (isAuthConfigured()) void completeOAuthRedirect(url);
         return;
       }
       const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);

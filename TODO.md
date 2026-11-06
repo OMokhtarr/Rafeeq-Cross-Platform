@@ -39,18 +39,19 @@ order. Full detail in `PLAY-CONSOLE-PREP.md` §9.
 
 ## Accounts launch (Supabase sign-in, owner setup)
 
-Code is merged and dark behind `REACT_APP_ACCOUNTS=on`. Pro lives on the
-account, so this comes before the Pro launch above goes live. Full detail,
+Sign-in is on in every build that has the Supabase URL and key (the old
+`REACT_APP_ACCOUNTS` switch is gone). Pro lives on the account, so this comes before the Pro launch above goes live. Full detail,
 the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 §4 and §9.
 
-- [ ] **Supabase projects.** Create dev + prod. Both must sign JWTs with the
-      asymmetric **ES256** signing keys (the broker refuses legacy HS256
-      tokens). Put the prod URL in `token-broker/wrangler.toml`
-      `SUPABASE_URL` and the dev URL in `[env.dev.vars]`; put the project ref
-      in `supabase/config.toml` `project_id`; `supabase link`, then
-      `supabase db push` to apply the `apple_tokens` migration.
-- [ ] **Google.** OAuth clients: a Web client (→ `REACT_APP_GOOGLE_WEB_CLIENT_ID`
+- [x] **Supabase project.** One project for production (owner's call,
+      6 Nov 2026): ref `fmoqvreblkfomfhpghzg`, London (eu-west-2), ES256 keys,
+      email sign-in off. All three migrations pushed with the CLI and the
+      sync_items self-check passed. Its URL is in `.env.production`,
+      `.env.local` and both `wrangler.toml` environments.
+- [ ] **Google.** Web client and debug sign-in work (6 Nov 2026). Still confirm
+      the Android clients for the Play App Signing and upload-key SHA-1s exist,
+      or Play installs can't sign in. OAuth clients: a Web client (→ `REACT_APP_GOOGLE_WEB_CLIENT_ID`
       and Supabase's Google provider) and an Android client with the debug
       SHA-1 **and** the Play App Signing SHA-1.
 - [ ] **Apple (when ready).** Services ID + key; Supabase Apple provider with
@@ -60,12 +61,13 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       `APPLE_BUNDLE_ID`; `REACT_APP_APPLE_SIGNIN=on` to show Apple on Android.
       Known limit: Apple accounts created through the Android web flow have no
       stored Apple token, so deletion can't revoke Apple's grant for them.
-- [ ] **Edge Functions.** Secrets `SUPABASE_SERVICE_ROLE_KEY` (Supabase
+- [x] **Edge Functions.** Secrets `SUPABASE_SERVICE_ROLE_KEY` (Supabase
       provides it), `REVENUECAT_SECRET_KEY`, `ADMIN_DELETE_SECRET` (long random,
       at least 32 characters); deploy `delete-account` and `apple-token`.
-- [ ] **App env.** `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_PUBLISHABLE_KEY`,
-      and `REACT_APP_ACCOUNTS=on` only in the build that goes out after the
-      paperwork is live.
+- [x] **App env.** Supabase URL, publishable key and Google web client id are
+      in `.env.production` (and the same values in `.env.local`, which
+      overrides it). Every release built now shows sign-in: ship only after
+      the paperwork is live.
 - [ ] **RevenueCat dashboard.** Transfer behaviour so a purchase stays with the
       account that bought it ("Keep with original App User ID", or the
       dashboard's current name for it; verify). Create a reviewer test Google
@@ -90,9 +92,8 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 - [ ] **Device check: backup import on a synced phone.** Import a backup and
       confirm nothing disappears (locally or on the other phone); the import
       only adds and overwrites.
-- [ ] **Release gate: run the sync_items SQL self-check on the dev project.** The
-      migration has never executed on any database. Steps in
-      `PLAY-CONSOLE-PREP.md` §9, Accounts, item 1.
+- [x] **Release gate: run the sync_items SQL self-check.** Passed 6 Nov 2026
+      on the production project.
 - [ ] **Release gate: fresh install on an Android device.** The strict Hifz read
       and write path has never run on a device. Sign in on a fresh install with a
       Pro account that has a Hifz plan: Account must show synced, not an error, and
