@@ -1,5 +1,35 @@
 # TODO
 
+## Next up (as of 6 Nov 2026)
+
+Sign-in, Pro sync (#71) and the Android Auto session work (#72) are on main.
+Every build now shows sign-in, so the release waits on steps 1-4; the
+details are in the sections below.
+
+1. [ ] **Confirm the policy promises**: the 30-day deletion window, the email
+       identity check and the terms §5 closure clause. Then push `gh-pages`
+       (6 commits waiting; the region now reads London, United Kingdom) and
+       check privacy, terms and delete-account load in both languages.
+2. [ ] **Play Console**: redo Data safety (account data, purchase history,
+       Pro-synced app data, all deletable), add the delete-account URL, and
+       put the reviewer account under App access.
+3. [ ] **RevenueCat**: confirm "Keep with original App User ID" is saved;
+       create the reviewer Google account with lifetime promotional Pro.
+4. [ ] **Google Cloud**: confirm the Android OAuth clients for the Play App
+       Signing and upload-key SHA-1s exist, or Play installs can't sign in.
+5. [ ] **Release**: bump `versionCode`, add `RELEASE-NOTES.md` (sign-in, Pro
+       sync, the new Account page, Android Auto keeping its session), then
+       `npm run android:build` with Android Studio closed and check
+       `android/app/src/main/assets/public/index.html` exists before uploading.
+6. [ ] **Supabase Free to Pro** before real subscribers' data builds up (Free
+       has no backups).
+7. [ ] **Device checks**: two-phone sync, backup import on a synced phone,
+       offline launch (below), and in a car: close and reopen Rafeeq while it
+       plays (it should continue the same verse), and pick a surah inside a
+       reciter's folder (it should play that reciter).
+8. [ ] **Later**: turn on the Pro gate (`REACT_APP_PRO_GATE=on`, then the
+       broker's `REQUIRE_PRO="true"` and deploy), and Apple sign-in.
+
 ## Rafeeq Pro launch (RevenueCat)
 
 Code is done and merged; Test Store purchases, restore and the Arabic paywall
@@ -72,12 +102,12 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       account that bought it ("Keep with original App User ID", or the
       dashboard's current name for it; verify). Create a reviewer test Google
       account and grant it promotional Pro.
-- [ ] **`npx cap sync`** before the next build: `@capacitor/browser` and
-      `@capgo/capacitor-social-login` are not registered in the Android
-      project yet.
-- [ ] **Legal pages.** On the local `gh-pages` branch (not pushed): replace the
-      `[REGION]` placeholder in `privacy.html` and `privacy-ar.html` with the
-      Supabase region, then push; confirm `delete-account.html` (+ `-ar`),
+- [x] **`npx cap sync`**: `@capacitor/browser` and
+      `@capgo/capacitor-social-login` are registered in the Android project
+      (committed 6 Nov 2026).
+- [ ] **Legal pages.** On the local `gh-pages` branch (not pushed); the region
+      is filled in as London, United Kingdom. Push it after the owner
+      confirmation below, then confirm `delete-account.html` (+ `-ar`),
       `privacy.html` and `terms.html` load.
 - [ ] **Play Console.** Redo Data safety (Name, Email, User IDs for account
       management; Purchase history; deletion = yes; delete-account URL
