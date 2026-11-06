@@ -47,13 +47,14 @@ afterEach(() => {
   host.remove();
 });
 
-it("renders nothing when accounts are disabled", () => {
+it("renders nothing when sign-in isn't configured", () => {
   mount({ enabled: false, user: null });
   expect(host.innerHTML).toBe("");
 });
 
 it("offers Sign in when signed out, and it requests sign-in", async () => {
   mount({ enabled: true, user: null });
+  expect(host.textContent).toContain("سجّل الدخول إلى رفيق");
   expect(button("تسجيل الخروج")).toBeUndefined();
   await act(async () => button("تسجيل الدخول")!.click());
   expect(requestSignIn).toHaveBeenCalled();
@@ -64,6 +65,7 @@ it("shows the name, email and provider when signed in", () => {
   expect(host.textContent).toContain("Sara");
   expect(host.textContent).toContain("sara@example.com");
   expect(host.textContent).toContain("Google");
+  expect(host.querySelector(".ac-acct-avatar")!.textContent).toBe("S");
   expect(button("تسجيل الدخول")).toBeUndefined();
   expect(button("تسجيل الخروج")).toBeDefined();
   expect(button("حذف الحساب")).toBeDefined();
@@ -76,7 +78,7 @@ it("labels Apple accounts", () => {
 
 it("labels the identity with the provider when there is no name or email", () => {
   mount({ enabled: true, user: { ...USER, name: null, email: null, provider: "apple" } });
-  expect(host.querySelector(".ac-row--static .ac-row-label")!.textContent).toBe("Apple");
+  expect(host.querySelector(".ac-acct-name")!.textContent).toBe("Apple");
 });
 
 it("signs out", async () => {

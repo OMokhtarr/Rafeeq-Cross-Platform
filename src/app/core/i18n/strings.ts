@@ -600,9 +600,10 @@ export interface AppStrings {
     purchaseFailed: string;
     noPlans: string;
     accountTitle: string;
-    plan: string;
     planPro: string;
-    planFree: string;
+    proLine: string;
+    proActive: string;
+    proActiveLine: string;
     manage: string;
     manageFailed: string;
     view: string;
@@ -619,7 +620,8 @@ export interface AppStrings {
     signInFailed: string;
     signIn: string;
     signOut: string;
-    signedInAs: (email: string) => string;
+    signedOutTitle: string;
+    signedOutLine: string;
     deleteAccount: string;
     sectionTitle: string;
     deleteTitle: string;
@@ -1341,9 +1343,10 @@ const ar: AppStrings = {
     purchaseFailed: "تعذّر إتمام الاشتراك، حاول مرة أخرى",
     noPlans: "خطط الاشتراك غير متاحة الآن",
     accountTitle: "الاشتراك",
-    plan: "الخطة",
     planPro: "رفيق برو",
-    planFree: "مجاني",
+    proLine: "سمّع وسيتابعك رفيق ويُظهر أخطاءك، وتتزامن بياناتك بين أجهزتك",
+    proActive: "مفعّل",
+    proActiveLine: "التسميع والمزامنة مفعّلان لهذا الحساب",
     manage: "إدارة الاشتراك",
     manageFailed: "تعذّر فتح إدارة الاشتراك، تحقّق من الاتصال",
     view: "عرض الاشتراك",
@@ -1360,7 +1363,8 @@ const ar: AppStrings = {
     signInFailed: "تعذّر تسجيل الدخول، حاول مرة أخرى",
     signIn: "تسجيل الدخول",
     signOut: "تسجيل الخروج",
-    signedInAs: (email: string) => `مسجّل الدخول باسم ${email}`,
+    signedOutTitle: "سجّل الدخول إلى رفيق",
+    signedOutLine: "يرتبط اشتراك رفيق برو بحسابك، ومعه تتزامن ملاحظاتك وحفظك وإعداداتك بين أجهزتك.",
     deleteAccount: "حذف الحساب",
     sectionTitle: "الحساب",
     deleteTitle: "حذف حسابك؟",
@@ -2090,9 +2094,10 @@ const en: AppStrings = {
     purchaseFailed: "The subscription couldn't be completed. Please try again.",
     noPlans: "Subscription plans aren't available right now",
     accountTitle: "Subscription",
-    plan: "Plan",
     planPro: "Rafeeq Pro",
-    planFree: "Free",
+    proLine: "Recite while Rafeeq follows along and shows your mistakes, and sync your data across your phones",
+    proActive: "Active",
+    proActiveLine: "Recite and sync are on for this account",
     manage: "Manage subscription",
     manageFailed: "Couldn't open subscription settings. Check your connection.",
     view: "View subscription",
@@ -2109,7 +2114,8 @@ const en: AppStrings = {
     signInFailed: "Couldn't sign in. Please try again.",
     signIn: "Sign in",
     signOut: "Sign out",
-    signedInAs: (email: string) => `Signed in as ${email}`,
+    signedOutTitle: "Sign in to Rafeeq",
+    signedOutLine: "Rafeeq Pro stays with your account, and with it your notes, Hifz progress and settings sync across your phones.",
     deleteAccount: "Delete account",
     sectionTitle: "Account",
     deleteTitle: "Delete your account?",

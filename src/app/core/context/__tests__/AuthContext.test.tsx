@@ -1,12 +1,10 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { AuthProvider, useAuth } from "../AuthContext";
-import { isAccountsOn } from "../../services/auth/accounts-switch";
 import * as auth from "../../services/auth/auth.service";
 import { isAuthConfigured } from "../../services/auth/supabase.client";
 import { brokerHeaders } from "../../services/audio/stt/broker";
 
-jest.mock("../../services/auth/accounts-switch", () => ({ isAccountsOn: jest.fn() }));
 jest.mock("../../services/auth/auth.service", () => ({
   signIn: jest.fn(),
   signOut: jest.fn(),
@@ -20,7 +18,6 @@ jest.mock("../../services/auth/supabase.client", () => ({ isAuthConfigured: jest
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const on = isAccountsOn as jest.Mock;
 const configured = isAuthConfigured as jest.Mock;
 const svc = auth as unknown as Record<string, jest.Mock>;
 
@@ -56,7 +53,6 @@ async function mount() {
 
 beforeEach(() => {
   emit = null;
-  on.mockReturnValue(true);
   configured.mockReturnValue(true);
   svc.currentUser.mockResolvedValue(null);
   svc.signOut.mockResolvedValue(undefined);
@@ -92,8 +88,8 @@ describe("AuthProvider", () => {
     expect(seen).not.toContainEqual([true, null]);
   });
 
-  it("is ready with no user and never reads a session when accounts are off", async () => {
-    on.mockReturnValue(false);
+  it("is ready with no user and never reads a session when sign-in isn't configured", async () => {
+    configured.mockReturnValue(false);
     await mount();
     expect(ctx.enabled).toBe(false);
     expect(ctx.ready).toBe(true);
@@ -156,8 +152,8 @@ describe("AuthProvider", () => {
       expect(await brokerHeaders()).toEqual({ authorization: "Bearer tok" });
     });
 
-    it("sends no token when accounts are off", async () => {
-      on.mockReturnValue(false);
+    it("sends no token when sign-in isn't configured", async () => {
+      configured.mockReturnValue(false);
       svc.accessToken.mockResolvedValue("tok");
       await mount();
       expect(await brokerHeaders()).toEqual({});

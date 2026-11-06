@@ -4,9 +4,9 @@
  * App-wide sign-in state: who is signed in (if anyone), sign-in and sign-out,
  * and the open state of the sign-in sheet any gated feature can raise.
  *
- * Accounts are optional. When the accounts switch is off or the auth backend
- * isn't configured, `enabled` is false, nobody is ever signed in and `ready` is
- * true from the start. Otherwise the stored session is read once at launch
+ * Signing in is optional. When the auth backend isn't configured (no Supabase
+ * URL or key in the build), `enabled` is false, nobody is ever signed in and
+ * `ready` is true from the start. Otherwise the stored session is read once at launch
  * (a cached user is used when offline) and then follows account events.
  */
 
@@ -19,7 +19,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { isAccountsOn } from "../services/auth/accounts-switch";
 import {
   AccountUser,
   AuthProviderId,
@@ -65,7 +64,7 @@ interface PendingRequest {
 const AuthContext = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const enabled = useMemo(() => isAccountsOn() && isAuthConfigured(), []);
+  const enabled = useMemo(() => isAuthConfigured(), []);
   const [user, setUser] = useState<AccountUser | null>(null);
   const [ready, setReady] = useState(!enabled);
   const [signInOpen, setSignInOpen] = useState(false);

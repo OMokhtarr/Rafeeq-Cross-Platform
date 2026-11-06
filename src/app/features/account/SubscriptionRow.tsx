@@ -1,16 +1,12 @@
 /**
  * ACCOUNT → SUBSCRIPTION
  *
- * Shows whether this person has Rafeeq Pro and the ways to act on it:
- * subscribers open RevenueCat's Customer Center (cancel, change plan,
- * restore, refund requests); everyone else can open the Paywall or restore a
- * purchase made on another device. Works whether or not the app-side paywall
- * switch is on, so purchases can be tested before launch.
- *
- * Pro always belongs to an account, so a release build with accounts off
- * offers no way to buy or restore it: a purchase there would land on an
- * anonymous id. Debug builds keep both rows for store testing, and an
- * existing subscriber can still reach Manage.
+ * Rafeeq Pro and the ways to act on it. Pro always belongs to an account, so
+ * the card only appears once someone is signed in. Subscribers open
+ * RevenueCat's Customer Center (cancel, change plan, restore, refund
+ * requests); everyone else can open the Paywall or restore a purchase made on
+ * another device. Works whether or not the app-side paywall switch is on, so
+ * purchases can be tested before launch.
  *
  * The Support ID is the RevenueCat app-user id, shown shortened and copied
  * in full. The owner needs it to grant free Pro (testers, family, a store
@@ -19,25 +15,33 @@
 
 import React, { useState } from "react";
 import { useIonToast } from "@ionic/react";
-import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../../core/context/AuthContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { useSubscription } from "../../core/context/SubscriptionContext";
-import { useSignedInAction, useStartSubscribe } from "../subscription/useStartSubscribe";
+import { useStartSubscribe } from "../subscription/useStartSubscribe";
 
 /** Characters of the Support ID shown on screen; the full id is copied. */
 const SHORT_ID_LENGTH = 8;
 
+/** The eight-pointed star of the rub el hizb, Rafeeq Pro's mark. */
+const ProStar: React.FC = () => (
+  <svg className="ac-pro-star" viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="5" y="5" width="14" height="14" rx="1" />
+    <rect x="5" y="5" width="14" height="14" rx="1" transform="rotate(45 12 12)" />
+    <circle cx="12" cy="12" r="2.6" />
+  </svg>
+);
+
 const SubscriptionRow: React.FC = () => {
   const { t } = useLang();
   const ts = t.subscription;
+  const { user } = useAuth();
   const { isPro, appUserId, restore, showCustomerCenter } = useSubscription();
-  const { enabled: accountsEnabled } = useAuth();
-  const canBuy = accountsEnabled || Capacitor.DEBUG === true;
   const startSubscribe = useStartSubscribe();
-  const whenSignedIn = useSignedInAction();
   const [presentToast] = useIonToast();
   const [restoring, setRestoring] = useState(false);
+
+  if (!user) return null;
 
   const toast = (message: string) =>
     presentToast({ message, duration: 2000, position: "bottom" });
@@ -78,46 +82,42 @@ const SubscriptionRow: React.FC = () => {
   return (
     <>
       <p className="ac-section-label">{ts.accountTitle}</p>
-      <div className="ac-group">
-        <div className="ac-row ac-row--static">
-          <span className="ac-row-label">{ts.plan}</span>
-          <span className={`ac-plan-pill${isPro ? " ac-plan-pill--pro" : ""}`}>
-            {isPro ? ts.planPro : ts.planFree}
-          </span>
+      <section className={`ac-card ac-pro${isPro ? " ac-pro--active" : ""}`}>
+        <div className="ac-pro-head">
+          <ProStar />
+          <div className="ac-pro-text">
+            <h2 className="ac-pro-title">{ts.planPro}</h2>
+            <p className="ac-pro-line">{isPro ? ts.proActiveLine : ts.proLine}</p>
+          </div>
+          {isPro && <span className="ac-plan-pill ac-plan-pill--pro">{ts.proActive}</span>}
         </div>
 
-        {(isPro || canBuy) && <div className="ac-row-divider" />}
         {isPro ? (
-          <button className="ac-row" onClick={onManage}>
-            <span className="ac-row-label">{ts.manage}</span>
-            <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="17" x2="20" y2="17" />
-              <circle cx="9" cy="7" r="2.2" fill="var(--color-bg-card)" /><circle cx="15" cy="17" r="2.2" fill="var(--color-bg-card)" />
-            </svg>
-          </button>
-        ) : canBuy ? (
           <>
-            <button className="ac-row" onClick={() => void startSubscribe()}>
-              <span className="ac-row-label">{ts.view}</span>
-              <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3.5 3.5 0 013.5 3.5v6a3.5 3.5 0 01-7 0v-6A3.5 3.5 0 0112 2z" />
-                <path d="M18.5 10.5v1a6.5 6.5 0 01-13 0v-1" /><line x1="12" y1="18" x2="12" y2="22" />
-              </svg>
-            </button>
             <div className="ac-row-divider" />
-            <button className="ac-row" onClick={() => void whenSignedIn(onRestore)} disabled={restoring}>
-              <span className="ac-row-label">{ts.restore}</span>
+            <button className="ac-row" onClick={onManage}>
+              <span className="ac-row-label">{ts.manage}</span>
               <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><polyline points="3 3 3 8 8 8" />
+                <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="17" x2="20" y2="17" />
+                <circle cx="9" cy="7" r="2.2" fill="var(--color-bg-card)" /><circle cx="15" cy="17" r="2.2" fill="var(--color-bg-card)" />
               </svg>
             </button>
           </>
-        ) : null}
+        ) : (
+          <div className="ac-pro-actions">
+            <button className="ac-acct-cta" onClick={() => void startSubscribe()}>
+              {ts.view}
+            </button>
+            <button className="ac-pro-restore" onClick={() => void onRestore()} disabled={restoring}>
+              {ts.restore}
+            </button>
+          </div>
+        )}
 
         {appUserId && (
           <>
             <div className="ac-row-divider" />
-            <button className="ac-row" onClick={onCopyId}>
+            <button className="ac-row ac-row--quiet" onClick={onCopyId}>
               <span className="ac-row-label">{ts.supportId}</span>
               <span className="ac-support-id">…{appUserId.slice(-SHORT_ID_LENGTH)}</span>
               <svg className="ac-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -126,7 +126,7 @@ const SubscriptionRow: React.FC = () => {
             </button>
           </>
         )}
-      </div>
+      </section>
     </>
   );
 };
