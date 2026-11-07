@@ -1,23 +1,35 @@
 /**
- * One-off build step: fetches the Uthmani text of every verse
- * the Feelings page cites, so verse text is never typed by hand.
+ * One-off build step: copies the Uthmani text of every verse the Feelings
+ * page cites out of a Tanzil dump, so verse text is never typed by hand.
  *
  * Usage:
- *   node scripts/generate-feeling-verses.mjs
+ *   node scripts/generate-feeling-verses.mjs <path-to-quran-uthmani.txt>
  *
  * Input:
- *   src/data/feelingsData.ts — the `verses: [...]` arrays ("13:28", "94:5-6")
+ *   - src/data/feelingsData.ts — the `verses: [...]` arrays ("13:28", "94:5-6")
+ *   - Tanzil "Uthmani" text, "Text (with aya numbers)" format — one
+ *     `sura|aya|text` line per verse plus a `#` copyright block. Download from
+ *     https://tanzil.net/download/ (Quran type: Uthmani).
  *
  * Output:
  *   src/data/feelingsVerses.generated.ts — FEELING_VERSES[key] = { text }
  *
- * Source: api.quran.com v4 `verses/by_key` (text_uthmani). Public,
- * no auth. Any failed or incomplete response aborts before the output is
- * written, so the file is never left half-generated. Re-run after changing any
- * verse ref; the feelings data test fails if a ref has no generated entry.
+ * Why Tanzil and not the QF API: QF's Uthmani text is licensed to Rafeeq only
+ * for caching inside the offline reader, with no redistribution and a weekly
+ * refresh (docs/licensing-decisions.md §1, §1a) — bundling it into the APK
+ * would break both. Tanzil's licence (CC BY 3.0) allows verbatim copies,
+ * provided the text is unchanged, its copyright block is kept in files derived
+ * from it, and the app credits Tanzil with a link to tanzil.net (the Feelings
+ * page does). So text is copied byte for byte and the block is reproduced in
+ * the output header.
  *
- * Page numbers are deliberately not taken from the API: its page layout differs
- * from the app's PAGE_STARTS table, which the resolver uses instead.
+ * Page numbers are not generated: the resolver takes them from the app's own
+ * PAGE_STARTS table so the viewer deep link lands where the app's layout puts
+ * the ayah.
+ *
+ * Any problem — missing verse, unparseable ref, ayah 1 (Tanzil prefixes it
+ * with the basmala, which the card would then show as part of the ayah) —
+ * aborts before the output is written, so the file is never half-generated.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -27,18 +39,28 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INPUT = resolve(ROOT, "src/data/feelingsData.ts");
 const OUTPUT = resolve(ROOT, "src/data/feelingsVerses.generated.ts");
-const API = "https://api.quran.com/api/v4/verses/by_key";
-const DELAY_MS = 150;
+
+function fail(message) {
+  console.error(`Aborted, nothing written — ${message}`);
+  process.exit(1);
+}
+
+const tanzilPath = process.argv[2];
+if (!tanzilPath) {
+  console.error("Usage: node scripts/generate-feeling-verses.mjs <quran-uthmani.txt>");
+  process.exit(1);
+}
 
 function collectKeys(source) {
   const keys = new Set();
   for (const [, body] of source.matchAll(/verses:\s*\[([^\]]*)\]/g)) {
     for (const [, ref] of body.matchAll(/"([^"]+)"/g)) {
       const m = /^(\d+):(\d+)(?:-(\d+))?$/.exec(ref);
-      if (!m) throw new Error(`Bad verse ref: ${ref}`);
+      if (!m) fail(`bad verse ref: ${ref}`);
       const surah = Number(m[1]);
       const from = Number(m[2]);
       const to = m[3] ? Number(m[3]) : from;
+      if (from === 1 && surah !== 1) fail(`${ref}: ayah 1 carries the basmala in Tanzil's text`);
       for (let ayah = from; ayah <= to; ayah++) keys.add(`${surah}:${ayah}`);
     }
   }
@@ -49,36 +71,32 @@ function collectKeys(source) {
   });
 }
 
-async function fetchVerse(key) {
-  const res = await fetch(`${API}/${key}?fields=text_uthmani`, {
-    headers: { "User-Agent": "rafeeq-feelings-generator" },
-  });
-  if (!res.ok) throw new Error(`${key}: HTTP ${res.status}`);
-  const { verse } = await res.json();
-  const text = verse?.text_uthmani?.trim();
-  if (!text) throw new Error(`${key}: incomplete response`);
-  return { text };
+// Tanzil dumps can start with a BOM; strip it so line 1 parses.
+const tanzilLines = readFileSync(tanzilPath, "utf8").replace(/^﻿/, "").split(/\r?\n/);
+const copyright = tanzilLines.filter((l) => l.startsWith("#"));
+if (!copyright.some((l) => l.includes("Tanzil Quran Text (Uthmani"))) {
+  fail(`${tanzilPath} has no Tanzil Uthmani copyright block — wrong file?`);
 }
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const tanzil = new Map();
+for (const line of tanzilLines) {
+  const m = /^(\d+)\|(\d+)\|(.+)$/.exec(line);
+  if (m) tanzil.set(`${m[1]}:${m[2]}`, m[3]);
+}
+if (tanzil.size !== 6236) fail(`expected 6236 verses in ${tanzilPath}, found ${tanzil.size}`);
 
 const keys = collectKeys(readFileSync(INPUT, "utf8"));
-const verses = {};
-try {
-  for (const key of keys) {
-    verses[key] = await fetchVerse(key);
-    await sleep(DELAY_MS);
-  }
-} catch (err) {
-  console.error(`Aborted, nothing written — ${err.message}`);
-  process.exit(1);
+for (const key of keys) {
+  if (!tanzil.get(key)?.trim()) fail(`${key}: not in ${tanzilPath}`);
 }
 
 const lines = [
-  "// GENERATED by scripts/generate-feeling-verses.mjs from api.quran.com (text_uthmani) — do not edit.",
+  "// GENERATED by scripts/generate-feeling-verses.mjs from the Tanzil Uthmani text — do not edit.",
+  "// The verse text below is a verbatim copy; Tanzil's licence requires its notice to stay with it:",
+  "//",
+  ...copyright.map((l) => `// ${l}`.trimEnd()),
   "",
   "export const FEELING_VERSES: Record<string, { text: string }> = {",
-  ...keys.map((k) => `  ${JSON.stringify(k)}: { text: ${JSON.stringify(verses[k].text)} },`),
+  ...keys.map((k) => `  ${JSON.stringify(k)}: { text: ${JSON.stringify(tanzil.get(k))} },`),
   "};",
   "",
 ];

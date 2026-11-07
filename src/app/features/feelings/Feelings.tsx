@@ -10,6 +10,9 @@
  *
  * Verse and dua text is Arabic in both languages; only the chrome (prompt,
  * headings, feeling names) follows the app language.
+ *
+ * Verse text is Tanzil's (see scripts/generate-feeling-verses.mjs); its licence
+ * requires the credit line and tanzil.net link under the verses.
  */
 
 import React, { useMemo } from "react";
@@ -104,6 +107,15 @@ const Feelings: React.FC = () => {
                       </span>
                     </button>
                   ))}
+                  <a
+                    className="feelings-credit"
+                    href="https://tanzil.net"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    lang={lang}
+                  >
+                    {tf.versesCredit} · tanzil.net
+                  </a>
                 </section>
 
                 <section className="feelings-section">

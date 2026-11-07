@@ -250,6 +250,26 @@
   color: var(--color-gold);
 }
 
+/* ── Verse text credit (Tanzil licence) ──────── */
+.feelings-credit {
+  align-self: flex-start;
+  font-family: var(--font-arabic);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--color-gold-subtle);
+  text-underline-offset: 3px;
+}
+
+[dir="ltr"] .feelings-credit {
+  font-family: var(--font-latin);
+}
+
+.feelings-credit:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
 /* ── Dua card ────────────────────────────────── */
 .feelings-dua-text {
   margin: 0;

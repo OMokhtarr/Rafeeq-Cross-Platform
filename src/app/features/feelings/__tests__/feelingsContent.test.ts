@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { join } from "path";
 import azkarData from "../../../../data/azkarData";
 import { FEELINGS } from "../../../../data/feelingsData";
 import { FEELING_VERSES } from "../../../../data/feelingsVerses.generated";
@@ -126,4 +128,14 @@ test("range uses first ayah's key and page", () => {
   const v = resolveVerses(getFeeling("content")!).find((x) => x.ref === "89:27-30")!;
   expect(v.firstKey).toBe("89:27");
   expect(v.page).toBe(estimatePageForVerse(89, 27));
+});
+
+test("verse text keeps the Tanzil copyright notice its licence requires", () => {
+  const generated = readFileSync(
+    join(__dirname, "../../../../data/feelingsVerses.generated.ts"),
+    "utf8"
+  );
+  expect(generated).toContain("Tanzil Quran Text (Uthmani");
+  expect(generated).toContain("CHANGING IT IS NOT ALLOWED");
+  expect(generated).not.toContain("api.quran.com");
 });

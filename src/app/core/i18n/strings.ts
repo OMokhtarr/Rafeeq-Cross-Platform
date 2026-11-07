@@ -48,6 +48,8 @@ export interface AppStrings {
     duas: string;
     back: string;
     openInMushaf: string;
+    /** Tanzil's licence: name the source of the verse text and link to it. */
+    versesCredit: string;
   };
 
   tracker: {
@@ -772,6 +774,7 @@ const ar: AppStrings = {
     duas: "أدعية",
     back: "رجوع",
     openInMushaf: "افتح في المصحف",
+    versesCredit: "نص الآيات من مشروع تنزيل",
   },
   tracker: {
     title: "متابعة العبادات",
@@ -1528,6 +1531,7 @@ const en: AppStrings = {
     duas: "Duas",
     back: "Back",
     openInMushaf: "Open in the mushaf",
+    versesCredit: "Verse text from the Tanzil Project",
   },
   tracker: {
     title: "Worship Tracker",
