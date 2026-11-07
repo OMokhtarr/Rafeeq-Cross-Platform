@@ -153,3 +153,40 @@ architectural change is involved.
 The stronger position, should it ever be wanted, is either an express
 permission from KFGQPC or a replacement asset. Either would convert this entry
 from a risk acceptance into an actual resolution.
+
+---
+
+## 3. Tanzil Quran text — used under its public licence
+
+**Status:** In use. No permission needed beyond the licence; obligations below.
+**Date:** 2026-11-07
+
+**Licence:** Creative Commons Attribution 3.0 with Tanzil's terms of use, quoted
+in the copyright block of every Tanzil download: verbatim copying and
+distribution allowed, **changing the text is not**; the source (Tanzil Project)
+must be clearly indicated with a link to tanzil.net; the copyright notice must
+be kept in verbatim copies and reproduced in files derived from the text.
+
+**Where Rafeeq bundles it:**
+
+| Use | Tanzil edition | Built by |
+|---|---|---|
+| Feelings page verses (`src/data/feelingsVerses.generated.ts`) | Uthmani | `scripts/generate-feeling-verses.mjs` |
+| Offline search/recite corpus (`public/data/quran-text.json`) | Uthmani simple-clean | `scripts/build-quran-corpus.mjs` |
+
+**Why Tanzil for bundled text:** QF's script is licensed only for caching inside
+the offline reader (§1, §1a — no redistribution, weekly refresh). Text shipped
+inside the APK needs a licence that allows redistribution; Tanzil's does.
+
+**How the obligations are met:**
+
+- *Unchanged text* — both scripts copy verse text verbatim. Feelings keeps the
+  ۞ marks Tanzil includes rather than stripping them.
+- *Notice* — `feelingsVerses.generated.ts` reproduces the full copyright block;
+  a test fails if it goes missing.
+- *Credit + link* — the Feelings detail page shows «نص الآيات من مشروع تنزيل ·
+  tanzil.net» under the verses, linking to https://tanzil.net.
+
+**Open item:** the search corpus has no in-app credit or link yet, and
+`quran-text.json` does not carry the notice. Fix when that corpus is next
+touched, e.g. with an attributions row in Settings or Account.
