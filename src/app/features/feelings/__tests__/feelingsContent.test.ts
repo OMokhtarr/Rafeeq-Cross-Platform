@@ -1,10 +1,12 @@
 import azkarData from "../../../../data/azkarData";
 import { FEELINGS } from "../../../../data/feelingsData";
+import { FEELING_VERSES } from "../../../../data/feelingsVerses.generated";
 import {
   parseVerseRef,
   expandVerseRef,
   getFeeling,
   resolveDuas,
+  resolveVerses,
 } from "../feelingsContent";
 
 const IDS = [
@@ -92,4 +94,28 @@ test("resolveDuas throws on a missing zikr", () => {
 
 test("getFeeling returns undefined for unknown id", () => {
   expect(getFeeling("nope")).toBeUndefined();
+});
+
+test("every verse ref has generated text and page", () => {
+  FEELINGS.flatMap((f) => f.verses)
+    .flatMap(expandVerseRef)
+    .forEach((k) => {
+      expect(FEELING_VERSES[k]?.text).toBeTruthy();
+      expect(FEELING_VERSES[k].page).toBeGreaterThanOrEqual(1);
+      expect(FEELING_VERSES[k].page).toBeLessThanOrEqual(604);
+    });
+});
+
+test("range joins ayat in order with Arabic-Indic numbers", () => {
+  const v = resolveVerses(getFeeling("sad")!).find((x) => x.ref === "94:5-6")!;
+  expect(v.text).toBe(
+    `${FEELING_VERSES["94:5"].text} (٥) ${FEELING_VERSES["94:6"].text} (٦)`
+  );
+  expect(v.surahName).toBe("الشرح");
+});
+
+test("range uses first ayah's key and page", () => {
+  const v = resolveVerses(getFeeling("content")!).find((x) => x.ref === "89:27-30")!;
+  expect(v.firstKey).toBe("89:27");
+  expect(v.page).toBe(FEELING_VERSES["89:27"].page);
 });

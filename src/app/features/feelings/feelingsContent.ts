@@ -1,17 +1,33 @@
 /**
  * FEELINGS CONTENT
- * Pure resolvers that turn a Feeling's refs into display-ready duas. Throws on
- * bad data rather than rendering a blank card — the data tests run every
- * feeling through here, so a typo fails CI instead of reaching a user.
+ * Pure resolvers that turn a Feeling's refs into display-ready verses and
+ * duas. Throws on bad data rather than rendering a blank card — the data
+ * tests run every feeling through here, so a typo fails CI instead of
+ * reaching a user.
  */
 
 import azkarData from "../../../data/azkarData";
 import { FEELINGS, Feeling } from "../../../data/feelingsData";
+import { FEELING_VERSES } from "../../../data/feelingsVerses.generated";
+import { getSurahNameArabic } from "../../core/services/data/metadata.service";
 
 export interface VerseRef {
   surah: number;
   from: number;
   to: number;
+}
+
+export interface ResolvedVerse {
+  ref: string;
+  surah: number;
+  surahName: string;
+  from: number;
+  to: number;
+  /** Each ayah's text followed by its number in Arabic-Indic digits. */
+  text: string;
+  /** Mushaf page of the first ayah — where the viewer deep link lands. */
+  page: number;
+  firstKey: string;
 }
 
 export interface ResolvedDua {
@@ -61,6 +77,33 @@ export function expandVerseRef(ref: string): string[] {
   const keys: string[] = [];
   for (let ayah = from; ayah <= to; ayah++) keys.push(`${surah}:${ayah}`);
   return keys;
+}
+
+export function arabicIndic(n: number): string {
+  return String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
+}
+
+export function resolveVerses(feeling: Feeling): ResolvedVerse[] {
+  return feeling.verses.map((ref) => {
+    const { surah, from, to } = parseVerseRef(ref);
+    const ayat = expandVerseRef(ref).map((key) => {
+      const verse = FEELING_VERSES[key];
+      if (!verse) {
+        throw new Error(`Missing verse ${key} — re-run scripts/generate-feeling-verses.mjs`);
+      }
+      return verse;
+    });
+    return {
+      ref,
+      surah,
+      surahName: getSurahNameArabic(surah),
+      from,
+      to,
+      text: ayat.map((v, i) => `${v.text} (${arabicIndic(from + i)})`).join(" "),
+      page: ayat[0].page,
+      firstKey: `${surah}:${from}`,
+    };
+  });
 }
 
 export function getFeeling(id: string): Feeling | undefined {
