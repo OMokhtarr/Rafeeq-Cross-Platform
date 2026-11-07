@@ -1,6 +1,7 @@
 import azkarData from "../../../../data/azkarData";
 import { FEELINGS } from "../../../../data/feelingsData";
 import { FEELING_VERSES } from "../../../../data/feelingsVerses.generated";
+import { estimatePageForVerse } from "../../../core/services/data/metadata.service";
 import {
   parseVerseRef,
   expandVerseRef,
@@ -96,14 +97,21 @@ test("getFeeling returns undefined for unknown id", () => {
   expect(getFeeling("nope")).toBeUndefined();
 });
 
-test("every verse ref has generated text and page", () => {
+test("every verse ref has generated text", () => {
   FEELINGS.flatMap((f) => f.verses)
     .flatMap(expandVerseRef)
-    .forEach((k) => {
-      expect(FEELING_VERSES[k]?.text).toBeTruthy();
-      expect(FEELING_VERSES[k].page).toBeGreaterThanOrEqual(1);
-      expect(FEELING_VERSES[k].page).toBeLessThanOrEqual(604);
-    });
+    .forEach((k) => expect(FEELING_VERSES[k]?.text).toBeTruthy());
+});
+
+test("every verse card opens the app's own mushaf page for its first ayah", () => {
+  FEELINGS.flatMap(resolveVerses).forEach((v) =>
+    expect(v.page).toBe(estimatePageForVerse(v.surah, v.from))
+  );
+});
+
+test("94:5-6 opens page 597, where the app's layout puts it", () => {
+  const v = resolveVerses(getFeeling("sad")!).find((x) => x.ref === "94:5-6")!;
+  expect(v.page).toBe(597);
 });
 
 test("range joins ayat in order with Arabic-Indic numbers", () => {
@@ -117,5 +125,5 @@ test("range joins ayat in order with Arabic-Indic numbers", () => {
 test("range uses first ayah's key and page", () => {
   const v = resolveVerses(getFeeling("content")!).find((x) => x.ref === "89:27-30")!;
   expect(v.firstKey).toBe("89:27");
-  expect(v.page).toBe(FEELING_VERSES["89:27"].page);
+  expect(v.page).toBe(estimatePageForVerse(89, 27));
 });

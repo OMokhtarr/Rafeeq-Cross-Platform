@@ -9,7 +9,10 @@
 import azkarData from "../../../data/azkarData";
 import { FEELINGS, Feeling } from "../../../data/feelingsData";
 import { FEELING_VERSES } from "../../../data/feelingsVerses.generated";
-import { getSurahNameArabic } from "../../core/services/data/metadata.service";
+import {
+  estimatePageForVerse,
+  getSurahNameArabic,
+} from "../../core/services/data/metadata.service";
 
 export interface VerseRef {
   surah: number;
@@ -25,7 +28,11 @@ export interface ResolvedVerse {
   to: number;
   /** Each ayah's text followed by its number in Arabic-Indic digits. */
   text: string;
-  /** Mushaf page of the first ayah — where the viewer deep link lands. */
+  /**
+   * Mushaf page of the first ayah — where the viewer deep link lands. From
+   * the app's own PAGE_STARTS table, not api.quran.com's page_number: the two
+   * layouts disagree around pages 565–600 (e.g. 94:5 is on 597 here, 596 there).
+   */
   page: number;
   firstKey: string;
 }
@@ -100,7 +107,7 @@ export function resolveVerses(feeling: Feeling): ResolvedVerse[] {
       from,
       to,
       text: ayat.map((v, i) => `${v.text} (${arabicIndic(from + i)})`).join(" "),
-      page: ayat[0].page,
+      page: estimatePageForVerse(surah, from),
       firstKey: `${surah}:${from}`,
     };
   });
