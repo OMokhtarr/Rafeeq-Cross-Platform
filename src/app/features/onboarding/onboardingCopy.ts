@@ -74,7 +74,7 @@ const ar: OnboardingCopy = {
   tours: {
     home: {
       tabs: { title: "التنقل", body: "كل أقسام التطبيق في الشريط السفلي: الرئيسية والمصحف والاختبارات والأذكار والحفظ." },
-      more: { title: "المزيد", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، والحساب، والإعدادات." },
+      more: { title: "المزيد", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، ومشاعري، والحساب، والإعدادات." },
     },
     viewer: {
       swipe: { title: "قلّب الصفحات", body: "اسحب يمينًا أو يسارًا للانتقال بين الصفحات." },
@@ -153,7 +153,7 @@ const ar: OnboardingCopy = {
       open: { title: "راجع واختبر", body: "افتح الجلسة في المصحف، أو اختبر نفسك فيها بعد إنجازها." },
     },
     more: {
-      cards: { title: "المزيد من رفيق", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، والحساب، والإعدادات." },
+      cards: { title: "المزيد من رفيق", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، ومشاعري، والحساب، والإعدادات." },
     },
     "prayerTimes.setup": {
       grant: { title: "موقعك", body: "اسمح بالوصول إلى موقعك لحساب مواقيت الصلاة واتجاه القبلة." },
@@ -239,7 +239,7 @@ const en: OnboardingCopy = {
   tours: {
     home: {
       tabs: { title: "Getting around", body: "Every section is one tap away in the bar below: Home, Quran, Quiz, Azkar and Hifz." },
-      more: { title: "More", body: "Prayer times & Qibla, the Worship Tracker, your account and settings." },
+      more: { title: "More", body: "Prayer times & Qibla, the Worship Tracker, Feelings, your account and settings." },
     },
     viewer: {
       swipe: { title: "Turn pages", body: "Swipe left or right to move between pages." },
@@ -318,7 +318,7 @@ const en: OnboardingCopy = {
       open: { title: "Review & test", body: "Open a session in the mushaf, or quiz yourself on it once it's done." },
     },
     more: {
-      cards: { title: "More of Rafeeq", body: "Prayer times & Qibla, the Worship Tracker, Account and Settings." },
+      cards: { title: "More of Rafeeq", body: "Prayer times & Qibla, the Worship Tracker, Feelings, Account and Settings." },
     },
     "prayerTimes.setup": {
       grant: { title: "Your location", body: "Allow location access to work out prayer times and the Qibla." },

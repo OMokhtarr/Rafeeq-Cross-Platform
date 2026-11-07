@@ -1,7 +1,7 @@
 /**
  * MORE PAGE
  * Hub for secondary destinations that don't earn a tab of their own:
- * Prayer Times & Qibla, the Worship Tracker, Account and Settings.
+ * Prayer Times & Qibla, the Worship Tracker, Feelings, Account and Settings.
  *
  * Prayer times and the qibla share one entry because they share one page —
  * /prayer-times renders the compass in its header above the times, so two
@@ -28,7 +28,7 @@ import { tourAttr } from "../onboarding/tourCatalog";
 import "./More.css";
 
 interface MoreEntry {
-  id: "account" | "settings" | "prayerTimes" | "tracker";
+  id: "account" | "settings" | "prayerTimes" | "tracker" | "feelings";
   icon: React.ReactNode;
   route: string;
   comingSoon?: boolean;
@@ -59,6 +59,19 @@ const ENTRIES: MoreEntry[] = [
       </svg>
     ),
     route: "/tracker",
+  },
+  {
+    id: "feelings",
+    // A smiling face: verses and duas picked by how you feel.
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+        <line x1="9" y1="9.5" x2="9.01" y2="9.5" strokeWidth="2" />
+        <line x1="15" y1="9.5" x2="15.01" y2="9.5" strokeWidth="2" />
+      </svg>
+    ),
+    route: "/feelings",
   },
   {
     id: "account",
@@ -94,6 +107,7 @@ const More: React.FC = () => {
     settings: tm.settings,
     prayerTimes: tm.prayerTimes,
     tracker: tm.tracker,
+    feelings: tm.feelings,
   };
 
   return (
