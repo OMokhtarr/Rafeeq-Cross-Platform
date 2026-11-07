@@ -37,6 +37,17 @@ export interface AppStrings {
     /** One entry covers both: the page shows the qibla above the times. */
     prayerTimes: string;
     tracker: string;
+    feelings: string;
+  };
+
+  /** Duas and verses picked by how the user feels (/feelings). */
+  feelings: {
+    title: string;
+    prompt: string;
+    verses: string;
+    duas: string;
+    back: string;
+    openInMushaf: string;
   };
 
   tracker: {
@@ -752,6 +763,15 @@ const ar: AppStrings = {
     settings: "الإعدادات",
     prayerTimes: "المواقيت والقبلة",
     tracker: "متابعة العبادات",
+    feelings: "مشاعري",
+  },
+  feelings: {
+    title: "مشاعري",
+    prompt: "كيف تشعر الآن؟",
+    verses: "آيات",
+    duas: "أدعية",
+    back: "رجوع",
+    openInMushaf: "افتح في المصحف",
   },
   tracker: {
     title: "متابعة العبادات",
@@ -1499,6 +1519,15 @@ const en: AppStrings = {
     settings: "Settings",
     prayerTimes: "Prayer Times & Qibla",
     tracker: "Worship Tracker",
+    feelings: "Feelings",
+  },
+  feelings: {
+    title: "Feelings",
+    prompt: "How are you feeling?",
+    verses: "Verses",
+    duas: "Duas",
+    back: "Back",
+    openInMushaf: "Open in the mushaf",
   },
   tracker: {
     title: "Worship Tracker",

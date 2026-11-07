@@ -43,6 +43,7 @@ import Bookmarks from "./app/features/bookmarks/Bookmarks";
 import TafsirSettings from "./app/features/tafsir/TafsirSettings";
 import Hifz from "./app/features/hifz/Hifz";
 import More from "./app/features/more/More";
+import Feelings from "./app/features/feelings/Feelings";
 import PrayerTimes from "./app/features/prayer-times/PrayerTimes";
 import WorshipTracker from "./app/features/tracker/WorshipTracker";
 import { ensureSince } from "./app/features/tracker/trackerStore";
@@ -230,6 +231,8 @@ const MainRouterOutlet: React.FC = () => {
       <Route exact path="/akmel-alnehayat" component={AkmelAlNehayat} />
       <Route exact path="/hifz" component={Hifz} />
       <Route exact path="/more" component={More} />
+      <Route exact path="/feelings" component={Feelings} />
+      <Route exact path="/feelings/:feelingId" component={Feelings} />
       <Route exact path="/prayer-times" component={PrayerTimes} />
       <Route exact path="/tracker" component={WorshipTracker} />
       <Route exact path="/account" component={Account} />
