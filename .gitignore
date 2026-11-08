@@ -55,3 +55,7 @@ coverage/
 
 # Playwright run output
 test-results/
+
+# Wrangler local secrets (wrangler dev)
+token-broker/.dev.vars
+token-broker/.wrangler/

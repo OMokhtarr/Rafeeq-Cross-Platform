@@ -11,8 +11,9 @@ details are in the sections below.
 2. [x] **Play Console**: Data safety redone, delete-account URL added, App
        access filled in, content rating re-run and changes sent for review
        (owner, 7 Nov 2026).
-3. [ ] **RevenueCat**: confirm "Keep with original App User ID" is saved;
-       create the reviewer Google account with lifetime promotional Pro.
+3. [x] **RevenueCat**: reviewer account rafeeq.quranquiz@gmail.com has
+       lifetime promotional Pro (verified 8 Nov 2026); "Keep with original App
+       User ID" saved (owner, 8 Nov 2026).
 4. [x] **Google Cloud**: Android OAuth clients for the Play App Signing and
        upload-key SHA-1s exist (owner confirmed 7 Nov 2026).
 5. [ ] **Release**: bump `versionCode`, add `RELEASE-NOTES.md` (sign-in, Pro
@@ -89,7 +90,7 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       in `.env.production` (and the same values in `.env.local`, which
       overrides it). Every release built now shows sign-in: ship only after
       the paperwork is live.
-- [ ] **RevenueCat dashboard.** Transfer behaviour so a purchase stays with the
+- [x] **RevenueCat dashboard.** Done 8 Nov 2026. Transfer behaviour so a purchase stays with the
       account that bought it ("Keep with original App User ID", or the
       dashboard's current name for it; verify). Create a reviewer test Google
       account and grant it promotional Pro.
@@ -127,7 +128,12 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 - [x] **Device check: offline launch.** Passed (owner, 7 Nov 2026). Sign in, wait until the access token
       has expired (over an hour), then launch offline: the app must show the
       account as signed in and keep Pro.
-- [ ] **Broker against prod.** Run `token-broker/verify-deploy.sh` with a
+- [x] **Broker against prod.** Passed 8 Nov 2026 on a local `wrangler dev
+      --var REQUIRE_PRO:true` against the prod Supabase project and RevenueCat:
+      no token and a forged token → 402; the reviewer's token (lifetime promo
+      Pro) → through the Pro check. Still run `verify-deploy.sh` with a
+      `PRO_TOKEN` right after flipping `REQUIRE_PRO` at launch. Original note:
+      Run `token-broker/verify-deploy.sh` with a
       `PRO_TOKEN` from the prod project once the Worker's `SUPABASE_URL` is
       set to the prod URL exactly as it appears in that token's `iss` (`iss`
       is `<SUPABASE_URL>/auth/v1`: same scheme and host, so not a custom
