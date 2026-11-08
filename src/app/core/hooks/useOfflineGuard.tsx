@@ -16,8 +16,6 @@ import { useIonToast } from "@ionic/react";
 import { useLang } from "../context/LanguageContext";
 import { isNetworkReachable } from "../services/api/network.service";
 
-import "./useOfflineGuard.css";
-
 export function useOfflineGuard() {
   const [presentToast] = useIonToast();
   const { t } = useLang();
@@ -29,7 +27,6 @@ export function useOfflineGuard() {
         message: message ?? t.offline.message,
         duration: 3000,
         position: "bottom",
-        cssClass: "rafeeq-offline-toast",
       });
     },
     [presentToast, t],

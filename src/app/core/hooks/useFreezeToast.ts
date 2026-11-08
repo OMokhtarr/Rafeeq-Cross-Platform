@@ -29,6 +29,7 @@ export function useFreezeToast() {
               : `Freezes covered ${days} missed days — your streak is safe.`,
         duration: 3500,
         position: "top",
+        cssClass: "rfq-toast-top",
       });
     },
     [presentToast, lang],
@@ -47,6 +48,7 @@ export function useFreezeToast() {
               : `You earned ${count} streak freezes.`,
         duration: 2500,
         position: "top",
+        cssClass: "rfq-toast-top",
       });
     },
     [presentToast, lang],

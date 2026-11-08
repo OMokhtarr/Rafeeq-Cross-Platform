@@ -86,36 +86,85 @@ ion-footer {
   transition: width 0.3s ease;
 }
 
-/* ── Exit-confirmation toast ───────────────────────────────────────────────
-   A compact centred pill rather than Ionic's full-width bar. ion-toast keeps
-   its content in shadow DOM, so the shape comes from its custom properties
-   and the sizing from ::part(container) — a plain descendant selector cannot
-   reach inside. Scoped to .rfq-exit-toast so other toasts keep the default. */
-ion-toast.rfq-exit-toast {
-  --background: rgba(28, 28, 28, 0.94);
-  --color: #fff;
-  --border-radius: 9999px;
-  --box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
-  --min-width: 0;
-  --width: auto;
-  --max-width: calc(100vw - 64px);
-  /* Sit above the bottom nav rather than behind it. */
-  --start: 0;
-  --end: 0;
-  margin-inline: auto;
-  padding-bottom: calc(var(--bottom-nav-height, 64px) + 8px);
-  text-align: center;
+/* ── Toasts (every useIonToast pop-up) ─────────────────────────────────────
+   One look for all of them instead of Ionic's grey bar with a blue all-caps
+   button: the app's card surface, a gold-tinted border, the app's own fonts.
+   ion-toast keeps its content in shadow DOM, so the surface comes from its
+   custom properties and the inner pieces from ::part() — a plain descendant
+   selector cannot reach inside. Tokens only, so day and night both work. */
+ion-toast {
+  --background: var(--color-bg-card);
+  --color: var(--color-text-primary);
+  --button-color: var(--color-gold);
+  --border-color: var(--color-border-card);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-radius: var(--radius-lg);
+  --box-shadow: var(--shadow-card-lift);
+  --max-width: var(--max-width-mobile, 600px);
+  --start: var(--space-4);
+  --end: var(--space-4);
+
   font-family: var(--font-arabic);
+  font-size: 1rem;
+  line-height: 1.6;
+
+  /* The fixed BottomNavBar covers the bottom of every page, and Ionic parks a
+     bottom toast at the screen edge — behind the nav. Lift the whole overlay
+     clear of it. Top toasts opt out with .rfq-toast-top (shadow DOM hides the
+     position from light-DOM selectors, so the caller has to say). */
+  transform: translateY(calc(-1 * var(--bottom-nav-height, 64px)));
 }
 
-ion-toast.rfq-exit-toast::part(container) {
-  width: -moz-fit-content;
-  width: fit-content;
-  margin-inline: auto;
-  border-radius: 9999px;
+ion-toast.rfq-toast-top {
+  transform: none;
+}
+
+/* Latin copy reads better in the body serif than the Arabic face. */
+:root[lang="en"] ion-toast {
+  font-family: var(--font-latin);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Darker gold for the action text on the white day card, where the regular
+   day gold is too faint for a small label. */
+:root[data-theme="day"] ion-toast {
+  --button-color: var(--color-gold-deep);
+}
+
+ion-toast::part(message) {
+  /* A gold rule on the leading edge marks the message as a notice without
+     a warning colour — most of these are confirmations, not failures. */
+  border-inline-start: 2px solid var(--color-gold);
+  padding-inline-start: var(--space-3);
+}
+
+ion-toast::part(button) {
+  /* Ionic's Material default is uppercase + tracked, which breaks Arabic
+     shaping and shouts in English. */
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  border-radius: var(--radius-md);
+}
+
+/* Exit confirmation: the same surface as a compact centred pill — it is a
+   single short hint, so a full-width card would overstate it. */
+ion-toast.rfq-exit-toast {
+  --border-radius: var(--radius-full);
+  --min-width: 0;
+  --width: fit-content;
+  --max-width: calc(100vw - 64px);
+  --start: 0;
+  --end: 0;
+  text-align: center;
 }
 
 ion-toast.rfq-exit-toast::part(message) {
-  padding: 2px 4px;
+  border-inline-start: none;
+  padding-inline: var(--space-2);
   text-align: center;
 }
