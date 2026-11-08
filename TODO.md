@@ -6,29 +6,29 @@ Sign-in, Pro sync (#71) and the Android Auto session work (#72) are on main.
 Every build now shows sign-in, so the release waits on steps 1-4; the
 details are in the sections below.
 
-1. [ ] **Confirm the policy promises**: the 30-day deletion window, the email
-       identity check and the terms §5 closure clause. Then push `gh-pages`
-       (6 commits waiting; the region now reads London, United Kingdom) and
-       check privacy, terms and delete-account load in both languages.
-2. [ ] **Play Console**: redo Data safety (account data, purchase history,
-       Pro-synced app data, all deletable), add the delete-account URL, and
-       put the reviewer account under App access.
+1. [x] **Legal pages live**: `gh-pages` pushed (814424c); privacy, terms and
+       delete-account return 200 in both languages (checked 7 Nov 2026).
+2. [x] **Play Console**: Data safety redone, delete-account URL added, App
+       access filled in, content rating re-run and changes sent for review
+       (owner, 7 Nov 2026).
 3. [ ] **RevenueCat**: confirm "Keep with original App User ID" is saved;
        create the reviewer Google account with lifetime promotional Pro.
-4. [ ] **Google Cloud**: confirm the Android OAuth clients for the Play App
-       Signing and upload-key SHA-1s exist, or Play installs can't sign in.
+4. [x] **Google Cloud**: Android OAuth clients for the Play App Signing and
+       upload-key SHA-1s exist (owner confirmed 7 Nov 2026).
 5. [ ] **Release**: bump `versionCode`, add `RELEASE-NOTES.md` (sign-in, Pro
        sync, the new Account page, Android Auto keeping its session), then
        `npm run android:build` with Android Studio closed and check
        `android/app/src/main/assets/public/index.html` exists before uploading.
 6. [ ] **Supabase Free to Pro** before real subscribers' data builds up (Free
-       has no backups).
-7. [ ] **Device checks**: two-phone sync, backup import on a synced phone,
-       offline launch (below), and in a car: close and reopen Rafeeq while it
-       plays (it should continue the same verse), and pick a surah inside a
-       reciter's folder (it should play that reciter).
+       has no backups). Deferred by the owner on 7 Nov 2026; still needed
+       before subscribers' synced data grows.
+7. [ ] **Device checks**: sign-in and sync checks passed (7 Nov 2026). Still
+       to do, in a car: close and reopen Rafeeq while it plays (it should
+       continue the same verse), and pick a surah inside a reciter's folder
+       (it should play that reciter).
 8. [ ] **Later**: turn on the Pro gate (`REACT_APP_PRO_GATE=on`, then the
-       broker's `REQUIRE_PRO="true"` and deploy), and Apple sign-in.
+       broker's `REQUIRE_PRO="true"` and deploy). Apple sign-in waits for the
+       iOS app (see "Later").
 
 ## Rafeeq Pro launch (RevenueCat)
 
@@ -53,7 +53,7 @@ order. Full detail in `PLAY-CONSOLE-PREP.md` §9.
 - [x] **Worker.** Copy the RevenueCat secret key (`sk_…`), run
       `npx wrangler secret put REVENUECAT_SECRET_KEY`, and deploy with
       `REQUIRE_PRO` still `"false"`.
-- [ ] **Store forms.** Before the first build carrying the `goog_` key:
+- [x] **Store forms.** Done 7 Nov 2026. Before the first build carrying the `goog_` key:
       content rating (digital purchases = Yes) and Data safety (purchase
       history). The hosted privacy policy and terms already name RevenueCat
       and cover subscriptions (updated 24 Oct 2026).
@@ -79,18 +79,9 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       email sign-in off. All three migrations pushed with the CLI and the
       sync_items self-check passed. Its URL is in `.env.production`,
       `.env.local` and both `wrangler.toml` environments.
-- [ ] **Google.** Web client and debug sign-in work (6 Nov 2026). Still confirm
-      the Android clients for the Play App Signing and upload-key SHA-1s exist,
-      or Play installs can't sign in. OAuth clients: a Web client (→ `REACT_APP_GOOGLE_WEB_CLIENT_ID`
-      and Supabase's Google provider) and an Android client with the debug
-      SHA-1 **and** the Play App Signing SHA-1.
-- [ ] **Apple (when ready).** Services ID + key; Supabase Apple provider with
-      the Services ID and the iOS bundle id among its client ids;
-      `rafeeq://auth/callback` in Supabase's redirect allow-list; Edge Function
-      secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`,
-      `APPLE_BUNDLE_ID`; `REACT_APP_APPLE_SIGNIN=on` to show Apple on Android.
-      Known limit: Apple accounts created through the Android web flow have no
-      stored Apple token, so deletion can't revoke Apple's grant for them.
+- [x] **Google.** Web client and debug sign-in work (6 Nov 2026); the Android
+      clients for the Play App Signing and upload-key SHA-1s exist (owner
+      confirmed 7 Nov 2026).
 - [x] **Edge Functions.** Secrets `SUPABASE_SERVICE_ROLE_KEY` (Supabase
       provides it), `REVENUECAT_SECRET_KEY`, `ADMIN_DELETE_SECRET` (long random,
       at least 32 characters); deploy `delete-account` and `apple-token`.
@@ -105,35 +96,35 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 - [x] **`npx cap sync`**: `@capacitor/browser` and
       `@capgo/capacitor-social-login` are registered in the Android project
       (committed 6 Nov 2026).
-- [ ] **Legal pages.** On the local `gh-pages` branch (not pushed); the region
+- [x] **Legal pages.** Pushed and live (7 Nov 2026). Was on the local `gh-pages` branch; the region
       is filled in as London, United Kingdom. Push it after the owner
       confirmation below, then confirm `delete-account.html` (+ `-ar`),
       `privacy.html` and `terms.html` load.
-- [ ] **Play Console.** Redo Data safety (Name, Email, User IDs for account
+- [x] **Play Console.** Done 7 Nov 2026. Redo Data safety (Name, Email, User IDs for account
       management; Purchase history; deletion = yes; delete-account URL
       `<LEGAL_BASE_URL>/delete-account.html`), App access with the reviewer
       account, and re-run the content rating if not done for Pro.
 - [ ] **Supabase Free to Pro** before real subscribers' data accumulates (Free
       has no backups). This now matters most for Pro sync: `sync_items` holds
       subscribers' notes, bookmarks, progress and settings.
-- [ ] **Device check: sync, two phones.** Same Pro account on both. Edit the
+- [x] **Device check: sync, two phones.** Passed (owner, 7 Nov 2026). Same Pro account on both. Edit the
       same note offline on each, reconnect, sync, and confirm both phones end
       with one copy holding the later edit.
-- [ ] **Device check: backup import on a synced phone.** Import a backup and
+- [x] **Device check: backup import on a synced phone.** Passed (owner, 7 Nov 2026). Import a backup and
       confirm nothing disappears (locally or on the other phone); the import
       only adds and overwrites.
 - [x] **Release gate: run the sync_items SQL self-check.** Passed 6 Nov 2026
       on the production project.
-- [ ] **Release gate: fresh install on an Android device.** The strict Hifz read
+- [x] **Release gate: fresh install on an Android device.** Passed (owner, 7 Nov 2026). The strict Hifz read
       and write path has never run on a device. Sign in on a fresh install with a
       Pro account that has a Hifz plan: Account must show synced, not an error, and
       the plan, best and latest records and read pages must arrive rather than
       being skipped.
-- [ ] **Data safety for synced data.** In the same redo: App activity → user
+- [x] **Data safety for synced data.** Done 7 Nov 2026. In the same redo: App activity → user
       content (notes) and app interactions (Hifz progress, tracker) now
       collected for Pro subscribers; app functionality; encrypted in transit;
       deletable (`PLAY-CONSOLE-PREP.md` §2).
-- [ ] **Device check: offline launch.** Sign in, wait until the access token
+- [x] **Device check: offline launch.** Passed (owner, 7 Nov 2026). Sign in, wait until the access token
       has expired (over an hour), then launch offline: the app must show the
       account as signed in and keep Pro.
 - [ ] **Broker against prod.** Run `token-broker/verify-deploy.sh` with a
@@ -142,11 +133,19 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
       is `<SUPABASE_URL>/auth/v1`: same scheme and host, so not a custom
       domain if the token says `<ref>.supabase.co`); any mismatch refuses
       every account.
-- [ ] **Owner:** confirm the 30-day deletion window, the email identity check and the terms §5 closure clause before pushing gh-pages.
+- [x] **Owner:** (done; gh-pages pushed 7 Nov 2026) confirm the 30-day deletion window, the email identity check and the terms §5 closure clause before pushing gh-pages.
 - [ ] **Support runbook.** Email deletion requests:
       `SUPABASE_URL=... ADMIN_DELETE_SECRET=... scripts/delete-account.sh <user-id | email>`.
 
 ## Later
+
+- [ ] **Apple sign-in, with the iOS app** (not needed until then). Services ID
+      + key; Supabase Apple provider with the Services ID and the iOS bundle id
+      among its client ids; `rafeeq://auth/callback` in Supabase's redirect
+      allow-list; Edge Function secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`,
+      `APPLE_PRIVATE_KEY`, `APPLE_BUNDLE_ID`. Known limit: Apple accounts
+      created through the Android web flow have no stored Apple token, so
+      deletion can't revoke Apple's grant for them.
 
 - [ ] **Pro sync follow-ups (none block launch).** Small or rare cases left from
       the Nov 2026 reviews:
