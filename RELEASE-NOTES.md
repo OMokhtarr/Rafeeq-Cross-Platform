@@ -7,9 +7,14 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
-## 1.1.0 (versionCode 18) — 2026-11-08
+## 1.1.0 (versionCode 19) — 2026-11-08
 
-**Release name:** `18 (1.1.0)`
+**Release name:** `19 (1.1.0)`
+
+Build 18 was made but never uploaded: it still bundled the Facebook SDK, which
+added the advertising ID permission. 19 is 18 with Facebook (and Twitter) left
+out of the sign-in plugin, so it declares no advertising ID. Nothing for users
+to see in that change, so the notes below are 18's.
 
 Changes since 17: sign-in, Pro on an account with sync, account deletion, the
 Android Auto session fixes, the new Feelings page and the restyled pop-up

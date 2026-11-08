@@ -45,6 +45,20 @@ const config: CapacitorConfig = {
     SystemBars: {
       style: "DARK",
     },
+
+    // Only the providers Rafeeq signs in with get bundled. Left unset, the
+    // plugin bundles all of them, and the Facebook SDK adds the advertising ID
+    // permission (AD_ID) and the Privacy Sandbox ad permissions to the
+    // manifest, which Play's Advertising ID declaration then has to admit.
+    // Apple stays on for the future iOS app. Takes effect on `npx cap sync`.
+    SocialLogin: {
+      providers: {
+        google: true,
+        apple: true,
+        facebook: false,
+        twitter: false,
+      },
+    },
   },
 };
 
