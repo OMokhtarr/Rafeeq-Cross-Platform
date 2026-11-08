@@ -12,7 +12,8 @@ The release name is only shown in Play Console, never to users.
 **Release name:** `18 (1.1.0)`
 
 Changes since 17: sign-in, Pro on an account with sync, account deletion, the
-Android Auto session fixes and the new Feelings page. If 17 never reached
+Android Auto session fixes, the new Feelings page and the restyled pop-up
+messages. If 17 never reached
 production, its recite-mode notes still need to reach users here. Rafeeq Pro
 is named here because the subscription card on the Account page is live, but
 the paywall switch is still off, so recite mode stays free. If the switch is on
@@ -25,6 +26,7 @@ for this build, add a line saying recite mode is part of Rafeeq Pro.
 • Rafeeq Pro stays with your account, and your notes, Hifz progress, worship tracker and settings sync across your phones
 • Delete your account and its data from the Account page
 • Android Auto: reopening Rafeeq keeps the recitation playing, and a surah picked in a reciter's folder plays that reciter
+• Pop-up messages now match the app's look
 </en-US>
 <ar>
 • جديد: مشاعري — اختر ما تشعر به واقرأ له آيات وأدعية (المزيد ← مشاعري)
@@ -32,6 +34,7 @@ for this build, add a line saying recite mode is part of Rafeeq Pro.
 • يرتبط اشتراك رفيق برو بحسابك، وتتزامن ملاحظاتك وحفظك ومتابعة العبادات وإعداداتك بين أجهزتك
 • حذف الحساب وبياناته من صفحة الحساب
 • Android Auto: إعادة فتح رفيق لا توقف التلاوة، والسورة المختارة من مجلد قارئ تُتلى بصوته
+• رسائل التنبيه بمظهر جديد يناسب التطبيق
 </ar>
 ```
 
