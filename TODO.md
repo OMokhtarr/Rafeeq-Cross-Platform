@@ -44,25 +44,17 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 
 ## Later
 
-- [ ] **Pro sync follow-ups (none block launch).** Two rare cases left from the
-      Nov 2026 reviews (the other nine were fixed 10 Nov 2026):
-      - A delete and an edit within one run's pull-to-push window can lose the
-        edit; a newer push can overwrite a row stored after our pull. Needs a
-        compare-and-swap on `server_at` in `sync_push` (new migration, a push
-        format older installs still work with, then a prod deploy).
-      - Items that lose their id (numeric ids, `[null, null]`) or a plan holding
-        JSON `null` still read as deletes. No writer produces these; marking
-        the store broken instead would keep it in first merge for as long as
-        the bad entry stays, which brings back deletes made on other phones.
-- [ ] **Ionic 8 device check.** `@ionic/react` and `@ionic/react-router` are
-      both on 8.7.18 now (10 Nov 2026; was 7.8.6 + 8.8.19, two Ionic copies),
-      and the WebView floor rose from 79 to 89 (Ionic 8's minimum:
-      `browserslist` and `minWebViewVersion`). Tests and `tsc` pass; on a
-      phone, check: page transitions, hardware Back and the double-back exit
-      toast, edge swipe-back (blocked on the root tabs), toasts (top and exit),
-      sheets closing on Back, the bottom nav, the onboarding tours' spotlight
-      timing, and the Hifz page.
-- [ ] **TypeScript 5, then Ionic 8.8+.** Ionic is pinned `~8.7.18` and
-      ionicons `~8.0.13`: newer releases ship type declarations TypeScript 4.9
-      can't parse (see `_ionic_pin_note` in `package.json`). react-scripts 5
-      only allows TypeScript 4, so this needs an override or a move off CRA.
+- [ ] **Deploy the `sync_push` compare-and-swap** (closes the pull-to-push
+      race). `supabase/migrations/20261110000000_sync_push_cas.sql`: run
+      `npx supabase db push`, then both self-checks in the SQL editor (this
+      migration's and `20261101000000_sync_items.sql`'s). The app already
+      sends `base_server_at`; until the deploy the server ignores it and keeps
+      plain last-write-wins, so the order doesn't matter.
+- [ ] **Ionic 8 device check.** `@ionic/react` and `@ionic/react-router` are on
+      8.8.19 (was 7.8.6 + 8.8.19, two Ionic copies), TypeScript on 5.9, and the
+      WebView floor rose from 79 to 89 (Ionic 8's minimum: `browserslist` and
+      `minWebViewVersion`). Tests and `tsc` pass; on a phone, check: page
+      transitions, hardware Back and the double-back exit toast, edge
+      swipe-back (blocked on the root tabs), toasts (top and exit), sheets
+      closing on Back, the bottom nav, the onboarding tours' spotlight timing,
+      and the Hifz page.

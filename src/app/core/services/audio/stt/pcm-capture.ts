@@ -10,7 +10,7 @@ export const PCM_SAMPLE_RATE = 16000;
 export const PCM_FRAME_SAMPLES = 1024;
 
 /** Float [-1, 1] to signed 16-bit PCM, clamping out-of-range input. */
-export function floatToPcm16(frame: Float32Array): Int16Array {
+export function floatToPcm16(frame: Float32Array): Int16Array<ArrayBuffer> {
   const out = new Int16Array(frame.length);
   for (let i = 0; i < frame.length; i++) {
     const s = Math.max(-1, Math.min(1, frame[i]));
