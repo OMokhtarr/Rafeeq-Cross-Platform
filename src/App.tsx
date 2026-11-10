@@ -84,9 +84,9 @@ setupIonicReact({ mode: "md", hardwareBackButton: false });
 // Records which synced store each write touches, so Pro sync knows what changed.
 installWriteHook();
 
-// Main tab destinations that must never go back: disable the edge swipe-back
-// gesture while one of them is the active route, so an accidental edge swipe
-// can't pop the user to whatever pushed the tab (e.g. a quiz).
+// Main tab destinations that never go back: Back there counts toward exiting
+// the app instead (two in a row), so it can't pop the user to whatever pushed
+// the tab (e.g. a quiz).
 const ROOT_TAB_PATHS = new Set<string>([
   "/",
   "/viewer",
@@ -99,14 +99,14 @@ const ROOT_TAB_PATHS = new Set<string>([
 const MainRouterOutlet: React.FC = () => {
   const location = useLocation();
   const exit = useDoubleSwipeExit();
-  // Keep a live ref to whether the *current* route is a root tab. The outlet's
-  // swipe handler is created once, so we gate it through this ref rather than
-  // re-binding the handler on every navigation.
+  // Keep a live ref to whether the *current* route is a root tab. The back
+  // listener is registered once, so it reads this ref rather than re-binding
+  // on every navigation.
   const isRootTabRef = useRef(false);
   isRootTabRef.current = ROOT_TAB_PATHS.has(location.pathname);
 
-  // Keep the exit helpers in a ref for the same reason: the patched canStart is
-  // installed once, so it must not close over this render's callbacks.
+  // Keep the exit helpers in a ref for the same reason: the listener is
+  // registered once, so it must not close over this render's callbacks.
   const exitRef = useRef(exit);
   exitRef.current = exit;
 
@@ -128,6 +128,11 @@ const MainRouterOutlet: React.FC = () => {
   // defaults to `mode === "ios"` and this app runs in "md". Registering a
   // listener also replaces Capacitor's default (WebView goBack), so this
   // ladder owns the whole back behaviour.
+  //
+  // Don't hook the outlet's swipeHandler.canStart for this: Ionic asks it on
+  // every touch-start within 50 px of the leading edge (the right edge in
+  // Arabic), so a plain tap there — the Home tab in the bottom nav — would
+  // count as a back swipe.
   useEffect(() => {
     const handle = CapApp.addListener("backButton", ({ canGoBack }) => {
       // 1. An open sheet/dialog swallows it.
@@ -166,49 +171,6 @@ const MainRouterOutlet: React.FC = () => {
     const handle = CapApp.addListener("appUrlOpen", ({ url }) => open(url));
     return () => {
       handle.then((h) => h.remove());
-    };
-  }, []);
-
-  useEffect(() => {
-    let patched: { canStart: (...a: unknown[]) => boolean } | null = null;
-    let original: ((...a: unknown[]) => boolean) | null = null;
-
-    // The outlet's swipeHandler is assigned by IonReactRouter shortly after
-    // mount, so poll briefly until it exists, then wrap its canStart to block
-    // the gesture while on a root tab page.
-    const tryPatch = () => {
-      const outlet = document.querySelector(
-        "ion-router-outlet#main",
-      ) as (HTMLIonRouterOutletElement & {
-        swipeHandler?: { canStart: (...a: unknown[]) => boolean };
-      }) | null;
-      const handler = outlet?.swipeHandler;
-      if (!handler || patched) return;
-      patched = handler;
-      original = handler.canStart.bind(handler);
-      // Priority: an open sheet swallows the swipe, then root tabs count it
-      // toward exiting, and only otherwise does it fall through to Ionic's
-      // real back navigation. Returning false in the first two cases stops
-      // Ionic animating a page transition that must not happen.
-      handler.canStart = (...args: unknown[]) => {
-        if (closeTopOverlay()) return false;
-        if (isRootTabRef.current) {
-          exitRef.current.attempt();
-          return false;
-        }
-        return original!(...args);
-      };
-    };
-
-    tryPatch();
-    const interval = patched ? null : window.setInterval(() => {
-      tryPatch();
-      if (patched && interval) window.clearInterval(interval);
-    }, 200);
-
-    return () => {
-      if (interval) window.clearInterval(interval);
-      if (patched && original) patched.canStart = original;
     };
   }, []);
 
