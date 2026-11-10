@@ -44,12 +44,6 @@ the release order and the store paperwork are in `PLAY-CONSOLE-PREP.md` §2,
 
 ## Later
 
-- [ ] **Deploy the `sync_push` compare-and-swap** (closes the pull-to-push
-      race). `supabase/migrations/20261110000000_sync_push_cas.sql`: run
-      `npx supabase db push`, then both self-checks in the SQL editor (this
-      migration's and `20261101000000_sync_items.sql`'s). The app already
-      sends `base_server_at`; until the deploy the server ignores it and keeps
-      plain last-write-wins, so the order doesn't matter.
 - [ ] **Ionic 8 device check.** `@ionic/react` and `@ionic/react-router` are on
       8.8.19 (was 7.8.6 + 8.8.19, two Ionic copies), TypeScript on 5.9, and the
       WebView floor rose from 79 to 89 (Ionic 8's minimum: `browserslist` and
