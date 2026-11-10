@@ -151,6 +151,25 @@ describe("Hifz while sync applies a plan", () => {
     expect(await doneIds()).toEqual(["s1", "s2"]);
   });
 
+  it("a corrupt best record does not stop the arriving plan from showing", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    await savePlanStrict(plan(false));
+    await syncNow("u1");
+    idbStore.set("best-plan", { id: "best-plan", data: "{not json" });
+    await render();
+
+    cloud.set("hifzPlan/current", planRow(plan(true)));
+    await applyCloud();
+    expect(await doneIds()).toEqual(["s2"]);
+
+    const open = checks().find((b) => !b.classList.contains("checked")) as HTMLButtonElement;
+    await act(async () => open.click());
+    await flush();
+
+    expect(await doneIds()).toEqual(["s1", "s2"]);
+    warn.mockRestore();
+  });
+
   it("leaves the setup screen when a plan syncs in, so a new plan cannot replace it", async () => {
     await render();
     expect(checks()).toHaveLength(0);

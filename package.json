@@ -34,14 +34,14 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@capgo/capacitor-social-login": "8.7.5",
-    "@ionic/react": "^7.0.0",
-    "@ionic/react-router": "^8.7.18",
+    "@ionic/react": "~8.7.18",
+    "@ionic/react-router": "~8.7.18",
     "@quranjs/api": "^2.2.0",
     "@revenuecat/purchases-capacitor": "^13.7.4",
     "@revenuecat/purchases-capacitor-ui": "^13.7.4",
     "@supabase/supabase-js": "^2.118.0",
     "ajv": "^8.18.0",
-    "ionicons": "^7.0.0",
+    "ionicons": "~8.0.13",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router": "^5.3.4",
@@ -64,10 +64,11 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "_browserslist_note": "Floor is chrome 79, not a market-share query. `>0.2%` resolved `and_chr` to the single LATEST Android Chrome, giving zero coverage of stale WebViews on old devices — WebView updates via Play independently of the OS, so the OS version says nothing about the engine. 79 = the `max()` floor used by the --safe-inset-* tokens; below it safe-area layout breaks structurally. Capacitor 8 itself blocks below WebView 60 (android.minWebViewVersion), so 79 is the binding constraint. This governs JS SYNTAX transpilation only — newer CSS (color-mix, font-palette) is handled by per-declaration fallbacks and degrades gracefully, so do NOT raise this floor to match a CSS feature. See docs/webview-compat-audit.md.",
+  "_ionic_pin_note": "@ionic/react and @ionic/react-router are pinned to ~8.7 and ionicons to ~8.0: from @ionic/core 8.8.0 and ionicons 8.1.0 their Stencil type declarations use `const` type parameters, which TypeScript 4.9 (the version react-scripts 5 allows) cannot parse, so `tsc --noEmit` fails. Lift the pins together with a TypeScript 5 upgrade.",
+  "_browserslist_note": "Floor is chrome 89 (Ionic 8's minimum; it was 79 under Ionic 7), not a market-share query. `>0.2%` resolved `and_chr` to the single LATEST Android Chrome, giving zero coverage of stale WebViews on old devices — WebView updates via Play independently of the OS, so the OS version says nothing about the engine. 89 = Ionic 8's supported minimum and the binding constraint; 79, the `max()` floor of the --safe-inset-* tokens, sits below it. Keep capacitor.config.ts android.minWebViewVersion in step. This governs JS SYNTAX transpilation only — newer CSS (color-mix, font-palette) is handled by per-declaration fallbacks and degrades gracefully, so do NOT raise this floor to match a CSS feature. See docs/webview-compat-audit.md.",
   "browserslist": {
     "production": [
-      "chrome >= 79",
+      "chrome >= 89",
       "ios_saf >= 15.6",
       "not dead",
       "not op_mini all"

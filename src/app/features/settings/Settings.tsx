@@ -645,11 +645,19 @@ const Settings: React.FC = () => {
   const loaded = useRef(s);
 
   // Sync applied newer settings: show them, so the next toggle here does not
-  // write this copy back over them on every device.
+  // write this copy back over them on every device. A change still waiting for
+  // the save delay is kept on top and saved with them.
   useSyncRefresh(["settings"], () => {
+    const before = loaded.current;
     const fresh = loadSettings();
     loaded.current = fresh;
-    setS(fresh);
+    setS((prev) => {
+      const pending = (Object.keys(prev) as (keyof AppSettings)[]).filter((k) => prev[k] !== before[k]);
+      if (pending.length === 0) return fresh;
+      const next = { ...fresh };
+      for (const k of pending) (next as Record<string, unknown>)[k] = prev[k];
+      return next;
+    });
     setSaved(false);
   });
 

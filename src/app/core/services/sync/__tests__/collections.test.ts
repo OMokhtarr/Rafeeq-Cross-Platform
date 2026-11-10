@@ -124,6 +124,23 @@ describe("write", () => {
     expect(ids("rafiq_notes_v1")).toEqual(["a", "b", "c"]);
   });
 
+  it("settings leave out this phone's reminder flags and keep them on write", async () => {
+    const key = "rafiq_settings_v1";
+    localStorage.setItem(key, JSON.stringify({ fontSize: 3, prayerReminders: true, azkarReminders: false }));
+    expect(await col("settings").read()).toEqual({ value: { fontSize: 3 } });
+
+    await col("settings").write({ value: { fontSize: 5, prayerReminders: false, azkarReminders: true } });
+    expect(JSON.parse(localStorage.getItem(key) as string)).toEqual({
+      fontSize: 5,
+      prayerReminders: true,
+      azkarReminders: false,
+    });
+
+    localStorage.removeItem(key);
+    await col("settings").write({ value: { fontSize: 1, prayerReminders: true } });
+    expect(JSON.parse(localStorage.getItem(key) as string)).toEqual({ fontSize: 1 });
+  });
+
   it("quiz presets live in Preferences", async () => {
     const p = { id: "p1", name: "n", ranges: [], createdAt: 1, updatedAt: 2 };
     await col("quizPresets").write({ p1: p });

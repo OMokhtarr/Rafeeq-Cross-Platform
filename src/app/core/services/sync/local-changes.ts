@@ -13,11 +13,8 @@
  * writer calls `markDirty(key)` directly.
  */
 
-import { stableStringify } from "./merge";
 import { collectionForStorageKey, isBrokenRaw } from "./collections";
 import { markStoreBroken } from "./broken-stores";
-
-export { stableStringify };
 
 const DIRTY_KEY = "rafiq_sync_dirty_v1";
 
@@ -154,16 +151,4 @@ export function clearDirty(collectionId: string, upTo: string): void {
   if (Date.parse(recorded) > Date.parse(upTo)) return;
   delete times[collectionId];
   writeDirty(times);
-}
-
-/** Keys whose stable JSON differs from the snapshot (or are new), and snapshot keys now absent. */
-export function diffAgainstSnapshot(
-  current: Record<string, unknown>,
-  snapshot: Record<string, string>,
-): { changed: string[]; removed: string[] } {
-  const changed = Object.keys(current).filter(
-    (k) => snapshot[k] === undefined || stableStringify(current[k]) !== snapshot[k],
-  );
-  const removed = Object.keys(snapshot).filter((k) => !(k in current));
-  return { changed, removed };
 }

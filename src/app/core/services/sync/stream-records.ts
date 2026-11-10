@@ -18,7 +18,7 @@
  * JSON.parse on each complete element. That is enough for this endpoint and
  * avoids adding a streaming-JSON dependency for one call site.
  *
- * ReadableStream and TextDecoder are both far below the app's WebView 79
+ * ReadableStream and TextDecoder are both far below the app's WebView 89
  * floor (see docs/webview-compat-audit.md).
  */
 

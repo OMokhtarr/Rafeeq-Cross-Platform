@@ -98,4 +98,19 @@ describe("Settings and sync", () => {
 
     expect(stored()).toMatchObject({ azkarCounterSound: true, azkarVibration: false });
   });
+
+  it("a toggle not yet saved when sync applies is kept alongside what sync applied", async () => {
+    await render();
+    await pastDebounce();
+
+    await act(async () => toggle(ts.azkarVibration).click());
+    localStorage.setItem(KEY, JSON.stringify({ azkarCounterSound: true }));
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(SYNC_APPLIED_EVENT, { detail: { collections: ["settings"] } }));
+    });
+    await pastDebounce();
+
+    expect(stored()).toMatchObject({ azkarCounterSound: true, azkarVibration: false });
+    expect(toggle(ts.azkarVibration).checked).toBe(false);
+  });
 });

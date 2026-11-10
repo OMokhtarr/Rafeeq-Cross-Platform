@@ -20,13 +20,13 @@ const config: CapacitorConfig = {
   },
 
   android: {
-    // Same floor as browserslist's `chrome >= 79` in package.json — keep the two
-    // in step. 79 is where `max()` lands, which the --safe-inset-* tokens depend
-    // on; below it safe-area layout breaks structurally rather than degrading.
+    // Same floor as browserslist's `chrome >= 89` in package.json — keep the two
+    // in step. 89 is Ionic 8's minimum supported Chrome (the earlier 79 floor
+    // came from `max()` in the --safe-inset-* tokens, now well below it).
     // Capacitor's own default is 60 (hard floor 55), so this raises the bar to
     // what the app actually needs. Below it Capacitor shows a blocking dialog,
     // which beats loading into a broken layout.
-    minWebViewVersion: 79,
+    minWebViewVersion: 89,
   },
 
   plugins: {

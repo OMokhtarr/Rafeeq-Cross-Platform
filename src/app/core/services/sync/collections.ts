@@ -28,6 +28,7 @@ import {
   clearHifzReadingSessionStrict,
 } from "../../../features/hifz/hifz.service";
 import { PRESETS_KEY, isPreset } from "../../../features/quiz/services/quiz-presets.keys";
+import { markStoreBroken } from "./broken-stores";
 import type { SyncKind } from "./types";
 
 export interface SyncCollection {
@@ -43,6 +44,12 @@ export interface SyncCollection {
   validate(value: unknown, key: string): boolean;
   /** Edits are stamped and go up with the next run, but do not schedule one. */
   passive?: boolean;
+  /**
+   * Resets a damaged part of the store that only sync writes, marking the
+   * collection broken when it does. The engine runs it before `read()` with
+   * the write hook suppressed, so the reset is not taken for a local edit.
+   */
+  repair?(): Promise<void>;
 }
 
 /** Item fields holding the item's own edit time, for collections that have one. */
@@ -298,6 +305,44 @@ function hifzObject<T>(
 
 // ─── Specific collections ─────────────────────────────────────────────────────
 
+/**
+ * Settings that mirror this phone's native reminder state (Settings reconciles
+ * them with native on every open). Each phone keeps its own: synced, two
+ * phones with different reminders would overwrite each other on every open.
+ */
+const DEVICE_SETTINGS = ["prayerReminders", "azkarReminders"];
+
+const withoutDeviceSettings = (v: unknown): unknown => {
+  if (!isRecord(v)) return v;
+  const out = { ...v };
+  for (const k of DEVICE_SETTINGS) delete out[k];
+  return out;
+};
+
+const settingsStore = singleValue("settings", "object", "rafiq_settings_v1", "json", isRecord);
+
+/** The settings object without this phone's own settings; writes keep the local ones. */
+const settings: SyncCollection = {
+  ...settingsStore,
+  async read() {
+    const items = await settingsStore.read();
+    return VALUE in items ? { [VALUE]: withoutDeviceSettings(items[VALUE]) } : items;
+  },
+  async write(items) {
+    const next = items[VALUE];
+    if (!isRecord(next)) return settingsStore.write(items);
+    let local: unknown;
+    try {
+      local = readJson("rafiq_settings_v1");
+    } catch {
+      local = undefined;
+    }
+    const own: Record<string, unknown> = {};
+    if (isRecord(local)) for (const k of DEVICE_SETTINGS) if (k in local) own[k] = local[k];
+    await settingsStore.write({ [VALUE]: { ...(withoutDeviceSettings(next) as object), ...own } });
+  },
+};
+
 /** Quiz presets live in Capacitor Preferences, not localStorage. */
 const quizPresets = objectArray(
   "quizPresets",
@@ -353,6 +398,13 @@ const hifzPlan: SyncCollection = {
     }
   },
   validate: isPlanLike,
+  // The archive map is sync's own and the cloud holds every archive: a corrupt
+  // map is dropped and comes back from the cloud in the first merge that follows.
+  async repair() {
+    if (!isBrokenRaw(PLAN_ARCHIVE_KEY, readRaw(PLAN_ARCHIVE_KEY))) return;
+    markStoreBroken("hifzPlan");
+    localStorage.removeItem(PLAN_ARCHIVE_KEY);
+  },
 };
 
 export const SYNC_COLLECTIONS: SyncCollection[] = [
@@ -377,7 +429,7 @@ export const SYNC_COLLECTIONS: SyncCollection[] = [
     saveHifzReadingSessionStrict,
     clearHifzReadingSessionStrict,
   ),
-  singleValue("settings", "object", "rafiq_settings_v1", "json", isRecord),
+  settings,
   singleValue("theme", "object", "rafiq_theme_v1", "string", isString),
   singleValue("lang", "object", "rafiq_lang_v1", "string", isString),
   // Saved on every page turn; reading slowly must not mean a full sync per page.
