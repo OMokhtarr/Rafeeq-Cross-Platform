@@ -607,6 +607,7 @@ export interface AppStrings {
     noteTitle: string;
     noteLine: string;
     noteCta: string;
+    noteDismiss: string;
     restore: string;
     restoreNone: string;
     restoreFailed: string;
@@ -617,6 +618,14 @@ export interface AppStrings {
     proLine: string;
     proActive: string;
     proActiveLine: string;
+    planMonthly: string;
+    planYearly: string;
+    planLifetime: string;
+    planRenews: (plan: string | null, date: string) => string;
+    planEnds: (plan: string | null, date: string) => string;
+    trialRenews: (date: string) => string;
+    trialEnds: (date: string) => string;
+    planBillingIssue: string;
     manage: string;
     manageFailed: string;
     view: string;
@@ -1359,7 +1368,8 @@ const ar: AppStrings = {
   subscription: {
     noteTitle: "التسميع متاح للمشتركين",
     noteLine: "سمّع وسيتابعك رفيق ويُظهر أخطاءك",
-    noteCta: "عرض الاشتراك",
+    noteCta: "عرض الخطط",
+    noteDismiss: "ليس الآن",
     restore: "استعادة المشتريات",
     restoreNone: "لم يُعثر على اشتراك سابق",
     restoreFailed: "تعذّر الاتصال بالمتجر، تحقّق من الاتصال وحاول مرة أخرى",
@@ -1370,9 +1380,17 @@ const ar: AppStrings = {
     proLine: "سمّع وسيتابعك رفيق ويُظهر أخطاءك، وتتزامن بياناتك بين أجهزتك",
     proActive: "مفعّل",
     proActiveLine: "التسميع والمزامنة مفعّلان لهذا الحساب",
+    planMonthly: "الخطة الشهرية",
+    planYearly: "الخطة السنوية",
+    planLifetime: "اشتراك دائم",
+    planRenews: (plan, date) => (plan ? `${plan}، تتجدد في ${date}` : `يتجدد الاشتراك في ${date}`),
+    planEnds: (plan, date) => (plan ? `${plan}، تنتهي في ${date}` : `ينتهي الاشتراك في ${date}`),
+    trialRenews: (date) => `فترة تجريبية مجانية، أول دفعة في ${date}`,
+    trialEnds: (date) => `فترة تجريبية مجانية، تنتهي في ${date}`,
+    planBillingIssue: "تعذّر تحصيل الدفعة، افتح إدارة الاشتراك لتحديث طريقة الدفع",
     manage: "إدارة الاشتراك",
     manageFailed: "تعذّر فتح إدارة الاشتراك، تحقّق من الاتصال",
-    view: "عرض الاشتراك",
+    view: "عرض الخطط",
     supportId: "معرّف الدعم",
     copied: "تم النسخ",
   },
@@ -2119,8 +2137,9 @@ const en: AppStrings = {
 
   subscription: {
     noteTitle: "Recite is for subscribers",
-    noteLine: "Recite and Rafeeq follows along and shows your mistakes",
-    noteCta: "View subscription",
+    noteLine: "Recite aloud and Rafeeq follows along, marking your mistakes",
+    noteCta: "See plans",
+    noteDismiss: "Not now",
     restore: "Restore purchases",
     restoreNone: "No previous subscription found",
     restoreFailed: "Couldn't reach the store. Check your connection and try again.",
@@ -2128,12 +2147,20 @@ const en: AppStrings = {
     noPlans: "Subscription plans aren't available right now",
     accountTitle: "Subscription",
     planPro: "Rafeeq Pro",
-    proLine: "Recite while Rafeeq follows along and shows your mistakes, and sync your data across your phones",
+    proLine: "Recite aloud while Rafeeq follows along and marks your mistakes. Your data also syncs across your phones.",
     proActive: "Active",
     proActiveLine: "Recite and sync are on for this account",
+    planMonthly: "Monthly plan",
+    planYearly: "Yearly plan",
+    planLifetime: "Lifetime access",
+    planRenews: (plan, date) => (plan ? `${plan}, renews on ${date}` : `Renews on ${date}`),
+    planEnds: (plan, date) => (plan ? `${plan}, ends on ${date}` : `Ends on ${date}`),
+    trialRenews: (date) => `Free trial, first payment on ${date}`,
+    trialEnds: (date) => `Free trial, ends on ${date}`,
+    planBillingIssue: "Your last payment didn't go through. Open Manage subscription to update it.",
     manage: "Manage subscription",
     manageFailed: "Couldn't open subscription settings. Check your connection.",
-    view: "View subscription",
+    view: "See plans",
     supportId: "Support ID",
     copied: "Copied",
   },

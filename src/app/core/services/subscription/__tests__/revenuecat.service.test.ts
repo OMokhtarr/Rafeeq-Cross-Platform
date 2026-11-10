@@ -74,6 +74,81 @@ it("reads Pro from the com_rafeeq_quranquiz_pro entitlement only", () => {
   expect(mod.isProFromCustomerInfo(withEntitlements({ pro: {} }))).toBe(false);
 });
 
+describe("proPlanFromCustomerInfo", () => {
+  const ent = (over: object) =>
+    ({
+      entitlements: {
+        active: {
+          com_rafeeq_quranquiz_pro: {
+            productIdentifier: "rafeeq_pro:yearly",
+            productPlanIdentifier: "yearly",
+            expirationDate: "2026-12-12T10:00:00Z",
+            willRenew: true,
+            periodType: "NORMAL",
+            billingIssueDetectedAt: null,
+            ...over,
+          },
+        },
+      },
+    }) as never;
+
+  it("is null without the Pro entitlement", () => {
+    const { mod } = load();
+    expect(mod.proPlanFromCustomerInfo({ entitlements: { active: {} } } as never)).toBeNull();
+  });
+
+  it("reads a Play base plan", () => {
+    const { mod } = load();
+    expect(mod.proPlanFromCustomerInfo(ent({}))).toEqual({
+      period: "yearly",
+      trial: false,
+      willRenew: true,
+      endsAt: "2026-12-12T10:00:00Z",
+      billingIssue: false,
+    });
+  });
+
+  it("reads a Test Store product id when there is no base plan", () => {
+    const { mod } = load();
+    const plan = mod.proPlanFromCustomerInfo(ent({ productIdentifier: "monthly", productPlanIdentifier: null }));
+    expect(plan?.period).toBe("monthly");
+  });
+
+  it("treats a grant with no expiry as lifetime", () => {
+    const { mod } = load();
+    expect(mod.proPlanFromCustomerInfo(ent({ expirationDate: null }))?.period).toBe("lifetime");
+  });
+
+  it("treats a lifetime promotional grant as lifetime even with a far-off expiry", () => {
+    const { mod } = load();
+    const plan = mod.proPlanFromCustomerInfo(
+      ent({
+        store: "PROMOTIONAL",
+        productIdentifier: "rc_promo_com_rafeeq_quranquiz_pro_lifetime",
+        productPlanIdentifier: null,
+        expirationDate: "2226-01-01T00:00:00Z",
+      }),
+    );
+    expect(plan?.period).toBe("lifetime");
+  });
+
+  it("gives a timed promotional grant no plan name", () => {
+    const { mod } = load();
+    const plan = mod.proPlanFromCustomerInfo(
+      ent({ store: "PROMOTIONAL", productIdentifier: "rc_promo_com_rafeeq_quranquiz_pro_monthly", productPlanIdentifier: null }),
+    );
+    expect(plan?.period).toBe("other");
+  });
+
+  it("reports a trial, a cancelled renewal and a billing issue", () => {
+    const { mod } = load();
+    const plan = mod.proPlanFromCustomerInfo(
+      ent({ periodType: "TRIAL", willRenew: false, billingIssueDetectedAt: "2026-11-01T00:00:00Z" }),
+    );
+    expect(plan).toMatchObject({ trial: true, willRenew: false, billingIssue: true });
+  });
+});
+
 it.each([
   ["PURCHASED", "purchased"],
   ["RESTORED", "restored"],
