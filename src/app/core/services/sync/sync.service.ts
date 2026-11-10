@@ -21,15 +21,19 @@
  * the app changed during the run is skipped the same way, but silently: that
  * edit already schedules another run.
  *
- * The server keeps the newer `edited_at`. A pushed key whose stored row comes
- * back different lost to the cloud; it is reconciled once more against that row
- * in the same run. A pushed key missing from the stored rows was rejected and
- * is not pushed again until its local value changes.
+ * The server keeps the newer `edited_at`, and only over the copy this run
+ * reconciled against: each pushed row names that copy's `server_at`, or the
+ * pull's cursor when the run pulled none, and a row stored after it stays (see
+ * sync_push). A pushed key whose stored row comes back different lost to the
+ * cloud; it is reconciled once more against that row in the same run, unless
+ * this build can't read the row: then the key waits, so an older build never
+ * overwrites a newer one's row. A pushed key missing from the stored rows was
+ * rejected and is not pushed again until its local value changes.
  */
 
 import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
-import { ARCHIVE_PREFIX, OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
+import { ARCHIVE_PREFIX, isPartialRead, OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
 import { SYNC_APPLIED_EVENT } from "./sync-events";
 import { brokenStores, clearBroken, markSequence, markStoreBroken } from "./broken-stores";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
@@ -204,11 +208,15 @@ interface CollectionRun {
   firstMerge: boolean;
   /** The store was marked broken: what it holds now is what the app wrote after losing it. */
   recovering: boolean;
+  /** The read skipped entries it couldn't key, so a missing key is not a local delete. */
+  partial: boolean;
   dirtyAt: string | null;
   /** The store as last read (or written) by this run. */
   stored: Record<string, unknown>;
   /** What the store should hold: `stored` with the remote winners applied. */
   items: Record<string, unknown>;
+  /** server_at bound for keys the pull brought no row for: every older row was pulled before. */
+  horizon: string;
   /** The snapshot this run diffs against (empty in first-merge mode). */
   base: Record<string, string>;
   /** The snapshot to save if the run succeeds. */
@@ -243,7 +251,7 @@ function localSide(r: CollectionRun, key: string): Versioned | undefined {
     const editedAt = own && !Number.isNaN(Date.parse(own)) ? own : r.dirtyAt ?? EPOCH;
     return { value, editedAt, deleted: false };
   }
-  if (!r.firstMerge && r.base[key] !== undefined) {
+  if (!r.firstMerge && !r.partial && r.base[key] !== undefined) {
     return { value: null, editedAt: r.dirtyAt ?? EPOCH, deleted: true };
   }
   return undefined;
@@ -322,8 +330,18 @@ function setSnapshot(r: CollectionRun, key: string, v: Versioned): void {
   else r.snapshot[key] = entry;
 }
 
-/** The row to push; a winner not newer than the cloud's copy is stamped just after it so the server keeps it. */
-function outgoingRow(collection: string, key: string, winner: Versioned, remote: SyncRow | undefined): SyncRow {
+/**
+ * The row to push, based on the cloud copy it was reconciled against (or the
+ * run's horizon). A winner not newer than that copy is stamped just after it so
+ * the server keeps it.
+ */
+function outgoingRow(
+  collection: string,
+  key: string,
+  winner: Versioned,
+  remote: SyncRow | undefined,
+  horizon: string,
+): SyncRow {
   let editedAt = winner.editedAt;
   if (remote && instant(editedAt) <= instant(remote.edited_at)) {
     editedAt = new Date(instant(remote.edited_at) + 1).toISOString();
@@ -334,6 +352,7 @@ function outgoingRow(collection: string, key: string, winner: Versioned, remote:
     value: winner.deleted ? null : winner.value,
     edited_at: editedAt,
     deleted: winner.deleted,
+    base_server_at: remote?.server_at ?? horizon,
   };
 }
 
@@ -351,7 +370,7 @@ function reconcile(r: CollectionRun, key: string, row: SyncRow | undefined, loca
     r.applied.add(key);
     delete r.rejected[key];
   }
-  if (d.pushLocal) r.outgoing.set(key, outgoingRow(r.c.id, key, d.winner, row));
+  if (d.pushLocal) r.outgoing.set(key, outgoingRow(r.c.id, key, d.winner, row, r.horizon));
   else setSnapshot(r, key, d.winner);
 
   if (!d.archived) return null;
@@ -399,6 +418,8 @@ async function openRun(c: SyncCollection, state: SyncState): Promise<CollectionR
     c,
     firstMerge,
     recovering: broken,
+    partial: isPartialRead(stored),
+    horizon: EPOCH,
     dirtyAt,
     stored,
     items: { ...stored },
@@ -523,6 +544,13 @@ async function pushOutgoing(runs: CollectionRun[]): Promise<LostPush[]> {
   return lost;
 }
 
+/** Keeps `key`'s old snapshot entry and the collection's dirty time, so the next run tries it again. */
+function leaveUnsettled(r: CollectionRun, key: string): void {
+  r.unsettled = true;
+  if (r.base[key] === undefined) delete r.snapshot[key];
+  else r.snapshot[key] = r.base[key];
+}
+
 async function run(userId: string): Promise<SyncResult> {
   const resetsAtStart = resets;
   const runStart = new Date().toISOString();
@@ -549,7 +577,9 @@ async function run(userId: string): Promise<SyncResult> {
   // run after it can be read again.
   const fullPull =
     state.schema !== SYNC_SCHEMA || runs.some((r) => r.firstMerge || state.behind.includes(r.c.id));
-  const pulled = await pullSince(fullPull ? null : state.cursor);
+  const pulledFrom = fullPull ? null : state.cursor;
+  const pulled = await pullSince(pulledFrom);
+  for (const r of runs) r.horizon = pulledFrom ?? EPOCH;
   const remote = groupRows(pulled.rows);
   for (const r of runs) {
     const rows = remote.get(r.c.id) ?? {};
@@ -563,14 +593,16 @@ async function run(userId: string): Promise<SyncResult> {
   if (lost.length > 0) {
     // One more round against the copies that won in the cloud.
     for (const { r, key, sent, stored } of lost) {
-      if (!r.failed) reconcileKeys(r, [key], { [key]: stored }, new Map([[key, fromRow(sent)]]));
+      if (r.failed) continue;
+      if (!stored.deleted && !r.c.validate(stored.value, key)) {
+        console.warn(`[sync] ${r.c.id}/${key} lost to a cloud copy this build can't read; leaving it`);
+        leaveUnsettled(r, key);
+        continue;
+      }
+      reconcileKeys(r, [key], { [key]: stored }, new Map([[key, fromRow(sent)]]));
     }
     await applyLocally(runs, applied, failures, unreadable);
-    for (const { r, key } of await pushOutgoing(runs)) {
-      r.unsettled = true;
-      if (r.base[key] === undefined) delete r.snapshot[key];
-      else r.snapshot[key] = r.base[key];
-    }
+    for (const { r, key } of await pushOutgoing(runs)) leaveUnsettled(r, key);
   }
 
   const done = runs.filter((r) => !r.failed);

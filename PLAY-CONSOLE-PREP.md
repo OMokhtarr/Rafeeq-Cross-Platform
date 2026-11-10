@@ -707,15 +707,17 @@ any build with the Supabase URL and key.
    use the **asymmetric ES256 signing keys** (the broker refuses legacy HS256
    tokens). Put the prod project URL in `token-broker/wrangler.toml`
    `SUPABASE_URL` and the dev one in `[env.dev.vars]`; put the project ref in
-   `supabase/config.toml` `project_id`. Apply both migrations
+   `supabase/config.toml` `project_id`. Apply the migrations
    (`supabase db push` after `supabase link --project-ref <ref>`):
-   `20261029000000_apple_tokens.sql` creates `apple_tokens`, and
+   `20261029000000_apple_tokens.sql` creates `apple_tokens`,
    `20261101000000_sync_items.sql` creates `sync_items` and the `sync_push`
-   function (Pro sync). Then run the self-check at the bottom of
-   `20261101000000_sync_items.sql` in the SQL editor (copy the `do $$ … $$;`
-   block out of the comment). A run that finishes with no error means it
-   passed (the `sync_items self-check: PASS` notice shows if your client
-   displays notices).
+   function (Pro sync), and `20261110000000_sync_push_cas.sql` makes
+   `sync_push` keep rows stored after the copy a push was based on. Then run
+   the self-checks at the bottom of `20261101000000_sync_items.sql` and
+   `20261110000000_sync_push_cas.sql` in the SQL editor (copy each `do $$ … $$;`
+   block out of its comment). A run that finishes with no error means it
+   passed (a `… self-check: PASS` notice shows if your client displays
+   notices).
 2. **Google:** in Google Cloud, OAuth clients — a **Web** client (its id goes
    in `REACT_APP_GOOGLE_WEB_CLIENT_ID` and in Supabase's Google provider) and
    an **Android** client for `com.rafeeq.quranquiz` with the **debug SHA-1

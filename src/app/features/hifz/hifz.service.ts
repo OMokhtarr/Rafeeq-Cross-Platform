@@ -1339,6 +1339,9 @@ const READING_SLOT: HifzSlot = {
 };
 
 const isAndroid = (): boolean => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+
+/** The slot holds JSON `null`: present but not a value, so neither absent nor parseable as one. */
+export class StoredNullError extends Error {}
 const isNotFound = (err: unknown): boolean =>
   /not exist|not found|no such file|enoent/i.test(err instanceof Error ? err.message : String(err));
 
@@ -1360,7 +1363,10 @@ async function readSlotStrict<T>(slot: HifzSlot): Promise<T | null> {
     json = rec ? rec.data : null;
   }
   if (!json) json = localStorage.getItem(slot.lsKey);
-  return json ? (JSON.parse(json) as T) : null;
+  if (!json) return null;
+  const parsed = JSON.parse(json);
+  if (parsed === null) throw new StoredNullError(`${slot.lsKey} holds null`);
+  return parsed as T;
 }
 
 async function writeSlotStrict(slot: HifzSlot, value: unknown): Promise<void> {

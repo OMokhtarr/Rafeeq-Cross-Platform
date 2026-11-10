@@ -153,6 +153,8 @@ function toPushItem(r: SyncRow) {
     value: r.value,
     edited_at: r.edited_at,
     deleted: r.deleted,
+    // sync_push keeps a row stored after this one; servers before it ignore the field.
+    ...(r.base_server_at ? { base_server_at: r.base_server_at } : {}),
   };
 }
 

@@ -90,7 +90,9 @@ async function fakePush(rows: SyncRow[]) {
     const id = `${row.collection}/${row.item_key}`;
     if (rejectKeys.has(id)) continue;
     const prev = cloud.get(id);
-    if (!prev || Date.parse(row.edited_at) > Date.parse(prev.edited_at)) {
+    // sync_push's compare-and-swap: a row stored after the copy the push was based on stays.
+    const moved = !!row.base_server_at && !!prev && (prev.server_at as string) > row.base_server_at;
+    if (!moved && (!prev || Date.parse(row.edited_at) > Date.parse(prev.edited_at))) {
       cloud.set(id, { ...row, server_at: nextServerAt() });
     }
     stored.push(clone(cloud.get(id) as SyncRow));
@@ -435,6 +437,59 @@ describe("lost pushes", () => {
     expect(result).toEqual({ status: "synced", appliedCollections: ["notes"] });
     expect(localNotes()[0].body).toBe("theirs");
     expect((cloud.get("notes/a") as SyncRow).value).toMatchObject({ body: "theirs" });
+  });
+});
+
+describe("rows stored after this device's pull", () => {
+  it("an edit another phone stored after the pull beats this phone's later delete", async () => {
+    setNotes(note("n"), note("other"));
+    await syncNow("u1");
+    setNotes(note("other"));
+    (push as jest.Mock).mockImplementationOnce(async (rows: SyncRow[]) => {
+      // Stored after A pulled, with an edit time before A's delete.
+      seed("notes", "n", note("n", "edited on B"), "2026-10-02T00:00:00.000Z");
+      return fakePush(rows);
+    });
+
+    expect((await syncNow("u1")).status).toBe("synced");
+
+    expect(cloud.get("notes/n")?.deleted).toBe(false);
+    expect(cloud.get("notes/n")?.value).toMatchObject({ body: "edited on B" });
+    expect(localNotes().find((n) => n.id === "n")?.body).toBe("edited on B");
+  });
+
+  it("a newer local value is pushed again against the row that beat it, and lands", async () => {
+    const SETTINGS = "rafiq_settings_v1";
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 3 }));
+    await syncNow("u1");
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 4 }));
+    (push as jest.Mock).mockImplementationOnce(async (rows: SyncRow[]) => {
+      seed("settings", "value", { fontSize: 9 }, "2026-01-01T00:00:00.000Z");
+      return fakePush(rows);
+    });
+
+    expect((await syncNow("u1")).status).toBe("synced");
+
+    expect(cloud.get("settings/value")?.value).toEqual({ fontSize: 4 });
+    expect(JSON.parse(localStorage.getItem(SETTINGS) as string)).toEqual({ fontSize: 4 });
+    expect((push as jest.Mock).mock.calls.at(-1)[0][0].base_server_at).toBeDefined();
+  });
+
+  it("a row this build can't read that beat the push is left alone, not written locally", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    setNotes(note("n"));
+    await syncNow("u1");
+    setNotes(note("n", "mine"));
+    (push as jest.Mock).mockImplementationOnce(async (rows: SyncRow[]) => {
+      seed("notes", "n", { id: "n", future: true }, "2026-01-01T00:00:00.000Z");
+      return fakePush(rows);
+    });
+
+    await syncNow("u1");
+
+    expect(localNotes()[0].body).toBe("mine");
+    expect(cloud.get("notes/n")?.value).toEqual({ id: "n", future: true });
+    warn.mockRestore();
   });
 });
 
@@ -922,6 +977,50 @@ describe("lastSyncedAt", () => {
     expect(getLastSyncedAt("u1")).not.toBeNull();
     await syncNow("u2");
     expect(getLastSyncedAt("u1")).toBeNull();
+  });
+});
+
+describe("entries sync can't read", () => {
+  it("a note that lost its id is kept, its old key is not deleted, and cloud deletes still apply", async () => {
+    setNotes(note("a"), note("b"), note("c"));
+    await syncNow("u1");
+    const broken = { ...note("b"), id: 5 };
+    rawSetItem.call(localStorage, NOTES, JSON.stringify([note("a"), broken, note("c")]));
+    seed("notes", "c", null, "2099-01-01T00:00:00.000Z", true);
+
+    expect((await syncNow("u1")).status).toBe("synced");
+
+    expect(cloud.get("notes/b")?.deleted).toBe(false);
+    expect(localNotes()).toContainEqual(broken);
+    expect(localNoteIds()).not.toContain("c");
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(cloud.get("notes/b")?.deleted).toBe(false);
+  });
+
+  it("a hidden verse that is no longer a string is kept and not deleted", async () => {
+    localStorage.setItem(HIDDEN, JSON.stringify(["1:1", "2:2"]));
+    await syncNow("u1");
+    rawSetItem.call(localStorage, HIDDEN, JSON.stringify(["1:1", 22]));
+    seed("hiddenVerses", "3:3", true, "2099-01-01T00:00:00.000Z");
+
+    await syncNow("u1");
+
+    expect(cloud.get("hiddenVerses/2:2")?.deleted).toBe(false);
+    expect(JSON.parse(localStorage.getItem(HIDDEN) as string)).toEqual(["1:1", 22, "3:3"]);
+  });
+
+  it("a Hifz plan stored as JSON null is not a delete: the cloud's plan comes back", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    await savePlanStrict(plan(true));
+    await syncNow("u1");
+    devices.A.idb.set("plan", { id: "plan", data: "null" });
+    rawSetItem.call(localStorage, "rafiq_hifz_v2", "null");
+
+    expect((await syncNow("u1")).status).toBe("synced");
+
+    expect(cloud.get("hifzPlan/current")?.deleted).toBe(false);
+    expect((await loadPlanStrict())?.createdAt).toBe(plan(true).createdAt);
+    warn.mockRestore();
   });
 });
 
