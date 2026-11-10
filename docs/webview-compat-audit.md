@@ -68,7 +68,7 @@ That's exactly why the four wrong-answer rules **were** a bug and these are not:
 
 **`max()` in safe-area tokens** — WebView 79+. Below the app's practical floor; no action.
 
-**Browserslist floor pinned to `chrome >= 79`** — replaces `>0.2%, not dead`.
+**Browserslist floor pinned to `chrome >= 79`** — replaces `>0.2%, not dead`. *(Raised to 89 on 10 Nov 2026 with the move to Ionic 8, whose supported minimum is Chrome 89; see the table.)*
 
 The old query was worse than imprecise. `npx browserslist` resolved it to `and_chr 151` — a **single** entry, because browserslist's `and_chr`/`android` keywords only ever track the *current* Android Chrome release. There is no "Android 8 WebView" entry to select, since WebView version is decoupled from OS version. So the market-share query gave **zero** old-WebView coverage while looking like it gave some.
 
@@ -78,9 +78,10 @@ Why 79 specifically:
 |---|---|---|
 | Capacitor 8 hard floor | WebView 55 | `Bridge.MINIMUM_ANDROID_WEBVIEW_VERSION` |
 | Capacitor 8 default | WebView 60 | `Bridge.DEFAULT_ANDROID_WEBVIEW_VERSION`; below this it shows a blocking dialog |
-| **`max()` in `--safe-inset-*`** | **Chrome 79** | **binding constraint** — below it safe-area layout breaks *structurally*, not cosmetically |
+| `max()` in `--safe-inset-*` | Chrome 79 | below it safe-area layout breaks *structurally*, not cosmetically (the binding constraint until Nov 2026) |
+| **Ionic 8** | **Chrome 89** | **binding constraint** since the Ionic 8 upgrade (10 Nov 2026): Ionic's documented minimum |
 
-`android.minWebViewVersion: 79` was set in `capacitor.config.ts` to match, so the two floors cannot silently diverge.
+`android.minWebViewVersion` in `capacitor.config.ts` matches (89 now, 79 before), so the two floors cannot silently diverge.
 
 > **This floor governs JavaScript syntax transpilation, not CSS.** A JS parse error is a white screen; CSS degrades per-declaration. Newer CSS (`color-mix`, `font-palette`) is handled by the fallbacks above and must **not** be used as a reason to raise this number.
 
