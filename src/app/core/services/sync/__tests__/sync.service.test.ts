@@ -925,6 +925,158 @@ describe("lastSyncedAt", () => {
   });
 });
 
+describe("reminder flags", () => {
+  const SETTINGS = "rafiq_settings_v1";
+  const settingsOf = () => JSON.parse(localStorage.getItem(SETTINGS) as string);
+
+  it("stay on each phone: a reminder change elsewhere neither syncs nor overwrites", async () => {
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 3, prayerReminders: true }));
+    await syncNow("u1");
+    expect(cloud.get("settings/value")?.value).toEqual({ fontSize: 3 });
+
+    await useDevice("B");
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 3, prayerReminders: false, azkarReminders: true }));
+    await syncNow("u1");
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 4, prayerReminders: false, azkarReminders: false }));
+    await syncNow("u1");
+    expect(cloud.get("settings/value")?.value).toEqual({ fontSize: 4 });
+
+    await useDevice("A");
+    await syncNow("u1");
+    expect(settingsOf()).toEqual({ fontSize: 4, prayerReminders: true });
+  });
+});
+
+describe("recovering from damage", () => {
+  const ARCHIVE = "rafiq_hifz_plan_archive_v1";
+  const SETTINGS = "rafiq_settings_v1";
+  const quiet = () => jest.spyOn(console, "warn").mockImplementation(() => {});
+  const seedAbc = async () => {
+    setNotes(note("a"), note("b"), note("c"));
+    await syncNow("u1");
+  };
+  const noTombstones = () => expect(cloudRows("notes").filter((r) => r.deleted)).toEqual([]);
+
+  it("a corrupt archive map is dropped and its archives come back from the cloud", async () => {
+    const warn = quiet();
+    const old = { ...plan(true), createdAt: "2026-09-01T08:00:00.000Z" };
+    seed("hifzPlan", `archive:${old.createdAt}`, old, "2026-10-01T00:00:00.000Z");
+    await savePlanStrict(plan(false));
+    await syncNow("u1");
+    expect(Object.keys(JSON.parse(localStorage.getItem(ARCHIVE) as string))).toEqual([old.createdAt]);
+
+    rawSetItem.call(localStorage, ARCHIVE, "{corrupt");
+    expect((await syncNow("u1")).status).toBe("synced");
+    expect(Object.keys(JSON.parse(localStorage.getItem(ARCHIVE) as string))).toEqual([old.createdAt]);
+    expect(cloudRows("hifzPlan").filter((r) => r.deleted)).toEqual([]);
+    expect((await syncNow("u1")).status).toBe("synced");
+    warn.mockRestore();
+  });
+
+  it("settings reset to defaults after damage take the cloud's copy, not replace it", async () => {
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 5, soundEffects: false }));
+    await syncNow("u1");
+
+    rawSetItem.call(localStorage, SETTINGS, "{corrupt");
+    // The page reads bad JSON as its defaults and saves them.
+    localStorage.setItem(SETTINGS, JSON.stringify({ fontSize: 3, soundEffects: true }));
+    await syncNow("u1");
+
+    expect(cloud.get("settings/value")?.value).toEqual({ fontSize: 5, soundEffects: false });
+    expect(JSON.parse(localStorage.getItem(SETTINGS) as string)).toEqual({ fontSize: 5, soundEffects: false });
+  });
+
+  it("a freeze pool reset after damage takes the cloud's freezes, not zero", async () => {
+    const pool = { count: 2, earnedOn: { "2026-10-05": 1 }, spentOn: [] };
+    localStorage.setItem(FREEZES, JSON.stringify(pool));
+    await syncNow("u1");
+
+    rawSetItem.call(localStorage, FREEZES, "{corrupt");
+    localStorage.setItem(FREEZES, JSON.stringify({ count: 0, earnedOn: {}, spentOn: [] }));
+    await syncNow("u1");
+
+    expect(cloud.get("hifzFreezePool/value")?.value).toEqual(pool);
+    expect(JSON.parse(localStorage.getItem(FREEZES) as string)).toEqual(pool);
+  });
+
+  it("damage seen again during the run that merges it keeps the store marked", async () => {
+    const warn = quiet();
+    await seedAbc();
+    rawSetItem.call(localStorage, NOTES, "{corrupt");
+    setNotes(note("d"));
+
+    (push as jest.Mock).mockImplementationOnce(async (rows: SyncRow[]) => {
+      rawSetItem.call(localStorage, NOTES, "{corrupt");
+      setNotes(note("e"));
+      return fakePush(rows);
+    });
+    await syncNow("u1");
+    expect(brokenStores()).toEqual(["notes"]);
+
+    await syncNow("u1");
+    noTombstones();
+    expect(cloudLive("notes")).toEqual(["a", "b", "c", "d", "e"]);
+    warn.mockRestore();
+  });
+
+  it("a mark storage is too full to save still holds for this session", async () => {
+    const warn = quiet();
+    await seedAbc();
+    rawSetItem.call(localStorage, NOTES, "{corrupt");
+    const realSet = Storage.prototype.setItem;
+    const spy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k, v) {
+      if (k === "rafiq_sync_broken_v1") throw new Error("quota");
+      realSet.call(this, k, v);
+    });
+    setNotes(note("d"));
+    spy.mockRestore();
+    expect(localStorage.getItem("rafiq_sync_broken_v1")).toBeNull();
+    expect(brokenStores()).toEqual(["notes"]);
+
+    await syncNow("u1");
+    noTombstones();
+    expect(cloudLive("notes")).toEqual(["a", "b", "c", "d"]);
+    expect(brokenStores()).toEqual([]);
+    warn.mockRestore();
+  });
+});
+
+describe("schema changes", () => {
+  /** A saved state whose cursor has moved past every cloud row, as after an old build skipped them. */
+  const pastEveryRow = (schema?: number) => {
+    const saved = JSON.parse(localStorage.getItem(STATE) as string);
+    saved.cursor = "2099-01-01T00:00:00.000Z";
+    if (schema === undefined) delete saved.schema;
+    else saved.schema = schema;
+    rawSetItem.call(localStorage, STATE, JSON.stringify(saved));
+  };
+
+  it("keeps pulling incrementally while the schema is unchanged", async () => {
+    await syncNow("u1");
+    const { schema } = JSON.parse(localStorage.getItem(STATE) as string);
+    seed("notes", "a", note("a"), "2026-10-01T00:00:00.000Z");
+    pastEveryRow(schema);
+
+    await syncNow("u1");
+    expect(localNoteIds()).toEqual([]);
+  });
+
+  it("pulls everything once when the saved state is from an older schema", async () => {
+    await syncNow("u1");
+    seed("notes", "a", note("a"), "2026-10-01T00:00:00.000Z");
+    pastEveryRow(undefined);
+
+    (pullSince as jest.Mock).mockClear();
+    await syncNow("u1");
+    expect((pullSince as jest.Mock).mock.calls[0][0]).toBeNull();
+    expect(localNoteIds()).toEqual(["a"]);
+
+    (pullSince as jest.Mock).mockClear();
+    await syncNow("u1");
+    expect((pullSince as jest.Mock).mock.calls[0][0]).not.toBeNull();
+  });
+});
+
 describe("custom merges only when both sides changed", () => {
   it("a Hifz reset on one device reaches an unchanged device", async () => {
     await savePlanStrict(plan(true));

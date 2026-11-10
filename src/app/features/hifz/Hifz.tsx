@@ -1758,24 +1758,22 @@ const Hifz: React.FC = () => {
   const viewRef = useRef(view);
   viewRef.current = view;
   useSyncRefresh(["hifzPlan", "hifzBest", "hifzLatest", "hifzReading"], async () => {
-    let stores: [HifzPlan | null, BestPlanRecord | null, BestPlanRecord | null, { readPages: number[] } | null];
-    try {
-      stores = await Promise.all([
-        loadPlanStrict(),
-        loadBestPlanStrict(),
-        loadLatestPlanStrict(),
-        loadHifzReadingSessionStrict(),
-      ]);
-    } catch {
-      return; // Unreadable right now: sync reports that store; keep what is on screen.
-    }
-    const [saved, best, latest, reading] = stores;
+    // Each store on its own: one unreadable record must not keep a stale plan on
+    // screen. An unreadable store keeps what is shown; sync reports it.
+    const [planRes, bestRes, latestRes, readingRes] = await Promise.allSettled([
+      loadPlanStrict(),
+      loadBestPlanStrict(),
+      loadLatestPlanStrict(),
+      loadHifzReadingSessionStrict(),
+    ]);
+    if (bestRes.status === "fulfilled") setBestPlan(bestRes.value);
+    if (latestRes.status === "fulfilled") setLatestPlan(latestRes.value);
+    if (readingRes.status === "fulfilled") setReadPages(readingRes.value?.readPages ?? []);
+    if (planRes.status === "rejected") return;
+    const saved = planRes.value;
     const hadPlan = planRef.current !== null;
     const editing = hadPlan && viewRef.current === "setup";
     setPlan(saved);
-    setBestPlan(best);
-    setLatestPlan(latest);
-    setReadPages(reading?.readPages ?? []);
     if (saved && !editing) {
       setMemorized(saved.memorized);
       setGoal(saved.goal);

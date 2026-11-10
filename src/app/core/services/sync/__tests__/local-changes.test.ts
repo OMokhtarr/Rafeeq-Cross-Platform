@@ -5,8 +5,6 @@ import {
   suppressHook,
   dirtyTime,
   clearDirty,
-  diffAgainstSnapshot,
-  stableStringify,
 } from "../local-changes";
 import { PRESETS_KEY } from "../../../../features/quiz/services/quiz-presets.service";
 
@@ -99,20 +97,6 @@ describe("clearDirty", () => {
     expect(dirtyTime("notes")).toBe(t);
     clearDirty("notes", t);
     expect(dirtyTime("notes")).toBeNull();
-  });
-});
-
-describe("diffAgainstSnapshot", () => {
-  it("finds changed and removed keys and ignores key order", () => {
-    const snapshot = {
-      same: stableStringify({ a: 1, b: 2 }),
-      edited: stableStringify({ a: 1 }),
-      gone: stableStringify("x"),
-    };
-    const current = { same: { b: 2, a: 1 }, edited: { a: 2 }, added: 1 };
-    const d = diffAgainstSnapshot(current, snapshot);
-    expect(d.changed.sort()).toEqual(["added", "edited"]);
-    expect(d.removed).toEqual(["gone"]);
   });
 });
 

@@ -31,7 +31,7 @@ import type { HifzPlan } from "../../../features/hifz/hifz.service";
 import type { FreezePool } from "../storage/streak-freeze.service";
 import { ARCHIVE_PREFIX, OWN_TIME, SYNC_COLLECTIONS, type SyncCollection } from "./collections";
 import { SYNC_APPLIED_EVENT } from "./sync-events";
-import { brokenStores, clearBroken, markStoreBroken } from "./broken-stores";
+import { brokenStores, clearBroken, markSequence, markStoreBroken } from "./broken-stores";
 import { clearDirty, dirtyTime, suppressHook } from "./local-changes";
 import { mergeFreezePool, mergeHifzPlan, mergeVersioned, stableStringify } from "./merge";
 import { pullSince, push, SyncOfflineError } from "./sync-remote";
@@ -45,6 +45,13 @@ export type SyncResult =
 export { SYNC_APPLIED_EVENT };
 
 const STATE_KEY = "rafiq_sync_state_v1";
+/**
+ * Bump when a build starts accepting rows an older build skipped: a validator
+ * that accepts more, or a new item key. The cursor has already moved past the
+ * rows the old build could not read, so a new schema pulls everything once.
+ * (A new collection needs no bump: it starts in first merge, which pulls in full.)
+ */
+const SYNC_SCHEMA = 1;
 const EPOCH = new Date(0).toISOString();
 const CURRENT_PLAN = "current";
 /** The app's own change events, and the collections whose arrival should fire them. */
@@ -68,6 +75,8 @@ interface SyncState {
   rejected: KeyedFingerprints;
   /** When the last run for this user finished; null before the first one. */
   lastSyncedAt: string | null;
+  /** SYNC_SCHEMA of the build that saved this state; null before schemas existed. */
+  schema: number | null;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -89,11 +98,21 @@ function loadState(userId: string): SyncState {
     saved = null;
   }
   if (!isSavedState(saved, userId)) {
-    return { userId, cursor: null, snapshot: {}, merged: [], behind: [], rejected: {}, lastSyncedAt: null };
+    return {
+      userId,
+      cursor: null,
+      snapshot: {},
+      merged: [],
+      behind: [],
+      rejected: {},
+      lastSyncedAt: null,
+      schema: SYNC_SCHEMA,
+    };
   }
   const rejected = isKeyedFingerprints(saved.rejected) ? saved.rejected : {};
   const lastSyncedAt = typeof saved.lastSyncedAt === "string" ? saved.lastSyncedAt : null;
-  return { ...saved, rejected, lastSyncedAt };
+  const schema = typeof saved.schema === "number" ? saved.schema : null;
+  return { ...saved, rejected, lastSyncedAt, schema };
 }
 
 /** When the last sync for `userId` finished, or null (never synced, another user's state, or after a reset). */
@@ -183,6 +202,8 @@ const rowId = (collection: string, key: string): string => `${collection}\u0000$
 interface CollectionRun {
   c: SyncCollection;
   firstMerge: boolean;
+  /** The store was marked broken: what it holds now is what the app wrote after losing it. */
+  recovering: boolean;
   dirtyAt: string | null;
   /** The store as last read (or written) by this run. */
   stored: Record<string, unknown>;
@@ -283,6 +304,12 @@ function decide(
       ? { winner: theirs, pushLocal: false, applyRemote: true }
       : { winner: local, pushLocal: true, applyRemote: false };
   }
+  // A single value written after the store was lost is the app's defaults, not
+  // an edit: the cloud's copy, from before the damage, wins whatever the times
+  // say. (Merged, a reset freeze pool's zero count would win too: it takes the lower.)
+  if (r.recovering && (r.c.kind === "object" || r.c.kind === "freezePool") && !local.deleted && !theirs.deleted) {
+    return { winner: theirs, pushLocal: false, applyRemote: true };
+  }
   const custom = customMerge(r, key, local, theirs);
   if (custom) return custom;
   const kind = r.c.kind === "hifzPlan" || r.c.kind === "freezePool" ? "object" : r.c.kind;
@@ -357,17 +384,21 @@ async function openRun(c: SyncCollection, state: SyncState): Promise<CollectionR
   const dirtyAt = dirtyTime(c.id);
   let stored: Record<string, unknown>;
   try {
+    if (c.repair) await suppressHook(() => (c.repair as () => Promise<void>)());
     stored = await c.read();
   } catch (err) {
     console.warn(`[sync] skipping ${c.id} this run: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
+  // A store marked broken, even by the read just made, lost its contents locally.
+  const broken = brokenStores().includes(c.id);
   // First merge ignores any old snapshot.
-  const firstMerge = !state.merged.includes(c.id);
+  const firstMerge = broken || !state.merged.includes(c.id);
   const base = firstMerge ? {} : state.snapshot[c.id] ?? {};
   return {
     c,
     firstMerge,
+    recovering: broken,
     dirtyAt,
     stored,
     items: { ...stored },
@@ -498,6 +529,7 @@ async function run(userId: string): Promise<SyncResult> {
   const state = loadState(userId);
   // A marked store is not merged, whatever the saved state says (see broken-stores.ts).
   const marked = brokenStores();
+  const marksAtStart = markSequence();
   state.merged = state.merged.filter((id) => !marked.includes(id));
   const failures: string[] = [];
   const unreadable = new Set<string>();
@@ -515,7 +547,8 @@ async function run(userId: string): Promise<SyncResult> {
 
   // Read first: a broken store must not force a full pull on every run, only the
   // run after it can be read again.
-  const fullPull = runs.some((r) => r.firstMerge || state.behind.includes(r.c.id));
+  const fullPull =
+    state.schema !== SYNC_SCHEMA || runs.some((r) => r.firstMerge || state.behind.includes(r.c.id));
   const pulled = await pullSince(fullPull ? null : state.cursor);
   const remote = groupRows(pulled.rows);
   for (const r of runs) {
@@ -559,11 +592,12 @@ async function run(userId: string): Promise<SyncResult> {
     behind: SYNC_COLLECTIONS.map((c) => c.id).filter((id) => !doneIds.includes(id)),
     rejected,
     lastSyncedAt: wasReset ? null : new Date().toISOString(),
+    schema: SYNC_SCHEMA,
   };
   // A failed save throws: the run is an error and the old state and dirty times stay.
   localStorage.setItem(STATE_KEY, JSON.stringify(next));
   // Only now, and only marks that were there at the start: a mark made during the run stays.
-  clearBroken(marked.filter((id) => doneIds.includes(id)));
+  clearBroken(marked.filter((id) => doneIds.includes(id)), marksAtStart);
   for (const r of done) if (!r.unsettled) clearDirty(r.c.id, runStart);
 
   if (failures.length > 0) return { status: "error", message: `Could not sync ${failures.join(", ")}` };

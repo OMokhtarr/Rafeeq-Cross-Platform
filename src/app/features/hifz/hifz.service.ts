@@ -134,7 +134,12 @@ async function ensureHifzDir(): Promise<void> {
   }
 }
 
-async function readHifzFile(fileName: string): Promise<string | null> {
+/**
+ * The file's text, or null when it can't be had. An unreadable file (not a
+ * missing one) marks `collectionId`: the caller then treats the store as empty,
+ * and a plan made over it must merge with the cloud's, not replace it.
+ */
+async function readHifzFile(fileName: string, collectionId: string): Promise<string | null> {
   try {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
     const { data } = await Filesystem.readFile({
@@ -146,7 +151,8 @@ async function readHifzFile(fileName: string): Promise<string | null> {
       return atob(data);
     }
     return new TextDecoder().decode(data as any);
-  } catch {
+  } catch (err) {
+    if (!isNotFound(err)) markStoreBroken(collectionId);
     return null;
   }
 }
@@ -185,7 +191,7 @@ export async function loadPlanAsync(): Promise<HifzPlan | null> {
     let plan: HifzPlan | null = null;
 
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
-      const json = await readHifzFile("plan.json");
+      const json = await readHifzFile("plan.json", "hifzPlan");
       plan = json ? (JSON.parse(json) as HifzPlan) : null;
     } else {
       // Web/iOS: IndexedDB
@@ -267,7 +273,7 @@ export async function loadBestPlanAsync(): Promise<BestPlanRecord | null> {
     let record: BestPlanRecord | null = null;
 
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
-      const json = await readHifzFile("best-plan.json");
+      const json = await readHifzFile("best-plan.json", "hifzBest");
       record = json ? (JSON.parse(json) as BestPlanRecord) : null;
     } else {
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "best-plan");
@@ -325,7 +331,7 @@ export async function loadLatestPlanAsync(): Promise<BestPlanRecord | null> {
     let record: BestPlanRecord | null = null;
 
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
-      const json = await readHifzFile("latest-plan.json");
+      const json = await readHifzFile("latest-plan.json", "hifzLatest");
       record = json ? (JSON.parse(json) as BestPlanRecord) : null;
     } else {
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "latest-plan");
@@ -410,7 +416,7 @@ export async function loadHifzReadingSessionAsync(): Promise<HifzReadingSession 
     let session: HifzReadingSession | null = null;
 
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
-      const json = await readHifzFile("reading-session.json");
+      const json = await readHifzFile("reading-session.json", "hifzReading");
       session = json ? (JSON.parse(json) as HifzReadingSession) : null;
     } else {
       const rec = await idb.get<{ data: string }>(HIFZ_STORE, "reading-session");
