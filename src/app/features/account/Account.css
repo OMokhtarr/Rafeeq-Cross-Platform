@@ -1295,6 +1295,19 @@ ion-content::part(scroll) {
   text-align: start;
 }
 
+/* The active plan: what it is and when it renews. Gold when it needs the
+   subscriber's attention: it won't renew, or the store couldn't charge. */
+.ac-pro-plan {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+.ac-pro-plan--attention {
+  color: var(--color-gold);
+}
+
 /* The one filled button per card: Sign in, or View subscription. */
 .ac-acct-cta {
   display: block;

@@ -56,18 +56,28 @@ it("renders nothing when closed", () => {
 it("shows the Arabic note when open", () => {
   mount(true);
   expect(host.textContent).toContain("التسميع متاح للمشتركين");
-  expect(host.textContent).toContain("عرض الاشتراك");
+  expect(host.textContent).toContain("عرض الخطط");
 });
 
 it("closes and opens the paywall", () => {
   mount(true);
   const cta = Array.from(host.querySelectorAll("button")).find((b) =>
-    b.textContent?.includes("عرض الاشتراك"),
+    b.textContent?.includes("عرض الخطط"),
   );
   act(() => cta!.click());
   expect(closeNote).toHaveBeenCalledTimes(1);
   expect(mockOpenPaywall).toHaveBeenCalledTimes(1);
   expect(path).toBe("/viewer");
+});
+
+it("closes without opening the paywall from Not now", () => {
+  mount(true);
+  const dismiss = Array.from(host.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("ليس الآن"),
+  );
+  act(() => dismiss!.click());
+  expect(closeNote).toHaveBeenCalledTimes(1);
+  expect(mockOpenPaywall).not.toHaveBeenCalled();
 });
 
 it("registers with the overlay registry so Android Back closes it", () => {

@@ -19,29 +19,56 @@ import { useAuth } from "../../core/context/AuthContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useStartSubscribe } from "../subscription/useStartSubscribe";
+import ProStar from "../subscription/ProStar";
+import type { ProPlan } from "../../core/services/subscription/revenuecat.service";
+import type { AppStrings, Lang } from "../../core/i18n/strings";
 
 /** Characters of the Support ID shown on screen; the full id is copied. */
 const SHORT_ID_LENGTH = 8;
 
-/** The eight-pointed star of the rub el hizb, Rafeeq Pro's mark. */
-const ProStar: React.FC = () => (
-  <svg className="ac-pro-star" viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="5" y="5" width="14" height="14" rx="1" />
-    <rect x="5" y="5" width="14" height="14" rx="1" transform="rotate(45 12 12)" />
-    <circle cx="12" cy="12" r="2.6" />
-  </svg>
-);
+/** The plan line under an active subscription, and whether it needs the
+ *  subscriber's attention (it won't renew, or the store couldn't charge). */
+function planStatus(
+  plan: ProPlan,
+  ts: AppStrings["subscription"],
+  lang: Lang,
+): { text: string; attention: boolean } {
+  if (plan.billingIssue) return { text: ts.planBillingIssue, attention: true };
+  if (plan.period === "lifetime" || !plan.endsAt) return { text: ts.planLifetime, attention: false };
+  let date: string;
+  try {
+    date = new Date(plan.endsAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    date = plan.endsAt.slice(0, 10);
+  }
+  if (plan.trial) {
+    return plan.willRenew
+      ? { text: ts.trialRenews(date), attention: false }
+      : { text: ts.trialEnds(date), attention: true };
+  }
+  const name =
+    plan.period === "monthly" ? ts.planMonthly : plan.period === "yearly" ? ts.planYearly : null;
+  return plan.willRenew
+    ? { text: ts.planRenews(name, date), attention: false }
+    : { text: ts.planEnds(name, date), attention: true };
+}
 
 const SubscriptionRow: React.FC = () => {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const ts = t.subscription;
   const { user } = useAuth();
-  const { isPro, appUserId, restore, showCustomerCenter } = useSubscription();
+  const { isPro, proPlan, appUserId, restore, showCustomerCenter } = useSubscription();
   const startSubscribe = useStartSubscribe();
   const [presentToast] = useIonToast();
   const [restoring, setRestoring] = useState(false);
 
   if (!user) return null;
+
+  const status = isPro && proPlan ? planStatus(proPlan, ts, lang) : null;
 
   const toast = (message: string) =>
     presentToast({ message, duration: 2000, position: "bottom" });
@@ -84,10 +111,15 @@ const SubscriptionRow: React.FC = () => {
       <p className="ac-section-label">{ts.accountTitle}</p>
       <section className={`ac-card ac-pro${isPro ? " ac-pro--active" : ""}`}>
         <div className="ac-pro-head">
-          <ProStar />
+          <ProStar className="ac-pro-star" />
           <div className="ac-pro-text">
             <h2 className="ac-pro-title">{ts.planPro}</h2>
             <p className="ac-pro-line">{isPro ? ts.proActiveLine : ts.proLine}</p>
+            {status && (
+              <p className={`ac-pro-plan${status.attention ? " ac-pro-plan--attention" : ""}`}>
+                {status.text}
+              </p>
+            )}
           </div>
           {isPro && <span className="ac-plan-pill ac-plan-pill--pro">{ts.proActive}</span>}
         </div>

@@ -115,6 +115,41 @@ export function isProFromCustomerInfo(info: CustomerInfo): boolean {
   return info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
 }
 
+/** What the active Pro entitlement looks like, for the Account card. */
+export interface ProPlan {
+  /** "lifetime" when it never expires (a promotional grant, say). */
+  period: "monthly" | "yearly" | "lifetime" | "other";
+  trial: boolean;
+  willRenew: boolean;
+  /** ISO date it renews or ends; null for lifetime. */
+  endsAt: string | null;
+  billingIssue: boolean;
+}
+
+/** Null when Pro isn't active. Play reports the base plan ("monthly") in
+ *  productPlanIdentifier and "rafeeq_pro:monthly" as the product; the Test
+ *  Store reports just the product id ("monthly"), so both are matched. */
+export function proPlanFromCustomerInfo(info: CustomerInfo): ProPlan | null {
+  const ent = info.entitlements.active[PRO_ENTITLEMENT];
+  if (!ent) return null;
+  const plan = (ent.productPlanIdentifier ?? ent.productIdentifier ?? "").toLowerCase();
+  // A promotional grant ("rc_promo_…_lifetime") isn't a purchased plan, so it
+  // gets no plan name, and lifetime ones may still carry a far-off expiry.
+  let period: ProPlan["period"];
+  if (!ent.expirationDate || plan.includes("lifetime")) period = "lifetime";
+  else if (ent.store === "PROMOTIONAL") period = "other";
+  else if (plan.includes("month")) period = "monthly";
+  else if (plan.includes("year") || plan.includes("annual")) period = "yearly";
+  else period = "other";
+  return {
+    period,
+    trial: ent.periodType === "TRIAL",
+    willRenew: ent.willRenew,
+    endsAt: ent.expirationDate ?? null,
+    billingIssue: !!ent.billingIssueDetectedAt,
+  };
+}
+
 export type PaywallResult = "purchased" | "restored" | "cancelled" | "error";
 
 /** Shows the current offering's paywall and resolves once it is dismissed. */

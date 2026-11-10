@@ -34,6 +34,8 @@ import {
   fetchAppUserId,
   fetchCustomerInfo,
   isProFromCustomerInfo,
+  proPlanFromCustomerInfo,
+  ProPlan,
   logInRevenueCat,
   logOutRevenueCat,
   onCustomerInfo,
@@ -58,6 +60,8 @@ export type PaywallOutcome = "subscribed" | "dismissed" | "failed" | "unavailabl
 
 interface SubscriptionCtx {
   isPro: boolean;
+  /** The active plan's details; null when not Pro or not known yet (web). */
+  proPlan: ProPlan | null;
   /** RevenueCat has given a real answer this session. */
   ready: boolean;
   appUserId: string | null;
@@ -106,6 +110,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return readCache();
   });
   const [ready, setReady] = useState(!native);
+  const [proPlan, setProPlan] = useState<ProPlan | null>(null);
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
@@ -129,12 +134,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [seenAccountId, setSeenAccountId] = useState(accountId);
   if (seenAccountId !== accountId) {
     setSeenAccountId(accountId);
-    if (native && identityRef.current !== undefined) setIsPro(false);
+    if (native && identityRef.current !== undefined) {
+      setIsPro(false);
+      setProPlan(null);
+    }
   }
 
   const apply = useCallback((info: CustomerInfo) => {
     const pro = isProFromCustomerInfo(info);
     setIsPro(pro);
+    setProPlan(proPlanFromCustomerInfo(info));
     setReady(true);
     writeCache(pro);
     return pro;
@@ -302,13 +311,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return apply(await restorePurchases());
   }, [apply, identitySettled]);
 
-  const markNotPro = useCallback(() => setIsPro(false), []);
+  const markNotPro = useCallback(() => {
+    setIsPro(false);
+    setProPlan(null);
+  }, []);
   const openNote = useCallback(() => setNoteOpen(true), []);
   const closeNote = useCallback(() => setNoteOpen(false), []);
 
   const value = useMemo<SubscriptionCtx>(
     () => ({
       isPro,
+      proPlan,
       ready,
       appUserId,
       showPaywall,
@@ -319,7 +332,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       openNote,
       closeNote,
     }),
-    [isPro, ready, appUserId, showPaywall, showCustomerCenter, restore, markNotPro, noteOpen, openNote, closeNote],
+    [isPro, proPlan, ready, appUserId, showPaywall, showCustomerCenter, restore, markNotPro, noteOpen, openNote, closeNote],
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
