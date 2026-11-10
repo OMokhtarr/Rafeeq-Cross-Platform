@@ -16,6 +16,7 @@
 
 import { Preferences } from "@capacitor/preferences";
 import {
+  StoredNullError,
   loadPlanStrict,
   savePlanStrict,
   clearPlanStrict,
@@ -118,6 +119,31 @@ function readMap(key: string): Record<string, unknown> {
   return parsed;
 }
 
+/**
+ * Reads that skipped entries sync can't key (an object without a string id,
+ * a non-string in a set). Those entries stay in the store, so a key missing
+ * from such a read is not proof of a delete; the engine pushes none for it.
+ */
+const partialReads = new WeakSet<object>();
+
+/** True when `items` came from a read that skipped entries it couldn't key. */
+export const isPartialRead = (items: object): boolean => partialReads.has(items);
+
+/**
+ * A strict Hifz load, with a slot holding JSON `null` taken as empty and its
+ * collection marked broken: the first merge that follows brings the cloud's
+ * copy back over it, instead of the gap reading as a delete.
+ */
+async function loadOrNull<T>(collectionId: string, load: () => Promise<T | null>): Promise<T | null> {
+  try {
+    return await load();
+  } catch (err) {
+    if (!(err instanceof StoredNullError)) throw err;
+    markStoreBroken(collectionId);
+    return null;
+  }
+}
+
 /** Keys of `items` that are not in `existing`, in key order. */
 const newKeys = (existing: Set<string>, items: Record<string, unknown>): string[] =>
   Object.keys(items)
@@ -128,8 +154,8 @@ const newKeys = (existing: Set<string>, items: Record<string, unknown>): string[
 
 /**
  * An array of objects keyed by string `id`. Entries without a string id are
- * invalid for sync: ignored on read and dropped on write. Duplicate ids keep
- * the first occurrence. With `newestFirst`, the written array is sorted by that
+ * invalid for sync: ignored on read (the read counts as partial) and kept in
+ * place on write. Duplicate ids keep the first occurrence. With `newestFirst`, the written array is sorted by that
  * date field descending (ties by id), as the app stores and displays it;
  * otherwise local order is kept and new items are appended in key order.
  */
@@ -147,16 +173,23 @@ function objectArray(
     storageKeys: [storageKey],
     async read() {
       const out: Record<string, unknown> = {};
+      let partial = false;
       for (const item of await load()) {
-        if (isRecord(item) && isString(item.id) && !(item.id in out)) out[item.id] = item;
+        if (!isRecord(item) || !isString(item.id)) partial = true;
+        else if (!(item.id in out)) out[item.id] = item;
       }
+      if (partial) partialReads.add(out);
       return out;
     },
     async write(items) {
       const seen = new Set<string>();
       const next: unknown[] = [];
       for (const item of await load()) {
-        if (!isRecord(item) || !isString(item.id) || seen.has(item.id) || !(item.id in items)) continue;
+        if (!isRecord(item) || !isString(item.id)) {
+          next.push(item);
+          continue;
+        }
+        if (seen.has(item.id) || !(item.id in items)) continue;
         seen.add(item.id);
         next.push(items[item.id]);
       }
@@ -190,26 +223,35 @@ const localObjectArray = (
     newestFirst,
   );
 
-/** localStorage array of strings, each present item mapping to `true`. */
+/** localStorage array of strings, each present item mapping to `true`; other entries are kept as they are. */
 function stringSet(
   id: string,
   kind: "items" | "days",
   key: string,
   validateKey: (k: string) => boolean,
 ): SyncCollection {
-  const load = (): string[] => readArray(key).filter(isString);
   return {
     id,
     kind,
     storageKeys: [key],
     async read() {
       const out: Record<string, unknown> = {};
-      for (const k of load()) out[k] = true;
+      const raw = readArray(key);
+      for (const k of raw) if (isString(k)) out[k] = true;
+      if (raw.some((k) => !isString(k))) partialReads.add(out);
       return out;
     },
     async write(items) {
-      const kept = Array.from(new Set(load())).filter((k) => items[k] === true);
-      const added = newKeys(new Set(kept), items).filter((k) => items[k] === true);
+      const seen = new Set<string>();
+      const kept: unknown[] = [];
+      for (const k of readArray(key)) {
+        if (!isString(k)) kept.push(k);
+        else if (!seen.has(k) && items[k] === true) {
+          seen.add(k);
+          kept.push(k);
+        }
+      }
+      const added = newKeys(seen, items).filter((k) => items[k] === true);
       writeJson(key, [...kept, ...added]);
     },
     validate: (value, k) => value === true && validateKey(k),
@@ -288,7 +330,7 @@ function hifzObject<T>(
     kind: "object",
     storageKeys: [key],
     async read() {
-      const value = await load();
+      const value = await loadOrNull(id, load);
       return value ? { [VALUE]: value } : {};
     },
     async write(items) {
@@ -369,7 +411,7 @@ const hifzPlan: SyncCollection = {
   storageKeys: ["rafiq_hifz_v2", PLAN_ARCHIVE_KEY],
   async read() {
     const out: Record<string, unknown> = {};
-    const plan = await loadPlanStrict();
+    const plan = await loadOrNull("hifzPlan", loadPlanStrict);
     if (plan) out.current = plan;
     for (const [createdAt, p] of Object.entries(readMap(PLAN_ARCHIVE_KEY))) {
       out[ARCHIVE_PREFIX + createdAt] = p;

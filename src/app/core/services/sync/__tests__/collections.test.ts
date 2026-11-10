@@ -8,6 +8,7 @@ jest.mock("@capacitor/preferences", () => ({
   Preferences: { get: jest.fn(), set: jest.fn() },
 }));
 jest.mock("../../../../features/hifz/hifz.service", () => ({
+  StoredNullError: class StoredNullError extends Error {},
   loadPlanStrict: jest.fn(),
   savePlanStrict: jest.fn(),
   clearPlanStrict: jest.fn(),

@@ -258,6 +258,13 @@ describe("push", () => {
     );
   });
 
+  it("adds base_server_at, exactly as given, when the row has one", async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null });
+    const based = { ...localRow("a"), base_server_at: "2026-11-01T10:00:00.123456+00:00" };
+    await push([based]);
+    expect(mockRpc.mock.calls[0][1].items[0].base_server_at).toBe("2026-11-01T10:00:00.123456+00:00");
+  });
+
   it("skips rows whose collection or item_key length is out of bounds", async () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     mockRpc.mockResolvedValue({ data: [], error: null });

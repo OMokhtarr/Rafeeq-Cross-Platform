@@ -17,4 +17,6 @@ export interface SyncRow {
   edited_at: string;
   deleted: boolean;
   server_at?: string;
+  /** Push only: the `server_at` of the cloud copy this value was reconciled against (see sync_push). */
+  base_server_at?: string;
 }
