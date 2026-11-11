@@ -325,6 +325,19 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
     setEndVerse(pageEnd(604));
     setActiveQuick("fromPage");
   };
+  // The surah that runs on past this page (the page's last surah, when the next page opens
+  // mid-surah). Only then does "from this page to the end of the surah" differ from the page.
+  const surahPastPage = useMemo(() => {
+    if (currentPage >= 604) return null;
+    const next = getPageStart(currentPage + 1);
+    return next && next.aya > 1 ? next.sura : null;
+  }, [currentPage]);
+  const setRangeFromPageToSurahEnd = (p: number, s: number) => {
+    const ch = getChapters().find((c) => c.id === s);
+    setStartVerse(pageStart(p));
+    setEndVerse({ sura: s, aya: ch ? ch.verses_count : 1 });
+    setActiveQuick("fromPageToSurahEnd");
+  };
   const setRangeToSurah = (s: number) => {
     const ch = getChapters().find((c) => c.id === s);
     setStartVerse({ sura: s, aya: 1 });
@@ -742,6 +755,17 @@ const PlaybackSettings: React.FC<Props> = ({ onClose, currentPage: currentPagePr
             >
               {tp.quickFromPage(String(currentPage))}
             </button>
+            {surahPastPage !== null && (
+              <button
+                type="button"
+                className={`pb-seg-btn${nightCls}${
+                  activeQuick === "fromPageToSurahEnd" ? " is-active" : ""
+                }`}
+                {...quickTap(() => setRangeFromPageToSurahEnd(currentPage, surahPastPage))}
+              >
+                {tp.quickFromPageToSurahEnd(String(currentPage))}
+              </button>
+            )}
             {surahsOnPage.map((s) => (
               <button
                 key={s}
