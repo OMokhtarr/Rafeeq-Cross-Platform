@@ -7,7 +7,9 @@ import { LanguageProvider } from "../../../core/context/LanguageContext";
 
 // The quick-select panel is under test; the queue, audio cache, network and
 // Quran metadata behind the sheet are stood in for. Page 2 holds one surah
-// (al-Baqarah), so the panel shows one surah button.
+// (al-Baqarah), so the panel shows one surah button; al-Baqarah runs on to
+// page 3, while al-Fatihah (page 1) ends on its page.
+const mockStarted: { sura: number; aya: number }[][] = [];
 jest.mock("@ionic/react", () => {
   const { createElement } = require("react");
   const Pass = ({ children }: { children?: unknown }) => createElement("div", null, children);
@@ -19,7 +21,9 @@ jest.mock("../../../core/context/PlaybackContext", () => {
   const noop = () => {};
   const queue = {
     state: { currentVerse: null, isLoading: false, isPlaying: false },
-    start: async () => {},
+    start: async (verses: { sura: number; aya: number }[]) => {
+      mockStarted.push(verses);
+    },
     pause: noop,
     resume: noop,
     setReciter: noop,
@@ -66,6 +70,7 @@ jest.mock("../../../core/services/data/metadata.service", () => {
 let root: Root;
 beforeEach(() => {
   localStorage.clear();
+  mockStarted.length = 0;
   localStorage.setItem("rafiq_lang_v1", "en");
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -86,12 +91,12 @@ function tap(label: RegExp) {
   });
 }
 
-function renderSheet() {
+function renderSheet(page = 2) {
   act(() =>
     root.render(
       <MemoryRouter>
         <LanguageProvider>
-          <PlaybackSettings currentPage={2} />
+          <PlaybackSettings currentPage={page} />
         </LanguageProvider>
       </MemoryRouter>,
     ),
@@ -112,4 +117,20 @@ it("highlights only the latest of two quick choices", () => {
   tap(/hizb/i);
   expect(highlighted()).toHaveLength(1);
   expect(highlighted()[0]).toMatch(/hizb/i);
+});
+
+it("plays from the page's start to the end of a surah that runs on past the page", async () => {
+  renderSheet(2);
+  tap(/to surah end/i);
+  expect(highlighted()).toEqual(["PG. 2 to surah end"]);
+  const cta = document.querySelector(".pb-cta") as HTMLButtonElement;
+  await act(async () => cta.click());
+  const verses = mockStarted[0];
+  expect(verses[0]).toEqual({ sura: 2, aya: 1 });
+  expect(verses[verses.length - 1]).toEqual({ sura: 2, aya: 286 });
+});
+
+it("leaves out the to-surah-end choice when the page's last surah ends on the page", () => {
+  renderSheet(1);
+  expect(quickButtons().some((b) => /to surah end/i.test(b.textContent ?? ""))).toBe(false);
 });

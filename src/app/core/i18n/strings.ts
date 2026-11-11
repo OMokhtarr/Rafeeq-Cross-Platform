@@ -492,6 +492,7 @@ export interface AppStrings {
     loop: string;
     quickPage: (n: string) => string;
     quickFromPage: (n: string) => string;
+    quickFromPageToSurahEnd: (n: string) => string;
     quickSurah: (name: string) => string;
     quickJuz: (n: string) => string;
     quickHizb: (n: string) => string;
@@ -1242,6 +1243,7 @@ const ar: AppStrings = {
     loop: "تكرار مستمر",
     quickPage: (n: string) => `الصفحة ${n}`,
     quickFromPage: (n: string) => `من الصفحة ${n}`,
+    quickFromPageToSurahEnd: (n: string) => `من الصفحة ${n} لآخر السورة`,
     quickSurah: (name: string) => `سورة ${name}`,
     quickJuz: (n: string) => `الجزء ${n}`,
     quickHizb: (n: string) => `الحزب ${n}`,
@@ -2009,6 +2011,7 @@ const en: AppStrings = {
     loop: "Loop",
     quickPage: (n: string) => `PG. ${n}`,
     quickFromPage: (n: string) => `from PG. ${n}`,
+    quickFromPageToSurahEnd: (n: string) => `PG. ${n} to surah end`,
     quickSurah: (name: string) => `Surah ${name}`,
     quickJuz: (n: string) => `Juz ${n}`,
     quickHizb: (n: string) => `Hizb ${n}`,
