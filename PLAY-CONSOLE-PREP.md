@@ -682,6 +682,61 @@ ships dark: the paywall only appears when the app is built with
    Customer Center. The subscription card only appears once signed in, since
    Pro always belongs to an account.
 
+### Retention — keeping subscribers who go to cancel (Android)
+
+Set up 14 Nov 2026. iOS gets its own RevenueCat project later, so everything
+here is Android only.
+
+**Done in Play (through RevenueCat, live):**
+
+| Base plan | Offer id | What it is |
+|---|---|---|
+| `rafeeq_pro:monthly` | `free-trial-7d` | 7-day free trial, new subscribers only (existed before) |
+| `rafeeq_pro:yearly` | `yearly-trial-7d` | 7-day free trial, new subscribers only — so the paywall's default (Yearly) now says "Start free trial" |
+| `rafeeq_pro:monthly` | `cancel-save-50-3m` | Save offer: 50% off for the next 3 months |
+| `rafeeq_pro:yearly` | `cancel-save-30-1y` | Save offer: 30% off the next year |
+
+The two save offers are "developer determined" and tagged `rc-customer-center`
+and `rc-ignore-offer`. The paywall ignores them; only the Customer Center can
+show them. A trial-taker can't take the other plan's trial too: both trials
+are limited to people who never had this subscription.
+
+**Owner steps (RevenueCat dashboard → Lifecycle → Retention → Customer Center):**
+1. **Promotional offers → "Cancellation Retention Discount"** → map the Android
+   products: `rafeeq_pro:monthly` → `cancel-save-50-3m`,
+   `rafeeq_pro:yearly` → `cancel-save-30-1y`. Until this is done the cancel
+   survey is skipped and people cancel straight away (no offer has a mapping).
+2. Its eligibility is the default "First seen more than 14 days". Keep it, or
+   switch to "Time since first purchase" if you'd rather not offer a discount
+   to someone still in their free trial.
+3. **Cancel survey** already has: Too expensive → offer, Don't use the app →
+   offer, Bought by mistake → no offer. Nothing to change.
+4. **Support → Contact support visibility → All customers**, so subscribers
+   (not only lapsed users) see Contact support. That is the Android refund
+   route — see below.
+5. "Refunds Retention Discount" and the Refund request path are **iOS only**;
+   Android never shows them. Leave them for the iOS project.
+
+**Refunds on Android:** Google Play owns refunds. In the first 48 hours a
+buyer can get one from Play without ever opening the app, and nothing can
+step in there. After that they have to ask you. In the app that is Customer
+Center → Contact support (in-app ticket to `rafeeq.quranquiz@gmail.com`). Runbook for a
+refund request: reply first. If the reason is price, offer to keep them on
+the save offer — they accept it themselves from Customer Center → Cancel, or
+you grant a free month with Customers → Grant promotional entitlement. If they
+still want the money back, refund from the customer's page in RevenueCat
+(Refund revokes Pro).
+
+**Must be proved on a device** before calling this working (in `TODO.md`):
+- A brand-new buyer sees the full price and the free trial on the paywall,
+  never a save offer. A RevenueCat community thread reports tagged offers
+  leaking to new buyers on Android.
+- Customer Center → Cancel → "Too expensive" shows the save offer, and
+  accepting it completes in Play. For the test, set the offer's eligibility
+  to 0 days, because a fresh tester is "first seen" today, then put it back.
+- Play offer changes can take up to 24 hours to reach a device; clearing the
+  Play Store app's cache can speed it up.
+
 ### Store declarations — redo before the first build that carries a RevenueCat key
 
 The app starts RevenueCat on every launch of any build whose `.env` has
