@@ -3,6 +3,7 @@ import {
   pendingTours,
   pickNext,
   cardPlacement,
+  ringBox,
   unionBox,
   resolveTarget,
   swipeStep,
@@ -58,6 +59,46 @@ describe("cardPlacement", () => {
     expect(cardPlacement({ top: 10, left: 0, width: 40, height: 40 }, 800)).toBe("bottom"));
   it("moves the card to the top for targets in the lower 40%", () =>
     expect(cardPlacement({ top: 740, left: 0, width: 40, height: 40 }, 800)).toBe("top"));
+});
+
+describe("ringBox", () => {
+  // A 400×800 phone with a 24px status bar and a 16px gesture bar.
+  const safe = { top: 24, left: 0, width: 400, height: 760 };
+  it("pads a target that sits clear of every edge", () =>
+    expect(ringBox({ top: 100, left: 100, width: 50, height: 40 }, safe, 6, 3)).toEqual({
+      top: 94,
+      left: 94,
+      width: 62,
+      height: 52,
+    }));
+  it("keeps a full-width header's ring below the status bar and inside both sides", () =>
+    expect(ringBox({ top: 0, left: 0, width: 400, height: 80 }, safe, 6, 3)).toEqual({
+      top: 27,
+      left: 3,
+      width: 394,
+      height: 59,
+    }));
+  it("keeps a bottom bar's ring above the gesture bar", () =>
+    expect(ringBox({ top: 720, left: 0, width: 400, height: 80 }, safe, 6, 3)).toEqual({
+      top: 714,
+      left: 3,
+      width: 394,
+      height: 67,
+    }));
+  it("pulls in only the side that touches an edge", () =>
+    expect(ringBox({ top: 40, left: 352, width: 44, height: 44 }, safe, 6, 3)).toEqual({
+      top: 34,
+      left: 346,
+      width: 51,
+      height: 56,
+    }));
+  it("leaves the ring padded when the target is wholly outside the visible area", () =>
+    expect(ringBox({ top: 0, left: 0, width: 400, height: 10 }, safe, 6, 3)).toEqual({
+      top: -6,
+      left: -6,
+      width: 412,
+      height: 22,
+    }));
 });
 
 describe("unionBox", () => {

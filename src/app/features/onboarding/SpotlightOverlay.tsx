@@ -10,15 +10,25 @@ import { registerOverlay } from "../../core/utils/overlay-registry";
 import { ONBOARDING_COPY } from "./onboardingCopy";
 import { Dots } from "./SlideDeck";
 import type { Gesture, TourId, TourStep } from "./tourCatalog";
-import { Box, cardPlacement, resolveTarget } from "./tourLogic";
+import { Box, cardPlacement, resolveTarget, ringBox } from "./tourLogic";
 import "./onboarding.css";
 
 const PAD = 6;
+/** Room kept between the ring and a screen edge: the 2px gold border + 1px. */
+const EDGE = 3;
 const FIND_TIMEOUT_MS = 1500;
 const FIND_POLL_MS = 100;
 
 const sameBox = (a: Box | null, b: Box) =>
   !!a && a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height;
+
+/** The screen minus the system bars, read off the `.ob-safe` probe (which is
+ *  inset by the --safe-inset-* tokens); the whole window if it can't measure. */
+const visibleBounds = (probe: HTMLElement | null): Box => {
+  const r = probe?.getBoundingClientRect();
+  if (r && r.width > 0 && r.height > 0) return { top: r.top, left: r.left, width: r.width, height: r.height };
+  return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
+};
 
 /** A gold touch dot acting out the gesture: a sliding trail for swipe, a
  *  filling ring for long-press, two ripples for double-tap. */
@@ -76,6 +86,7 @@ export const SpotlightOverlay: React.FC<Props> = ({
   const text = copy.tours[tourId][step.key];
   const [box, setBox] = useState<Box | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const safeRef = useRef<HTMLDivElement>(null);
   const cb = useRef({ onShown, onMissing, onSkip });
   cb.current = { onShown, onMissing, onSkip };
 
@@ -134,21 +145,15 @@ export const SpotlightOverlay: React.FC<Props> = ({
   }, [visible]);
 
   const placement = box ? cardPlacement(box, window.innerHeight) : "bottom";
+  const ring = box ? ringBox(box, visibleBounds(safeRef.current), PAD, EDGE) : null;
   const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return createPortal(
     <div className={"ob-spot" + (box ? "" : " ob-spot--pending")} onClick={swallow} onPointerDown={swallow}>
-      {box && (
+      <div ref={safeRef} className="ob-safe" aria-hidden="true" />
+      {box && ring && (
         <>
-          <div
-            className="ob-spot-ring"
-            style={{
-              top: box.top - PAD,
-              left: box.left - PAD,
-              width: box.width + PAD * 2,
-              height: box.height + PAD * 2,
-            }}
-          />
+          <div className="ob-spot-ring" style={ring} />
           {step.gesture && <GestureHint gesture={step.gesture} box={box} />}
           <div
             ref={cardRef}

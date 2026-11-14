@@ -123,6 +123,17 @@
 /* Still looking for the step's target (it may never appear): nothing is drawn,
    so the page must keep taking taps instead of feeling frozen. */
 .ob-spot--pending { pointer-events: none; touch-action: auto; }
+/* Invisible probe: its box is the screen minus the system bars, which the
+   ring is kept inside (see ringBox). */
+.ob-safe {
+  position: fixed;
+  top: var(--safe-inset-top);
+  right: var(--safe-inset-right);
+  bottom: var(--safe-inset-bottom);
+  left: var(--safe-inset-left);
+  visibility: hidden;
+  pointer-events: none;
+}
 .ob-spot-ring {
   position: fixed;
   border-radius: 12px;
