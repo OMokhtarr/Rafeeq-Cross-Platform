@@ -25,7 +25,7 @@ import {
   recordStreakDay,
   recordHifzSession,
   settleHifzFreezes,
-  countSessionsToday,
+  sessionsDoneToday,
   countActiveDays,
   computeMaxSessionsPerDay,
   loadBestPlan,
@@ -1064,6 +1064,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [showNewRoundConfirm, setShowNewRoundConfirm] = useState(false);
   const [showStreakInfo, setShowStreakInfo] = useState(false);
   const [showStreakPanel, setShowStreakPanel] = useState(false);
+  const [showTodayPanel, setShowTodayPanel] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
 
   // Put these dialogs on the back ladder so an edge swipe dismisses the dialog
@@ -1082,6 +1083,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     if (!showStreakPanel) return;
     return registerOverlay(() => setShowStreakPanel(false));
   }, [showStreakPanel]);
+
+  useEffect(() => {
+    if (!showTodayPanel) return;
+    return registerOverlay(() => setShowTodayPanel(false));
+  }, [showTodayPanel]);
   const heroScrollRef = React.useRef<HTMLDivElement>(null);
   const sessions = plan.sessions;
   const doneSessions = sessions.filter((s) => s.done).length;
@@ -1091,7 +1097,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const memorizedPages = countMemorizedPages(plan.memorized, chapters);
   const quranPct = (memorizedPages / 604) * 100;
   const streak = computeStreakPersistent(sessions);
-  const todaySessions = countSessionsToday(sessions);
+  const doneToday = sessionsDoneToday(sessions);
+  const todaySessions = doneToday.length;
   const recovery = streakRecoveryInfo(sessions);
   const daysActive = countActiveDays(plan);
   const maxSessionsPerDay = computeMaxSessionsPerDay(sessions);
@@ -1113,6 +1120,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           return sessions.indexOf(s) > sessions.indexOf(latest) ? s : latest;
         })
       : null;
+
+  // Leaving for the reader or a quiz closes the today panel first, so it is
+  // not left on the back ladder (or open) behind the page we navigate to.
+  const openPageFromToday = (page: number, session?: PlanSession) => {
+    setShowTodayPanel(false);
+    onOpenPage(page, session);
+  };
+  const quizFromToday = (session: PlanSession) => {
+    setShowTodayPanel(false);
+    onQuiz(session);
+  };
+  const todayPanelKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setShowTodayPanel(true);
+    }
+  };
 
   return (
     <div className="hifz-plan" dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -1163,7 +1187,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="hifz-hero-big-lbl">{h.daysActive}</span>
             </div>
             <div className="hifz-hero-stat-divider" />
-            <div className="hifz-hero-big-stat">
+            <div
+              className="hifz-hero-big-stat hifz-hero-big-stat--tappable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setShowTodayPanel(true)}
+              onKeyDown={todayPanelKeyDown}
+            >
               <span className="hifz-hero-big-num">{todaySessions}</span>
               <span className="hifz-hero-big-lbl">{h.heroToday}</span>
             </div>
@@ -1239,7 +1269,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <span className="hifz-stat-num">{totalSessions - doneSessions}</span>
           <span className="hifz-stat-lbl">{h.sessionsLeft}</span>
         </div>
-        <div className="hifz-stat-chip">
+        <div
+          className="hifz-stat-chip hifz-stat-chip--tappable hifz-stat-chip-today"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowTodayPanel(true)}
+          onKeyDown={todayPanelKeyDown}
+        >
           <div className="hifz-stat-icon hifz-stat-icon-pages">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -1323,6 +1359,38 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         >
           <div className="hifz-streak-panel">
             <StreakPanel sessions={sessions} lang={lang} />
+          </div>
+        </AccountModal>
+      )}
+
+      {/* ── Today panel — the sessions finished today, each openable ── */}
+      {showTodayPanel && (
+        <AccountModal
+          title={h.heroToday}
+          onClose={() => setShowTodayPanel(false)}
+        >
+          <div className="hifz-today-panel" dir={lang === "ar" ? "rtl" : "ltr"}>
+            {doneToday.length === 0 ? (
+              <p className="hifz-empty-hint">{h.todaySessionsEmpty}</p>
+            ) : (
+              <div className="hifz-sessions-list">
+                {doneToday.map((s) => (
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    variant="done"
+                    onToggle={onToggleSession}
+                    onOpenPage={openPageFromToday}
+                    onQuiz={quizFromToday}
+                    onToggleSurah={onToggleSurah}
+                    lang={lang}
+                    h={h}
+                    chapters={chapters}
+                    readPages={readPages}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </AccountModal>
       )}

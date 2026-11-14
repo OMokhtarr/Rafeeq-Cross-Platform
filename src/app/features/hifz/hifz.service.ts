@@ -1172,9 +1172,14 @@ export function computeStreak(sessions: PlanSession[]): number {
   return streak;
 }
 
-export function countSessionsToday(sessions: PlanSession[]): number {
+/** The plan's sessions marked done today, in plan order. */
+export function sessionsDoneToday(sessions: PlanSession[]): PlanSession[] {
   const today = todayStr();
-  return sessions.filter((s) => s.done && s.doneDate === today).length;
+  return sessions.filter((s) => s.done && s.doneDate === today);
+}
+
+export function countSessionsToday(sessions: PlanSession[]): number {
+  return sessionsDoneToday(sessions).length;
 }
 
 export function computeMaxSessionsPerDay(sessions: PlanSession[]): number {

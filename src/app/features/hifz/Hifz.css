@@ -1515,6 +1515,22 @@ ion-content::part(scroll) {
   border-color: var(--color-gold);
 }
 
+/* "Sessions today" on the hero opens the same today panel as the chip. */
+.hifz-hero-big-stat--tappable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: opacity var(--transition-fast);
+}
+
+.hifz-hero-big-stat--tappable:active {
+  opacity: 0.65;
+}
+
+.hifz-hero-big-stat--tappable:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
 /* ── Streak info button (top corner of the streak chip) ─── */
 .hifz-streak-info-btn {
   position: absolute;
@@ -1760,6 +1776,10 @@ ion-content::part(scroll) {
    The panel is authored for the Account card body, which supplies the column
    layout and gap. Reproduced here so the shared component needs no host
    awareness of its own. */
+.hifz-today-panel {
+  padding: var(--space-1) 0 var(--space-4);
+}
+
 .hifz-streak-panel {
   display: flex;
   flex-direction: column;
