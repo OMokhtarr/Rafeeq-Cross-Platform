@@ -22,18 +22,13 @@ this order. Full detail in `PLAY-CONSOLE-PREP.md` §9.
 - [ ] **Real-purchase test.** Closed-testing build with the `goog_` key and
       the license-tester account: buy, renew, expire, reinstall + Restore,
       Customer Center.
-- [ ] **Retention setup** (Play offers are live since 14 Nov 2026; the
-      dashboard part is yours). In RevenueCat → Lifecycle → Retention →
-      Customer Center, map "Cancellation Retention Discount":
-      `rafeeq_pro:monthly` → `cancel-save-50-3m`, `rafeeq_pro:yearly` →
-      `cancel-save-30-1y`; set Contact support visibility to All customers.
-      Then on a device: a new buyer's paywall shows the full price and the
-      free trial on Yearly and Monthly (no save offer leaking), and Cancel →
-      "Too expensive" shows the offer and accepting it completes. Steps and
-      the refund runbook are in `PLAY-CONSOLE-PREP.md` §9 "Retention".
-- [ ] **Test Store prices** (debug builds and the paywall preview only): in
-      RevenueCat → Products, set the Test Store `monthly` to $4.99 and
-      `yearly` to $49.99 to match Play (the API can't change them).
+- [ ] **Retention device test.** Play offers and the Customer Center mapping
+      are done (14 Nov 2026). On a device: a new buyer's paywall shows the
+      full price and the free trial on Yearly and Monthly (no save offer
+      leaking), and Cancel → "Too expensive" shows the save offer and
+      accepting it completes. The offer's eligibility is first seen > 20 days
+      AND first purchase > 30 days — set both to 0 for the test, then restore.
+      Refund runbook: `PLAY-CONSOLE-PREP.md` §9 "Retention".
 - [ ] **Launch.** Set `REACT_APP_PRO_GATE=on` in `.env.production` (leave it
       out of `.env.local`) and release; then set `REQUIRE_PRO = "true"` in
       `token-broker/wrangler.toml` and deploy; then run
