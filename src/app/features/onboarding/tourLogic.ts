@@ -51,6 +51,25 @@ export function cardPlacement(target: Box, viewportHeight: number): "top" | "bot
   return target.top + target.height / 2 > viewportHeight * 0.6 ? "top" : "bottom";
 }
 
+/**
+ * The spotlight ring: `pad` px outside the target, but pulled in on any side
+ * that would cross `bounds` (the screen minus the system bars), keeping `edge`
+ * px clear for the ring's border. Without this a full-width header, the
+ * bottom nav or a button flush with a screen edge has part of its ring drawn
+ * off-screen or under the status bar. A target wholly outside `bounds` keeps
+ * the plain padded ring.
+ */
+export function ringBox(target: Box, bounds: Box, pad: number, edge: number): Box {
+  const top = Math.max(target.top - pad, bounds.top + edge);
+  const left = Math.max(target.left - pad, bounds.left + edge);
+  const bottom = Math.min(target.top + target.height + pad, bounds.top + bounds.height - edge);
+  const right = Math.min(target.left + target.width + pad, bounds.left + bounds.width - edge);
+  if (bottom <= top || right <= left) {
+    return { top: target.top - pad, left: target.left - pad, width: target.width + pad * 2, height: target.height + pad * 2 };
+  }
+  return { top, left, width: right - left, height: bottom - top };
+}
+
 export function unionBox(boxes: Box[]): Box | null {
   if (boxes.length === 0) return null;
   const top = Math.min(...boxes.map((b) => b.top));
