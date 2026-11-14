@@ -723,6 +723,7 @@ export interface AppStrings {
     sessionsAll: string;
     daysActive: string;
     todaySessions: string;
+    todaySessionsEmpty: string;
     bestPlan: string;
     latestPlan: string;
     sessionsWord: string;
@@ -1490,6 +1491,7 @@ const ar: AppStrings = {
     sessionsAll: "جميع الجلسات",
     daysActive: "أيام منذ البداية",
     todaySessions: "جلسة اليوم",
+    todaySessionsEmpty: "لم تُكمل أي جلسة اليوم بعد",
     bestPlan: "أفضل جولة",
     latestPlan: "آخر جولة",
     sessionsWord: "جلسة",
@@ -2261,6 +2263,7 @@ const en: AppStrings = {
     sessionsAll: "All Sessions",
     daysActive: "Days Since Start",
     todaySessions: "today",
+    todaySessionsEmpty: "No sessions completed today yet",
     bestPlan: "Best Round",
     latestPlan: "Last Round",
     sessionsWord: "sessions",
