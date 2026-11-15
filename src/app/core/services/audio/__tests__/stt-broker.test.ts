@@ -67,10 +67,10 @@ describe("the account token", () => {
 
 it("maps a 402 to NOT_SUBSCRIBED_MESSAGE", async () => {
   respond(402, { error: "subscription required", code: "not_subscribed" });
-  await expect(fetchBrokerKey("/deepgram/token")).rejects.toThrow(NOT_SUBSCRIBED_MESSAGE);
+  await expect(fetchBrokerKey("/soniox/token")).rejects.toThrow(NOT_SUBSCRIBED_MESSAGE);
 });
 
 it("keeps the 503 message", async () => {
   respond(503);
-  await expect(fetchBrokerKey("/deepgram/token")).rejects.toThrow(STT_UNAVAILABLE_MESSAGE);
+  await expect(fetchBrokerKey("/soniox/token")).rejects.toThrow(STT_UNAVAILABLE_MESSAGE);
 });

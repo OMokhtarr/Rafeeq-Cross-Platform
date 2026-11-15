@@ -49,7 +49,7 @@ export function brokerUrl(path: string): string {
 
 /** Fetches a short-lived credential for the given engine from the broker. */
 export async function fetchBrokerKey(
-  path: "/deepgram/token" | "/soniox/token",
+  path: "/soniox/token",
 ): Promise<string> {
   const url = brokerUrl(path);
   const res = await fetch(url, { method: "POST", headers: await brokerHeaders() });

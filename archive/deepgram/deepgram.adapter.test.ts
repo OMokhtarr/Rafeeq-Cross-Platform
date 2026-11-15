@@ -1,4 +1,4 @@
-import { parseStreamMessage } from "../speech-to-text-stream.service";
+import { parseStreamMessage } from "../stt/deepgram.adapter";
 
 describe("parseStreamMessage", () => {
   it("reads the transcript, finality and per-word confidences", () => {

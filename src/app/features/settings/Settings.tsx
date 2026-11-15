@@ -21,11 +21,6 @@ import {
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
 import {
-  RECITE_ENGINE_OPTIONS,
-  DEFAULT_RECITE_ENGINE,
-  type ReciteEngineChoice,
-} from "../../core/services/audio/stt-engine.config";
-import {
   runSync,
   getSyncStatus,
 } from "../../core/services/sync/content-sync.service";
@@ -63,8 +58,6 @@ interface AppSettings {
   reciter: string;
   showTajweedColors: boolean;
   autoNextPage: boolean;
-  /** Recite Mode STT engine. */
-  reciteEngine: ReciteEngineChoice;
   // Quiz
   quizDifficulty: string;
   showHintsDefault: boolean;
@@ -84,7 +77,6 @@ const DEFAULTS: AppSettings = {
   reciter: "husary",
   showTajweedColors: true,
   autoNextPage: false,
-  reciteEngine: DEFAULT_RECITE_ENGINE,
   quizDifficulty: "medium",
   showHintsDefault: true,
   soundEffects: true,
@@ -111,10 +103,6 @@ function loadSettings(): AppSettings {
       const merged = { ...DEFAULTS, ...JSON.parse(raw) } as AppSettings;
       // Migrate retired mushaf kinds (e.g. "qpc_v1") to the current default.
       if (!(merged.mushaf in MUSHAFS)) merged.mushaf = DEFAULT_MUSHAF;
-      // Migrate retired engine values (e.g. the removed "groq"/"auto").
-      if (!RECITE_ENGINE_OPTIONS.some((e) => e.value === merged.reciteEngine)) {
-        merged.reciteEngine = DEFAULT_RECITE_ENGINE;
-      }
       return merged;
     }
   } catch (_) {}
@@ -172,14 +160,6 @@ const ICONS = {
       <circle cx="12" cy="12" r="10" />
       <line x1="2" y1="12" x2="22" y2="12" />
       <path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z" />
-    </SvgIcon>
-  ),
-  mic: (
-    <SvgIcon>
-      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-      <line x1="12" y1="18" x2="12" y2="22" />
-      <line x1="8" y1="22" x2="16" y2="22" />
     </SvgIcon>
   ),
   palette: (
@@ -942,25 +922,6 @@ const Settings: React.FC = () => {
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* ── Recitation (Recite Mode) ── */}
-            <div className="settings-section">
-              <p className="settings-section-title">{ts.sectionRecite}</p>
-              <div className="settings-card">
-                <SelectRow
-                  icon={ICONS.mic}
-                  label={ts.reciteEngine}
-                  desc={ts.reciteEngineDesc}
-                  value={s.reciteEngine}
-                  options={RECITE_ENGINE_OPTIONS.map((e) => ({
-                    value: e.value,
-                    label: lang === "ar" ? e.labelAr : e.labelEn,
-                  }))}
-                  onChange={(v) => set("reciteEngine", v as ReciteEngineChoice)}
-                  night={isNight}
-                />
               </div>
             </div>
 

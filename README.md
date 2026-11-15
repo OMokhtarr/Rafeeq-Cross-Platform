@@ -28,7 +28,7 @@ A cross-platform Quran quiz and viewer app built with React, Ionic, and Capacito
 | Quran Data | [`@quranjs/api`](https://github.com/quranjs/api) SDK + bundled JSON seed |
 | Build Tool | Create React App (react-scripts 5) |
 | Testing | Jest (unit) + Playwright (E2E) |
-| Speech-to-text (recite mode) | Deepgram or Soniox, streamed live; keys issued by the token broker |
+| Speech-to-text (recite mode) | Soniox, streamed live; keys issued by the token broker |
 | Subscriptions (Rafeeq Pro) | [RevenueCat](https://www.revenuecat.com/) Capacitor SDK + Paywall / Customer Center UI |
 | Token broker | Cloudflare Worker in `token-broker/` |
 
@@ -46,7 +46,7 @@ rafeeq/
 │       │   ├── services/
 │       │   │   ├── api/        # Quran SDK client + font loader
 │       │   │   ├── data/       # Quran service, metadata service
-│       │   │   ├── audio/      # Audio caches, speech-to-text (stt/: Deepgram, Soniox, token broker client)
+│       │   │   ├── audio/      # Audio caches, speech-to-text (stt/: Soniox, token broker client)
 │       │   │   ├── quran/      # Recite matching: identify, align, spelling, muqatta'at
 │       │   │   ├── prayer/     # On-device prayer times and alarms
 │       │   │   ├── subscription/ # RevenueCat wrapper (Rafeeq Pro)
@@ -130,10 +130,9 @@ Main routes:
 
 ### Recite Mode and Rafeeq Pro
 
-Recite mode listens through the microphone, streams the audio live to the
-speech engine chosen in Settings (Deepgram or Soniox), and follows the
-recitation word by word, marking mistakes. The engines' keys never ship in
-the app: the token broker in `token-broker/` hands out short-lived tokens.
+Recite mode listens through the microphone, streams the audio live to
+Soniox for speech recognition, and follows the recitation word by word,
+marking mistakes. The Soniox key never ships in the app: the token broker in `token-broker/` hands out short-lived tokens.
 
 Recite mode is the paid **Rafeeq Pro** feature. RevenueCat holds the
 subscription (anonymous app-user id, no login); the app shows RevenueCat's
