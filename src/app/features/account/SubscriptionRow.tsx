@@ -20,6 +20,7 @@ import { useLang } from "../../core/context/LanguageContext";
 import { useSubscription } from "../../core/context/SubscriptionContext";
 import { useStartSubscribe } from "../subscription/useStartSubscribe";
 import ProStar from "../subscription/ProStar";
+import { tourAttr } from "../onboarding/tourCatalog";
 import type { ProPlan } from "../../core/services/subscription/revenuecat.service";
 import type { AppStrings, Lang } from "../../core/i18n/strings";
 
@@ -109,7 +110,7 @@ const SubscriptionRow: React.FC = () => {
   return (
     <>
       <p className="ac-section-label">{ts.accountTitle}</p>
-      <section className={`ac-card ac-pro${isPro ? " ac-pro--active" : ""}`}>
+      <section className={`ac-card ac-pro${isPro ? " ac-pro--active" : ""}`} {...tourAttr("account.sync.pro")}>
         <div className="ac-pro-head">
           <ProStar className="ac-pro-star" />
           <div className="ac-pro-text">

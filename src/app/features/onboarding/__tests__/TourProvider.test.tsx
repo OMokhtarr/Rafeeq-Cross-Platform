@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { act } from "react-dom/test-utils";
 import { MemoryRouter } from "react-router-dom";
 import { TourProvider, useActiveTour, useTours } from "../TourProvider";
+import { RELEASE_FEATURE_KEYS } from "../tourCatalog";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -36,7 +37,7 @@ it("reports the tour on screen, so a page can pause what would interrupt it", ()
   act(() =>
     root.render(
       <MemoryRouter>
-        <TourProvider initial={{ welcomeDone: true, seenTours: [], seenReleases: [] }}>
+        <TourProvider initial={{ welcomeDone: true, seenTours: [], seenReleases: RELEASE_FEATURE_KEYS }}>
           <Page />
         </TourProvider>
       </MemoryRouter>,

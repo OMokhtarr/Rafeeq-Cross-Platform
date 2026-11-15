@@ -43,8 +43,11 @@ export type TourId =
   | "azkarCategory"
   | "hifzSetup"
   | "hifzDashboard"
+  | "hifzDashboard.today"
   | "hifzSessions"
   | "more"
+  | "feelings"
+  | "feelings.detail"
   | "prayerTimes.setup"
   | "prayerTimes"
   | "prayerTimes.alarms"
@@ -52,7 +55,8 @@ export type TourId =
   | "bookmarks"
   | "settings"
   | "tafsirLibrary"
-  | "account";
+  | "account"
+  | "account.sync";
 
 export const TOURS: Record<TourId, TourStep[]> = {
   home: [{ key: "tabs" }, { key: "more" }],
@@ -81,8 +85,13 @@ export const TOURS: Record<TourId, TourStep[]> = {
   azkarCategory: [{ key: "counter" }, { key: "star" }, { key: "swipe", gesture: "swipe" }, { key: "ref" }],
   hifzSetup: [{ key: "add" }, { key: "goal" }, { key: "generate" }],
   hifzDashboard: [{ key: "hero", gesture: "swipe" }, { key: "streak" }, { key: "sessions" }],
+  // Added with the "sessions today" sheet. Its own id so users who have seen
+  // the dashboard tour above still get this step.
+  "hifzDashboard.today": [{ key: "chip" }],
   hifzSessions: [{ key: "done" }, { key: "open" }],
   more: [{ key: "cards" }],
+  feelings: [{ key: "grid" }],
+  "feelings.detail": [{ key: "verse" }, { key: "duas" }],
   // Split so the next-prayer / Qibla / menu steps still play the first time a
   // location exists, rather than being marked seen while only "grant" showed.
   "prayerTimes.setup": [{ key: "grant" }],
@@ -101,6 +110,9 @@ export const TOURS: Record<TourId, TourStep[]> = {
   settings: [{ key: "look", union: true }, { key: "sync" }, { key: "reminders" }, { key: "tours" }],
   tafsirLibrary: [{ key: "library" }, { key: "downloaded" }],
   account: [{ key: "notes" }, { key: "backup" }, { key: "streak" }],
+  // Sign-in and Rafeeq Pro, which came after the tour above. The Pro card
+  // only shows once signed in; its step is skipped until then.
+  "account.sync": [{ key: "identity" }, { key: "pro" }],
 };
 
 export type TourRef = `${TourId}.${string}`;
@@ -153,6 +165,12 @@ export const ALL_RELEASES: Release[] = [
     features: [
       // Ringing needs AlarmManager and a lock-screen activity: Android only.
       { key: "prayerAlarms", art: "qibla", route: "/prayer-times", tourId: "prayerTimes.alarms", platforms: ["android"] },
+    ],
+  },
+  {
+    features: [
+      { key: "feelings", art: "worship", route: "/feelings", tourId: "feelings" },
+      { key: "accountSync", art: "brand", route: "/account", tourId: "account.sync" },
     ],
   },
 ];

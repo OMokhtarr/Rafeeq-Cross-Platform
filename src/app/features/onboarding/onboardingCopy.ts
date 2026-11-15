@@ -148,12 +148,22 @@ const ar: OnboardingCopy = {
       streak: { title: "أيامك المتتالية", body: "اضغط لترى سلسلة أيامك." },
       sessions: { title: "كل الجلسات", body: "اعرض جلسات خطتك وعلّم ما أنجزته." },
     },
+    "hifzDashboard.today": {
+      chip: { title: "جلسات اليوم", body: "اضغط لترى ما أنجزته اليوم، وافتح أي جلسة في المصحف أو اختبر نفسك فيها." },
+    },
     hifzSessions: {
       done: { title: "أنجزتها", body: "علّم الجلسة عند الانتهاء منها." },
       open: { title: "راجع واختبر", body: "افتح الجلسة في المصحف، أو اختبر نفسك فيها بعد إنجازها." },
     },
     more: {
       cards: { title: "المزيد من رفيق", body: "مواقيت الصلاة والقبلة، ومتابع العبادات، ومشاعري، والحساب، والإعدادات." },
+    },
+    feelings: {
+      grid: { title: "كيف تشعر الآن؟", body: "اختر ما تشعر به لتقرأ آيات وأدعية تناسبه." },
+    },
+    "feelings.detail": {
+      verse: { title: "آيات لك", body: "اضغط على الآية لتفتحها في المصحف." },
+      duas: { title: "أدعية", body: "أدعية تقولها في هذا الحال، مع مصدر كل دعاء." },
     },
     "prayerTimes.setup": {
       grant: { title: "موقعك", body: "اسمح بالوصول إلى موقعك لحساب مواقيت الصلاة واتجاه القبلة." },
@@ -191,11 +201,26 @@ const ar: OnboardingCopy = {
       backup: { title: "النسخ الاحتياطي", body: "صدّر بياناتك واستعدها على جهاز آخر." },
       streak: { title: "احمِ سلسلتك", body: "استخدم التجميد لتحافظ على سلسلتك في يوم يفوتك." },
     },
+    "account.sync": {
+      identity: {
+        title: "حسابك",
+        body: "من هنا تسجّل الدخول أو الخروج، وبعد تسجيل الدخول ترى هنا متى تزامنت بياناتك آخر مرة.",
+      },
+      pro: { title: "رفيق برو", body: "اشترك أو أدِر اشتراكك من هنا، ويبقى معك على أي هاتف تسجّل الدخول عليه." },
+    },
   },
   releases: {
     prayerAlarms: {
       title: "منبّهات الصلاة",
       body: "اضبط منبّهات ترنّ قبل الصلاة أو بعدها، كالسحور قبل الفجر، وتتبع المواقيت كل يوم. يمكن تخصيصها لأيام معيّنة أو لرمضان فقط.",
+    },
+    feelings: {
+      title: "مشاعري",
+      body: "اختر ما تشعر به، واقرأ له آيات وأدعية.",
+    },
+    accountSync: {
+      title: "الحساب ورفيق برو",
+      body: "سجّل الدخول ليرتبط بك اشتراك رفيق برو، ومعه تتزامن ملاحظاتك وحفظك ومتابعة العبادات وإعداداتك بين أجهزتك.",
     },
   },
   settings: {
@@ -313,12 +338,22 @@ const en: OnboardingCopy = {
       streak: { title: "Your streak", body: "Tap to see your run of consecutive days." },
       sessions: { title: "All sessions", body: "See every session in your plan and mark what's done." },
     },
+    "hifzDashboard.today": {
+      chip: { title: "Sessions today", body: "Tap to see what you finished today, and open any session in the Quran or quiz yourself on it." },
+    },
     hifzSessions: {
       done: { title: "Mark it done", body: "Tick a session off when you finish it." },
       open: { title: "Review & test", body: "Open a session in the mushaf, or quiz yourself on it once it's done." },
     },
     more: {
       cards: { title: "More of Rafeeq", body: "Prayer times & Qibla, the Worship Tracker, Feelings, Account and Settings." },
+    },
+    feelings: {
+      grid: { title: "How are you feeling?", body: "Pick a feeling to read verses and duas for it." },
+    },
+    "feelings.detail": {
+      verse: { title: "Verses for you", body: "Tap a verse to open it in the Quran." },
+      duas: { title: "Duas", body: "Duas to say at such times, each with its source." },
     },
     "prayerTimes.setup": {
       grant: { title: "Your location", body: "Allow location access to work out prayer times and the Qibla." },
@@ -356,11 +391,26 @@ const en: OnboardingCopy = {
       backup: { title: "Backup", body: "Export your data and restore it on another device." },
       streak: { title: "Protect your streak", body: "Use a freeze to keep your streak on a day you miss." },
     },
+    "account.sync": {
+      identity: {
+        title: "Your account",
+        body: "Sign in or out here. Once you're signed in, this card shows when your data last synced.",
+      },
+      pro: { title: "Rafeeq Pro", body: "Subscribe or manage your subscription here. It follows you to any phone you sign in on." },
+    },
   },
   releases: {
     prayerAlarms: {
       title: "Prayer alarms",
       body: "Set alarms that ring before or after a prayer, like suhoor before Fajr, and follow the prayer times every day. Limit them to certain days or to Ramadan.",
+    },
+    feelings: {
+      title: "Feelings",
+      body: "Pick how you feel and read verses and duas for it.",
+    },
+    accountSync: {
+      title: "Account and Rafeeq Pro",
+      body: "Sign in and Rafeeq Pro stays with your account, and with it your notes, Hifz progress, worship tracker and settings sync across your phones.",
     },
   },
   settings: {

@@ -1271,6 +1271,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
         <div
           className="hifz-stat-chip hifz-stat-chip--tappable hifz-stat-chip-today"
+          {...tourAttr("hifzDashboard.today.chip")}
           role="button"
           tabIndex={0}
           onClick={() => setShowTodayPanel(true)}
@@ -1711,7 +1712,7 @@ const Hifz: React.FC = () => {
   // The sessions view, and setup while editing a plan, register themselves
   // as overlays so Back walks out of them; their tours belong to them.
   usePageTour(["hifzSetup"], { ready: planChecked && view === "setup", overOverlay: plan !== null });
-  usePageTour(["hifzDashboard"], { ready: planChecked && view === "plan" && plan !== null });
+  usePageTour(["hifzDashboard", "hifzDashboard.today"], { ready: planChecked && view === "plan" && plan !== null });
   usePageTour(["hifzSessions"], { ready: planChecked && view === "sessions", overOverlay: true });
   const [chapters, setChapters] = useState<any[]>([]);
   const [showAddSheet, setShowAddSheet] = useState(false);

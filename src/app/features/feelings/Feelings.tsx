@@ -20,6 +20,8 @@ import { IonPage, IonContent } from "@ionic/react";
 import { Redirect, useHistory, useParams } from "react-router-dom";
 import { useLang } from "../../core/context/LanguageContext";
 import BottomNavBar from "../../shared/components/bottom-nav/BottomNavBar";
+import { usePageTour } from "../onboarding/usePageTour";
+import { tourAttr } from "../onboarding/tourCatalog";
 import { FEELINGS } from "../../../data/feelingsData";
 import {
   arabicIndic,
@@ -50,6 +52,7 @@ const Feelings: React.FC = () => {
         : null,
     [feeling]
   );
+  usePageTour([feeling ? "feelings.detail" : "feelings"]);
 
   if (feelingId && !feeling) return <Redirect to="/feelings" />;
 
@@ -84,9 +87,10 @@ const Feelings: React.FC = () => {
               <div className="feelings-container" dir={dir}>
                 <section className="feelings-section">
                   <h2 className="feelings-section-title" lang={lang}>{tf.verses}</h2>
-                  {content.verses.map((v) => (
+                  {content.verses.map((v, i) => (
                     <button
                       key={v.ref}
+                      {...(i === 0 ? tourAttr("feelings.detail.verse") : {})}
                       className="feelings-card feelings-verse"
                       onClick={() =>
                         history.push(`/viewer?page=${v.page}&v=${encodeURIComponent(v.firstKey)}`)
@@ -119,7 +123,10 @@ const Feelings: React.FC = () => {
                 </section>
 
                 <section className="feelings-section">
-                  <h2 className="feelings-section-title" lang={lang}>{tf.duas}</h2>
+                  {/* The heading, not a dua: a long dua's ring would run under the tip card. */}
+                  <h2 className="feelings-section-title" lang={lang} {...tourAttr("feelings.detail.duas")}>
+                    {tf.duas}
+                  </h2>
                   {content.duas.map((d) => (
                     <article key={d.text} className="feelings-card feelings-dua" dir="rtl" lang="ar">
                       <p className="feelings-dua-text">{d.text}</p>
@@ -133,7 +140,7 @@ const Feelings: React.FC = () => {
           ) : (
             <div className="feelings-container" dir={dir}>
               <h1 className="feelings-prompt" lang={lang}>{tf.prompt}</h1>
-              <div className="feelings-grid">
+              <div className="feelings-grid" {...tourAttr("feelings.grid")}>
                 {FEELINGS.map((f) => (
                   <button
                     key={f.id}

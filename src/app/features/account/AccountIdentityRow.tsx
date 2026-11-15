@@ -14,6 +14,7 @@ import React from "react";
 import { useAuth } from "../../core/context/AuthContext";
 import { useLang } from "../../core/context/LanguageContext";
 import { useSync } from "../../core/context/SyncContext";
+import { tourAttr } from "../onboarding/tourCatalog";
 
 const PROVIDER_LABEL = { google: "Google", apple: "Apple" } as const;
 
@@ -45,7 +46,7 @@ const AccountIdentityRow: React.FC<AccountIdentityRowProps> = ({ onDelete }) => 
     return (
       <>
         <p className="ac-section-label">{ta.sectionTitle}</p>
-        <section className="ac-card ac-acct">
+        <section className="ac-card ac-acct" {...tourAttr("account.sync.identity")}>
           <div className="ac-acct-head">
             <span className="ac-acct-avatar ac-acct-avatar--empty" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +86,7 @@ const AccountIdentityRow: React.FC<AccountIdentityRowProps> = ({ onDelete }) => 
   return (
     <>
       <p className="ac-section-label">{ta.sectionTitle}</p>
-      <section className="ac-card ac-acct">
+      <section className="ac-card ac-acct" {...tourAttr("account.sync.identity")}>
         <div className="ac-acct-head">
           <span className="ac-acct-avatar" aria-hidden="true">
             {Array.from(displayName)[0]?.toLocaleUpperCase()}

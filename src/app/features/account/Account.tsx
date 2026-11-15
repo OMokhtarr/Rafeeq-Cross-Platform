@@ -42,7 +42,7 @@ type ModalType =
 const LEGAL_BASE_URL = "https://omokhtarr.github.io/Rafeeq-Cross-Platform";
 
 const Account: React.FC = () => {
-  usePageTour(["account"]);
+  usePageTour(["account", "account.sync"]);
   const history = useHistory();
   const { lang, isRTL, t: strings } = useLang();
   const { active: syncActive } = useSync();
