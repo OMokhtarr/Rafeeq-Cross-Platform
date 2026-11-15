@@ -51,19 +51,42 @@ export function cardPlacement(target: Box, viewportHeight: number): "top" | "bot
   return target.top + target.height / 2 > viewportHeight * 0.6 ? "top" : "bottom";
 }
 
+/** Space between the ring and its target. */
+export const RING_PAD = 6;
+/** The ring's gold border, drawn outside its box (box-shadow spread). */
+const RING_LINE = 2;
+/** Room kept between the ring and a screen edge: the border + 1px. */
+const RING_EDGE = RING_LINE + 1;
+/** Phones round their screen corners (a Redmi Note 11 Pro by 37 CSS px). A
+ *  ring reaching this close to the bottom keeps CORNER_EDGE from the sides
+ *  (and from the bottom, without a gesture bar) so the rounding can't clip
+ *  its 12px corners. */
+const CORNER_ZONE = 40;
+const CORNER_EDGE = 10;
+
 /**
- * The spotlight ring: `pad` px outside the target, but pulled in on any side
- * that would cross `bounds` (the screen minus the system bars), keeping `edge`
- * px clear for the ring's border. Without this a full-width header, the
+ * The spotlight ring: RING_PAD outside the target, but pulled in on any side
+ * that would leave the visible screen. Without this a full-width header, the
  * bottom nav or a button flush with a screen edge has part of its ring drawn
- * off-screen or under the status bar. A target wholly outside `bounds` keeps
- * the plain padded ring.
+ * off-screen, under the status bar or into a rounded screen corner.
+ *
+ * `safe` is the screen minus the system bars. The ring may dip 1px into the
+ * gesture bar (its line then sits just below a bottom bar's labels and above
+ * the gesture handle), but stays out of the status bar, whose icons would
+ * cover it. A full-width bar gets no padding above or below, so the ring lies
+ * along the bar's own border instead of leaving a strip of page between them.
+ * A target wholly off the visible screen keeps the plain padded ring.
  */
-export function ringBox(target: Box, bounds: Box, pad: number, edge: number): Box {
-  const top = Math.max(target.top - pad, bounds.top + edge);
-  const left = Math.max(target.left - pad, bounds.left + edge);
-  const bottom = Math.min(target.top + target.height + pad, bounds.top + bounds.height - edge);
-  const right = Math.min(target.left + target.width + pad, bounds.left + bounds.width - edge);
+export function ringBox(target: Box, safe: Box, screen: { width: number; height: number }): Box {
+  const pad = RING_PAD;
+  const fullWidth = target.left <= safe.left + 1 && target.left + target.width >= safe.left + safe.width - 1;
+  const padY = fullWidth ? 0 : pad;
+  const top = Math.max(target.top - padY, safe.top + RING_EDGE);
+  const bottomLimit = Math.min(safe.top + safe.height + 1, screen.height - CORNER_EDGE);
+  const bottom = Math.min(target.top + target.height + padY, bottomLimit);
+  const sideEdge = bottom + RING_LINE > screen.height - CORNER_ZONE ? CORNER_EDGE : RING_EDGE;
+  const left = Math.max(target.left - pad, safe.left + sideEdge);
+  const right = Math.min(target.left + target.width + pad, safe.left + safe.width - sideEdge);
   if (bottom <= top || right <= left) {
     return { top: target.top - pad, left: target.left - pad, width: target.width + pad * 2, height: target.height + pad * 2 };
   }
