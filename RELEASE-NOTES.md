@@ -7,6 +7,34 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
+## 1.1.0 (versionCode 20) — 2026-11-15
+
+**Release name:** `20 (1.1.0)`
+
+Changes since 19. Recite mode now runs only on Soniox, which users can't see,
+so it isn't mentioned. The Pro gate is still off, so recite mode stays free.
+
+```
+<en-US>
+• Hifz: tap "Sessions Today" to see today's sessions and open any of them in the Quran or a quiz
+• Quick Select: a new card plays from the current page to the end of the surah
+• The Subscription card on the Account page shows your plan and renewal date
+• New guided tours for Feelings, today's sessions and sign-in
+• More reliable sync between your phones
+• Fixed the exit message appearing when you tap near the edge of the screen
+</en-US>
+<ar>
+• الحفظ: اضغط على «جلسات اليوم» لعرض جلسات اليوم وفتح أي منها في المصحف أو في اختبار
+• اختيار سريع: بطاقة جديدة للتلاوة من الصفحة الحالية إلى آخر السورة
+• بطاقة الاشتراك في صفحة الحساب تعرض خطتك وموعد التجديد
+• جولات تعريفية جديدة لصفحة مشاعري وجلسات اليوم وتسجيل الدخول
+• مزامنة أكثر موثوقية بين أجهزتك
+• إصلاح ظهور رسالة الخروج عند اللمس قرب حافة الشاشة
+</ar>
+```
+
+---
+
 ## 1.1.0 (versionCode 19) — 2026-11-08
 
 **Release name:** `19 (1.1.0)`
