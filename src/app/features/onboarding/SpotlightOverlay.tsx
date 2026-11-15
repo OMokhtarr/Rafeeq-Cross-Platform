@@ -13,9 +13,6 @@ import type { Gesture, TourId, TourStep } from "./tourCatalog";
 import { Box, cardPlacement, resolveTarget, ringBox } from "./tourLogic";
 import "./onboarding.css";
 
-const PAD = 6;
-/** Room kept between the ring and a screen edge: the 2px gold border + 1px. */
-const EDGE = 3;
 const FIND_TIMEOUT_MS = 1500;
 const FIND_POLL_MS = 100;
 
@@ -145,7 +142,9 @@ export const SpotlightOverlay: React.FC<Props> = ({
   }, [visible]);
 
   const placement = box ? cardPlacement(box, window.innerHeight) : "bottom";
-  const ring = box ? ringBox(box, visibleBounds(safeRef.current), PAD, EDGE) : null;
+  const ring = box
+    ? ringBox(box, visibleBounds(safeRef.current), { width: window.innerWidth, height: window.innerHeight })
+    : null;
   const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return createPortal(

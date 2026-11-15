@@ -63,37 +63,52 @@ describe("cardPlacement", () => {
 
 describe("ringBox", () => {
   // A 400×800 phone with a 24px status bar and a 16px gesture bar.
+  const screen = { width: 400, height: 800 };
   const safe = { top: 24, left: 0, width: 400, height: 760 };
   it("pads a target that sits clear of every edge", () =>
-    expect(ringBox({ top: 100, left: 100, width: 50, height: 40 }, safe, 6, 3)).toEqual({
+    expect(ringBox({ top: 100, left: 100, width: 50, height: 40 }, safe, screen)).toEqual({
       top: 94,
       left: 94,
       width: 62,
       height: 52,
     }));
-  it("keeps a full-width header's ring below the status bar and inside both sides", () =>
-    expect(ringBox({ top: 0, left: 0, width: 400, height: 80 }, safe, 6, 3)).toEqual({
+  it("hugs a full-width header below the status bar, without a strip under it", () =>
+    expect(ringBox({ top: 0, left: 0, width: 400, height: 80 }, safe, screen)).toEqual({
       top: 27,
       left: 3,
       width: 394,
-      height: 59,
+      height: 53,
     }));
-  it("keeps a bottom bar's ring above the gesture bar", () =>
-    expect(ringBox({ top: 720, left: 0, width: 400, height: 80 }, safe, 6, 3)).toEqual({
-      top: 714,
-      left: 3,
-      width: 394,
-      height: 67,
+  it("runs a bottom bar's ring along its top border, just into the gesture bar, clear of the corners", () =>
+    expect(ringBox({ top: 720, left: 0, width: 400, height: 80 }, safe, screen)).toEqual({
+      top: 720,
+      left: 10,
+      width: 380,
+      height: 65,
+    }));
+  it("keeps a bottom-corner tab's ring out of the rounded screen corner", () =>
+    expect(ringBox({ top: 723, left: 0, width: 65, height: 54 }, safe, screen)).toEqual({
+      top: 717,
+      left: 10,
+      width: 61,
+      height: 66,
+    }));
+  it("keeps clear of the bottom corners on a screen without a gesture bar", () =>
+    expect(ringBox({ top: 720, left: 0, width: 400, height: 80 }, { ...safe, height: 776 }, screen)).toEqual({
+      top: 720,
+      left: 10,
+      width: 380,
+      height: 70,
     }));
   it("pulls in only the side that touches an edge", () =>
-    expect(ringBox({ top: 40, left: 352, width: 44, height: 44 }, safe, 6, 3)).toEqual({
+    expect(ringBox({ top: 40, left: 352, width: 44, height: 44 }, safe, screen)).toEqual({
       top: 34,
       left: 346,
       width: 51,
       height: 56,
     }));
   it("leaves the ring padded when the target is wholly outside the visible area", () =>
-    expect(ringBox({ top: 0, left: 0, width: 400, height: 10 }, safe, 6, 3)).toEqual({
+    expect(ringBox({ top: 0, left: 0, width: 400, height: 10 }, safe, screen)).toEqual({
       top: -6,
       left: -6,
       width: 412,

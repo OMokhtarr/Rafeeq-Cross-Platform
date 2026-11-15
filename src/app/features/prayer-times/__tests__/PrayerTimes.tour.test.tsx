@@ -7,6 +7,7 @@ import { LanguageProvider } from "../../../core/context/LanguageContext";
 import { TourProvider } from "../../onboarding/TourProvider";
 import { ONBOARDING_COPY } from "../../onboarding/onboardingCopy";
 import { ONBOARDING_KEY } from "../../onboarding/onboardingStore";
+import { RELEASE_FEATURE_KEYS } from "../../onboarding/tourCatalog";
 
 // The with-location page only exists on a device, so the platform pieces are
 // stood in for; the page, its tour wiring and the spotlight are the real ones.
@@ -80,7 +81,7 @@ it("explains the location button, then once a location is granted walks next pra
     root.render(
       <MemoryRouter>
         <LanguageProvider>
-          <TourProvider initial={{ welcomeDone: true, seenTours: [], seenReleases: [] }}>
+          <TourProvider initial={{ welcomeDone: true, seenTours: [], seenReleases: RELEASE_FEATURE_KEYS }}>
             <PrayerTimes />
           </TourProvider>
         </LanguageProvider>
