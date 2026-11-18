@@ -31,6 +31,7 @@ import {
 import { Segmented } from "../../../../../../shared/components/controls/Segmented";
 import { usePageTour } from "../../../../../onboarding/usePageTour";
 import { tourAttr } from "../../../../../onboarding/tourCatalog";
+import { clearQuizSession } from "../../../../quiz-session";
 import "./MutashabihatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -170,6 +171,8 @@ const MutashabihatSetup: React.FC = () => {
       value: JSON.stringify(config),
     });
 
+    // A new quiz replaces any quiz left in progress.
+    clearQuizSession();
     history.replace("/mutashabihat-test");
   };
 

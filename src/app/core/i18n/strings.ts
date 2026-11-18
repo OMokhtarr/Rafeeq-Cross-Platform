@@ -23,6 +23,8 @@ export interface AppStrings {
     more: string;
     settings: string;
     comingSoon: string;
+    /** Screen-reader note on the Quiz tab while a quiz is in progress. */
+    quizInProgress: string;
   };
 
   home: {
@@ -307,6 +309,14 @@ export interface AppStrings {
     mutashabihatDesc: string;
     nehayatTitle: string;
     nehayatDesc: string;
+    /** Card for the quiz left in progress (shown above the quiz cards). */
+    resumeTitle: string;
+    /** "{n}" = current question, "{total}" = question count. */
+    resumeProgress: string;
+    /** Shown when starting another quiz while one is in progress. */
+    replaceConfirm: string;
+    replaceStart: string;
+    replaceCancel: string;
   };
 
   quizSetup: {
@@ -766,6 +776,7 @@ const ar: AppStrings = {
     more: "المزيد",
     settings: "إعدادات",
     comingSoon: "قريباً...",
+    quizInProgress: "اختبار قيد التقدّم",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
@@ -1049,6 +1060,11 @@ const ar: AppStrings = {
     mutashabihatDesc: "ميّز بين الآيات المتشابهة وأكمل الآية الصحيحة",
     nehayatTitle: "أكمل النهايات",
     nehayatDesc: "اختر الخاتمة الصحيحة للآية بعد علامة الوقف",
+    resumeTitle: "تابع اختبارك",
+    resumeProgress: "السؤال {n} من {total}",
+    replaceConfirm: "لديك اختبار لم تُكمله. بدء اختبار جديد سيُلغي تقدّمك فيه.",
+    replaceStart: "اختبار جديد",
+    replaceCancel: "إلغاء",
   },
   quizSetup: {
     akmelTitle: "أكمل الآية",
@@ -1534,6 +1550,7 @@ const en: AppStrings = {
     more: "More",
     settings: "Settings",
     comingSoon: "Coming soon...",
+    quizInProgress: "quiz in progress",
   },
   home: {
     bismillah: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
@@ -1818,6 +1835,11 @@ const en: AppStrings = {
     mutashabihatDesc: "Distinguish and complete similar-opening verses",
     nehayatTitle: "Complete the Ending",
     nehayatDesc: "Choose the correct ending of the verse after its Waqf sign",
+    resumeTitle: "Continue your quiz",
+    resumeProgress: "Question {n} of {total}",
+    replaceConfirm: "You have a quiz in progress. Starting a new one will discard it.",
+    replaceStart: "New quiz",
+    replaceCancel: "Cancel",
   },
   quizSetup: {
     akmelTitle: "Complete the Verse",

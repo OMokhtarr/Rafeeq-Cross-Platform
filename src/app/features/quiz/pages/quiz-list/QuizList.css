@@ -98,6 +98,37 @@ ion-content::part(scroll) {
   line-height: 1.5;
 }
 
+/* ── Continue card (quiz in progress) ──────── */
+/* Same card as the quizzes below; its progress bar mirrors the quiz's own
+   header bar so it reads as the quiz the user left. */
+.ql-resume-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ql-resume-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-progress-track);
+  overflow: hidden;
+}
+
+.ql-resume-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-quiz);
+}
+
+.ql-resume-count {
+  font-family: var(--font-arabic);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* ── Bottom spacer ── */
 .ql-bottom-spacer {

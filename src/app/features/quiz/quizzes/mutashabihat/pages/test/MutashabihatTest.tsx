@@ -32,6 +32,11 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
+import { clearQuizSession } from "../../../../quiz-session";
+import {
+  useRestoredQuizSession,
+  usePersistQuizSession,
+} from "../../../../hooks/useQuizSession";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import { hiddenCardTokens } from "../../../../hooks/quizReciteProgress";
 import type { MutashabihatConfig } from "../../../../../../shared/models/verse.model";
@@ -59,6 +64,19 @@ const ReciteStatus: React.FC<ReciteStatusProps> = ({ recite, tt }) => (
   </div>
 );
 
+type MstQuestion = ReturnType<typeof buildMutashabihatQuestion>;
+
+/** What this quiz saves to come back to after a tab switch. */
+interface MstProgress {
+  idx: number;
+  userAnswer: string;
+  answered: boolean;
+  correct: boolean;
+  skipped: boolean;
+  hintLevel: number;
+  score: number;
+}
+
 const SETTINGS_KEY = "rafiq_settings_v1";
 function isSoundOn(): boolean {
   try {
@@ -74,22 +92,31 @@ const MutashabihatTest: React.FC = () => {
   const tt = t.quizTest;
   const [presentToast] = useIonToast();
 
-  const [questions, setQuestions] = useState<
-    ReturnType<typeof buildMutashabihatQuestion>[]
-  >([]);
-  const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // A quiz left for another tab comes back exactly where it was.
+  const restored = useRestoredQuizSession<MstQuestion, MstProgress>("mutashabihat");
+  const saved = restored?.progress;
+
+  const [questions, setQuestions] = useState<MstQuestion[]>(restored?.questions ?? []);
+  const [idx, setIdx] = useState(saved?.idx ?? 0);
+  const [loading, setLoading] = useState(!restored);
   const [error, setError] = useState<string | null>(null);
-  const [userAnswer, setUserAnswer] = useState("");
-  const [answered, setAnswered] = useState(false);
-  const [correct, setCorrect] = useState(false);
-  const [skipped, setSkipped] = useState(false);
-  const [hintLevel, setHintLevel] = useState(0);
+  const [userAnswer, setUserAnswer] = useState(saved?.userAnswer ?? "");
+  const [answered, setAnswered] = useState(saved?.answered ?? false);
+  const [correct, setCorrect] = useState(saved?.correct ?? false);
+  const [skipped, setSkipped] = useState(saved?.skipped ?? false);
+  const [hintLevel, setHintLevel] = useState(saved?.hintLevel ?? 0);
   const [showContext, setShowContext] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(saved?.score ?? 0);
   const [selectedVerseIdx, setSelectedVerseIdx] = useState(0); // 0 = target verse
+
+  usePersistQuizSession<MstQuestion, MstProgress>(
+    "mutashabihat",
+    questions,
+    { idx, userAnswer, answered, correct, skipped, hintLevel, score },
+    quizComplete,
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
@@ -113,6 +140,7 @@ const MutashabihatTest: React.FC = () => {
 
   // ── Load config + build questions ─────────────────────────────────────────
   useEffect(() => {
+    if (restored) return;
     let cancelled = false;
 
     const run = async () => {
@@ -747,7 +775,10 @@ const MutashabihatTest: React.FC = () => {
           <QuizExitModal
             isOpen={showExitModal}
             onCancel={() => setShowExitModal(false)}
-            onConfirm={() => history.replace("/quiz-list")}
+            onConfirm={() => {
+              clearQuizSession();
+              history.replace("/quiz-list");
+            }}
           />
         </div>
       </IonContent>

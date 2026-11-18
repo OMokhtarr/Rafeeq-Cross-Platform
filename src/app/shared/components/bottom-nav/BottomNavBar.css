@@ -96,6 +96,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative; /* anchors .rfq-tab-dot */
   background: transparent;
   transition:
     background var(--transition-fast, 0.15s ease),
@@ -104,6 +105,24 @@
 
 [data-theme="day"] .rfq-tab-icon-box {
   background: transparent;
+}
+
+/* Quiz in progress: a solid dot on the icon's top corner, ringed in the bar's
+   own background so it reads apart from the icon stroke. */
+.rfq-tab-dot {
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-quiz);
+  box-shadow: 0 0 0 2px #0a0a0a;
+  pointer-events: none;
+}
+
+[data-theme="day"] .rfq-tab-dot {
+  box-shadow: 0 0 0 2px #ffffff;
 }
 
 .rfq-tab-icon-box svg {
