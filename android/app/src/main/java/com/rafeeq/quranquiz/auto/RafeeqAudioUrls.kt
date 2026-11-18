@@ -319,6 +319,39 @@ object RafeeqAudioUrls {
         100, 6, 103, 1, 106, 1, 109, 1, 112, 1, 115, 1,
     )
 
+    // Madani 1405 (Tajweed) breaks these 25 pages differently from PAGE_STARTS. Flat triples
+    // [page, sura, aya, ...]. Mirrors PAGE_STARTS_1405_OVERRIDES in
+    // src/app/core/services/data/metadata.service.ts (a sync test compares them).
+    private val PAGE_STARTS_1405_OVERRIDES: IntArray = intArrayOf(
+        121, 5, 77, 122, 5, 83, 123, 5, 90, 145, 6, 132, 532, 55, 17,
+        533, 55, 41, 534, 55, 68, 565, 68, 16, 568, 69, 35, 570, 70, 40,
+        576, 74, 18, 584, 79, 16, 586, 81, 1, 588, 83, 7, 589, 83, 35,
+        590, 85, 1, 592, 87, 16, 593, 89, 1, 594, 89, 24, 595, 91, 1,
+        596, 92, 15, 597, 95, 1, 598, 97, 1, 599, 98, 8, 600, 100, 10,
+    )
+
+    /** Shared prefs file + key through which RafeeqAutoPlugin hands the layout to the service. */
+    const val PAGE_LAYOUT_PREFS = "rafeeq_player"
+    const val KEY_PAGE_LAYOUT_1405 = "page_layout_1405"
+
+    /** True when the Madani 1405 (Tajweed) mushaf is selected. Set from the plugin or, on a
+     *  cold start with the app never opened, from the persisted pref by the service. */
+    @Volatile var layout1405: Boolean = false
+
+    /** First verse of [page] as (sura, aya), honouring the active layout. */
+    private fun startOf(page: Int): Pair<Int, Int> {
+        if (layout1405) {
+            var i = 0
+            while (i < PAGE_STARTS_1405_OVERRIDES.size) {
+                if (PAGE_STARTS_1405_OVERRIDES[i] == page) {
+                    return Pair(PAGE_STARTS_1405_OVERRIDES[i + 1], PAGE_STARTS_1405_OVERRIDES[i + 2])
+                }
+                i += 3
+            }
+        }
+        return Pair(PAGE_STARTS[page * 2], PAGE_STARTS[page * 2 + 1])
+    }
+
     /** Mushaf page (1..604) containing verse {sura}:{aya}. Binary search over PAGE_STARTS,
      *  mirroring estimatePageForVerse in metadata.service.ts. */
     fun estimatePageForVerse(sura: Int, aya: Int): Int {
@@ -327,8 +360,7 @@ object RafeeqAudioUrls {
         var answer = 1
         while (lo <= hi) {
             val mid = (lo + hi) / 2
-            val pSura = PAGE_STARTS[mid * 2]
-            val pAya = PAGE_STARTS[mid * 2 + 1]
+            val (pSura, pAya) = startOf(mid)
             // start <= {sura,aya}
             if (pSura < sura || (pSura == sura && pAya <= aya)) {
                 answer = mid

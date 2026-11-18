@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { DrivingMode } from "../native/driving-mode.plugin";
 import {
   fetchVersesByPage,
   fetchVersesByJuz,
@@ -23,6 +25,7 @@ import {
   getSurahNameEnglish,
   estimatePageForVerse,
   setActivePageLayout,
+  type PageLayout,
 } from "./metadata.service";
 import {
   MUSHAFS,
@@ -858,7 +861,17 @@ export function readSelectedMushaf(): MushafKind {
  */
 export async function applyMushafSelection(kind: MushafKind): Promise<void> {
   setActivePageLayout(layoutFor(kind));
+  syncNativePageLayout(layoutFor(kind));
   await clearDerivedPageCache();
+}
+
+/**
+ * Tell the Android Auto service which page layout is active. Fire-and-forget:
+ * only Android has the native method, and a failure must never affect the app.
+ */
+export function syncNativePageLayout(layout: PageLayout): void {
+  if (Capacitor.getPlatform() !== "android") return;
+  DrivingMode.setPageLayout({ layout }).catch(() => {});
 }
 
 async function getChaptersFromMeta(): Promise<any[]> {

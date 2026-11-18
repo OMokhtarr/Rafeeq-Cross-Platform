@@ -116,6 +116,23 @@ class RafeeqAutoPlugin : Plugin() {
     // ── JS → Native ────────────────────────────────────────────────────────────
 
     /**
+     * Called by JS whenever the selected mushaf changes (and once at boot). Persists the page
+     * layout so RafeeqMediaService can read it on a cold start from Android Auto, and applies
+     * it to the in-process page lookup immediately.
+     */
+    @PluginMethod
+    fun setPageLayout(call: PluginCall) {
+        val is1405 = call.getString("layout") == "1405"
+        RafeeqAudioUrls.layout1405 = is1405
+        context.getSharedPreferences(RafeeqAudioUrls.PAGE_LAYOUT_PREFS, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(RafeeqAudioUrls.KEY_PAGE_LAYOUT_1405, is1405)
+            .apply()
+        call.resolve()
+    }
+
+
+    /**
      * Called by JS (PlaybackContext) as soon as the carAction listener is registered.
      * Flushes any event that arrived before JS was ready.
      */

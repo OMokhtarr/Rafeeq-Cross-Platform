@@ -1,4 +1,5 @@
 import { registerPlugin } from "@capacitor/core";
+import type { PageLayout } from "../data/metadata.service";
 
 export interface ReciterItem {
   id: string;
@@ -171,6 +172,10 @@ export interface DrivingModePlugin {
   /** Play a one-shot intro (bismillah); a 'nativeIntroEnded' carAction follows. */
   playNativeIntro(options: { url: string }): Promise<void>;
 
+  /** Tell native which mushaf page layout is active (Android only), so car playback places
+   *  verses on the same pages as the app. Persisted natively for cold starts. */
+  setPageLayout(options: { layout: PageLayout }): Promise<void>;
+
   addListener(
     event: "carAction",
     handler: (data: CarActionEvent) => void,
@@ -200,6 +205,7 @@ export const DrivingMode = registerPlugin<DrivingModePlugin>("RafeeqAuto", {
       playing: false,
     }),
     playNativeIntro: async () => {},
+    setPageLayout: async () => {},
     addListener: async (_event: string, _handler: () => void) => ({ remove: () => {} }),
     removeAllListeners: async () => {},
   },

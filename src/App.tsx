@@ -5,12 +5,14 @@ import { Route, Redirect, useLocation, useHistory } from "react-router-dom";
 import { App as CapApp } from "@capacitor/app";
 import {
   initMetadata,
+  getActivePageLayout,
   setActivePageLayout,
 } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
   seedTextCorpus,
   readSelectedMushaf,
+  syncNativePageLayout,
 } from "./app/core/services/data/quran.service";
 import { layoutFor } from "./app/core/services/api/mushaf.config";
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
@@ -240,6 +242,7 @@ const App: React.FC = () => {
       // Metadata is cache-first and falls back to static page starts, so it is
       // safe to start regardless of connectivity.
       setActivePageLayout(layoutFor(readSelectedMushaf()));
+      syncNativePageLayout(getActivePageLayout());
       initMetadata().catch(() => {});
 
       // Only the *preloads* need the network. navigator.onLine can't be trusted

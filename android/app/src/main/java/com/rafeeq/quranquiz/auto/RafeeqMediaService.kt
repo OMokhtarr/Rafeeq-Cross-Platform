@@ -278,6 +278,7 @@ class RafeeqMediaService : MediaBrowserServiceCompat() {
         // (UninitializedPropertyAccessException).
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        RafeeqAudioUrls.layout1405 = prefs.getBoolean(RafeeqAudioUrls.KEY_PAGE_LAYOUT_1405, false)
         createNotificationChannel()
         buildMediaSession()
         buildPlayer()

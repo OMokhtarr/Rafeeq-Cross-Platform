@@ -3,6 +3,8 @@
  * differently from the 1421 layout every other mushaf shares.
  */
 
+import * as fs from "fs";
+import * as path from "path";
 import {
   estimatePageForVerse,
   getActivePageLayout,
@@ -60,5 +62,26 @@ describe("page starts per layout", () => {
     expect(getSuraForPage(586)).toBe(80);
     setActivePageLayout("1405");
     expect(getSuraForPage(586)).toBe(81);
+  });
+});
+
+describe("Android Auto 1405 overrides", () => {
+  it("matches the Android Auto 1405 overrides entry for entry", () => {
+    const kt = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../../../android/app/src/main/java/com/rafeeq/quranquiz/auto/RafeeqAudioUrls.kt",
+      ),
+      "utf8",
+    );
+    const body = kt.match(/PAGE_STARTS_1405_OVERRIDES: IntArray = intArrayOf\(([^)]*)\)/);
+    expect(body).not.toBeNull();
+    const nums = body![1].split(",").map((s) => s.trim()).filter(Boolean).map(Number);
+    expect(nums).toHaveLength(25 * 3);
+    const actual: Record<number, string> = {};
+    for (let i = 0; i < nums.length; i += 3) {
+      actual[nums[i]] = `${nums[i + 1]}:${nums[i + 2]}`;
+    }
+    expect(actual).toEqual(OVERRIDES_1405);
   });
 });
