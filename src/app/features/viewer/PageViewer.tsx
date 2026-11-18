@@ -37,6 +37,8 @@ import { useWakeLock } from "../../core/hooks/useWakeLock";
 import { useReciteMode } from "../../core/hooks/useReciteMode";
 import { useFeedbackBeep } from "../../core/hooks/useFeedbackBeep";
 import { useSheetDrag } from "../../core/hooks/useSheetDrag";
+import { useHoldPress, HOLD_PRESS_MS } from "../../core/hooks/useHoldPress";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { registerOverlay } from "../../core/utils/overlay-registry";
 import VerseActionSheet from "../../shared/components/verse-action-sheet/VerseActionSheet";
 import { isPageBookmarked } from "../../core/services/storage/notes.service";
@@ -144,7 +146,6 @@ const PageViewer: React.FC = () => {
 
   // Long‑press / short‑tap on the play button
   const [reciteMode, setReciteMode] = useState(false);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
   const sheetOpenTimeRef = useRef<number>(0);
   const closePlaybackSheet = useCallback(() => setPlaybackSheetOpen(false), []);
@@ -176,19 +177,18 @@ const PageViewer: React.FC = () => {
 
   const beep = useFeedbackBeep();
 
-  const handlePlayPressStart = useCallback(() => {
-    longPressTimerRef.current = setTimeout(() => {
-      const next = !reciteMode;
-      if (next) {
-        queue.stop();
-        recite.arm(currentPage, verses);
-      } else {
-        recite.disarm();
-      }
-      setReciteMode(next);
-      longPressTimerRef.current = null;
-    }, 800);
-  }, [queue, recite, currentPage, verses, reciteMode]);
+  // Hold: switch between play and recite mode.
+  const handlePlayHold = () => {
+    Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+    const next = !reciteMode;
+    if (next) {
+      queue.stop();
+      recite.arm(currentPage, verses);
+    } else {
+      recite.disarm();
+    }
+    setReciteMode(next);
+  };
 
   // Starting to listen is Rafeeq Pro; arming recite mode and stopping are free.
   const { locked: reciteLocked, requirePro } = useProGate();
@@ -214,22 +214,22 @@ const PageViewer: React.FC = () => {
     }
   }, [recite.status, beep]);
 
-  const handlePlayPressEnd = useCallback(() => {
-    if (longPressTimerRef.current !== null) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-      if (reciteMode) {
-        if (recite.status === "recording") {
-          recite.stopRecording();
-        } else {
-          requirePro(() => recite.startRecording());
-        }
+  // Tap: open playback settings, or start/stop listening in recite mode.
+  const handlePlayTap = () => {
+    if (reciteMode) {
+      if (recite.status === "recording") {
+        recite.stopRecording();
       } else {
-        sheetOpenTimeRef.current = Date.now();
-        setPlaybackSheetOpen(true);
+        requirePro(() => recite.startRecording());
       }
+    } else {
+      sheetOpenTimeRef.current = Date.now();
+      setPlaybackSheetOpen(true);
     }
-  }, [reciteMode, recite, requirePro]);
+  };
+
+  const playPress = useHoldPress({ onTap: handlePlayTap, onHold: handlePlayHold });
+  const playHoldClass = playPress.holding ? " play-button--holding" : "";
 
   // playbackVerse: static grey highlight tracking the currently playing verse
   const [playbackVerse, setPlaybackVerse] = useState<string | null>(null);
@@ -806,29 +806,17 @@ const PageViewer: React.FC = () => {
           }`}
         >
           {/* ── Toolbar ── */}
-          <div className="top-toolbar">
+          <div
+            className="top-toolbar"
+            style={{ "--hold-ms": `${HOLD_PRESS_MS}ms` } as React.CSSProperties}
+          >
             {recite.status === "recording" ? (
               <div className="recite-recording-bar">
                 <button
                   type="button"
                   {...tourAttr("viewer.reciteBar.stop")}
-                  className="toolbar-button play-button play-button--recite play-button--listening"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressStart();
-                  }}
-                  onPointerUp={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressEnd();
-                  }}
-                  onPointerLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressEnd();
-                  }}
-                  onClick={(e) => e.preventDefault()}
+                  className={`toolbar-button play-button play-button--recite play-button--listening${playHoldClass}`}
+                  {...playPress.bind}
                   aria-label={t.mushaf.stopLabel}
                 >
                   <span className="recite-listening-dot" aria-hidden="true" />
@@ -991,23 +979,8 @@ const PageViewer: React.FC = () => {
                   {...tourAttr("viewer.play")}
                   className={`toolbar-button play-button${
                     reciteMode ? " play-button--recite" : ""
-                  }`}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressStart();
-                  }}
-                  onPointerUp={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressEnd();
-                  }}
-                  onPointerLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePlayPressEnd();
-                  }}
-                  onClick={(e) => e.preventDefault()}
+                  }${playHoldClass}`}
+                  {...playPress.bind}
                   aria-label={reciteMode ? t.mushaf.micLabel : t.playback.title}
                 >
                   {reciteMode ? (
