@@ -7,6 +7,27 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
+## 1.1.0 (versionCode 21) — 2026-11-18
+
+**Release name:** `21 (1.1.0)`
+
+Changes since 20 (PRs #87, #88, #89).
+
+```
+<en-US>
+• New mushaf: Madani 1405 with Tajweed colours, in Settings
+• Mutashabihat: a new "Between surahs only" option on the Advanced tab
+• Long-pressing the play button now reliably switches to recite mode, with a ring that shows the hold and a vibration when it switches
+</en-US>
+<ar>
+• مصحف جديد: مصحف المدينة ١٤٠٥ (تجويد) بألوان التجويد، من الإعدادات
+• المتشابهات: خيار جديد «بين السور فقط» في تبويب «متقدم»
+• الضغط المطوّل على زر التشغيل يحوّل الآن إلى وضع التسميع بثبات، مع حلقة تُظهر مدة الضغط واهتزاز عند التحويل
+</ar>
+```
+
+---
+
 ## 1.1.0 (versionCode 20) — 2026-11-15
 
 **Release name:** `20 (1.1.0)`
