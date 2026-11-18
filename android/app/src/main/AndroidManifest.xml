@@ -211,6 +211,13 @@
         <provider android:authorities="androidx.car.app.connection" />
     </queries>
 
+    <!-- screenOrientation="portrait" on the activities above makes Play infer
+         a REQUIRED android.hardware.screen.portrait feature, which filters
+         the app out on landscape-only devices (Chromebooks, tablets in some
+         modes, desktop, XR). Portrait is a preference, not a need — the lock
+         still applies wherever the device supports it. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

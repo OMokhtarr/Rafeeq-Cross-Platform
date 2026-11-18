@@ -7,11 +7,14 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
-## 1.1.0 (versionCode 21) — 2026-11-18
+## 1.1.0 (versionCode 22) — 2026-11-18
 
-**Release name:** `21 (1.1.0)`
+**Release name:** `22 (1.1.0)`
 
-Changes since 20 (PRs #87, #88, #89).
+Changes since 20 (PRs #87, #88, #89). Replaces versionCode 21, which was
+uploaded but never sent for review: Play blocked it because the portrait
+lock made `android.hardware.screen.portrait` a required feature (now
+declared optional — no user-visible change).
 
 ```
 <en-US>
