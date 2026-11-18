@@ -333,7 +333,7 @@ const MushafPage: React.FC<Props> = ({
       // to different widths, so measure them at that size and shrink if the
       // widest one would run past the page edge.
       if (isUnicode) {
-        const fitted = fitFontToWidth(px, measureLineWidths(el), w);
+        const fitted = fitFontToWidth(px, measureLineWidths(el, px), w);
         if (fitted !== px) setFontPx(fitted);
       }
     };
@@ -915,17 +915,27 @@ function renderUnicodeText(word: VerseWord, colored: boolean): React.ReactNode {
 }
 
 /**
- * Natural width of each strict-layout line: the sum of its words' widths.
- * The line box itself is always 100% wide (space-between), so it can't be
- * measured directly.
+ * Minimum space between words, in em, that the width fit reserves. Lines are
+ * spread with space-between and no gap, so without it the fitted line's words
+ * would touch.
  */
-function measureLineWidths(el: HTMLElement): number[] {
-  return Array.from(el.querySelectorAll<HTMLElement>(".mushaf-line"), (line) =>
-    Array.from(line.children).reduce(
+const MIN_WORD_GAP_EM = 0.25;
+
+/**
+ * Width each strict-layout line needs at font size `px`: the sum of its words'
+ * widths plus the minimum gap between each pair. The line box itself is always
+ * 100% wide (space-between), so it can't be measured directly.
+ */
+function measureLineWidths(el: HTMLElement, px: number): number[] {
+  return Array.from(el.querySelectorAll<HTMLElement>(".mushaf-line"), (line) => {
+    const words = Array.from(line.children);
+    const wordWidths = words.reduce(
       (sum, child) => sum + child.getBoundingClientRect().width,
       0,
-    ),
-  );
+    );
+    const gaps = Math.max(0, words.length - 1) * MIN_WORD_GAP_EM * px;
+    return wordWidths + gaps;
+  });
 }
 
 function groupByLine(verses: Verse[]): Line[] {

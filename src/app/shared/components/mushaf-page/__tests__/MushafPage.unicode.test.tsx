@@ -162,7 +162,7 @@ describe("MushafPage in Unicode-tajweed mode", () => {
 
 describe("MushafPage width fit", () => {
   // A 400x600 page: slot 40px, so the height-derived size is 20px. Three
-  // words of 160px make a 480px line, which overflows by 20%.
+  // words of 160px plus two 0.25em gaps make a 490px line, which overflows.
   beforeEach(() => {
     jest.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
     jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
@@ -179,6 +179,15 @@ describe("MushafPage width fit", () => {
     select({});
     await renderPage();
     expect(pageRoot().style.fontSize).toBe("16px");
+  });
+
+  it("counts a minimum inter-word gap, so words that exactly fill the line still shrink", async () => {
+    // 480px wide: the bare 3×160px words fit exactly, but 2 gaps × 0.25em at
+    // 20px add 10px, so 490px must fit in 480px: floor(20 × 480 / 490) = 19.
+    jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(480);
+    select({});
+    await renderPage();
+    expect(pageRoot().style.fontSize).toBe("19px");
   });
 
   it("leaves V4 at its height-derived size", async () => {
