@@ -71,6 +71,21 @@
   --color-hifz: #7c6cd4;
   --color-settings: #7f8c8d;
 
+  /* ── TAJWEED (theme-invariant) ───────────────────── */
+  /* Rule colours for the Unicode (Madani 1405) Mushaf, the same hexes as the
+     Settings legend (Settings.tsx TAJWEED_RULES). The V4 Mushaf takes its
+     colours from the font's own palettes instead. */
+
+  --tajweed-necessary: #c0392b;
+  --tajweed-obligatory: #e91e8c;
+  --tajweed-permissible: #e67e22;
+  --tajweed-normal: #f0c040;
+  --tajweed-ghunnah: #27ae60;
+  --tajweed-qalqalah: #5dade2;
+  --tajweed-silent: #95a5a6;
+  /* Recite glow on the Unicode Mushaf — the V4 day glow green. */
+  --tajweed-glow: #00a33d;
+
   /* ── TYPOGRAPHY ──────────────────────────────────── */
 
   --font-arabic: "Scheherazade New", "Amiri", "Traditional Arabic", serif;

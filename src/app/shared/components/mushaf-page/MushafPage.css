@@ -238,6 +238,16 @@
   text-decoration-color: #ff6b6b;
 }
 
+/* Unicode (Madani 1405) tajweed rules: a coloured run inside a word. Inline,
+   so the Arabic letters on either side still join across it. */
+.mushaf-tj-necessary { color: var(--tajweed-necessary); }
+.mushaf-tj-obligatory { color: var(--tajweed-obligatory); }
+.mushaf-tj-permissible { color: var(--tajweed-permissible); }
+.mushaf-tj-normal { color: var(--tajweed-normal); }
+.mushaf-tj-ghunnah { color: var(--tajweed-ghunnah); }
+.mushaf-tj-qalqalah { color: var(--tajweed-qalqalah); }
+.mushaf-tj-silent { color: var(--tajweed-silent); }
+
 /* Recite glow: a green copy of the word (own all-green font palette, set
    inline) laid over it that holds, then fades. Never intercepts taps. */
 .mushaf-word--glowing {
@@ -251,6 +261,14 @@
   -webkit-text-stroke: 0.5px #00a33d;
   pointer-events: none;
   animation: mushaf-glow 1650ms linear forwards;
+}
+/* Unicode Mushaf: no font palette to swap, so plain `color` paints the whole
+   overlay. Kept before the night rule (same specificity) so night still gets
+   its brighter green. */
+.mushaf-page-unicode .mushaf-word-glow {
+  color: var(--tajweed-glow);
+  -webkit-text-fill-color: var(--tajweed-glow);
+  -webkit-text-stroke: 0.5px var(--tajweed-glow);
 }
 [data-theme="night"] .mushaf-word-glow {
   color: #4cff9a;
