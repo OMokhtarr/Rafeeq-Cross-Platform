@@ -25,6 +25,11 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
+import { clearQuizSession } from "../../../../quiz-session";
+import {
+  useRestoredQuizSession,
+  usePersistQuizSession,
+} from "../../../../hooks/useQuizSession";
 import { useQuizRecite, UseQuizReciteResult } from "../../../../hooks/useQuizRecite";
 import { hiddenCardTokens } from "../../../../hooks/quizReciteProgress";
 import type {
@@ -62,6 +67,17 @@ function isSoundOn(): boolean {
     if (raw) return JSON.parse(raw).soundEffects !== false;
   } catch {}
   return true;
+}
+
+/** What this quiz saves to come back to after a tab switch. */
+interface AyahProgress {
+  idx: number;
+  userAnswer: string;
+  answered: boolean;
+  correct: boolean;
+  skipped: boolean;
+  hintLevel: number;
+  score: number;
 }
 
 // ── Inline verse splitter ─────────────────────────────────────────────────────
@@ -106,19 +122,30 @@ const AkmelAlAyah: React.FC = () => {
   const tt = t.quizTest;
   const [presentToast] = useIonToast();
 
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // A quiz left for another tab comes back exactly where it was.
+  const restored = useRestoredQuizSession<QuizQuestion, AyahProgress>("akmel-alayah");
+  const saved = restored?.progress;
+
+  const [questions, setQuestions] = useState<QuizQuestion[]>(restored?.questions ?? []);
+  const [idx, setIdx] = useState(saved?.idx ?? 0);
+  const [loading, setLoading] = useState(!restored);
   const [error, setError] = useState<string | null>(null);
-  const [userAnswer, setUserAnswer] = useState("");
-  const [answered, setAnswered] = useState(false);
-  const [correct, setCorrect] = useState(false);
-  const [skipped, setSkipped] = useState(false);
-  const [hintLevel, setHintLevel] = useState(0);
+  const [userAnswer, setUserAnswer] = useState(saved?.userAnswer ?? "");
+  const [answered, setAnswered] = useState(saved?.answered ?? false);
+  const [correct, setCorrect] = useState(saved?.correct ?? false);
+  const [skipped, setSkipped] = useState(saved?.skipped ?? false);
+  const [hintLevel, setHintLevel] = useState(saved?.hintLevel ?? 0);
   const [showContext, setShowContext] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(saved?.score ?? 0);
+
+  usePersistQuizSession<QuizQuestion, AyahProgress>(
+    "akmel-alayah",
+    questions,
+    { idx, userAnswer, answered, correct, skipped, hintLevel, score },
+    quizComplete,
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const beep = useFeedbackBeep();
@@ -142,6 +169,7 @@ const AkmelAlAyah: React.FC = () => {
 
   // ── Load config + generate questions ──────────────────────────────────────
   useEffect(() => {
+    if (restored) return;
     let cancelled = false;
 
     const run = async () => {
@@ -725,7 +753,10 @@ const AkmelAlAyah: React.FC = () => {
           <QuizExitModal
             isOpen={showExitModal}
             onCancel={() => setShowExitModal(false)}
-            onConfirm={() => history.replace("/quiz-list")}
+            onConfirm={() => {
+              clearQuizSession();
+              history.replace("/quiz-list");
+            }}
           />
         </div>
       </IonContent>

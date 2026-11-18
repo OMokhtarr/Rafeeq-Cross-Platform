@@ -16,6 +16,7 @@ import React from "react";
 import { useHistory } from "react-router-dom";
 import { useLang } from "../../../core/context/LanguageContext";
 import { tourAttr } from "../../../features/onboarding/tourCatalog";
+import { QUIZ_ROUTES, useActiveQuizKind } from "../../../features/quiz/quiz-session";
 import "./BottomNavBar.css";
 
 export type NavTabKey =
@@ -154,6 +155,17 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
   // is always available under IonReactRouter.
   const goToTab = (route: string) => history.replace(route);
 
+  // While a quiz is in progress the Quiz tab leads back to it (not the quiz
+  // list), so leaving through another tab never loses the user's place. Only
+  // quitting, finishing, or starting a new quiz ends it (see quiz-session.ts).
+  const quizInProgress = useActiveQuizKind();
+  const goToQuizTab = (listRoute: string) => {
+    if (!quizInProgress) return goToTab(listRoute);
+    const route = QUIZ_ROUTES[quizInProgress];
+    // Already on the quiz: stay put rather than re-entering the same page.
+    if (history.location.pathname !== route) goToTab(route);
+  };
+
   const labels: Record<NavTabKey, string> = {
     home: t.tabs.home,
     quran: t.tabs.quran,
@@ -173,6 +185,9 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
         const l = labels[tab.id];
         const isActive = active === tab.id;
         const route = tab.id === "quran" && quranHref ? quranHref : tab.route;
+        // The dot marks a quiz to come back to; the quiz pages themselves
+        // (Quiz tab active) don't need the reminder.
+        const showQuizDot = tab.id === "quiz" && !!quizInProgress && !isActive;
         return (
           <button
             key={tab.id}
@@ -182,12 +197,20 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
               (isActive ? " rfq-tab-active" : "")
             }
             style={{ "--tab-color": tab.color } as React.CSSProperties}
-            onClick={() => !tab.comingSoon && goToTab(route)}
+            onClick={() => {
+              if (tab.comingSoon) return;
+              if (tab.id === "quiz") goToQuizTab(route);
+              else goToTab(route);
+            }}
             disabled={tab.comingSoon}
             aria-current={isActive ? "page" : undefined}
             {...(tab.id === "more" ? tourAttr("home.more") : {})}
             aria-label={
-              tab.comingSoon ? `${l} (${t.tabs.comingSoon})` : l
+              tab.comingSoon
+                ? `${l} (${t.tabs.comingSoon})`
+                : showQuizDot
+                  ? `${l} (${t.tabs.quizInProgress})`
+                  : l
             }
           >
             <span
@@ -198,6 +221,7 @@ const BottomNavBar: React.FC<Props> = ({ active, quranHref, fixed }) => {
               aria-hidden="true"
             >
               {tab.icon}
+              {showQuizDot && <span className="rfq-tab-dot" />}
             </span>
             <span className="rfq-tab-label-primary">{l}</span>
             {tab.comingSoon && (

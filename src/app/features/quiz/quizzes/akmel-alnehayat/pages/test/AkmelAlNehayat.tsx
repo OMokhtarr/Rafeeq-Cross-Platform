@@ -18,6 +18,11 @@ import BottomNavBar from "../../../../../../shared/components/bottom-nav/BottomN
 import { useFeedbackBeep } from "../../../../../../core/hooks/useFeedbackBeep";
 import { useWakeLock } from "../../../../../../core/hooks/useWakeLock";
 import QuizExitModal from "../../../../components/QuizExitModal";
+import { clearQuizSession } from "../../../../quiz-session";
+import {
+  useRestoredQuizSession,
+  usePersistQuizSession,
+} from "../../../../hooks/useQuizSession";
 import type {
   QuizConfig,
   QuizQuestion,
@@ -89,6 +94,16 @@ function splitAtLastWaqf(text: string): {
 interface NehayatQuestion extends QuizQuestion {
   options: string[]; // 4 shuffled choices
   correctIndex: number; // index into options that is correct
+}
+
+/** What this quiz saves to come back to after a tab switch. */
+interface NehayatProgress {
+  idx: number;
+  selectedOption: number | null;
+  answered: boolean;
+  correct: boolean;
+  skipped: boolean;
+  score: number;
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -205,18 +220,29 @@ const AkmelAlNehayat: React.FC = () => {
   const { t, isRTL } = useLang();
   const tt = t.quizTest;
 
-  const [questions, setQuestions] = useState<NehayatQuestion[]>([]);
-  const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // A quiz left for another tab comes back exactly where it was.
+  const restored = useRestoredQuizSession<NehayatQuestion, NehayatProgress>("akmel-alnehayat");
+  const saved = restored?.progress;
+
+  const [questions, setQuestions] = useState<NehayatQuestion[]>(restored?.questions ?? []);
+  const [idx, setIdx] = useState(saved?.idx ?? 0);
+  const [loading, setLoading] = useState(!restored);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [answered, setAnswered] = useState(false);
-  const [correct, setCorrect] = useState(false);
-  const [skipped, setSkipped] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(saved?.selectedOption ?? null);
+  const [answered, setAnswered] = useState(saved?.answered ?? false);
+  const [correct, setCorrect] = useState(saved?.correct ?? false);
+  const [skipped, setSkipped] = useState(saved?.skipped ?? false);
   const [showContext, setShowContext] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(saved?.score ?? 0);
+
+  usePersistQuizSession<NehayatQuestion, NehayatProgress>(
+    "akmel-alnehayat",
+    questions,
+    { idx, selectedOption, answered, correct, skipped, score },
+    quizComplete,
+  );
 
   const beep = useFeedbackBeep();
   useWakeLock();
@@ -237,6 +263,7 @@ const AkmelAlNehayat: React.FC = () => {
 
   // ── Load config + generate questions ──────────────────────────────────────
   useEffect(() => {
+    if (restored) return;
     let cancelled = false;
 
     const run = async () => {
@@ -596,7 +623,10 @@ const AkmelAlNehayat: React.FC = () => {
           <QuizExitModal
             isOpen={showExitModal}
             onCancel={() => setShowExitModal(false)}
-            onConfirm={() => history.replace("/quiz-list")}
+            onConfirm={() => {
+              clearQuizSession();
+              history.replace("/quiz-list");
+            }}
           />
         </div>
       </IonContent>

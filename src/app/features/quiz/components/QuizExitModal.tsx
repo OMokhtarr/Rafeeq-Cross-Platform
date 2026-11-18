@@ -6,9 +6,20 @@ interface Props {
   isOpen: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  /** Overrides for reuse beyond "exit the quiz?" (defaults: quizTest strings). */
+  message?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
-const QuizExitModal: React.FC<Props> = ({ isOpen, onCancel, onConfirm }) => {
+const QuizExitModal: React.FC<Props> = ({
+  isOpen,
+  onCancel,
+  onConfirm,
+  message,
+  confirmLabel,
+  cancelLabel,
+}) => {
   const { t, isRTL } = useLang();
   const tt = t.quizTest;
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -30,13 +41,15 @@ const QuizExitModal: React.FC<Props> = ({ isOpen, onCancel, onConfirm }) => {
   return (
     <div className="qem-backdrop" ref={backdropRef} onClick={onCancel}>
       <div className="qem-sheet" onClick={(e) => e.stopPropagation()}>
-        <p className="qem-message" style={{ direction: isRTL ? "rtl" : "ltr" }}>{tt.confirmExit}</p>
+        <p className="qem-message" style={{ direction: isRTL ? "rtl" : "ltr" }}>
+          {message ?? tt.confirmExit}
+        </p>
         <div className="qem-actions">
           <button className="qem-btn qem-cancel" onClick={onCancel}>
-            {tt.exitCancel}
+            {cancelLabel ?? tt.exitCancel}
           </button>
           <button className="qem-btn qem-confirm" onClick={onConfirm}>
-            {tt.exitConfirm}
+            {confirmLabel ?? tt.exitConfirm}
           </button>
         </div>
       </div>

@@ -28,6 +28,7 @@ import {
 import { totalPageCount } from "../../../../services/quiz-ranges.service";
 import { usePageTour } from "../../../../../onboarding/usePageTour";
 import { tourAttr } from "../../../../../onboarding/tourCatalog";
+import { clearQuizSession } from "../../../../quiz-session";
 import "./AkmelAlNehayatSetup.css";
 
 const JUZS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -157,6 +158,8 @@ const AkmelAlNehayatSetup: React.FC = () => {
       value: JSON.stringify(quizConfig),
     });
 
+    // A new quiz replaces any quiz left in progress.
+    clearQuizSession();
     history.replace("/akmel-alnehayat");
   };
 
