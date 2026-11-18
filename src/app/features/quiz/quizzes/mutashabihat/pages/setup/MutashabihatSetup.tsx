@@ -24,7 +24,11 @@ import {
   savePreset,
   updatePreset,
 } from "../../../../services/quiz-presets.service";
-import { totalPageCount } from "../../../../services/quiz-ranges.service";
+import {
+  totalPageCount,
+  rangeSurahs,
+} from "../../../../services/quiz-ranges.service";
+import { Segmented } from "../../../../../../shared/components/controls/Segmented";
 import { usePageTour } from "../../../../../onboarding/usePageTour";
 import { tourAttr } from "../../../../../onboarding/tourCatalog";
 import "./MutashabihatSetup.css";
@@ -57,6 +61,10 @@ const MutashabihatSetup: React.FC = () => {
   const [saveIntent, setSaveIntent] = useState<SaveIntent>({ mode: "none" });
   // Questions per page, or null for a plain total. Drives questionCount when set.
   const [perPage, setPerPage] = useState<number | null>(null);
+  // All similar verses, or only those spanning different surahs. Offered once
+  // the ranges reach two surahs; ignored (but kept) when they no longer do.
+  const [matchMode, setMatchMode] = useState<"all" | "cross">("all");
+  const multiSurah = useMemo(() => rangeSurahs(ranges).size >= 2, [ranges]);
 
   const allPageOptions = useMemo(
     () =>
@@ -154,6 +162,7 @@ const MutashabihatSetup: React.FC = () => {
       selectedJuzs: !advanced && scopeType === "juz" ? selectedJuzs : [],
       questionCount: effectiveQuestionCount,
       ranges: advanced ? ranges : null,
+      crossSurahOnly: advanced && multiSurah && matchMode === "cross",
     };
 
     await Preferences.set({
@@ -243,16 +252,32 @@ const MutashabihatSetup: React.FC = () => {
             </div>
 
             {tab === "advanced" ? (
-              <div className="ms-scroll-zone">
-                <AdvancedRangePicker
-                  ranges={ranges}
-                  onRangesChange={setRanges}
-                  saveIntent={saveIntent}
-                  onSaveIntentChange={setSaveIntent}
-                  perPage={perPage}
-                  onPerPageChange={setPerPage}
-                />
-              </div>
+              <>
+                <div className="ms-scroll-zone">
+                  <AdvancedRangePicker
+                    ranges={ranges}
+                    onRangesChange={setRanges}
+                    saveIntent={saveIntent}
+                    onSaveIntentChange={setSaveIntent}
+                    perPage={perPage}
+                    onPerPageChange={setPerPage}
+                  />
+                </div>
+                {multiSurah && (
+                  <div className="ms-match-mode">
+                    <div className="ms-label">{tq.matchModeLabel}</div>
+                    <Segmented<"all" | "cross">
+                      label={tq.matchModeLabel}
+                      options={[
+                        { value: "all", label: tq.matchAll },
+                        { value: "cross", label: tq.matchCrossSurah },
+                      ]}
+                      value={matchMode}
+                      onChange={setMatchMode}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <>
               {/* Scope selector */}
