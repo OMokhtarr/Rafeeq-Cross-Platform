@@ -28,7 +28,6 @@ import {
   buildRangeVerses,
   rangePageCount,
   totalPageCount,
-  rangeSurahs,
 } from "../quiz-ranges.service";
 
 const verse = (sura: number, aya: number, page = 1): Verse => ({
@@ -230,28 +229,3 @@ describe("totalPageCount", () => {
   });
 });
 
-const sorted = (s: Set<number>) => [...s].sort((a, b) => a - b);
-
-describe("rangeSurahs", () => {
-  it("returns the surah of a surah range", () => {
-    expect(sorted(rangeSurahs([{ kind: "surah", surah: 2 }]))).toEqual([2]);
-  });
-
-  it("spans every surah from a juz's first verse to its last", () => {
-    expect(sorted(rangeSurahs([{ kind: "juz", juz: 1 }]))).toEqual([1, 2]);
-  });
-
-  it("includes every surah a page range overlaps", () => {
-    expect(sorted(rangeSurahs([{ kind: "pages", from: 1, to: 2 }]))).toEqual([1, 2]);
-    expect(sorted(rangeSurahs([{ kind: "pages", from: 5, to: 10 }]))).toEqual([2]);
-  });
-
-  it("unions ranges and ignores invalid ones", () => {
-    const out = rangeSurahs([
-      { kind: "surah", surah: 1 },
-      { kind: "surah", surah: 2 },
-      { kind: "surah", surah: 999 },
-    ]);
-    expect(sorted(out)).toEqual([1, 2]);
-  });
-});
