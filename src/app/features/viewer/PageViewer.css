@@ -100,9 +100,51 @@
   transform: scale(0.95);
 }
 
-/* Play button — gold accent; recite mode uses gold background */
+/* Play button — gold accent; recite mode uses gold background.
+   Tap and hold are told apart in JS (useHoldPress); the browser must not
+   claim the touch for panning, its own long-press, or the callout menu. */
 .toolbar-button.play-button {
+  position: relative;
   color: var(--color-gold);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Hold progress — a gold ring traces round the button over the hold time,
+   so the user can see the switch to recite (or back) coming. */
+@property --hold-sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.toolbar-button.play-button--holding::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 11px;
+  padding: 2px;
+  background: conic-gradient(
+    var(--color-gold, #d4b48c) var(--hold-sweep),
+    transparent 0
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: play-hold-sweep var(--hold-ms, 500ms) linear forwards;
+  pointer-events: none;
+}
+@keyframes play-hold-sweep {
+  to {
+    --hold-sweep: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-button.play-button--holding::before {
+    animation: none;
+    --hold-sweep: 360deg;
+  }
 }
 .toolbar-button.play-button--recite {
   position: relative;
