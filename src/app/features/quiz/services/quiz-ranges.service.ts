@@ -119,6 +119,30 @@ export function totalPageCount(ranges: QuizRange[]): number {
   return pages.size;
 }
 
+/**
+ * Every surah a selection touches. A juz or page range that crosses a surah
+ * boundary counts each surah it reaches, so one range can cover several.
+ */
+export function rangeSurahs(ranges: QuizRange[]): Set<number> {
+  const surahs = new Set<number>();
+  for (const range of normalizeRanges(ranges)) {
+    if (range.kind === "surah") {
+      surahs.add(range.surah);
+    } else if (range.kind === "juz") {
+      const first = getJuzStart(range.juz).sura;
+      const last = getJuzEnd(range.juz).sura;
+      for (let s = first; s <= last; s++) surahs.add(s);
+    } else {
+      for (let s = 1; s <= 114; s++) {
+        if (getSurahStartPage(s) <= range.to && getSurahEndPage(s) >= range.from) {
+          surahs.add(s);
+        }
+      }
+    }
+  }
+  return surahs;
+}
+
 async function versesFor(range: QuizRange): Promise<Verse[]> {
   switch (range.kind) {
     case "surah":

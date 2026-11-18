@@ -157,10 +157,14 @@ export function filterGroupsByJuzs(
  * matching verses fall in two different ranges would be rejected by both. Here
  * every verse is tested against the whole range set first, and the group-size
  * rule is applied to what survives.
+ *
+ * With `crossSurahOnly`, a group must also span at least two surahs after that
+ * filtering, so pairs found only inside one surah are left out.
  */
 export function filterGroupsByRanges(
   groups: MutashabihatGroup[],
   ranges: QuizRange[],
+  crossSurahOnly = false,
 ): MutashabihatGroup[] {
   const valid = ranges.filter(isValidRange);
   if (valid.length === 0) return [];
@@ -182,14 +186,23 @@ export function filterGroupsByRanges(
   const filtered: MutashabihatGroup[] = [];
   for (const g of groups) {
     const matching = g.verses.filter(inRanges);
-    if (matching.length >= MIN_GROUP_SIZE) {
+    const spansSurahs = new Set(matching.map((v) => v.sura)).size >= 2;
+    if (matching.length >= MIN_GROUP_SIZE && (!crossSurahOnly || spansSurahs)) {
       filtered.push({ ...g, verses: matching });
     }
   }
   return filtered;
 }
 
-export function buildMutashabihatQuestion(group: MutashabihatGroup) {
+/**
+ * With `crossSurahOnly`, the siblings shown are only those from other surahs
+ * than the target's. Groups that reach here span two or more surahs, so every
+ * target still has at least one.
+ */
+export function buildMutashabihatQuestion(
+  group: MutashabihatGroup,
+  crossSurahOnly = false,
+) {
   // Safety guard: group must have at least 2 verses to have a meaningful sibling
   if (group.verses.length < 2) {
     throw new Error("Mutashabihat group must contain at least 2 verses");
@@ -197,7 +210,9 @@ export function buildMutashabihatQuestion(group: MutashabihatGroup) {
 
   const idx = Math.floor(Math.random() * group.verses.length);
   const target = group.verses[idx];
-  const siblings = group.verses.filter((_, i) => i !== idx);
+  const siblings = group.verses.filter(
+    (v, i) => i !== idx && (!crossSurahOnly || v.sura !== target.sura),
+  );
 
   const rawWords = target.text.split(/\s+/).filter(Boolean);
   const displayedPortion = rawWords.slice(0, group.windowSize).join(" ");
