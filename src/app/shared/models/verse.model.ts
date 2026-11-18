@@ -33,6 +33,8 @@ export interface VerseWord {
   charType: "word" | "end";
   text_uthmani: string;
   codeV2: string;
+  /** Uthmani text with `<rule class=…>` tajweed markup (1405 mushaf only). */
+  textTajweed?: string;
   lineNumber: number;
   pageNumber: number;
   translation?: string; // optional

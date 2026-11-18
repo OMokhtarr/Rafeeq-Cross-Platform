@@ -85,6 +85,7 @@ function mapApiWord(w: any): VerseWord {
     charType: w.char_type_name === "end" ? "word" : "end",
     text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV2: w.code_v2 ?? w.codeV2 ?? "",
+    textTajweed: w.text_uthmani_tajweed ?? w.textTajweed,
     lineNumber: w.line_number ?? w.lineNumber ?? 0,
     pageNumber: w.page_number ?? w.pageNumber ?? 0,
   };

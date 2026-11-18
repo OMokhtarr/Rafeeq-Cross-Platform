@@ -313,6 +313,7 @@ interface ApiWord {
   char_type_name: "word" | "end";
   text_uthmani?: string;
   code_v2?: string;
+  text_uthmani_tajweed?: string;
   line_number?: number;
   page_number?: number;
   translation?: { text?: string; language_name?: string };
@@ -374,6 +375,7 @@ export async function fetchVersesByPage(
       charType: w.char_type_name === "end" ? "word" : "end",
       text_uthmani: w.text_uthmani || "",
       codeV2: w.code_v2 || "",
+      textTajweed: w.text_uthmani_tajweed,
       lineNumber: w.line_number || 0,
       pageNumber: w.page_number || page,
       translation: w.translation?.text,
@@ -422,6 +424,7 @@ export async function fetchVersesByJuz(
       charType: w.char_type_name === "end" ? "word" : "end",
       text_uthmani: w.text_uthmani || "",
       codeV2: w.code_v2 || "",
+      textTajweed: w.text_uthmani_tajweed,
       lineNumber: w.line_number || 0,
       pageNumber: w.page_number || 0,
       translation: w.translation?.text,
