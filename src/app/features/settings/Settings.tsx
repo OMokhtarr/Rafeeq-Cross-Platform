@@ -20,6 +20,7 @@ import {
   DEFAULT_MUSHAF,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
+import { applyMushafSelection } from "../../core/services/data/quran.service";
 import {
   runSync,
   getSyncStatus,
@@ -88,13 +89,15 @@ const DEFAULTS: AppSettings = {
 
 const STORAGE_KEY = "rafiq_settings_v1";
 
-// Only the Tajweed mushaf is offered in Settings for now; the other rendering
-// kinds are kept in mushaf.config but hidden from the dropdown.
-const MUSHAF_OPTIONS = [MUSHAFS.qpc_v4_tajweed];
+// Only the Tajweed mushafs are offered in Settings; the other rendering kinds
+// are kept in mushaf.config but hidden from the dropdown.
+const MUSHAF_OPTIONS = [MUSHAFS.qpc_v4_tajweed, MUSHAFS.madani_1405_tajweed];
 
-// Strip the trailing "(KFGQPC V4)"-style parenthetical from a mushaf label.
+// Strip a trailing "(KFGQPC V4)"-style parenthetical from a mushaf label. Only
+// parentheticals made of Latin capitals/digits go: "(Tajweed)" is part of the
+// name that tells the two Madani mushafs apart.
 const cleanMushafLabel = (label: string) =>
-  label.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  label.replace(/\s*\([A-Z0-9 ]+\)\s*$/, "").trim();
 
 function loadSettings(): AppSettings {
   try {
@@ -623,6 +626,8 @@ const Settings: React.FC = () => {
   // What the store already holds, so only a real change is saved: a save on
   // opening the page would stamp defaults as an edit that beats the cloud.
   const loaded = useRef(s);
+  // The mushaf the page cache and layout currently belong to.
+  const appliedMushaf = useRef(s.mushaf);
 
   // Sync applied newer settings: show them, so the next toggle here does not
   // write this copy back over them on every device. A change still waiting for
@@ -647,6 +652,11 @@ const Settings: React.FC = () => {
     if (s === loaded.current) return;
     const writeT = setTimeout(() => {
       saveSettings(s);
+      // After the save, so page fetches that read the stored mushaf agree.
+      if (s.mushaf !== appliedMushaf.current) {
+        appliedMushaf.current = s.mushaf;
+        applyMushafSelection(s.mushaf).catch(() => {});
+      }
       setSaved(true);
     }, 250);
     const clearT = setTimeout(() => setSaved(false), 1500);

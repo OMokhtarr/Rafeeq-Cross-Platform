@@ -22,11 +22,21 @@ import {
   getSurahNameArabic,
   getSurahNameEnglish,
   estimatePageForVerse,
+  setActivePageLayout,
 } from "./metadata.service";
-import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../api/mushaf.config";
+import {
+  MUSHAFS,
+  DEFAULT_MUSHAF,
+  mushafIdFor,
+  layoutFor,
+  type MushafKind,
+} from "../api/mushaf.config";
 import { readPageLayout } from "./page-layout";
 import { mergeLayoutIntoVerses } from "./merge-layout";
-import { onDerivedPageCacheCleared } from "./page-cache";
+import {
+  onDerivedPageCacheCleared,
+  clearDerivedPageCache,
+} from "./page-cache";
 import { shouldRefetchPage } from "./page-refresh";
 import { isLikelyOffline } from "../api/quran-api.client";
 import { removeDiacritics } from "../../utils/arabic.util";
@@ -158,7 +168,7 @@ async function fetchAndStorePage(page: number): Promise<Verse[]> {
   // Best-effort: a failed write (private mode / quota) must not cost the
   // reader the page they already have in hand.
   await idb
-    .put("pages", { page, verses, fetchedAt: Date.now() })
+    .put("pages", { page, verses, fetchedAt: Date.now(), mushaf })
     .catch(() => {});
   memSet(page, verses);
   return verses;
@@ -193,8 +203,12 @@ export async function getPage(page: number): Promise<Verse[]> {
       page: number;
       verses: Verse[];
       fetchedAt?: number;
+      mushaf?: MushafKind;
     }>("pages", page);
-    if (idbHit?.verses?.length) {
+    // Records written before pages were tagged hold qpc_v4_tajweed text. A
+    // page cached for a different mushaf is not this mushaf's text: refetch.
+    const cachedMushaf = idbHit?.mushaf ?? "qpc_v4_tajweed";
+    if (idbHit?.verses?.length && cachedMushaf === readSelectedMushaf()) {
       memSet(page, idbHit.verses);
       // The word-level Uthmani text here is QF content that Content Sync does
       // not carry, so it owes a re-fetch at least every 7 days
@@ -816,7 +830,7 @@ async function searchFromPagesCache(q: string): Promise<SearchResult[]> {
 }
 
 // ─── Mushaf selection helper ─────────────────────────────────────────────────
-export function readSelectedMushaf() {
+export function readSelectedMushaf(): MushafKind {
   try {
     const raw = localStorage.getItem("rafiq_settings_v1");
     if (raw) {
@@ -825,6 +839,16 @@ export function readSelectedMushaf() {
     }
   } catch {}
   return DEFAULT_MUSHAF;
+}
+
+/**
+ * Make `kind` the active mushaf: switch the page layout the metadata lookups
+ * use, then drop every cached page (IDB + in-memory LRU) so none of the old
+ * mushaf's text or page boundaries is served.
+ */
+export async function applyMushafSelection(kind: MushafKind): Promise<void> {
+  setActivePageLayout(layoutFor(kind));
+  await clearDerivedPageCache();
 }
 
 async function getChaptersFromMeta(): Promise<any[]> {

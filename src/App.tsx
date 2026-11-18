@@ -3,11 +3,16 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect, useLocation, useHistory } from "react-router-dom";
 import { App as CapApp } from "@capacitor/app";
-import { initMetadata } from "./app/core/services/data/metadata.service";
+import {
+  initMetadata,
+  setActivePageLayout,
+} from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
   seedTextCorpus,
+  readSelectedMushaf,
 } from "./app/core/services/data/quran.service";
+import { layoutFor } from "./app/core/services/api/mushaf.config";
 import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { useDoubleSwipeExit } from "./app/core/hooks/useDoubleSwipeExit";
@@ -234,6 +239,7 @@ const App: React.FC = () => {
 
       // Metadata is cache-first and falls back to static page starts, so it is
       // safe to start regardless of connectivity.
+      setActivePageLayout(layoutFor(readSelectedMushaf()));
       initMetadata().catch(() => {});
 
       // Only the *preloads* need the network. navigator.onLine can't be trusted
