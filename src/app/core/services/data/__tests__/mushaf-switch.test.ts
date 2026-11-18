@@ -91,3 +91,31 @@ describe("applyMushafSelection", () => {
     expect(mockClear).toHaveBeenCalledWith("pages");
   });
 });
+
+describe("fetch in flight across a mushaf switch", () => {
+  it("never serves the old mushaf's page under the new one", async () => {
+    select("qpc_v4_tajweed");
+    mockGet.mockResolvedValue(undefined);
+    let release: (v: unknown[]) => void = () => {};
+    mockFetch.mockImplementationOnce(
+      () => new Promise((res) => (release = res)),
+    );
+    const oldFetch = getPage(9);
+    await new Promise((r) => setTimeout(r, 0));
+
+    select("madani_1405_tajweed");
+    await applyMushafSelection("madani_1405_tajweed");
+    release([
+      { verse_key: "1:11", verse_number: 11, chapter_id: 1, words: [] },
+    ]);
+    await oldFetch;
+
+    mockFetch.mockResolvedValueOnce([
+      { verse_key: "1:22", verse_number: 22, chapter_id: 1, words: [] },
+    ]);
+    const verses = await getPage(9);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(verses)).toContain('"aya":22');
+    expect(JSON.stringify(verses)).not.toContain('"aya":11');
+  });
+});

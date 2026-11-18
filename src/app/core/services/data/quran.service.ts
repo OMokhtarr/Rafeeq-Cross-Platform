@@ -103,19 +103,24 @@ function mapApiWord(w: any): VerseWord {
 
 // ─── In‑memory LRU cache ────────────────────────────────────────────────────
 const MAX_MEM_PAGES = 20;
-const pageCache = new Map<number, Verse[]>();
+// Keyed by mushaf + page: a fetch that began under one mushaf can resolve
+// after the selection changed, and must never be readable under the new one.
+const pageCache = new Map<string, Verse[]>();
+const cacheKey = (mushaf: MushafKind, page: number) => `${mushaf}:${page}`;
 
-function memGet(page: number): Verse[] | null {
-  const hit = pageCache.get(page);
+function memGet(mushaf: MushafKind, page: number): Verse[] | null {
+  const key = cacheKey(mushaf, page);
+  const hit = pageCache.get(key);
   if (!hit) return null;
-  pageCache.delete(page);
-  pageCache.set(page, hit);
+  pageCache.delete(key);
+  pageCache.set(key, hit);
   return hit;
 }
 
-function memSet(page: number, verses: Verse[]) {
-  if (pageCache.has(page)) pageCache.delete(page);
-  pageCache.set(page, verses);
+function memSet(mushaf: MushafKind, page: number, verses: Verse[]) {
+  const key = cacheKey(mushaf, page);
+  if (pageCache.has(key)) pageCache.delete(key);
+  pageCache.set(key, verses);
   while (pageCache.size > MAX_MEM_PAGES) {
     const firstKey = pageCache.keys().next().value;
     if (firstKey !== undefined) pageCache.delete(firstKey);
@@ -129,7 +134,7 @@ function memSet(page: number, verses: Verse[]) {
 onDerivedPageCacheCleared(() => pageCache.clear());
 
 // ─── In‑flight dedup ────────────────────────────────────────────────────────
-const inflight = new Map<number, Promise<Verse[]>>();
+const inflight = new Map<string, Promise<Verse[]>>();
 
 /**
  * Re-fetch one page's word text without making the reader wait.
@@ -138,7 +143,7 @@ const inflight = new Map<number, Promise<Verse[]>>();
  * carry (docs/licensing-decisions.md §1a). Failures are silent: the cached
  * page is already on screen and is allowed to stay.
  */
-const refreshing = new Set<number>();
+const refreshing = new Set<string>();
 
 /**
  * Fetch one page and store it: API word text, plus the synced V4 layout when
@@ -148,8 +153,10 @@ const refreshing = new Set<number>();
  * if not, so a disagreement costs slightly stale line breaks rather than words
  * paired with the wrong glyphs. See merge-layout.ts.
  */
-async function fetchAndStorePage(page: number): Promise<Verse[]> {
-  const mushaf = readSelectedMushaf();
+async function fetchAndStorePage(
+  page: number,
+  mushaf: MushafKind = readSelectedMushaf(),
+): Promise<Verse[]> {
   const apiVerses: any[] = (await fetchVersesByPage(
     page,
     MUSHAFS[mushaf].wordFields,
@@ -170,19 +177,20 @@ async function fetchAndStorePage(page: number): Promise<Verse[]> {
   await idb
     .put("pages", { page, verses, fetchedAt: Date.now(), mushaf })
     .catch(() => {});
-  memSet(page, verses);
+  memSet(mushaf, page, verses);
   return verses;
 }
 
-function refreshPageInBackground(page: number): void {
-  if (refreshing.has(page)) return;
-  refreshing.add(page);
-  fetchAndStorePage(page)
+function refreshPageInBackground(page: number, mushaf: MushafKind): void {
+  const key = cacheKey(mushaf, page);
+  if (refreshing.has(key)) return;
+  refreshing.add(key);
+  fetchAndStorePage(page, mushaf)
     .catch(() => {
       // Offline or a failed request: the cached copy stands until next time.
     })
     .finally(() => {
-      refreshing.delete(page);
+      refreshing.delete(key);
     });
 }
 
@@ -192,10 +200,11 @@ export async function getPage(page: number): Promise<Verse[]> {
   if (!Number.isFinite(page) || page < 1 || page > TOTAL_PAGES) return [];
   page = Math.floor(page);
 
-  const memHit = memGet(page);
+  const mushaf = readSelectedMushaf();
+  const memHit = memGet(mushaf, page);
   if (memHit) return memHit;
 
-  const pending = inflight.get(page);
+  const pending = inflight.get(cacheKey(mushaf, page));
   if (pending) return pending;
 
   const work = (async () => {
@@ -208,8 +217,8 @@ export async function getPage(page: number): Promise<Verse[]> {
     // Records written before pages were tagged hold qpc_v4_tajweed text. A
     // page cached for a different mushaf is not this mushaf's text: refetch.
     const cachedMushaf = idbHit?.mushaf ?? "qpc_v4_tajweed";
-    if (idbHit?.verses?.length && cachedMushaf === readSelectedMushaf()) {
-      memSet(page, idbHit.verses);
+    if (idbHit?.verses?.length && cachedMushaf === mushaf) {
+      memSet(mushaf, page, idbHit.verses);
       // The word-level Uthmani text here is QF content that Content Sync does
       // not carry, so it owes a re-fetch at least every 7 days
       // (docs/licensing-decisions.md §1a). Refresh in the BACKGROUND: the
@@ -221,25 +230,26 @@ export async function getPage(page: number): Promise<Verse[]> {
           online: !isLikelyOffline(),
         })
       ) {
-        refreshPageInBackground(page);
+        refreshPageInBackground(page, mushaf);
       }
       return idbHit.verses;
     }
 
-    return fetchAndStorePage(page);
+    return fetchAndStorePage(page, mushaf);
   })();
 
-  inflight.set(page, work);
+  const flightKey = cacheKey(mushaf, page);
+  inflight.set(flightKey, work);
   try {
     return await work;
   } finally {
-    inflight.delete(page);
+    inflight.delete(flightKey);
   }
 }
 
 export async function prefetchPage(page: number): Promise<void> {
   if (!Number.isFinite(page) || page < 1 || page > TOTAL_PAGES) return;
-  if (memGet(page)) return;
+  if (memGet(readSelectedMushaf(), page)) return;
   getPage(page).catch(() => {});
 }
 
