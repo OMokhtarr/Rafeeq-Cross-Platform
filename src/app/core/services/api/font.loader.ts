@@ -32,6 +32,8 @@ const V4_CDN_BASE =
   "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2";
 const BISMILLAH_CDN_URL =
   "https://cdn.jsdelivr.net/gh/quran/quran.com-images@master/res/fonts/QCF_BSML.TTF";
+const HAFS_UNICODE_CDN_URL =
+  "https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2";
 
 const FONT_CACHE_VERSION = "v4-colrv1";
 
@@ -114,9 +116,32 @@ export async function ensurePageFont(page: number): Promise<void> {
 
 export async function ensureBismillahFont(): Promise<void> {
   if (bismillahInjected) return;
-  const blob = await loadOrFetchBismillahFont();
+  const blob = await loadOrFetchSingleFont(BISMILLAH_FONT);
   await injectFontFace(BISMILLAH_FONT_FAMILY, blob);
   bismillahInjected = true;
+}
+
+/**
+ * KFGQPC Uthmanic Hafs (v18): one Unicode font for every page, used by the
+ * Madani 1405 Mushaf, which draws `text_uthmani_tajweed` with CSS colours
+ * instead of the per-page V4 glyph fonts. Same CDN and the same 7-day refresh
+ * duty as the V4 fonts (docs/licensing-decisions.md §1a).
+ */
+export const HAFS_UNICODE_FONT_FAMILY = "UthmanicHafsV18";
+
+let hafsUnicodeFont: Promise<void> | null = null;
+
+export function ensureHafsUnicodeFont(): Promise<void> {
+  if (!hafsUnicodeFont) {
+    hafsUnicodeFont = loadOrFetchSingleFont(HAFS_UNICODE_FONT)
+      .then((blob) => injectFontFace(HAFS_UNICODE_FONT_FAMILY, blob))
+      .catch((err) => {
+        // Let the next page open try again instead of caching the failure.
+        hafsUnicodeFont = null;
+        throw err;
+      });
+  }
+  return hafsUnicodeFont;
 }
 
 /**
@@ -141,45 +166,65 @@ export async function ensureSurahNamesFont(): Promise<void> {
   }
 }
 
-async function loadOrFetchBismillahFont(): Promise<Blob> {
-  const cached = await idb.get<CachedFont>("fonts", BSML_CACHE_KEY);
-  if (cached?.blob && cached.cacheVersion === FONT_CACHE_VERSION) {
-    // Same refresh duty as the page fonts — QF's answer covers this one too
-    // (docs/licensing-decisions.md §1a, point 3).
-    if (isStale(cached.fetchedAt)) refreshBismillahInBackground();
-    return cached.blob;
-  }
-  return fetchAndCacheBismillahFont();
+/**
+ * A font that is not per-page, cached in the `fonts` store under a reserved
+ * slot (no real page uses 0 or below).
+ */
+interface SingleFont {
+  label: string;
+  url: string;
+  slot: number;
+  cacheVersion: string;
 }
 
-/** Page-slot 0 in the fonts store (no real page uses slot 0). */
-const BSML_CACHE_KEY = 0;
+const BISMILLAH_FONT: SingleFont = {
+  label: "bismillah",
+  url: BISMILLAH_CDN_URL,
+  slot: 0,
+  cacheVersion: FONT_CACHE_VERSION,
+};
 
-async function fetchAndCacheBismillahFont(): Promise<Blob> {
-  const res = await fetch(BISMILLAH_CDN_URL);
-  if (!res.ok) throw new Error(`bismillah font: HTTP ${res.status}`);
+const HAFS_UNICODE_FONT: SingleFont = {
+  label: "uthmanic hafs",
+  url: HAFS_UNICODE_CDN_URL,
+  slot: -1,
+  cacheVersion: "uthmanic-hafs-v18",
+};
+
+async function loadOrFetchSingleFont(font: SingleFont): Promise<Blob> {
+  const cached = await idb.get<CachedFont>("fonts", font.slot);
+  if (cached?.blob && cached.cacheVersion === font.cacheVersion) {
+    // Same refresh duty as the page fonts — QF's answer covers these too
+    // (docs/licensing-decisions.md §1a, point 3).
+    if (isStale(cached.fetchedAt)) refreshSingleFontInBackground(font);
+    return cached.blob;
+  }
+  return fetchAndCacheSingleFont(font);
+}
+
+async function fetchAndCacheSingleFont(font: SingleFont): Promise<Blob> {
+  const res = await fetch(font.url);
+  if (!res.ok) throw new Error(`${font.label} font: HTTP ${res.status}`);
   const blob = await res.blob();
   idb
     .put("fonts", {
-      page: BSML_CACHE_KEY,
+      page: font.slot,
       blob,
-      cacheVersion: FONT_CACHE_VERSION,
+      cacheVersion: font.cacheVersion,
       fetchedAt: Date.now(),
     })
     .catch(() => {});
   return blob;
 }
 
-let refreshingBismillah = false;
+const refreshingSingleFonts = new Set<number>();
 
-function refreshBismillahInBackground(): void {
-  if (refreshingBismillah) return;
-  refreshingBismillah = true;
-  fetchAndCacheBismillahFont()
+function refreshSingleFontInBackground(font: SingleFont): void {
+  if (refreshingSingleFonts.has(font.slot)) return;
+  refreshingSingleFonts.add(font.slot);
+  fetchAndCacheSingleFont(font)
     .catch(() => {})
-    .finally(() => {
-      refreshingBismillah = false;
-    });
+    .finally(() => refreshingSingleFonts.delete(font.slot));
 }
 
 // ─── Internals ────────────────────────────────────────────────────────────────

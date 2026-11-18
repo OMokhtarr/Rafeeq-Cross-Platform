@@ -24,6 +24,7 @@ import {
   BackupError,
   type BackupSummary,
 } from "../../core/services/storage/backup.service";
+import { reconcileMushafSelection } from "../../core/services/data/quran.service";
 import AccountModal from "./AccountModal";
 import AccountIdentityRow from "./AccountIdentityRow";
 import DeleteAccountSheet from "./DeleteAccountSheet";
@@ -167,6 +168,8 @@ const Account: React.FC = () => {
     setBackupError(null);
     try {
       await restoreBackup(parseBackup(pendingRestore.json), { keepLocal: syncActive });
+      // The file may carry a different mushaf: bring the page layout along.
+      reconcileMushafSelection();
       setModal(null);
       setPendingRestore(null);
       await loadLocalData();

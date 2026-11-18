@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { DrivingMode } from "../native/driving-mode.plugin";
 import {
   fetchVersesByPage,
   fetchVersesByJuz,
@@ -22,13 +24,25 @@ import {
   getSurahNameArabic,
   getSurahNameEnglish,
   estimatePageForVerse,
+  getSurahStartPage,
+  getSurahEndPage,
+  getActivePageLayout,
+  setActivePageLayout,
+  type PageLayout,
 } from "./metadata.service";
-import { MUSHAFS, DEFAULT_MUSHAF, mushafIdFor } from "../api/mushaf.config";
+import {
+  MUSHAFS,
+  DEFAULT_MUSHAF,
+  mushafIdFor,
+  layoutFor,
+  type MushafKind,
+} from "../api/mushaf.config";
 import { readPageLayout } from "./page-layout";
 import { mergeLayoutIntoVerses } from "./merge-layout";
 import { onDerivedPageCacheCleared } from "./page-cache";
 import { shouldRefetchPage } from "./page-refresh";
 import { isLikelyOffline } from "../api/quran-api.client";
+import { isNetworkReachable } from "../api/network.service";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   buildIdentifyCorpus,
@@ -85,6 +99,7 @@ function mapApiWord(w: any): VerseWord {
     charType: w.char_type_name === "end" ? "word" : "end",
     text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV2: w.code_v2 ?? w.codeV2 ?? "",
+    textTajweed: w.text_uthmani_tajweed ?? w.textTajweed,
     lineNumber: w.line_number ?? w.lineNumber ?? 0,
     pageNumber: w.page_number ?? w.pageNumber ?? 0,
   };
@@ -92,19 +107,24 @@ function mapApiWord(w: any): VerseWord {
 
 // ─── In‑memory LRU cache ────────────────────────────────────────────────────
 const MAX_MEM_PAGES = 20;
-const pageCache = new Map<number, Verse[]>();
+// Keyed by mushaf + page: a fetch that began under one mushaf can resolve
+// after the selection changed, and must never be readable under the new one.
+const pageCache = new Map<string, Verse[]>();
+const cacheKey = (mushaf: MushafKind, page: number) => `${mushaf}:${page}`;
 
-function memGet(page: number): Verse[] | null {
-  const hit = pageCache.get(page);
+function memGet(mushaf: MushafKind, page: number): Verse[] | null {
+  const key = cacheKey(mushaf, page);
+  const hit = pageCache.get(key);
   if (!hit) return null;
-  pageCache.delete(page);
-  pageCache.set(page, hit);
+  pageCache.delete(key);
+  pageCache.set(key, hit);
   return hit;
 }
 
-function memSet(page: number, verses: Verse[]) {
-  if (pageCache.has(page)) pageCache.delete(page);
-  pageCache.set(page, verses);
+function memSet(mushaf: MushafKind, page: number, verses: Verse[]) {
+  const key = cacheKey(mushaf, page);
+  if (pageCache.has(key)) pageCache.delete(key);
+  pageCache.set(key, verses);
   while (pageCache.size > MAX_MEM_PAGES) {
     const firstKey = pageCache.keys().next().value;
     if (firstKey !== undefined) pageCache.delete(firstKey);
@@ -118,7 +138,7 @@ function memSet(page: number, verses: Verse[]) {
 onDerivedPageCacheCleared(() => pageCache.clear());
 
 // ─── In‑flight dedup ────────────────────────────────────────────────────────
-const inflight = new Map<number, Promise<Verse[]>>();
+const inflight = new Map<string, Promise<Verse[]>>();
 
 /**
  * Re-fetch one page's word text without making the reader wait.
@@ -127,7 +147,7 @@ const inflight = new Map<number, Promise<Verse[]>>();
  * carry (docs/licensing-decisions.md §1a). Failures are silent: the cached
  * page is already on screen and is allowed to stay.
  */
-const refreshing = new Set<number>();
+const refreshing = new Set<string>();
 
 /**
  * Fetch one page and store it: API word text, plus the synced V4 layout when
@@ -137,8 +157,10 @@ const refreshing = new Set<number>();
  * if not, so a disagreement costs slightly stale line breaks rather than words
  * paired with the wrong glyphs. See merge-layout.ts.
  */
-async function fetchAndStorePage(page: number): Promise<Verse[]> {
-  const mushaf = readSelectedMushaf();
+async function fetchAndStorePage(
+  page: number,
+  mushaf: MushafKind = readSelectedMushaf(),
+): Promise<Verse[]> {
   const apiVerses: any[] = (await fetchVersesByPage(
     page,
     MUSHAFS[mushaf].wordFields,
@@ -157,21 +179,22 @@ async function fetchAndStorePage(page: number): Promise<Verse[]> {
   // Best-effort: a failed write (private mode / quota) must not cost the
   // reader the page they already have in hand.
   await idb
-    .put("pages", { page, verses, fetchedAt: Date.now() })
+    .put("pages", { page, verses, fetchedAt: Date.now(), mushaf })
     .catch(() => {});
-  memSet(page, verses);
+  memSet(mushaf, page, verses);
   return verses;
 }
 
-function refreshPageInBackground(page: number): void {
-  if (refreshing.has(page)) return;
-  refreshing.add(page);
-  fetchAndStorePage(page)
+function refreshPageInBackground(page: number, mushaf: MushafKind): void {
+  const key = cacheKey(mushaf, page);
+  if (refreshing.has(key)) return;
+  refreshing.add(key);
+  fetchAndStorePage(page, mushaf)
     .catch(() => {
       // Offline or a failed request: the cached copy stands until next time.
     })
     .finally(() => {
-      refreshing.delete(page);
+      refreshing.delete(key);
     });
 }
 
@@ -181,10 +204,11 @@ export async function getPage(page: number): Promise<Verse[]> {
   if (!Number.isFinite(page) || page < 1 || page > TOTAL_PAGES) return [];
   page = Math.floor(page);
 
-  const memHit = memGet(page);
+  const mushaf = readSelectedMushaf();
+  const memHit = memGet(mushaf, page);
   if (memHit) return memHit;
 
-  const pending = inflight.get(page);
+  const pending = inflight.get(cacheKey(mushaf, page));
   if (pending) return pending;
 
   const work = (async () => {
@@ -192,9 +216,13 @@ export async function getPage(page: number): Promise<Verse[]> {
       page: number;
       verses: Verse[];
       fetchedAt?: number;
+      mushaf?: MushafKind;
     }>("pages", page);
-    if (idbHit?.verses?.length) {
-      memSet(page, idbHit.verses);
+    // Records written before pages were tagged hold qpc_v4_tajweed text. A
+    // page cached for a different mushaf is not this mushaf's text: refetch.
+    const cachedMushaf = idbHit?.mushaf ?? "qpc_v4_tajweed";
+    if (idbHit?.verses?.length && cachedMushaf === mushaf) {
+      memSet(mushaf, page, idbHit.verses);
       // The word-level Uthmani text here is QF content that Content Sync does
       // not carry, so it owes a re-fetch at least every 7 days
       // (docs/licensing-decisions.md §1a). Refresh in the BACKGROUND: the
@@ -206,25 +234,26 @@ export async function getPage(page: number): Promise<Verse[]> {
           online: !isLikelyOffline(),
         })
       ) {
-        refreshPageInBackground(page);
+        refreshPageInBackground(page, mushaf);
       }
       return idbHit.verses;
     }
 
-    return fetchAndStorePage(page);
+    return fetchAndStorePage(page, mushaf);
   })();
 
-  inflight.set(page, work);
+  const flightKey = cacheKey(mushaf, page);
+  inflight.set(flightKey, work);
   try {
     return await work;
   } finally {
-    inflight.delete(page);
+    inflight.delete(flightKey);
   }
 }
 
 export async function prefetchPage(page: number): Promise<void> {
   if (!Number.isFinite(page) || page < 1 || page > TOTAL_PAGES) return;
-  if (memGet(page)) return;
+  if (memGet(readSelectedMushaf(), page)) return;
   getPage(page).catch(() => {});
 }
 
@@ -267,10 +296,12 @@ export async function getAllVersesAsMap(): Promise<Record<string, string>> {
 
 export async function getSurahVersesList(suraIndex: number): Promise<Verse[]> {
   const out: Verse[] = [];
-  const chapters = await getChaptersFromMeta();
-  const ch = chapters.find((c: any) => c.id === suraIndex);
-  if (!ch) return out;
-  for (let p = ch.pages[0]; p <= ch.pages[1]; p++) {
+  if (!Number.isInteger(suraIndex) || suraIndex < 1 || suraIndex > 114) {
+    return out;
+  }
+  // The page span of the active layout, not the API's (which is 1405's).
+  const lastPage = getSurahEndPage(suraIndex);
+  for (let p = getSurahStartPage(suraIndex); p <= lastPage; p++) {
     const pageVerses = await getPage(p);
     for (const v of pageVerses) {
       if (v.sura === suraIndex) out.push(v);
@@ -338,6 +369,8 @@ export async function repairPagesCache(): Promise<void> {
 
 // ─── Background page preload ─────────────────────────────────────────────────
 let preloadPromise: Promise<void> | null = null;
+// Bumped when the preload is restarted so a running loop stops.
+let preloadGeneration = 0;
 
 /**
  * Start preloading all 604 pages in the background.
@@ -349,9 +382,11 @@ export function preloadAllPages(
 ): Promise<void> {
   if (preloadPromise) return preloadPromise;
 
+  const generation = preloadGeneration;
   preloadPromise = (async () => {
     const total = TOTAL_PAGES;
     for (let p = 1; p <= total; p++) {
+      if (generation !== preloadGeneration) return;
       try {
         await getPage(p); // this automatically caches in IDB
       } catch {
@@ -815,7 +850,7 @@ async function searchFromPagesCache(q: string): Promise<SearchResult[]> {
 }
 
 // ─── Mushaf selection helper ─────────────────────────────────────────────────
-export function readSelectedMushaf() {
+export function readSelectedMushaf(): MushafKind {
   try {
     const raw = localStorage.getItem("rafiq_settings_v1");
     if (raw) {
@@ -826,9 +861,46 @@ export function readSelectedMushaf() {
   return DEFAULT_MUSHAF;
 }
 
-async function getChaptersFromMeta(): Promise<any[]> {
-  const { getChapters } = await import("./metadata.service");
-  return getChapters();
+/**
+ * Make `kind` the active mushaf: switch the page layout the metadata lookups
+ * use and the native one. Cached pages are kept: each record is tagged with its
+ * mushaf and getPage never serves another's, so both mushafs stay available
+ * offline. The new mushaf's pages are then preloaded when online (best effort).
+ */
+export async function applyMushafSelection(kind: MushafKind): Promise<void> {
+  setActivePageLayout(layoutFor(kind));
+  syncNativePageLayout(layoutFor(kind));
+  preloadGeneration++;
+  preloadPromise = null;
+  isNetworkReachable()
+    .then((online) => {
+      if (online) return preloadAllPages();
+    })
+    .catch(() => {});
+}
+
+/**
+ * Bring the page layout (JS and native) in line with the stored mushaf. The
+ * selection can change without Settings: cloud sync and backup restore write
+ * the settings directly. A no-op when already in line.
+ */
+export function reconcileMushafSelection(): void {
+  const kind = readSelectedMushaf();
+  const layout = layoutFor(kind);
+  if (layout === getActivePageLayout() && layout === nativeLayoutSynced) return;
+  applyMushafSelection(kind).catch(() => {});
+}
+
+let nativeLayoutSynced: PageLayout | null = null;
+
+/**
+ * Tell the Android Auto service which page layout is active. Fire-and-forget:
+ * only Android has the native method, and a failure must never affect the app.
+ */
+export function syncNativePageLayout(layout: PageLayout): void {
+  nativeLayoutSynced = layout;
+  if (Capacitor.getPlatform() !== "android") return;
+  DrivingMode.setPageLayout({ layout }).catch(() => {});
 }
 
 export async function ensureSeeded(): Promise<void> {

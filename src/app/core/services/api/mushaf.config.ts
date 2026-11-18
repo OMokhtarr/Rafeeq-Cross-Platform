@@ -6,7 +6,14 @@
  * Uthmani text is always fetched too, because quizzes / search read it.
  */
 
-export type MushafKind = "qpc_v4_tajweed" | "uthmani" | "indopak" | "imlaei";
+import type { PageLayout } from "../data/metadata.service";
+
+export type MushafKind =
+  | "qpc_v4_tajweed"
+  | "uthmani"
+  | "indopak"
+  | "imlaei"
+  | "madani_1405_tajweed";
 
 export interface MushafSpec {
   kind: MushafKind;
@@ -41,6 +48,10 @@ export interface MushafSpec {
    * the published table, so we let the API pick rather than guess wrong.
    */
   mushafId?: number;
+  /** Page layout (which page-start table) this kind is laid out on. */
+  layout: PageLayout;
+  /** How words are drawn: per-page V4 glyph fonts, or Unicode tajweed markup. */
+  renderer: "v4-glyph" | "unicode-tajweed";
 }
 
 export const MUSHAFS: Record<MushafKind, MushafSpec> = {
@@ -50,6 +61,8 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
     labelEn: "Tajweed Mushaf (KFGQPC V4)",
     wordFields: "code_v2,text_uthmani,line_number,page_number",
     mushafId: 19,
+    layout: "1421",
+    renderer: "v4-glyph",
   },
   uthmani: {
     kind: "uthmani",
@@ -57,6 +70,8 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
     labelEn: "Uthmani text",
     wordFields: "text_uthmani,line_number,page_number",
     mushafId: 4,
+    layout: "1421",
+    renderer: "v4-glyph",
   },
   indopak: {
     kind: "indopak",
@@ -64,18 +79,41 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
     labelEn: "IndoPak",
     wordFields: "text_indopak,text_uthmani,line_number,page_number",
     mushafId: 3,
+    layout: "1421",
+    renderer: "v4-glyph",
   },
   imlaei: {
     kind: "imlaei",
     labelAr: "الإملائي",
     labelEn: "Imlaei",
     wordFields: "text_imlaei,text_uthmani,line_number,page_number",
+    layout: "1421",
+    renderer: "v4-glyph",
+  },
+  madani_1405_tajweed: {
+    kind: "madani_1405_tajweed",
+    labelAr: "مصحف المدينة ١٤٠٥ (تجويد)",
+    labelEn: "Madani 1405 (Tajweed)",
+    wordFields: "text_uthmani,text_uthmani_tajweed,line_number,page_number",
+    mushafId: 2,
+    layout: "1405",
+    renderer: "unicode-tajweed",
   },
 };
 
 /** Numeric Mushaf id for a kind, or undefined when the API should choose. */
 export function mushafIdFor(kind: MushafKind): number | undefined {
   return MUSHAFS[kind]?.mushafId;
+}
+
+/** Page layout a kind is laid out on. */
+export function layoutFor(kind: MushafKind): PageLayout {
+  return MUSHAFS[kind]?.layout ?? "1421";
+}
+
+/** Renderer a kind uses. */
+export function rendererFor(kind: MushafKind): MushafSpec["renderer"] {
+  return MUSHAFS[kind]?.renderer ?? "v4-glyph";
 }
 
 export const DEFAULT_MUSHAF: MushafKind = "qpc_v4_tajweed";

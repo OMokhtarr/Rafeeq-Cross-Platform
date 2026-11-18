@@ -8,7 +8,8 @@ export interface PageStart {
 
 // ─── Static fallback ─────────────────────────────────────────────────────────
 // First verse of each page, checked in full (2026-10-19) against the QF API's
-// /pages/lookup, which every selectable mushaf (19, 4, 3, default) shares.
+// /pages/lookup. Mushafs 19, 1 and 5 share this table; mushafs 2 and 11
+// (Madani 1405) differ on 25 pages, listed in PAGE_STARTS_1405_OVERRIDES.
 // Mirrored in android/.../auto/RafeeqAudioUrls.kt; page-starts.test.ts holds
 // the two together.
 const PAGE_STARTS: readonly PageStart[] = [
@@ -735,10 +736,56 @@ const SURAH_NAMES_EN: readonly string[] = [
   "Al-Masad","Al-Ikhlas","Al-Falaq","An-Nas",
 ];
 
+// Madani 1405 breaks these 25 pages differently from the table above.
+const PAGE_STARTS_1405_OVERRIDES: Readonly<Record<number, PageStart>> = {
+  121: { sura: 5, aya: 77 },
+  122: { sura: 5, aya: 83 },
+  123: { sura: 5, aya: 90 },
+  145: { sura: 6, aya: 132 },
+  532: { sura: 55, aya: 17 },
+  533: { sura: 55, aya: 41 },
+  534: { sura: 55, aya: 68 },
+  565: { sura: 68, aya: 16 },
+  568: { sura: 69, aya: 35 },
+  570: { sura: 70, aya: 40 },
+  576: { sura: 74, aya: 18 },
+  584: { sura: 79, aya: 16 },
+  586: { sura: 81, aya: 1 },
+  588: { sura: 83, aya: 7 },
+  589: { sura: 83, aya: 35 },
+  590: { sura: 85, aya: 1 },
+  592: { sura: 87, aya: 16 },
+  593: { sura: 89, aya: 1 },
+  594: { sura: 89, aya: 24 },
+  595: { sura: 91, aya: 1 },
+  596: { sura: 92, aya: 15 },
+  597: { sura: 95, aya: 1 },
+  598: { sura: 97, aya: 1 },
+  599: { sura: 98, aya: 8 },
+  600: { sura: 100, aya: 10 },
+};
+
+export type PageLayout = "1421" | "1405";
+
+let activeLayout: PageLayout = "1421";
+
+export function setActivePageLayout(layout: PageLayout): void {
+  activeLayout = layout;
+}
+export function getActivePageLayout(): PageLayout {
+  return activeLayout;
+}
+
+function startOf(page: number): PageStart {
+  return (
+    (activeLayout === "1405" ? PAGE_STARTS_1405_OVERRIDES[page] : undefined) ??
+    PAGE_STARTS[page]
+  );
+}
+
 // ─── In‑memory caches ────────────────────────────────────────────────────────
 let chaptersCache: any[] = [];
 let juzsCache: any[] = [];
-let pageToSuraMap: Map<number, number> | null = null;
 let initPromise: Promise<void> | null = null;
 
 export async function initMetadata(): Promise<void> {
@@ -772,15 +819,6 @@ export async function initMetadata(): Promise<void> {
       if (juzs.length > 0) await idb.put("meta", { key: "juzs", value: juzs });
     }
     juzsCache = juzs;
-
-    // 3. Page → surah mapping
-    const suraMap = new Map<number, number>();
-    for (const ch of chaptersCache) {
-      const start = ch.pages?.[0] ?? 1;
-      const end = ch.pages?.[1] ?? start;
-      for (let p = start; p <= end; p++) suraMap.set(p, ch.id);
-    }
-    pageToSuraMap = suraMap;
   })();
   return initPromise;
 }
@@ -790,10 +828,8 @@ export function getChapters(): any[] {
   return chaptersCache;
 }
 export function getSuraForPage(page: number): number | undefined {
-  if (pageToSuraMap?.size) return pageToSuraMap.get(page);
-  // Offline fallback: PAGE_STARTS is indexed by page number (0-based entry 0 is unused).
-  const entry = PAGE_STARTS[page];
-  return entry?.sura || undefined;
+  if (page < 1 || page > 604) return undefined;
+  return startOf(page).sura || undefined;
 }
 export function getSurahNameArabic(suraId: number): string {
   const ch = chaptersCache.find((c: any) => c.id === suraId);
@@ -804,18 +840,16 @@ export function getSurahNameEnglish(suraId: number): string {
   return ch?.name_simple ?? ch?.translated_name?.name ?? SURAH_NAMES_EN[suraId] ?? `Surah ${suraId}`;
 }
 export function getSurahStartPage(suraId: number): number {
-  const ch = chaptersCache.find((c: any) => c.id === suraId);
-  return ch ? ch.pages?.[0] ?? 1 : 1;
+  return estimatePageForVerse(suraId, 1);
 }
 
 export function getSurahEndPage(suraId: number): number {
-  const ch = chaptersCache.find((c: any) => c.id === suraId);
-  return ch ? ch.pages?.[1] ?? ch.pages?.[0] ?? 604 : 604;
+  return estimatePageForVerse(suraId, SURAH_VERSE_COUNTS[suraId]);
 }
 
 export function getPageStart(page: number): PageStart | null {
   if (page < 1 || page > 604) return null;
-  return PAGE_STARTS[page];
+  return startOf(page);
 }
 
 export function estimatePageForVerse(sura: number, aya: number): number {
@@ -824,7 +858,7 @@ export function estimatePageForVerse(sura: number, aya: number): number {
     answer = 1;
   while (lo <= hi) {
     const mid = Math.floor((lo + hi) / 2);
-    const start = PAGE_STARTS[mid];
+    const start = startOf(mid);
     if (verseLessThanOrEqual(start, { sura, aya })) {
       answer = mid;
       lo = mid + 1;
