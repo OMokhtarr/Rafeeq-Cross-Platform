@@ -50,6 +50,20 @@ const verses: Verse[] = [
   },
 ];
 
+const v4Verses: Verse[] = [
+  {
+    sura: 55,
+    aya: 17,
+    text: "",
+    page: 532,
+    suraNameAr: "",
+    words: [
+      { ...word(1, 1, ""), codeV2: "ﱁ", textTajweed: undefined },
+      { ...word(2, 1, ""), codeV2: "ﱂ", textTajweed: undefined },
+    ],
+  },
+];
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let container: HTMLElement;
@@ -152,11 +166,28 @@ describe("MushafPage in Unicode-tajweed mode", () => {
     expect(overlay.querySelector("[class*='mushaf-tj-']")).toBeNull();
   });
 
-  it("stays on the V4 renderer when the default mushaf is selected", async () => {
-    await renderPage();
+  it("stays on the V4 renderer for V4 data", async () => {
+    await renderPage({ verses: v4Verses });
     expect(mockEnsurePageFont).toHaveBeenCalled();
     expect(mockEnsureHafsUnicodeFont).not.toHaveBeenCalled();
     expect(pageRoot().classList.contains("mushaf-page-unicode")).toBe(false);
+  });
+
+  it("follows the data, not the setting: 1405 data under a V4 setting draws Unicode", async () => {
+    localStorage.setItem(
+      "rafiq_settings_v1",
+      JSON.stringify({ mushaf: "qpc_v4_tajweed" }),
+    );
+    await renderPage();
+    expect(pageRoot().classList.contains("mushaf-page-unicode")).toBe(true);
+    expect(mockEnsureHafsUnicodeFont).toHaveBeenCalled();
+  });
+
+  it("follows the data, not the setting: V4 data under a 1405 setting draws V4", async () => {
+    select({});
+    await renderPage({ verses: v4Verses });
+    expect(pageRoot().classList.contains("mushaf-page-unicode")).toBe(false);
+    expect(mockEnsurePageFont).toHaveBeenCalled();
   });
 });
 
@@ -191,7 +222,7 @@ describe("MushafPage width fit", () => {
   });
 
   it("leaves V4 at its height-derived size", async () => {
-    await renderPage();
+    await renderPage({ verses: v4Verses });
     expect(pageRoot().style.fontSize).toBe("20px");
   });
 });

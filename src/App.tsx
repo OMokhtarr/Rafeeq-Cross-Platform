@@ -3,19 +3,19 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect, useLocation, useHistory } from "react-router-dom";
 import { App as CapApp } from "@capacitor/app";
-import {
-  initMetadata,
-  getActivePageLayout,
-  setActivePageLayout,
-} from "./app/core/services/data/metadata.service";
+import { initMetadata } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
   seedTextCorpus,
   readSelectedMushaf,
-  syncNativePageLayout,
+  reconcileMushafSelection,
 } from "./app/core/services/data/quran.service";
-import { layoutFor } from "./app/core/services/api/mushaf.config";
-import { preloadAllPageFonts } from "./app/core/services/api/font.loader";
+import { rendererFor } from "./app/core/services/api/mushaf.config";
+import {
+  preloadAllPageFonts,
+  ensureHafsUnicodeFont,
+} from "./app/core/services/api/font.loader";
+import { useSyncRefresh } from "./app/core/hooks/useSyncRefresh";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
 import { useDoubleSwipeExit } from "./app/core/hooks/useDoubleSwipeExit";
 import { useContentSync } from "./app/core/hooks/useContentSync";
@@ -228,6 +228,10 @@ const App: React.FC = () => {
 
   useContentSync();
 
+  // Cloud sync can change the mushaf while Settings isn't open; the page
+  // layout (JS and Android Auto) must follow it.
+  useSyncRefresh(["settings"], reconcileMushafSelection);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -240,9 +244,8 @@ const App: React.FC = () => {
       seedTextCorpus().catch(() => {});
 
       // Metadata is cache-first and falls back to static page starts, so it is
-      // safe to start regardless of connectivity.
-      setActivePageLayout(layoutFor(readSelectedMushaf()));
-      syncNativePageLayout(getActivePageLayout());
+      // safe to start regardless of connectivity. (The page layout is already
+      // set: index.tsx does it before the first render.)
       initMetadata().catch(() => {});
 
       // Only the *preloads* need the network. navigator.onLine can't be trusted
@@ -260,6 +263,9 @@ const App: React.FC = () => {
       });
       // Start font preload in background (doesn't block UI)
       preloadAllPageFonts().catch(() => {});
+      if (rendererFor(readSelectedMushaf()) === "unicode-tajweed") {
+        ensureHafsUnicodeFont().catch(() => {});
+      }
     })();
 
     return () => {

@@ -49,8 +49,6 @@ import {
   BISMILLAH_FONT_FAMILY,
   HAFS_UNICODE_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
-import { rendererFor } from "../../../core/services/api/mushaf.config";
-import { readSelectedMushaf } from "../../../core/services/data/quran.service";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import { useTheme } from "../../../core/context/ThemeContext";
 import { findLineGaps, gapBeforeLine } from "./page-line-gaps";
@@ -118,17 +116,15 @@ const MushafPage: React.FC<Props> = ({
   const [tajweedOn, setTajweedOn] = useState(readTajweedSetting);
   // Madani 1405 draws Unicode text in one Hafs font with CSS tajweed colours;
   // every other kind keeps the per-page V4 glyph fonts and their palettes.
-  const [isUnicode, setIsUnicode] = useState(readIsUnicode);
+  // Decided by the data being drawn, not the setting, so verses fetched before
+  // a mushaf switch are never drawn with the other mushaf's renderer.
+  const isUnicode = isUnicodeData(verses);
 
-  // Live reaction to the "Tajweed colors" toggle and the Mushaf picker in
-  // Settings. The native `storage` event only fires across tabs, so Settings
-  // also dispatches a same-tab `rafiq-settings-changed` CustomEvent whenever
-  // it persists.
+  // Live reaction to the "Tajweed colors" toggle in Settings. The native
+  // `storage` event only fires across tabs, so Settings also dispatches a
+  // same-tab `rafiq-settings-changed` CustomEvent whenever it persists.
   useEffect(() => {
-    const refresh = () => {
-      setTajweedOn(readTajweedSetting());
-      setIsUnicode(readIsUnicode());
-    };
+    const refresh = () => setTajweedOn(readTajweedSetting());
     window.addEventListener("storage", refresh);
     window.addEventListener("rafiq-settings-changed", refresh);
     return () => {
@@ -891,8 +887,10 @@ function readTajweedSetting(): boolean {
   return true;
 }
 
-function readIsUnicode(): boolean {
-  return rendererFor(readSelectedMushaf()) === "unicode-tajweed";
+/** 1405 words carry `textTajweed` and no V4 glyph string (`codeV2`). */
+function isUnicodeData(verses: Verse[]): boolean {
+  const first = verses.find((v) => v.words?.length)?.words[0];
+  return !!first && !!first.textTajweed && !first.codeV2;
 }
 
 /**

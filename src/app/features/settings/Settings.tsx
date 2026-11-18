@@ -20,7 +20,7 @@ import {
   DEFAULT_MUSHAF,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
-import { applyMushafSelection } from "../../core/services/data/quran.service";
+import { reconcileMushafSelection } from "../../core/services/data/quran.service";
 import {
   runSync,
   getSyncStatus,
@@ -626,8 +626,6 @@ const Settings: React.FC = () => {
   // What the store already holds, so only a real change is saved: a save on
   // opening the page would stamp defaults as an edit that beats the cloud.
   const loaded = useRef(s);
-  // The mushaf the page cache and layout currently belong to.
-  const appliedMushaf = useRef(s.mushaf);
 
   // Sync applied newer settings: show them, so the next toggle here does not
   // write this copy back over them on every device. A change still waiting for
@@ -653,10 +651,7 @@ const Settings: React.FC = () => {
     const writeT = setTimeout(() => {
       saveSettings(s);
       // After the save, so page fetches that read the stored mushaf agree.
-      if (s.mushaf !== appliedMushaf.current) {
-        appliedMushaf.current = s.mushaf;
-        applyMushafSelection(s.mushaf).catch(() => {});
-      }
+      reconcileMushafSelection();
       setSaved(true);
     }, 250);
     const clearT = setTimeout(() => setSaved(false), 1500);

@@ -24,6 +24,9 @@ import {
   getSurahNameArabic,
   getSurahNameEnglish,
   estimatePageForVerse,
+  getSurahStartPage,
+  getSurahEndPage,
+  getActivePageLayout,
   setActivePageLayout,
   type PageLayout,
 } from "./metadata.service";
@@ -36,12 +39,10 @@ import {
 } from "../api/mushaf.config";
 import { readPageLayout } from "./page-layout";
 import { mergeLayoutIntoVerses } from "./merge-layout";
-import {
-  onDerivedPageCacheCleared,
-  clearDerivedPageCache,
-} from "./page-cache";
+import { onDerivedPageCacheCleared } from "./page-cache";
 import { shouldRefetchPage } from "./page-refresh";
 import { isLikelyOffline } from "../api/quran-api.client";
+import { isNetworkReachable } from "../api/network.service";
 import { removeDiacritics } from "../../utils/arabic.util";
 import {
   buildIdentifyCorpus,
@@ -295,10 +296,12 @@ export async function getAllVersesAsMap(): Promise<Record<string, string>> {
 
 export async function getSurahVersesList(suraIndex: number): Promise<Verse[]> {
   const out: Verse[] = [];
-  const chapters = await getChaptersFromMeta();
-  const ch = chapters.find((c: any) => c.id === suraIndex);
-  if (!ch) return out;
-  for (let p = ch.pages[0]; p <= ch.pages[1]; p++) {
+  if (!Number.isInteger(suraIndex) || suraIndex < 1 || suraIndex > 114) {
+    return out;
+  }
+  // The page span of the active layout, not the API's (which is 1405's).
+  const lastPage = getSurahEndPage(suraIndex);
+  for (let p = getSurahStartPage(suraIndex); p <= lastPage; p++) {
     const pageVerses = await getPage(p);
     for (const v of pageVerses) {
       if (v.sura === suraIndex) out.push(v);
@@ -366,6 +369,8 @@ export async function repairPagesCache(): Promise<void> {
 
 // ─── Background page preload ─────────────────────────────────────────────────
 let preloadPromise: Promise<void> | null = null;
+// Bumped when the preload is restarted so a running loop stops.
+let preloadGeneration = 0;
 
 /**
  * Start preloading all 604 pages in the background.
@@ -377,9 +382,11 @@ export function preloadAllPages(
 ): Promise<void> {
   if (preloadPromise) return preloadPromise;
 
+  const generation = preloadGeneration;
   preloadPromise = (async () => {
     const total = TOTAL_PAGES;
     for (let p = 1; p <= total; p++) {
+      if (generation !== preloadGeneration) return;
       try {
         await getPage(p); // this automatically caches in IDB
       } catch {
@@ -856,27 +863,44 @@ export function readSelectedMushaf(): MushafKind {
 
 /**
  * Make `kind` the active mushaf: switch the page layout the metadata lookups
- * use, then drop every cached page (IDB + in-memory LRU) so none of the old
- * mushaf's text or page boundaries is served.
+ * use and the native one. Cached pages are kept: each record is tagged with its
+ * mushaf and getPage never serves another's, so both mushafs stay available
+ * offline. The new mushaf's pages are then preloaded when online (best effort).
  */
 export async function applyMushafSelection(kind: MushafKind): Promise<void> {
   setActivePageLayout(layoutFor(kind));
   syncNativePageLayout(layoutFor(kind));
-  await clearDerivedPageCache();
+  preloadGeneration++;
+  preloadPromise = null;
+  isNetworkReachable()
+    .then((online) => {
+      if (online) return preloadAllPages();
+    })
+    .catch(() => {});
 }
+
+/**
+ * Bring the page layout (JS and native) in line with the stored mushaf. The
+ * selection can change without Settings: cloud sync and backup restore write
+ * the settings directly. A no-op when already in line.
+ */
+export function reconcileMushafSelection(): void {
+  const kind = readSelectedMushaf();
+  const layout = layoutFor(kind);
+  if (layout === getActivePageLayout() && layout === nativeLayoutSynced) return;
+  applyMushafSelection(kind).catch(() => {});
+}
+
+let nativeLayoutSynced: PageLayout | null = null;
 
 /**
  * Tell the Android Auto service which page layout is active. Fire-and-forget:
  * only Android has the native method, and a failure must never affect the app.
  */
 export function syncNativePageLayout(layout: PageLayout): void {
+  nativeLayoutSynced = layout;
   if (Capacitor.getPlatform() !== "android") return;
   DrivingMode.setPageLayout({ layout }).catch(() => {});
-}
-
-async function getChaptersFromMeta(): Promise<any[]> {
-  const { getChapters } = await import("./metadata.service");
-  return getChapters();
 }
 
 export async function ensureSeeded(): Promise<void> {

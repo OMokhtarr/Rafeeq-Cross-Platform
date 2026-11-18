@@ -2,7 +2,13 @@
  * Selecting a mushaf: cached pages are per mushaf, and switching drops them.
  */
 
-import { getPage, applyMushafSelection } from "../quran.service";
+import {
+  getPage,
+  applyMushafSelection,
+  reconcileMushafSelection,
+  getSurahVersesList,
+} from "../quran.service";
+import { isNetworkReachable } from "../../api/network.service";
 import { getActivePageLayout, setActivePageLayout } from "../metadata.service";
 import { idb } from "../../storage/idb.service";
 import { fetchVersesByPage } from "../../api/quran-data-provider";
@@ -16,12 +22,16 @@ jest.mock("../../api/quran-data-provider", () => ({
 jest.mock("../../api/quran-api.client", () => ({
   isLikelyOffline: () => false,
 }));
+jest.mock("../../api/network.service", () => ({
+  isNetworkReachable: jest.fn(),
+}));
 jest.mock("../page-layout", () => ({ readPageLayout: jest.fn() }));
 
 const mockGet = idb.get as jest.Mock;
 const mockPut = idb.put as jest.Mock;
 const mockClear = idb.clear as jest.Mock;
 const mockFetch = fetchVersesByPage as jest.Mock;
+const mockReachable = isNetworkReachable as jest.Mock;
 
 const cachedVerse = { verse_key: "1:1", words: [] };
 
@@ -35,6 +45,7 @@ beforeEach(() => {
   mockPut.mockResolvedValue(undefined);
   mockClear.mockResolvedValue(undefined);
   mockFetch.mockResolvedValue([]);
+  mockReachable.mockResolvedValue(false);
   setActivePageLayout("1421");
 });
 
@@ -85,10 +96,72 @@ describe("per-mushaf page cache", () => {
 });
 
 describe("applyMushafSelection", () => {
-  it("switches the page layout and clears the pages store", async () => {
+  it("switches the page layout and keeps the cached pages", async () => {
     await applyMushafSelection("madani_1405_tajweed");
     expect(getActivePageLayout()).toBe("1405");
-    expect(mockClear).toHaveBeenCalledWith("pages");
+    expect(mockClear).not.toHaveBeenCalled();
+  });
+
+  it("still never serves the other mushaf's cached record after a switch", async () => {
+    select("madani_1405_tajweed");
+    await applyMushafSelection("madani_1405_tajweed");
+    mockGet.mockResolvedValue({
+      page: 12,
+      mushaf: "qpc_v4_tajweed",
+      verses: [cachedVerse],
+      fetchedAt: Date.now(),
+    });
+    await getPage(12);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("preloads the pages of the new mushaf when online", async () => {
+    mockReachable.mockResolvedValue(true);
+    mockGet.mockResolvedValue(undefined);
+    select("madani_1405_tajweed");
+    await applyMushafSelection("madani_1405_tajweed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockFetch).toHaveBeenCalled();
+    // Stop the loop so it cannot leak into later tests.
+    mockReachable.mockResolvedValue(false);
+    await applyMushafSelection("qpc_v4_tajweed");
+  });
+
+  it("does not preload offline", async () => {
+    await applyMushafSelection("madani_1405_tajweed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("reconcileMushafSelection", () => {
+  it("applies a mushaf written to the settings from outside, once", async () => {
+    reconcileMushafSelection();
+    expect(getActivePageLayout()).toBe("1421");
+
+    select("madani_1405_tajweed");
+    reconcileMushafSelection();
+    expect(getActivePageLayout()).toBe("1405");
+
+    // Already in line: a second call changes nothing and doesn't re-preload.
+    mockReachable.mockClear();
+    reconcileMushafSelection();
+    expect(getActivePageLayout()).toBe("1405");
+    expect(mockReachable).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 0));
+  });
+});
+
+describe("getSurahVersesList", () => {
+  it("follows the active layout's pages: surah 80 reaches page 586 under 1421", async () => {
+    mockGet.mockResolvedValue(undefined);
+    const fetched: number[] = [];
+    mockFetch.mockImplementation(async (page: number) => {
+      fetched.push(page);
+      return [];
+    });
+    await getSurahVersesList(80);
+    expect(fetched).toEqual([585, 586]);
   });
 });
 
