@@ -18,6 +18,9 @@ import {
   getJuzStart,
   getJuzEnd,
   estimatePageForVerse,
+  getPageStart,
+  getRubStart,
+  getRubEnd,
 } from "../../../core/services/data/metadata.service";
 import { rangeKey } from "./quiz-range-format";
 
@@ -117,6 +120,42 @@ export function totalPageCount(ranges: QuizRange[]): number {
     for (let p = start; p <= end; p++) pages.add(p);
   }
   return pages.size;
+}
+
+/** Surah of the last verse on `page`: the one before the next page starts. */
+function lastSurahOnPage(page: number): number {
+  const next = getPageStart(page + 1);
+  if (!next) return 114;
+  return next.aya === 1 ? next.sura - 1 : next.sura;
+}
+
+/**
+ * Every surah a selection touches. A juz or page range that crosses a surah
+ * boundary counts each surah it reaches, so one range can cover several.
+ *
+ * Built only from the bundled PAGE_STARTS / RUB_STARTS tables, never the
+ * fetched chapter/juz caches: the setup page calls this on render, which can
+ * come before metadata loads (first launch offline), and the cache fallbacks
+ * would then report all 114 surahs.
+ */
+export function rangeSurahs(ranges: QuizRange[]): Set<number> {
+  const surahs = new Set<number>();
+  for (const range of normalizeRanges(ranges)) {
+    let first: number;
+    let last: number;
+    if (range.kind === "surah") {
+      first = last = range.surah;
+    } else if (range.kind === "juz") {
+      // A juz is 8 rubs: rubs 8n-7 … 8n.
+      first = getRubStart(range.juz * 8 - 7).sura;
+      last = getRubEnd(range.juz * 8).sura;
+    } else {
+      first = getPageStart(range.from)!.sura;
+      last = lastSurahOnPage(range.to);
+    }
+    for (let s = first; s <= last; s++) surahs.add(s);
+  }
+  return surahs;
 }
 
 async function versesFor(range: QuizRange): Promise<Verse[]> {

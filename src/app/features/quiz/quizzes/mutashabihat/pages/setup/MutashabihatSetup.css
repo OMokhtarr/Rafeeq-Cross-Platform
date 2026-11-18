@@ -162,6 +162,12 @@ ion-content::part(scroll) {
   transition: border-color var(--transition-theme), background var(--transition-theme);
 }
 
+/* All / between-surahs toggle under the Advanced range list. Fixed height so
+   the list above keeps the flexible space; .ms-body's gap spaces it. */
+.ms-match-mode {
+  flex-shrink: 0;
+}
+
 .ms-scroll-zone-label {
   flex-shrink: 0;
   padding: 10px 14px 6px;

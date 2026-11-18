@@ -133,8 +133,11 @@ const MutashabihatTest: React.FC = () => {
         const allVerses = await getAllVerses();
         const allGroups = getAllMutashabihatGroups(allVerses);
 
+        const crossSurah =
+          !!config.ranges?.length && config.crossSurahOnly === true;
+
         let filtered = config.ranges?.length
-          ? filterGroupsByRanges(allGroups, config.ranges)
+          ? filterGroupsByRanges(allGroups, config.ranges, crossSurah)
           : config.scopeType === "surah"
             ? filterGroupsBySurahs(allGroups, config.selectedSurahs)
             : config.scopeType === "page"
@@ -154,7 +157,7 @@ const MutashabihatTest: React.FC = () => {
           .slice(0, config.questionCount);
 
         if (!cancelled) {
-          setQuestions(chosen.map((g) => buildMutashabihatQuestion(g)));
+          setQuestions(chosen.map((g) => buildMutashabihatQuestion(g, crossSurah)));
           setLoading(false);
         }
       } catch (e) {

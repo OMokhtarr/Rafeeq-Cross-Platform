@@ -146,4 +146,9 @@ export interface MutashabihatConfig {
    * configs already stored on device keep working with no migration.
    */
   ranges?: QuizRange[] | null;
+  /**
+   * Advanced only: keep just the similar verses that span two or more surahs,
+   * and show each question's siblings from other surahs only. Missing = false.
+   */
+  crossSurahOnly?: boolean;
 }

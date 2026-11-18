@@ -1,4 +1,7 @@
-import { filterGroupsByRanges } from "../mutashabihat.service";
+import {
+  filterGroupsByRanges,
+  buildMutashabihatQuestion,
+} from "../mutashabihat.service";
 import type {
   QuizRange,
   Verse,
@@ -82,5 +85,50 @@ describe("filterGroupsByRanges", () => {
       { kind: "surah", surah: 2 },
     ];
     expect(filterGroupsByRanges([g], ranges)).toHaveLength(1);
+  });
+});
+
+describe("filterGroupsByRanges — crossSurahOnly", () => {
+  const both: QuizRange[] = [
+    { kind: "surah", surah: 2 },
+    { kind: "surah", surah: 3 },
+  ];
+
+  it("drops a group whose in-range verses are all in one surah", () => {
+    const g = group([verse(2, 1, 2, 1), verse(2, 9, 3, 1)]);
+    expect(filterGroupsByRanges([g], both, true)).toEqual([]);
+  });
+
+  it("keeps a group spanning two selected surahs", () => {
+    const g = group([verse(2, 1, 2, 1), verse(3, 1, 50, 3)]);
+    expect(filterGroupsByRanges([g], both, true)).toHaveLength(1);
+  });
+
+  it("drops a group whose other-surah verse is outside the ranges", () => {
+    const g = group([verse(2, 1, 2, 1), verse(2, 9, 3, 1), verse(78, 1, 582, 30)]);
+    expect(filterGroupsByRanges([g], both, true)).toEqual([]);
+  });
+});
+
+describe("buildMutashabihatQuestion — crossSurahOnly", () => {
+  const withWindow = (verses: Verse[]) => ({
+    ...group(verses),
+    windowSize: 3,
+    sharedPhraseRaw: "",
+  });
+
+  it("shows only siblings from other surahs", () => {
+    const g = withWindow([verse(2, 1, 2, 1), verse(2, 9, 3, 1), verse(3, 1, 50, 3)]);
+    // The target is picked at random; enough draws to hit both surahs.
+    for (let i = 0; i < 30; i++) {
+      const q = buildMutashabihatQuestion(g, true);
+      expect(q.siblingVerses.length).toBeGreaterThan(0);
+      expect(q.siblingVerses.every((s) => s.sura !== q.targetVerse.sura)).toBe(true);
+    }
+  });
+
+  it("keeps same-surah siblings when the flag is off", () => {
+    const g = withWindow([verse(2, 1, 2, 1), verse(2, 9, 3, 1)]);
+    expect(buildMutashabihatQuestion(g).siblingVerses).toHaveLength(1);
   });
 });

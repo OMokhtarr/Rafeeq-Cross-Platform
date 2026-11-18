@@ -359,6 +359,9 @@ export interface AppStrings {
     rangeTotals: string;
     pageWord: string;
     othersWord: string;
+    matchModeLabel: string;
+    matchAll: string;
+    matchCrossSurah: string;
     juzPlural: string;
     surahPlural: string;
     pagePlural: string;
@@ -1100,6 +1103,9 @@ const ar: AppStrings = {
     rangeTotals: "الإجمالي",
     pageWord: "ص",
     othersWord: "أخرى",
+    matchModeLabel: "المتشابهات",
+    matchAll: "كل المتشابهات",
+    matchCrossSurah: "بين السور فقط",
     juzPlural: "أجزاء",
     surahPlural: "سور",
     pagePlural: "نطاقات صفحات",
@@ -1866,6 +1872,9 @@ const en: AppStrings = {
     rangeTotals: "Total",
     pageWord: "p.",
     othersWord: "others",
+    matchModeLabel: "Similar verses",
+    matchAll: "All similar verses",
+    matchCrossSurah: "Between surahs only",
     juzPlural: "juz",
     surahPlural: "surahs",
     pagePlural: "page ranges",
