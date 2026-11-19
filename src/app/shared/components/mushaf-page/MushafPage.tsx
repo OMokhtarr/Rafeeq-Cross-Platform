@@ -49,12 +49,13 @@ import {
   BISMILLAH_FONT_FAMILY,
   HAFS_UNICODE_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
+import { offersTajweedColors } from "../../../core/services/api/mushaf.config";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import { useTheme } from "../../../core/context/ThemeContext";
 import { findLineGaps, gapBeforeLine } from "./page-line-gaps";
 import { measureTextZoom } from "./text-zoom";
 import { parseTajweed, stripTajweed } from "./tajweed-markup";
-import { fitFontToWidth } from "./fit-width";
+import { fitUnicodeFontPx, lineSqueeze } from "./fit-width";
 import {
   SURAH_BANNER_PATH,
   SURAH_BANNER_VIEWBOX,
@@ -325,12 +326,25 @@ const MushafPage: React.FC<Props> = ({
       const byWidth = w * 0.052;
       const px = Math.round(Math.min(byHeight, byWidth));
       setFontPx(px);
-      // `byWidth` is tuned to the V4 glyph widths. A Unicode font's lines run
-      // to different widths, so measure them at that size and shrink if the
-      // widest one would run past the page edge.
+      // `byWidth` and `byHeight` are tuned to the V4 glyphs. The Unicode font
+      // gets one size for every page, read back from the rendered line
+      // height, and a line too long for it is condensed on its own rather
+      // than shrinking the page (see fit-width.ts).
       if (isUnicode) {
-        const fitted = fitFontToWidth(px, measureLineWidths(el, px), w);
+        const lines = Array.from(
+          el.querySelectorAll<HTMLElement>(".mushaf-line"),
+        );
+        lines.forEach(unsqueezeLine);
+        // The line's own width: the Unicode page is inset (MushafPage.css),
+        // so the container's outer width would overstate the room.
+        const fitted = fitUnicodeFontPx(
+          px,
+          lines[0]?.clientWidth || w,
+          lines[0]?.getBoundingClientRect().height ?? 0,
+          slotPx,
+        );
         if (fitted !== px) setFontPx(fitted);
+        lines.forEach(squeezeLineToFit);
       }
     };
     update();
@@ -681,7 +695,7 @@ const MushafPage: React.FC<Props> = ({
         }
       >
         {isUnicode
-          ? renderUnicodeText(tw.word, tajweedOn)
+          ? renderUnicodeText(tw.word, tajweedOn && UNICODE_TAJWEED_COLORS)
           : tw.word.codeV2 || tw.word.text_uthmani}
         {isGlowing &&
           (isUnicode ? (
@@ -887,6 +901,12 @@ function readTajweedSetting(): boolean {
   return true;
 }
 
+/**
+ * Whether Unicode pages honour the tajweed setting. The renderer follows the
+ * data, not the setting, and 1405 is the only Mushaf drawn in Unicode.
+ */
+const UNICODE_TAJWEED_COLORS = offersTajweedColors("madani_1405_tajweed");
+
 /** 1405 words carry `textTajweed` and no V4 glyph string (`codeV2`). */
 function isUnicodeData(verses: Verse[]): boolean {
   const first = verses.find((v) => v.words?.length)?.words[0];
@@ -912,28 +932,29 @@ function renderUnicodeText(word: VerseWord, colored: boolean): React.ReactNode {
   );
 }
 
-/**
- * Minimum space between words, in em, that the width fit reserves. Lines are
- * spread with space-between and no gap, so without it the fitted line's words
- * would touch.
- */
-const MIN_WORD_GAP_EM = 0.25;
+/** Undo `squeezeLineToFit`, so the line can be measured at its natural size. */
+function unsqueezeLine(line: HTMLElement): void {
+  line.style.removeProperty("width");
+  line.style.removeProperty("transform");
+  line.style.removeProperty("transform-origin");
+}
 
 /**
- * Width each strict-layout line needs at font size `px`: the sum of its words'
- * widths plus the minimum gap between each pair. The line box itself is always
- * 100% wide (space-between), so it can't be measured directly.
+ * Condense a Unicode line whose words, set edge to edge, are wider than the
+ * line. The line box is widened to the words (so its overflow clip keeps them
+ * whole) and scaled back to the page width from its right, RTL start edge.
+ * The line box is always 100% wide (space-between), so the words are summed.
  */
-function measureLineWidths(el: HTMLElement, px: number): number[] {
-  return Array.from(el.querySelectorAll<HTMLElement>(".mushaf-line"), (line) => {
-    const words = Array.from(line.children);
-    const wordWidths = words.reduce(
-      (sum, child) => sum + child.getBoundingClientRect().width,
-      0,
-    );
-    const gaps = Math.max(0, words.length - 1) * MIN_WORD_GAP_EM * px;
-    return wordWidths + gaps;
-  });
+function squeezeLineToFit(line: HTMLElement): void {
+  const wordsWidth = Array.from(line.children).reduce(
+    (sum, child) => sum + child.getBoundingClientRect().width,
+    0,
+  );
+  const scale = lineSqueeze(wordsWidth, line.clientWidth);
+  if (scale === 1) return;
+  line.style.width = `${wordsWidth}px`;
+  line.style.transformOrigin = "right center";
+  line.style.transform = `scaleX(${scale})`;
 }
 
 function groupByLine(verses: Verse[]): Line[] {

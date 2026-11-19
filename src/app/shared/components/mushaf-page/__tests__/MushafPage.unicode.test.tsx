@@ -115,31 +115,16 @@ describe("MushafPage in Unicode-tajweed mode", () => {
     expect(mockEnsurePageFont).not.toHaveBeenCalled();
   });
 
-  it("draws the rule classes as coloured spans", async () => {
-    select({ showTajweedColors: true });
-    await renderPage();
-    const silent = container.querySelector("span.mushaf-tj-silent");
-    expect(silent?.textContent).toBe("ٱ");
-    expect(container.querySelector("span.mushaf-tj-permissible")?.textContent).toBe("يۡ");
-    expect(container.querySelector("script")).toBeNull();
-  });
-
-  it("draws plain text when tajweed colours are off", async () => {
-    select({ showTajweedColors: false });
-    await renderPage();
-    expect(container.querySelectorAll("[class*='mushaf-tj-']")).toHaveLength(0);
-    expect(words()[1].textContent).toBe(STRIPPED);
-  });
-
-  it("follows the tajweed toggle live", async () => {
-    select({ showTajweedColors: true });
-    await renderPage();
-    select({ showTajweedColors: false });
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent("rafiq-settings-changed"));
-    });
-    expect(container.querySelectorAll("[class*='mushaf-tj-']")).toHaveLength(0);
-  });
+  it.each([true, false])(
+    "draws plain text whatever the tajweed setting (%s): 1405 offers no colours yet",
+    async (showTajweedColors) => {
+      select({ showTajweedColors });
+      await renderPage();
+      expect(container.querySelectorAll("[class*='mushaf-tj-']")).toHaveLength(0);
+      expect(words()[1].textContent).toBe(STRIPPED);
+      expect(container.querySelector("script")).toBeNull();
+    },
+  );
 
   it("uses the Hafs font family and no font palette on the root", async () => {
     select({});
@@ -192,33 +177,67 @@ describe("MushafPage in Unicode-tajweed mode", () => {
 });
 
 describe("MushafPage width fit", () => {
-  // A 400x600 page: slot 40px, so the height-derived size is 20px. Three
-  // words of 160px plus two 0.25em gaps make a 490px line, which overflows.
+  // A 400x600 page: slot 40px, so the height-derived size is 20px, and a 36px
+  // line (1.8em) means the text renders at that size. Three words of 160px
+  // make a 480px line, which overflows the 400px line.
+  let wordWidth = 160;
+  let lineHeight = 36;
+  const firstLine = () =>
+    pageRoot().querySelector<HTMLElement>(".mushaf-line")!;
   beforeEach(() => {
+    wordWidth = 160;
+    lineHeight = 36;
     jest.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
     jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
     jest
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockImplementation(function (this: Element) {
-        const width = this.closest(".mushaf-line") ? 160 : 0;
-        return { width, height: 0, top: 0, left: 0, right: width, bottom: 0 } as DOMRect;
+        const isLine = this.classList.contains("mushaf-line");
+        const width = !isLine && this.closest(".mushaf-line") ? wordWidth : 0;
+        const height = isLine ? lineHeight : 0;
+        return { width, height, top: 0, left: 0, right: width, bottom: height } as DOMRect;
       });
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it("shrinks a Unicode page until its widest line fits", async () => {
+  it("keeps the common size and condenses only the overflowing line", async () => {
+    // 400px / 17.5em allows 23px, the 40px slot floor(22.2) = 22; the long
+    // line does not shrink the page, it is condensed to 400 / 480 instead.
     select({});
     await renderPage();
-    expect(pageRoot().style.fontSize).toBe("16px");
+    expect(pageRoot().style.fontSize).toBe("22px");
+    expect(firstLine().style.width).toBe("480px");
+    expect(firstLine().style.transform).toMatch(/^scaleX\(0\.8333/);
   });
 
-  it("counts a minimum inter-word gap, so words that exactly fill the line still shrink", async () => {
-    // 480px wide: the bare 3×160px words fit exactly, but 2 gaps × 0.25em at
-    // 20px add 10px, so 490px must fit in 480px: floor(20 × 480 / 490) = 19.
-    jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(480);
+  it("leaves a line that fits uncondensed", async () => {
+    wordWidth = 100;
     select({});
     await renderPage();
-    expect(pageRoot().style.fontSize).toBe("19px");
+    expect(firstLine().style.transform).toBe("");
+    expect(firstLine().style.width).toBe("");
+  });
+
+  it("grows a Unicode page to the typical line width, up to its slot", async () => {
+    // 500px wide: the typical 17.5em line allows 29px, but a 36px line in a
+    // 40px slot caps it at floor(20 × 40 / 36) = 22.
+    jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(500);
+    wordWidth = 100;
+    select({});
+    await renderPage();
+    expect(pageRoot().style.fontSize).toBe("22px");
+  });
+
+  it("gives every page the same size, however long its lines", async () => {
+    wordWidth = 100;
+    select({});
+    await renderPage();
+    const shortLines = pageRoot().style.fontSize;
+    // Turn to a page whose words are nearly twice as wide.
+    wordWidth = 190;
+    await renderPage({ page: 533 });
+    expect(pageRoot().style.fontSize).toBe(shortLines);
+    expect(firstLine().style.transform).toMatch(/^scaleX\(/);
   });
 
   it("leaves V4 at its height-derived size", async () => {

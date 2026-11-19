@@ -8,7 +8,9 @@ describe("parseTajweed", () => {
       ),
     ).toEqual([
       { text: "ٱ", rule: "silent" },
-      { text: "لۡمَغۡرِبَ" },
+      { text: "لۡمَ" },
+      { text: "غۡ", rule: "heavy" },
+      { text: "رِبَ" },
       { text: "يۡ", rule: "permissible" },
       { text: "نِ" },
     ]);
@@ -18,12 +20,51 @@ describe("parseTajweed", () => {
     expect(parseTajweed("رَبُّ")).toEqual([{ text: "رَبُّ" }]);
   });
 
+  it.each(["خ", "ص", "ض", "غ", "ط", "ق", "ظ"])(
+    "colours the always-heavy letter %s with its vowel marks",
+    (letter) => {
+      expect(parseTajweed(`يَ${letter}ُّونَ`)).toEqual([
+        { text: "يَ" },
+        { text: `${letter}ُّ`, rule: "heavy" },
+        { text: "ونَ" },
+      ]);
+    },
+  );
+
+  it("leaves a heavy letter inside another rule to that rule", () => {
+    // ق under qalqalah keeps the qalqalah colour.
+    expect(parseTajweed("يَ<rule class=qalaqah>قۡ</rule>طَعُونَ")).toEqual([
+      { text: "يَ" },
+      { text: "قۡ", rule: "qalqalah" },
+      { text: "طَ", rule: "heavy" },
+      { text: "عُونَ" },
+    ]);
+  });
+
+  it("does not colour ر or the lam of the Name, whose heaviness depends on context", () => {
+    expect(parseTajweed("رَسُولُ ٱللَّهِ")).toEqual([{ text: "رَسُولُ ٱللَّهِ" }]);
+  });
+
   it("gives the custom class no colour", () => {
     expect(parseTajweed("<rule class=custom>x</rule>")).toEqual([{ text: "x" }]);
   });
 
   it("gives an unknown class no colour", () => {
     expect(parseTajweed("<rule class=not_a_rule>x</rule>")).toEqual([{ text: "x" }]);
+  });
+
+  it("parses the hyphenated custom-alef-maksora class nested in a madda", () => {
+    // Verbatim from the API (55:76 مُتَّكِـِٔينَ … عَبۡقَرِيٍّ area, page 533).
+    expect(
+      parseTajweed(
+        "صِر<rule class=madda_normal><rule class=custom-alef-maksora>ٰ</rule></rule>طَ",
+      ),
+    ).toEqual([
+      { text: "صِ", rule: "heavy" },
+      { text: "ر" },
+      { text: "ٰ", rule: "normal" },
+      { text: "طَ", rule: "heavy" },
+    ]);
   });
 
   it.each([

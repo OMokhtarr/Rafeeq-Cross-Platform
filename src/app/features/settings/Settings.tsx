@@ -18,6 +18,7 @@ import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
   MUSHAFS,
   DEFAULT_MUSHAF,
+  offersTajweedColors,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
 import { reconcileMushafSelection } from "../../core/services/data/quran.service";
@@ -89,15 +90,9 @@ const DEFAULTS: AppSettings = {
 
 const STORAGE_KEY = "rafiq_settings_v1";
 
-// Only the Tajweed mushafs are offered in Settings; the other rendering kinds
-// are kept in mushaf.config but hidden from the dropdown.
+// Only the two Madani layouts (1421 and 1405) are offered in Settings; the
+// other rendering kinds are kept in mushaf.config but hidden from the dropdown.
 const MUSHAF_OPTIONS = [MUSHAFS.qpc_v4_tajweed, MUSHAFS.madani_1405_tajweed];
-
-// Strip a trailing "(KFGQPC V4)"-style parenthetical from a mushaf label. Only
-// parentheticals made of Latin capitals/digits go: "(Tajweed)" is part of the
-// name that tells the two Madani mushafs apart.
-const cleanMushafLabel = (label: string) =>
-  label.replace(/\s*\([A-Z0-9 ]+\)\s*$/, "").trim();
 
 function loadSettings(): AppSettings {
   try {
@@ -840,21 +835,21 @@ const Settings: React.FC = () => {
                   value={s.mushaf}
                   options={MUSHAF_OPTIONS.map((m) => ({
                     value: m.kind,
-                    label: cleanMushafLabel(
-                      lang === "ar" ? m.labelAr : m.labelEn,
-                    ),
+                    label: lang === "ar" ? m.labelAr : m.labelEn,
                   }))}
                   onChange={(v) => set("mushaf", v as MushafKind)}
                   night={isNight}
                 />
-                <ToggleRow
-                  icon={ICONS.palette}
-                  label={ts.tajweed}
-                  desc={ts.tajweedDesc}
-                  checked={s.showTajweedColors}
-                  onChange={(v) => set("showTajweedColors", v)}
-                  onInfo={() => setTajweedInfoOpen(true)}
-                />
+                {offersTajweedColors(s.mushaf) && (
+                  <ToggleRow
+                    icon={ICONS.palette}
+                    label={ts.tajweed}
+                    desc={ts.tajweedDesc}
+                    checked={s.showTajweedColors}
+                    onChange={(v) => set("showTajweedColors", v)}
+                    onInfo={() => setTajweedInfoOpen(true)}
+                  />
+                )}
               </div>
             </div>
 

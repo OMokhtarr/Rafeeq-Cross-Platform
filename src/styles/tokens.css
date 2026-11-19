@@ -71,18 +71,23 @@
   --color-hifz: #7c6cd4;
   --color-settings: #7f8c8d;
 
-  /* ── TAJWEED (theme-invariant) ───────────────────── */
-  /* Rule colours for the Unicode (Madani 1405) Mushaf, the same hexes as the
-     Settings legend (Settings.tsx TAJWEED_RULES). The V4 Mushaf takes its
-     colours from the font's own palettes instead. */
+  /* ── TAJWEED ─────────────────────────────────────── */
+  /* Rule colours for the Unicode (Madani 1405) Mushaf, copied from the V4
+     (1421) fonts' own CPAL palettes so both Mushafs colour a rule the same:
+     these are palette 1, the night palette the V4 page uses by default; the
+     day block below overrides them with palette 0. Identical in every V4 page
+     font. Slot per rule, measured by matching V4 glyph layers to the 1405
+     rule tags over 26 pages: necessary 3, obligatory 9, permissible 4,
+     normal 5, ghunnah 6, qalqalah 8, silent 2, heavy (tafkheem) 7. */
 
-  --tajweed-necessary: #c0392b;
-  --tajweed-obligatory: #e91e8c;
-  --tajweed-permissible: #e67e22;
-  --tajweed-normal: #f0c040;
-  --tajweed-ghunnah: #27ae60;
-  --tajweed-qalqalah: #5dade2;
-  --tajweed-silent: #95a5a6;
+  --tajweed-necessary: #e30000;
+  --tajweed-obligatory: #ff5e8e;
+  --tajweed-permissible: #ff8e3b;
+  --tajweed-normal: #ffc1e0;
+  --tajweed-ghunnah: #26b55d;
+  --tajweed-qalqalah: #00deff;
+  --tajweed-silent: #999999;
+  --tajweed-heavy: #3c84d5;
   /* Recite glow on the Unicode Mushaf — the V4 day glow green. */
   --tajweed-glow: #00a33d;
 
@@ -272,6 +277,16 @@
    Pure white surfaces, minimal off-white accents.
    ───────────────────────────────────────────────────── */
 :root[data-theme="day"] {
+  /* Tajweed — the V4 fonts' day palette (palette 0); see the TAJWEED block. */
+  --tajweed-necessary: #b50000;
+  --tajweed-obligatory: #f40000;
+  --tajweed-permissible: #ff7b00;
+  --tajweed-normal: #ce9e00;
+  --tajweed-ghunnah: #09b000;
+  --tajweed-qalqalah: #2fadff;
+  --tajweed-silent: #a3a5a5;
+  --tajweed-heavy: #3f48e6;
+
   /* Surfaces — all white / near-white */
   --color-bg-app: #ffffff;
   --color-bg-status: #ffffff;
