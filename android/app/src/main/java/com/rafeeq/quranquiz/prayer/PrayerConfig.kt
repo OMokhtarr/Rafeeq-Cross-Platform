@@ -40,6 +40,7 @@ object PrayerConfig {
 
     private const val KEY_REMINDERS = "reminders_enabled"
     private const val KEY_AZKAR_REMINDERS = "azkar_reminders_enabled"
+    private const val KEY_FASTING_REMINDERS = "fasting_reminders_enabled"
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
@@ -174,6 +175,14 @@ object PrayerConfig {
 
     fun setAzkarRemindersEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_AZKAR_REMINDERS, enabled).apply()
+    }
+
+    /** Evening-before Sunnah fasting reminders; independent of the other toggles. */
+    fun fastingRemindersEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_FASTING_REMINDERS, false)
+
+    fun setFastingRemindersEnabled(ctx: Context, enabled: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_FASTING_REMINDERS, enabled).apply()
     }
 
     fun enabledPrayers(ctx: Context): Set<String> =

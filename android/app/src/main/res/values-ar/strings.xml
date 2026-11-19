@@ -54,6 +54,15 @@
     <string name="azkar_reminder_morning_text">حان وقت أذكار الصباح</string>
     <string name="azkar_reminder_evening_title">أذكار المساء</string>
     <string name="azkar_reminder_evening_text">حان وقت أذكار المساء</string>
+    <string name="fasting_reminder_channel">تذكير صيام السنة</string>
+    <string name="fasting_reminder_text">صيام سنة. جهّز سحورك وانوِ الصيام الليلة.</string>
+    <string name="fasting_reminder_monday_title">غداً يوم الاثنين</string>
+    <string name="fasting_reminder_thursday_title">غداً يوم الخميس</string>
+    <string name="fasting_reminder_white_days_title">غداً من الأيام البيض</string>
+    <string name="fasting_reminder_arafah_title">غداً يوم عرفة</string>
+    <string name="fasting_reminder_ashura_title">غداً يوم عاشوراء</string>
+    <string name="fasting_reminder_tasua_title">غداً يوم تاسوعاء</string>
+    <string name="fasting_reminder_shawwal_title">يمكنك البدء بصيام الست من شوال غداً</string>
 
     <!-- منبّهات الصلاة -->
     <string name="alarm_stop">إيقاف</string>

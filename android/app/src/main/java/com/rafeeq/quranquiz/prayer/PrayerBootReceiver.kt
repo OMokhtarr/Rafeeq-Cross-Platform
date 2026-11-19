@@ -32,6 +32,7 @@ class PrayerBootReceiver : BroadcastReceiver() {
         PrayerAlarmScheduler.scheduleNext(context)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
         AzkarReminderScheduler.scheduleNext(context)
+        FastingReminderScheduler.scheduleNext(context)
         PrayerAlarmClockScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
 
