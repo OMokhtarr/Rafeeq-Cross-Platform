@@ -61,6 +61,15 @@
     <string name="azkar_reminder_morning_text">Time for the morning remembrances</string>
     <string name="azkar_reminder_evening_title">Evening azkar</string>
     <string name="azkar_reminder_evening_text">Time for the evening remembrances</string>
+    <string name="fasting_reminder_channel">Sunnah fasting reminders</string>
+    <string name="fasting_reminder_text">A Sunnah fast. Plan your suhoor and make your intention tonight.</string>
+    <string name="fasting_reminder_monday_title">Tomorrow is Monday</string>
+    <string name="fasting_reminder_thursday_title">Tomorrow is Thursday</string>
+    <string name="fasting_reminder_white_days_title">Tomorrow is one of the White Days</string>
+    <string name="fasting_reminder_arafah_title">Tomorrow is the Day of Arafah</string>
+    <string name="fasting_reminder_ashura_title">Tomorrow is Ashura</string>
+    <string name="fasting_reminder_tasua_title">Tomorrow is Tasu\'a</string>
+    <string name="fasting_reminder_shawwal_title">The six days of Shawwal can start tomorrow</string>
 
     <!-- Prayer alarms (the ringing ones; reminders are separate) -->
     <string name="alarm_stop">Stop</string>

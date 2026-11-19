@@ -33,13 +33,16 @@ import {
 } from "./sync-status";
 import {
   enableAzkarReminders,
+  enableFastingReminders,
   enableReminders,
   getAzkarReminders,
+  getFastingReminders,
   getReminderHealth,
   getReminders,
   openAppSettings,
   requestExactAlarms,
   setAzkarReminders,
+  setFastingReminders,
   setReminders,
   type ReminderHealth,
 } from "../../core/services/prayer/prayer-times.service";
@@ -70,6 +73,7 @@ interface AppSettings {
   // Notifications — native owns the truth; these mirror it
   prayerReminders: boolean;
   azkarReminders: boolean;
+  fastingReminders: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -86,6 +90,7 @@ const DEFAULTS: AppSettings = {
   azkarCounterSound: false,
   prayerReminders: false,
   azkarReminders: false,
+  fastingReminders: false,
 };
 
 const STORAGE_KEY = "rafiq_settings_v1";
@@ -612,6 +617,7 @@ const Settings: React.FC = () => {
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [prayerReminderError, setPrayerReminderError] = useState(false);
   const [azkarReminderError, setAzkarReminderError] = useState(false);
+  const [fastingReminderError, setFastingReminderError] = useState(false);
   const [reminderHealth, setReminderHealth] = useState<ReminderHealth | null>(null);
   const tours = useTours();
   const oc = ONBOARDING_COPY[lang].settings;
@@ -697,6 +703,15 @@ const Settings: React.FC = () => {
         ),
       )
       .catch(() => {});
+    getFastingReminders()
+      .then((enabled) =>
+        setS((prev) =>
+          prev.fastingReminders === enabled
+            ? prev
+            : { ...prev, fastingReminders: enabled },
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   // Re-read whenever the page becomes visible again: both fixes happen in
@@ -712,7 +727,7 @@ const Settings: React.FC = () => {
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
 
-  const remindersOn = s.prayerReminders || s.azkarReminders;
+  const remindersOn = s.prayerReminders || s.azkarReminders || s.fastingReminders;
   const needsExactAlarms = remindersOn && reminderHealth?.exactAlarms === false;
   const needsBatteryExemption =
     remindersOn &&
@@ -770,6 +785,18 @@ const Settings: React.FC = () => {
       await setAzkarReminders(false);
       setAzkarReminderError(false);
       set("azkarReminders", false);
+    }
+  };
+
+  const handleFastingRemindersToggle = async (checked: boolean) => {
+    if (checked) {
+      const ok = await enableFastingReminders();
+      setFastingReminderError(!ok);
+      if (ok) set("fastingReminders", true);
+    } else {
+      await setFastingReminders(false);
+      setFastingReminderError(false);
+      set("fastingReminders", false);
     }
   };
 
@@ -978,6 +1005,22 @@ const Settings: React.FC = () => {
                   }}
                 />
                 {azkarReminderError && (
+                  <div className="settings-row">
+                    <p className="settings-sync-note settings-sync-note--error">
+                      {ts.notificationsDenied}
+                    </p>
+                  </div>
+                )}
+                <ToggleRow
+                  icon={ICONS.moon}
+                  label={ts.fastingReminders}
+                  desc={ts.fastingRemindersDesc}
+                  checked={s.fastingReminders}
+                  onChange={(v) => {
+                    void handleFastingRemindersToggle(v);
+                  }}
+                />
+                {fastingReminderError && (
                   <div className="settings-row">
                     <p className="settings-sync-note settings-sync-note--error">
                       {ts.notificationsDenied}

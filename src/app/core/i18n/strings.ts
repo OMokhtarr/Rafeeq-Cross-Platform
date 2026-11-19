@@ -577,6 +577,8 @@ export interface AppStrings {
     prayerRemindersDesc: string;
     azkarReminders: string;
     azkarRemindersDesc: string;
+    fastingReminders: string;
+    fastingRemindersDesc: string;
     notificationsDenied: string;
     remindersLate: string;
     exactAlarmsDesc: string;
@@ -1336,6 +1338,8 @@ const ar: AppStrings = {
     prayerRemindersDesc: "تنبيه عند دخول وقت كل صلاة",
     azkarReminders: "تذكير الأذكار اليومية",
     azkarRemindersDesc: "تنبيه بعد الفجر وبعد العصر للأذكار",
+    fastingReminders: "تذكير صيام السنة",
+    fastingRemindersDesc: "تنبيه في الليلة السابقة للاثنين والخميس والأيام البيض وعرفة وعاشوراء",
     notificationsDenied: "اسمح للتطبيق بالإشعارات لتفعيل التذكير",
     remindersLate: "قد تتأخر التنبيهات",
     exactAlarmsDesc: "اسمح بالمنبهات الدقيقة ليصل التذكير في وقته",
@@ -2111,6 +2115,8 @@ const en: AppStrings = {
     prayerRemindersDesc: "A notification when each prayer time begins",
     azkarReminders: "Daily Azkar Reminders",
     azkarRemindersDesc: "A reminder after Fajr and after Asr",
+    fastingReminders: "Sunnah Fasting Reminders",
+    fastingRemindersDesc: "The night before Mondays, Thursdays, the White Days, Arafah and Ashura",
     notificationsDenied: "Allow notifications to turn on reminders",
     remindersLate: "Reminders may arrive late",
     exactAlarmsDesc: "Allow exact alarms so reminders arrive on time",

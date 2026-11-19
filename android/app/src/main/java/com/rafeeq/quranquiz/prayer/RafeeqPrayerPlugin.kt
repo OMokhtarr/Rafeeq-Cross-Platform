@@ -46,6 +46,7 @@ import java.util.TimeZone
  *   setLocation({ lat, lng })            — store coordinates for every consumer
  *   getConfig() / setConfig({...})       — method, madhab and clock format
  *   getAzkarReminders() / setAzkarReminders({ enabled }) — morning/evening azkar reminders
+ *   getFastingReminders() / setFastingReminders({ enabled }) — evening-before Sunnah fasting reminders
  *   getReminderHealth()                  — what may delay reminders on this device
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
@@ -141,13 +142,14 @@ class RafeeqPrayerPlugin : Plugin() {
             resolveSound(call, uri, name)
         }
 
-        // Re-arm both reminder chains on every launch. Each is one alarm that
+        // Re-arm every reminder chain on every launch. Each is one alarm that
         // re-arms itself when it fires, so a vendor battery manager that
         // drops or kills it (Xiaomi does on swipe-away from recents) ends
         // every later reminder until something re-arms — this is that
-        // something. Both no-op when their reminders are off.
+        // something. Each no-ops when its reminders are off.
         PrayerAlarmScheduler.scheduleNext(context)
         AzkarReminderScheduler.scheduleNext(context)
+        FastingReminderScheduler.scheduleNext(context)
         PrayerAlarmClockScheduler.scheduleNext(context)
     }
 
@@ -396,8 +398,9 @@ class RafeeqPrayerPlugin : Plugin() {
         // compass and the widget. This also clears any previously cached name.
         PrayerConfig.setCoords(context, lat, lng)
         PrayerAlarmScheduler.scheduleMidnightRoll(context)
-        // A first fix moves the azkar slots from fixed hours onto the prayers.
+        // A first fix moves the azkar and fasting slots from fixed hours onto the prayers.
         AzkarReminderScheduler.scheduleNext(context)
+        FastingReminderScheduler.scheduleNext(context)
         // New coordinates move every prayer an alarm is measured from.
         PrayerAlarmClockScheduler.scheduleNext(context)
         PrayerWidgetProvider.refresh(context)
@@ -425,9 +428,11 @@ class RafeeqPrayerPlugin : Plugin() {
     fun setConfig(call: PluginCall) {
         call.getString("method")?.let { PrayerConfig.setMethod(context, it) }
         call.getString("madhab")?.let { PrayerConfig.setMadhab(context, it) }
-        // Both move Fajr or Asr, which the pending azkar slot was computed from.
+        // Both move Fajr, Asr or Isha, which the pending azkar and fasting
+        // slots were computed from.
         if (call.data.has("method") || call.data.has("madhab")) {
             AzkarReminderScheduler.scheduleNext(context)
+            FastingReminderScheduler.scheduleNext(context)
             PrayerAlarmClockScheduler.scheduleNext(context)
         }
         // `has` before `getBoolean`: a plain getBoolean cannot tell "absent"
@@ -492,6 +497,27 @@ class RafeeqPrayerPlugin : Plugin() {
             AzkarReminderScheduler.scheduleNext(context)
         } else {
             AzkarReminderScheduler.cancel(context)
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun getFastingReminders(call: PluginCall) {
+        call.resolve(JSObject().put("enabled", PrayerConfig.fastingRemindersEnabled(context)))
+    }
+
+    @PluginMethod
+    fun setFastingReminders(call: PluginCall) {
+        val enabled = call.getBoolean("enabled")
+        if (enabled == null) {
+            call.reject("enabled is required")
+            return
+        }
+        PrayerConfig.setFastingRemindersEnabled(context, enabled)
+        if (enabled) {
+            FastingReminderScheduler.scheduleNext(context)
+        } else {
+            FastingReminderScheduler.cancel(context)
         }
         call.resolve()
     }
