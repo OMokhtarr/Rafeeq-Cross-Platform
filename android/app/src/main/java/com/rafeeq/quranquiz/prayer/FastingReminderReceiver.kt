@@ -32,17 +32,53 @@ class FastingReminderReceiver : BroadcastReceiver() {
         const val CHANNEL_ID = "rafeeq_fasting"
         private const val NOTIFICATION_ID = 4401
         private const val TAG = "RafeeqFasting"
+
+        /** The notification title for [occasion]; null for one never reminded (Ramadan). */
+        internal fun titleFor(occasion: FastingOccasion): Int? = when (occasion) {
+            FastingOccasion.MONDAY -> R.string.fasting_reminder_monday_title
+            FastingOccasion.THURSDAY -> R.string.fasting_reminder_thursday_title
+            FastingOccasion.WHITE_DAYS -> R.string.fasting_reminder_white_days_title
+            FastingOccasion.ARAFAH -> R.string.fasting_reminder_arafah_title
+            FastingOccasion.ASHURA -> R.string.fasting_reminder_ashura_title
+            FastingOccasion.TASUA -> R.string.fasting_reminder_tasua_title
+            FastingOccasion.SHAWWAL -> R.string.fasting_reminder_shawwal_title
+            FastingOccasion.RAMADAN -> null
+        }
+
+        /**
+         * The occasion to post from a fired alarm's extras, or null to post
+         * nothing: extras missing or unreadable, an occasion with no title,
+         * or a reminder too stale to be true ([FastingReminderScheduler.isTooLate]).
+         * A missing slot time reads as 0, which is always stale.
+         */
+        internal fun reminderToPost(
+            occasionName: String?,
+            dateText: String?,
+            at: Long,
+            now: Long,
+            tz: TimeZone,
+        ): FastingOccasion? {
+            val occasion = occasionName
+                ?.let { runCatching { FastingOccasion.valueOf(it) }.getOrNull() }
+                ?: return null
+            if (titleFor(occasion) == null) return null
+            val fastDate = dateText
+                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                ?: return null
+            if (FastingReminderScheduler.isTooLate(now, at, fastDate, tz)) return null
+            return occasion
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val occasion = intent.getStringExtra(FastingReminderScheduler.EXTRA_OCCASION)
-            ?.let { runCatching { FastingOccasion.valueOf(it) }.getOrNull() }
-        val fastDate = intent.getStringExtra(FastingReminderScheduler.EXTRA_DATE)
-            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        val at = intent.getLongExtra(FastingReminderScheduler.EXTRA_AT, 0L)
-        val stale = fastDate == null ||
-            FastingReminderScheduler.isTooLate(System.currentTimeMillis(), at, fastDate, TimeZone.getDefault())
-        if (occasion != null && !stale) {
+        val occasion = reminderToPost(
+            intent.getStringExtra(FastingReminderScheduler.EXTRA_OCCASION),
+            intent.getStringExtra(FastingReminderScheduler.EXTRA_DATE),
+            intent.getLongExtra(FastingReminderScheduler.EXTRA_AT, 0L),
+            System.currentTimeMillis(),
+            TimeZone.getDefault(),
+        )
+        if (occasion != null) {
             try {
                 postNotification(context, occasion)
             } catch (e: Exception) {
@@ -53,19 +89,8 @@ class FastingReminderReceiver : BroadcastReceiver() {
         FastingReminderScheduler.scheduleNext(context)
     }
 
-    private fun titleFor(occasion: FastingOccasion): Int = when (occasion) {
-        FastingOccasion.MONDAY -> R.string.fasting_reminder_monday_title
-        FastingOccasion.THURSDAY -> R.string.fasting_reminder_thursday_title
-        FastingOccasion.WHITE_DAYS -> R.string.fasting_reminder_white_days_title
-        FastingOccasion.ARAFAH -> R.string.fasting_reminder_arafah_title
-        FastingOccasion.ASHURA -> R.string.fasting_reminder_ashura_title
-        FastingOccasion.TASUA -> R.string.fasting_reminder_tasua_title
-        FastingOccasion.SHAWWAL -> R.string.fasting_reminder_shawwal_title
-        // Never scheduled (FastingCalendar.reminderFor drops it); kept total.
-        FastingOccasion.RAMADAN -> R.string.fasting_reminder_channel
-    }
-
     private fun postNotification(context: Context, occasion: FastingOccasion) {
+        val title = titleFor(occasion) ?: return
         // The app's own language, not the device's: this is the app speaking.
         val config = Configuration(context.resources.configuration).apply {
             setLocale(PrayerConfig.appLocale(context))
@@ -89,7 +114,7 @@ class FastingReminderReceiver : BroadcastReceiver() {
             .setSmallIcon(R.drawable.ic_notification)
             // Brand gold for the icon and app name, where the system tints them.
             .setColor(ContextCompat.getColor(context, R.color.colorAccent))
-            .setContentTitle(res.getString(titleFor(occasion)))
+            .setContentTitle(res.getString(title))
             .setContentText(res.getString(R.string.fasting_reminder_text))
             .setStyle(NotificationCompat.BigTextStyle().bigText(res.getString(R.string.fasting_reminder_text)))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

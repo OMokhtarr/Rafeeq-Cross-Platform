@@ -158,8 +158,8 @@ const MainRouterOutlet: React.FC = () => {
   }, []);
 
   // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
-  // (and a fasting reminder with rafeeq://tracker)
-  // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
+  // (AzkarReminderReceiver), and a fasting reminder with rafeeq://tracker
+  // (FastingReminderReceiver). A cold start carries it as the launch URL; a
   // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
   // Android's Apple sign-in in the browser; a cold start there means the
   // app was killed while the tab was open, and the code still signs in.

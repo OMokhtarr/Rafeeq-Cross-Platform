@@ -151,6 +151,17 @@ const ICONS = {
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </SvgIcon>
   ),
+  // A calendar page with a crescent: a day marked for fasting. Kept apart
+  // from `moon`, which is Night Mode's.
+  fastingDay: (
+    <SvgIcon>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <path d="M15 16.26A3 3 0 1 1 11.74 13 2.33 2.33 0 0 0 15 16.26z" />
+    </SvgIcon>
+  ),
   type: (
     <SvgIcon>
       <polyline points="4 7 4 4 20 4 20 7" />
@@ -1012,7 +1023,7 @@ const Settings: React.FC = () => {
                   </div>
                 )}
                 <ToggleRow
-                  icon={ICONS.moon}
+                  icon={ICONS.fastingDay}
                   label={ts.fastingReminders}
                   desc={ts.fastingRemindersDesc}
                   checked={s.fastingReminders}
