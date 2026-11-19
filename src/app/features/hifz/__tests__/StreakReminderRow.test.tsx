@@ -20,6 +20,9 @@ const mocked = prayer as jest.Mocked<typeof prayer>;
 const clock = (minuteOfDay: number) =>
   formatClock(new Date(2026, 0, 1, Math.floor(minuteOfDay / 60), minuteOfDay % 60), "en");
 
+/** What native has stored: the mocks read and write it like the plugin does. */
+let stored: prayer.StreakReminder;
+
 let root: Root;
 let host: HTMLDivElement;
 
@@ -42,9 +45,15 @@ const pickTime = async (value: string) => {
 beforeEach(() => {
   // react-scripts runs jest with resetMocks: implementations go here, not in the factory.
   mocked.isNativeReminders.mockReturnValue(true);
-  mocked.getStreakReminder.mockResolvedValue({ enabled: false, minuteOfDay: 1260 });
-  mocked.setStreakReminder.mockResolvedValue();
-  mocked.enableStreakReminder.mockResolvedValue(true);
+  stored = { enabled: false, minuteOfDay: 1260 };
+  mocked.getStreakReminder.mockImplementation(async () => ({ ...stored }));
+  mocked.setStreakReminder.mockImplementation(async (change) => {
+    stored = { ...stored, ...change };
+  });
+  mocked.enableStreakReminder.mockImplementation(async () => {
+    stored = { ...stored, enabled: true };
+    return true;
+  });
 
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -64,7 +73,7 @@ describe("Streak reminder row", () => {
   });
 
   it("shows the stored state and time", async () => {
-    mocked.getStreakReminder.mockResolvedValue({ enabled: true, minuteOfDay: 1260 });
+    stored = { enabled: true, minuteOfDay: 1260 };
     await render();
     expect(reminderSwitch().checked).toBe(true);
     expect(host.textContent).toContain(clock(1260));
@@ -73,8 +82,16 @@ describe("Streak reminder row", () => {
   it("turning on asks permission and keeps the time", async () => {
     await render();
     await act(async () => reminderSwitch().click());
-    expect(mocked.enableStreakReminder).toHaveBeenCalledWith(1260);
+    expect(mocked.enableStreakReminder).toHaveBeenCalledWith();
     expect(reminderSwitch().checked).toBe(true);
+  });
+
+  it("turning on shows the time native has, not a stale one", async () => {
+    await render();
+    // Another screen changes the time after this one read it.
+    stored = { ...stored, minuteOfDay: 465 };
+    await act(async () => reminderSwitch().click());
+    expect(host.textContent).toContain(clock(465));
   });
 
   it("denied permission keeps it off and shows the note", async () => {
@@ -86,18 +103,19 @@ describe("Streak reminder row", () => {
   });
 
   it("turning off saves off with the time", async () => {
-    mocked.getStreakReminder.mockResolvedValue({ enabled: true, minuteOfDay: 1260 });
+    stored = { enabled: true, minuteOfDay: 1260 };
     await render();
     await act(async () => reminderSwitch().click());
-    expect(mocked.setStreakReminder).toHaveBeenCalledWith({ enabled: false, minuteOfDay: 1260 });
+    expect(mocked.setStreakReminder).toHaveBeenCalledWith({ enabled: false });
     expect(reminderSwitch().checked).toBe(false);
   });
 
   it("picking a time saves it", async () => {
-    mocked.getStreakReminder.mockResolvedValue({ enabled: true, minuteOfDay: 1260 });
+    stored = { enabled: true, minuteOfDay: 1260 };
     await render();
     await pickTime("07:45");
-    expect(mocked.setStreakReminder).toHaveBeenCalledWith({ enabled: true, minuteOfDay: 465 });
+    // Only the time: a stale `enabled` here could switch the reminder back on.
+    expect(mocked.setStreakReminder).toHaveBeenCalledWith({ minuteOfDay: 465 });
     expect(host.textContent).toContain(clock(465));
   });
 });

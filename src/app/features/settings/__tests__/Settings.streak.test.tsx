@@ -42,6 +42,9 @@ jest.mock("../../../core/services/prayer/prayer-times.service", () => ({
 const ts = STRINGS.en.settings;
 const mocked = prayer as jest.Mocked<typeof prayer>;
 
+/** What native has stored: the mocks read and write it like the plugin does. */
+let stored: prayer.StreakReminder;
+
 let root: Root;
 let host: HTMLDivElement;
 
@@ -68,9 +71,15 @@ beforeEach(() => {
   mocked.enableFastingReminders.mockResolvedValue(true);
   mocked.setFastingReminders.mockResolvedValue();
   mocked.isNativeReminders.mockReturnValue(true);
-  mocked.getStreakReminder.mockResolvedValue({ enabled: false, minuteOfDay: 1260 });
-  mocked.enableStreakReminder.mockResolvedValue(true);
-  mocked.setStreakReminder.mockResolvedValue();
+  stored = { enabled: false, minuteOfDay: 1260 };
+  mocked.getStreakReminder.mockImplementation(async () => ({ ...stored }));
+  mocked.setStreakReminder.mockImplementation(async (change) => {
+    stored = { ...stored, ...change };
+  });
+  mocked.enableStreakReminder.mockImplementation(async () => {
+    stored = { ...stored, enabled: true };
+    return true;
+  });
 
   localStorage.clear();
   localStorage.setItem("rafiq_lang_v1", "en");
@@ -90,15 +99,15 @@ describe("Hifz streak reminder in Settings", () => {
     expect(streakSwitch()).not.toBeNull();
   });
 
-  it("turning it on enables with the stored time", async () => {
+  it("turning it on enables without resending a time", async () => {
     await render();
     await act(async () => streakSwitch().click());
-    expect(mocked.enableStreakReminder).toHaveBeenCalledWith(1260);
+    expect(mocked.enableStreakReminder).toHaveBeenCalledWith();
     expect(streakSwitch().checked).toBe(true);
   });
 
   it("counts toward the exact-alarm warning", async () => {
-    mocked.getStreakReminder.mockResolvedValue({ enabled: true, minuteOfDay: 1260 });
+    stored = { enabled: true, minuteOfDay: 1260 };
     mocked.getReminderHealth.mockResolvedValue({ exactAlarms: false, batteryUnrestricted: true, aggressiveBattery: false });
     await render();
     expect(host.textContent).toContain(ts.exactAlarmsDesc);

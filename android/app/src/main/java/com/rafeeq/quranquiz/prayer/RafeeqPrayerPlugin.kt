@@ -47,7 +47,7 @@ import java.util.TimeZone
  *   getConfig() / setConfig({...})       — method, madhab and clock format
  *   getAzkarReminders() / setAzkarReminders({ enabled }) — morning/evening azkar reminders
  *   getFastingReminders() / setFastingReminders({ enabled }) — evening-before Sunnah fasting reminders
- *   getStreakReminder() / setStreakReminder({ enabled, minuteOfDay? }) — daily hifz-streak reminder
+ *   getStreakReminder() / setStreakReminder({ enabled?, minuteOfDay? }) — daily hifz-streak reminder
  *   getReminderHealth()                  — what may delay reminders on this device
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
@@ -535,18 +535,22 @@ class RafeeqPrayerPlugin : Plugin() {
 
     @PluginMethod
     fun setStreakReminder(call: PluginCall) {
-        val enabled = call.getBoolean("enabled")
-        if (enabled == null) {
-            call.reject("enabled is required")
+        // Each field is optional and only the ones given change: the Hifz
+        // panel and Settings each send just what the user touched, so a
+        // screen holding stale state cannot flip the other field.
+        val enabledArg = call.getBoolean("enabled")
+        val minute = call.getInt("minuteOfDay")
+        if (enabledArg == null && minute == null) {
+            call.reject("enabled or minuteOfDay is required")
             return
         }
-        val minute = call.getInt("minuteOfDay")
         if (minute != null && minute !in 0 until 24 * 60) {
             call.reject("minuteOfDay must be 0..1439")
             return
         }
         minute?.let { PrayerConfig.setStreakReminderMinute(context, it) }
-        PrayerConfig.setStreakReminderEnabled(context, enabled)
+        enabledArg?.let { PrayerConfig.setStreakReminderEnabled(context, it) }
+        val enabled = PrayerConfig.streakReminderEnabled(context)
         // Re-arming replaces the pending alarm, so a new time takes effect now.
         if (enabled) {
             HifzStreakReminderScheduler.scheduleNext(context)

@@ -45,7 +45,7 @@ interface RafeeqPrayerPlugin extends PrayerAlarmPlugin {
   getFastingReminders(): Promise<{ enabled: boolean }>;
   setFastingReminders(options: { enabled: boolean }): Promise<void>;
   getStreakReminder(): Promise<StreakReminder>;
-  setStreakReminder(options: StreakReminder): Promise<void>;
+  setStreakReminder(options: Partial<StreakReminder>): Promise<void>;
   getReminderHealth(): Promise<ReminderHealth>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
   requestExactAlarm(): Promise<{ granted: boolean }>;
@@ -397,22 +397,26 @@ export async function getStreakReminder(): Promise<StreakReminder> {
   return RafeeqPrayer.getStreakReminder();
 }
 
-export async function setStreakReminder(reminder: StreakReminder): Promise<void> {
+/**
+ * Changes only the fields given: each screen sends just what the user
+ * changed, so one showing stale state cannot overwrite the other field.
+ */
+export async function setStreakReminder(change: Partial<StreakReminder>): Promise<void> {
   if (!isNativeReminders()) return;
-  await RafeeqPrayer.setStreakReminder(reminder);
+  await RafeeqPrayer.setStreakReminder(change);
 }
 
 /**
- * Turn the streak reminder on at [minuteOfDay]. Needs only the notification
- * permission — it is a fixed clock time, so no location.
+ * Turn the streak reminder on at the time native has stored. Needs only the
+ * notification permission — it is a fixed clock time, so no location.
  */
-export async function enableStreakReminder(minuteOfDay: number): Promise<boolean> {
+export async function enableStreakReminder(): Promise<boolean> {
   if (!isNativeReminders()) return false;
 
   const notificationsGranted = await requestNotificationPermission();
   if (!notificationsGranted) return false;
 
-  await setStreakReminder({ enabled: true, minuteOfDay });
+  await setStreakReminder({ enabled: true });
 
   try {
     await RafeeqPrayer.requestExactAlarm();

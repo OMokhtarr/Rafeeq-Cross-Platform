@@ -43,9 +43,6 @@ object PrayerConfig {
     private const val KEY_FASTING_REMINDERS = "fasting_reminders_enabled"
     private const val KEY_STREAK_REMINDER = "streak_reminder_enabled"
     private const val KEY_STREAK_REMINDER_MINUTE = "streak_reminder_minute"
-
-    /** 21:00 — the streak reminder's time until the user picks one. */
-    const val DEFAULT_STREAK_REMINDER_MINUTE = 21 * 60
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
@@ -197,6 +194,9 @@ object PrayerConfig {
     fun setStreakReminderEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_STREAK_REMINDER, enabled).apply()
     }
+
+    /** 21:00 — the streak reminder's time until the user picks one. */
+    const val DEFAULT_STREAK_REMINDER_MINUTE = 21 * 60
 
     /** Minutes since local midnight of the streak reminder. */
     fun streakReminderMinute(ctx: Context): Int =

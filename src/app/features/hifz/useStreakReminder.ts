@@ -29,46 +29,52 @@ export function useStreakReminder(): StreakReminderState {
   const [minuteOfDay, setMinuteOfDay] = useState(DEFAULT_STREAK_REMINDER_MINUTE);
   const [denied, setDenied] = useState(false);
 
-  // Read on mount and whenever the page becomes visible again — the
-  // permission may have been granted in system settings meanwhile.
+  const load = useCallback(() => {
+    getStreakReminder()
+      .then((r) => {
+        setEnabled(r.enabled);
+        setMinuteOfDay(r.minuteOfDay);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Read on mount and whenever the app comes back to the foreground.
   useEffect(() => {
     if (!visible) return;
     const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      getStreakReminder()
-        .then((r) => {
-          setEnabled(r.enabled);
-          setMinuteOfDay(r.minuteOfDay);
-        })
-        .catch(() => {});
+      if (document.visibilityState === "visible") load();
     };
-    refresh();
+    load();
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
-  }, [visible]);
+  }, [visible, load]);
 
+  // Each write sends only the field it changes, then re-reads native: the
+  // Hifz panel and Settings each hold a copy, and either may be stale.
   const toggle = useCallback(
     async (on: boolean) => {
       if (on) {
-        const ok = await enableStreakReminder(minuteOfDay);
+        const ok = await enableStreakReminder();
         setDenied(!ok);
         if (ok) setEnabled(true);
       } else {
-        await setStreakReminder({ enabled: false, minuteOfDay });
+        await setStreakReminder({ enabled: false });
         setDenied(false);
         setEnabled(false);
       }
+      load();
     },
-    [minuteOfDay],
+    [load],
   );
 
   // Storing a time while off is harmless: native only arms when enabled.
   const setMinute = useCallback(
     async (minute: number) => {
       setMinuteOfDay(minute);
-      await setStreakReminder({ enabled, minuteOfDay: minute });
+      await setStreakReminder({ minuteOfDay: minute });
+      load();
     },
-    [enabled],
+    [load],
   );
 
   return { visible, enabled, minuteOfDay, denied, toggle, setMinute };
