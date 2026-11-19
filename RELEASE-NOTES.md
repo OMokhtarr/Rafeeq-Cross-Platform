@@ -7,6 +7,27 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
+## 1.1.0 (versionCode 24) — not built yet
+
+**Release name:** `24 (1.1.0)`
+
+Changes since 23 (PRs #93, #94, #95). Written ahead of the build:
+`versionCode` in `android/app/build.gradle` is still 23 and must be bumped
+to 24 before this build is uploaded.
+
+```
+<en-US>
+• New: Sunnah fasting reminders — a notification the night before Mondays, Thursdays, the White Days, Arafah, Tasu'a, Ashura and the six of Shawwal, so you can plan suhoor and your intention. Turn it on in Settings › Notifications
+• Prayer alarms: sound, snooze, vibration and the Ramadan start now have their own Alarm settings page, opened from the gear icon
+</en-US>
+<ar>
+• جديد: تذكير صيام السنة، تنبيه في الليلة السابقة للاثنين والخميس والأيام البيض وعرفة وتاسوعاء وعاشوراء والست من شوال لتجهّز سحورك ونيّتك. فعّله من الإعدادات ← التنبيهات
+• منبّهات الصلاة: الصوت والغفوة والاهتزاز وبداية رمضان أصبحت في صفحة «إعدادات المنبّهات» من أيقونة الترس
+</ar>
+```
+
+---
+
 ## 1.1.0 (versionCode 23) — 2026-11-19
 
 **Release name:** `23 (1.1.0)`
