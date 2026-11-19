@@ -41,6 +41,8 @@ object PrayerConfig {
     private const val KEY_REMINDERS = "reminders_enabled"
     private const val KEY_AZKAR_REMINDERS = "azkar_reminders_enabled"
     private const val KEY_FASTING_REMINDERS = "fasting_reminders_enabled"
+    private const val KEY_STREAK_REMINDER = "streak_reminder_enabled"
+    private const val KEY_STREAK_REMINDER_MINUTE = "streak_reminder_minute"
     private const val KEY_ENABLED_PRAYERS = "enabled_prayers"
     private const val KEY_USE_24_HOUR = "use_24_hour"
     private const val KEY_APP_NIGHT = "app_night"
@@ -183,6 +185,25 @@ object PrayerConfig {
 
     fun setFastingRemindersEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_FASTING_REMINDERS, enabled).apply()
+    }
+
+    /** Daily hifz-streak reminder; independent of the other toggles. */
+    fun streakReminderEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_STREAK_REMINDER, false)
+
+    fun setStreakReminderEnabled(ctx: Context, enabled: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_STREAK_REMINDER, enabled).apply()
+    }
+
+    /** 21:00 — the streak reminder's time until the user picks one. */
+    const val DEFAULT_STREAK_REMINDER_MINUTE = 21 * 60
+
+    /** Minutes since local midnight of the streak reminder. */
+    fun streakReminderMinute(ctx: Context): Int =
+        prefs(ctx).getInt(KEY_STREAK_REMINDER_MINUTE, DEFAULT_STREAK_REMINDER_MINUTE)
+
+    fun setStreakReminderMinute(ctx: Context, minuteOfDay: Int) {
+        prefs(ctx).edit().putInt(KEY_STREAK_REMINDER_MINUTE, minuteOfDay).apply()
     }
 
     fun enabledPrayers(ctx: Context): Set<String> =

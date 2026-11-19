@@ -72,6 +72,10 @@
             android:name=".prayer.FastingReminderReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".prayer.HifzStreakReminderReceiver"
+            android:exported="false" />
+
         <!-- Prayer alarms: the ring/snooze broadcast from AlarmManager, the
              service that rings, and the screen shown over the lock screen.
              systemExempted is the service type Android reserves for apps

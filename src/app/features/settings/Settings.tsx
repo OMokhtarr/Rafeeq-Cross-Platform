@@ -50,6 +50,8 @@ import { usePageTour } from "../onboarding/usePageTour";
 import { ONBOARDING_COPY } from "../onboarding/onboardingCopy";
 import { tourAttr } from "../onboarding/tourCatalog";
 import { Switch } from "../../shared/components/controls/Switch";
+import { useStreakReminder } from "../hifz/useStreakReminder";
+import { StreakReminderTime } from "../hifz/StreakReminderRow";
 import "./Settings.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -627,6 +629,7 @@ const Settings: React.FC = () => {
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [prayerReminderError, setPrayerReminderError] = useState(false);
   const [azkarReminderError, setAzkarReminderError] = useState(false);
+  const streak = useStreakReminder();
   const [fastingReminderError, setFastingReminderError] = useState(false);
   const [reminderHealth, setReminderHealth] = useState<ReminderHealth | null>(null);
   const tours = useTours();
@@ -737,7 +740,8 @@ const Settings: React.FC = () => {
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
 
-  const remindersOn = s.prayerReminders || s.azkarReminders || s.fastingReminders;
+  const remindersOn =
+    s.prayerReminders || s.azkarReminders || s.fastingReminders || streak.enabled;
   const needsExactAlarms = remindersOn && reminderHealth?.exactAlarms === false;
   const needsBatteryExemption =
     remindersOn &&
@@ -1034,6 +1038,43 @@ const Settings: React.FC = () => {
                       {ts.notificationsDenied}
                     </p>
                   </div>
+                )}
+                {streak.visible && (
+                  <>
+                    <ToggleRow
+                      icon={ICONS.book}
+                      label={ts.streakReminder}
+                      desc={ts.streakReminderDesc}
+                      checked={streak.enabled}
+                      onChange={(v) => {
+                        void streak.toggle(v);
+                      }}
+                    />
+                    {streak.enabled && (
+                      <div className="settings-row">
+                        <div className="settings-row-info">
+                          <div className="settings-row-text">
+                            <p className="settings-row-label">{t.hifz.streakReminderAt}</p>
+                          </div>
+                        </div>
+                        <StreakReminderTime
+                          minuteOfDay={streak.minuteOfDay}
+                          lang={lang}
+                          label={t.hifz.streakReminderAt}
+                          onChange={(m) => {
+                            void streak.setMinute(m);
+                          }}
+                        />
+                      </div>
+                    )}
+                    {streak.denied && (
+                      <div className="settings-row">
+                        <p className="settings-sync-note settings-sync-note--error">
+                          {ts.notificationsDenied}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
                 {needsExactAlarms && (
                   <div className="settings-row">

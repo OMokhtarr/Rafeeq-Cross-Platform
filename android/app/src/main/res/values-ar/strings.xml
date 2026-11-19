@@ -63,6 +63,9 @@
     <string name="fasting_reminder_ashura_title">غداً يوم عاشوراء</string>
     <string name="fasting_reminder_tasua_title">غداً يوم تاسوعاء</string>
     <string name="fasting_reminder_shawwal_title">يمكنك البدء بصيام الست من شوال غداً</string>
+    <string name="streak_reminder_channel">تذكير سلسلة المواظبة</string>
+    <string name="streak_reminder_title">سلسلة المواظبة على الحفظ</string>
+    <string name="streak_reminder_text">لا تقطع سلسلتك، حفظ اليوم بانتظارك.</string>
 
     <!-- منبّهات الصلاة -->
     <string name="alarm_stop">إيقاف</string>

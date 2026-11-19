@@ -9,6 +9,7 @@ import { registerOverlay } from "../../core/utils/overlay-registry";
 import { useSheetDrag } from "../../core/hooks/useSheetDrag";
 import AccountModal from "../account/AccountModal";
 import StreakPanel from "../account/StreakPanel";
+import StreakReminderRow from "./StreakReminderRow";
 import {
   loadPlan,
   loadPlanAsync,
@@ -1360,6 +1361,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         >
           <div className="hifz-streak-panel">
             <StreakPanel sessions={sessions} lang={lang} />
+            <StreakReminderRow lang={lang} />
           </div>
         </AccountModal>
       )}

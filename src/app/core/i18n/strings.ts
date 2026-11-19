@@ -579,6 +579,8 @@ export interface AppStrings {
     azkarRemindersDesc: string;
     fastingReminders: string;
     fastingRemindersDesc: string;
+    streakReminder: string;
+    streakReminderDesc: string;
     notificationsDenied: string;
     remindersLate: string;
     exactAlarmsDesc: string;
@@ -724,6 +726,8 @@ export interface AppStrings {
     sessionsLeft: string;
     streakDays: string;
     streakInfoTitle: string;
+    streakReminder: string;
+    streakReminderAt: string;
     streakInfoBody: (n: number) => string;
     streakInfoOk: string;
     streakRecoverAvailable: (n: number) => string;
@@ -1340,6 +1344,8 @@ const ar: AppStrings = {
     azkarRemindersDesc: "تنبيه بعد الفجر وبعد العصر للأذكار",
     fastingReminders: "تذكير صيام السنة",
     fastingRemindersDesc: "تنبيه في الليلة السابقة للاثنين والخميس والأيام البيض وعرفة وتاسوعاء وعاشوراء والست من شوال",
+    streakReminder: "تذكير سلسلة المواظبة",
+    streakReminderDesc: "تنبيه يومي للمحافظة على سلسلة المواظبة في الحفظ",
     notificationsDenied: "اسمح للتطبيق بالإشعارات لتفعيل التذكير",
     remindersLate: "قد تتأخر التنبيهات",
     exactAlarmsDesc: "اسمح بالمنبهات الدقيقة ليصل التذكير في وقته",
@@ -1497,6 +1503,8 @@ const ar: AppStrings = {
     sessionsLeft: "متبقية",
     streakDays: "يوم متتالي",
     streakInfoTitle: "سلسلة المواظبة",
+    streakReminder: "تذكير سلسلة المواظبة",
+    streakReminderAt: "ذكّرني الساعة",
     streakInfoBody: (n) =>
       `حافظ على سلسلتك بإتمام جلسة واحدة على الأقل كل يوم. إذا فاتك يوم، يمكنك استعادة السلسلة بإكمال ${n} جلسات في اليوم التالي.`,
     streakInfoOk: "حسنًا",
@@ -2117,6 +2125,8 @@ const en: AppStrings = {
     azkarRemindersDesc: "A reminder after Fajr and after Asr",
     fastingReminders: "Sunnah Fasting Reminders",
     fastingRemindersDesc: "The night before Mondays, Thursdays, the White Days, Arafah, Tasu'a, Ashura and the six of Shawwal",
+    streakReminder: "Hifz Streak Reminder",
+    streakReminderDesc: "A daily reminder to keep your hifz streak",
     notificationsDenied: "Allow notifications to turn on reminders",
     remindersLate: "Reminders may arrive late",
     exactAlarmsDesc: "Allow exact alarms so reminders arrive on time",
@@ -2277,6 +2287,8 @@ const en: AppStrings = {
     sessionsLeft: "left",
     streakDays: "day streak",
     streakInfoTitle: "Streak",
+    streakReminder: "Streak reminder",
+    streakReminderAt: "Remind me at",
     streakInfoBody: (n) =>
       `Keep your streak by completing at least one session every day. If you miss a day, you can win the streak back by completing ${n} sessions the next day.`,
     streakInfoOk: "Got it",

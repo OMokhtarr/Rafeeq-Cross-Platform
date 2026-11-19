@@ -47,6 +47,7 @@ import java.util.TimeZone
  *   getConfig() / setConfig({...})       — method, madhab and clock format
  *   getAzkarReminders() / setAzkarReminders({ enabled }) — morning/evening azkar reminders
  *   getFastingReminders() / setFastingReminders({ enabled }) — evening-before Sunnah fasting reminders
+ *   getStreakReminder() / setStreakReminder({ enabled?, minuteOfDay? }) — daily hifz-streak reminder
  *   getReminderHealth()                  — what may delay reminders on this device
  *   requestNotificationPermission()      — runtime POST_NOTIFICATIONS request (Android 13+)
  *   getQibla()                           — qibla bearing (true and magnetic) for the stored location
@@ -150,6 +151,7 @@ class RafeeqPrayerPlugin : Plugin() {
         PrayerAlarmScheduler.scheduleNext(context)
         AzkarReminderScheduler.scheduleNext(context)
         FastingReminderScheduler.scheduleNext(context)
+        HifzStreakReminderScheduler.scheduleNext(context)
         PrayerAlarmClockScheduler.scheduleNext(context)
     }
 
@@ -518,6 +520,42 @@ class RafeeqPrayerPlugin : Plugin() {
             FastingReminderScheduler.scheduleNext(context)
         } else {
             FastingReminderScheduler.cancel(context)
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun getStreakReminder(call: PluginCall) {
+        call.resolve(
+            JSObject()
+                .put("enabled", PrayerConfig.streakReminderEnabled(context))
+                .put("minuteOfDay", PrayerConfig.streakReminderMinute(context)),
+        )
+    }
+
+    @PluginMethod
+    fun setStreakReminder(call: PluginCall) {
+        // Each field is optional and only the ones given change: the Hifz
+        // panel and Settings each send just what the user touched, so a
+        // screen holding stale state cannot flip the other field.
+        val enabledArg = call.getBoolean("enabled")
+        val minute = call.getInt("minuteOfDay")
+        if (enabledArg == null && minute == null) {
+            call.reject("enabled or minuteOfDay is required")
+            return
+        }
+        if (minute != null && minute !in 0 until 24 * 60) {
+            call.reject("minuteOfDay must be 0..1439")
+            return
+        }
+        minute?.let { PrayerConfig.setStreakReminderMinute(context, it) }
+        enabledArg?.let { PrayerConfig.setStreakReminderEnabled(context, it) }
+        val enabled = PrayerConfig.streakReminderEnabled(context)
+        // Re-arming replaces the pending alarm, so a new time takes effect now.
+        if (enabled) {
+            HifzStreakReminderScheduler.scheduleNext(context)
+        } else {
+            HifzStreakReminderScheduler.cancel(context)
         }
         call.resolve()
     }

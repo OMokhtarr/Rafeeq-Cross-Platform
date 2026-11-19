@@ -70,6 +70,9 @@
     <string name="fasting_reminder_ashura_title">Tomorrow is Ashura</string>
     <string name="fasting_reminder_tasua_title">Tomorrow is Tasu\'a</string>
     <string name="fasting_reminder_shawwal_title">The six days of Shawwal can start tomorrow</string>
+    <string name="streak_reminder_channel">Hifz streak reminder</string>
+    <string name="streak_reminder_title">Your hifz streak</string>
+    <string name="streak_reminder_text">Don\'t break your streak: today\'s hifz is waiting.</string>
 
     <!-- Prayer alarms (the ringing ones; reminders are separate) -->
     <string name="alarm_stop">Stop</string>

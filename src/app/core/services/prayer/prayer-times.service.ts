@@ -44,6 +44,8 @@ interface RafeeqPrayerPlugin extends PrayerAlarmPlugin {
   setAzkarReminders(options: { enabled: boolean }): Promise<void>;
   getFastingReminders(): Promise<{ enabled: boolean }>;
   setFastingReminders(options: { enabled: boolean }): Promise<void>;
+  getStreakReminder(): Promise<StreakReminder>;
+  setStreakReminder(options: Partial<StreakReminder>): Promise<void>;
   getReminderHealth(): Promise<ReminderHealth>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
   requestExactAlarm(): Promise<{ granted: boolean }>;
@@ -365,6 +367,56 @@ export async function enableFastingReminders(): Promise<boolean> {
   if (!notificationsGranted) return false;
 
   await setFastingReminders(true);
+
+  try {
+    await RafeeqPrayer.requestExactAlarm();
+  } catch {
+    // Reminders stay inexact.
+  }
+  return true;
+}
+
+/** The daily hifz-streak reminder: on/off and minutes since local midnight. */
+export interface StreakReminder {
+  enabled: boolean;
+  minuteOfDay: number;
+}
+
+/** 21:00 — what native also falls back to before the user picks a time. */
+export const DEFAULT_STREAK_REMINDER_MINUTE = 21 * 60;
+
+/** The streak reminder is native-Android only, like the other reminders. */
+export function isNativeReminders(): boolean {
+  return Capacitor.getPlatform() === "android";
+}
+
+export async function getStreakReminder(): Promise<StreakReminder> {
+  if (!isNativeReminders()) {
+    return { enabled: false, minuteOfDay: DEFAULT_STREAK_REMINDER_MINUTE };
+  }
+  return RafeeqPrayer.getStreakReminder();
+}
+
+/**
+ * Changes only the fields given: each screen sends just what the user
+ * changed, so one showing stale state cannot overwrite the other field.
+ */
+export async function setStreakReminder(change: Partial<StreakReminder>): Promise<void> {
+  if (!isNativeReminders()) return;
+  await RafeeqPrayer.setStreakReminder(change);
+}
+
+/**
+ * Turn the streak reminder on at the time native has stored. Needs only the
+ * notification permission — it is a fixed clock time, so no location.
+ */
+export async function enableStreakReminder(): Promise<boolean> {
+  if (!isNativeReminders()) return false;
+
+  const notificationsGranted = await requestNotificationPermission();
+  if (!notificationsGranted) return false;
+
+  await setStreakReminder({ enabled: true });
 
   try {
     await RafeeqPrayer.requestExactAlarm();
