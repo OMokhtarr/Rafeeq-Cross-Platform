@@ -100,6 +100,7 @@ function mapApiWord(w: any): VerseWord {
     text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV2: w.code_v2 ?? w.codeV2 ?? "",
     textTajweed: w.text_uthmani_tajweed ?? w.textTajweed,
+    glyphPage: w.v2_page ?? w.glyphPage,
     lineNumber: w.line_number ?? w.lineNumber ?? 0,
     pageNumber: w.page_number ?? w.pageNumber ?? 0,
   };
@@ -198,6 +199,16 @@ function refreshPageInBackground(page: number, mushaf: MushafKind): void {
     });
 }
 
+/**
+ * A cached page written before this mushaf asked for glyphs has none, and
+ * would draw in the wrong renderer: refetch it.
+ */
+function hasFieldsFor(mushaf: MushafKind, verses: Verse[]): boolean {
+  if (!MUSHAFS[mushaf].wordFields.includes("code_v2")) return true;
+  const first = verses.find((v) => v.words?.length)?.words?.[0];
+  return !first || !!first.codeV2;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export async function getPage(page: number): Promise<Verse[]> {
@@ -221,7 +232,11 @@ export async function getPage(page: number): Promise<Verse[]> {
     // Records written before pages were tagged hold qpc_v4_tajweed text. A
     // page cached for a different mushaf is not this mushaf's text: refetch.
     const cachedMushaf = idbHit?.mushaf ?? "qpc_v4_tajweed";
-    if (idbHit?.verses?.length && cachedMushaf === mushaf) {
+    if (
+      idbHit?.verses?.length &&
+      cachedMushaf === mushaf &&
+      hasFieldsFor(mushaf, idbHit.verses)
+    ) {
       memSet(mushaf, page, idbHit.verses);
       // The word-level Uthmani text here is QF content that Content Sync does
       // not carry, so it owes a re-fetch at least every 7 days
@@ -344,8 +359,9 @@ export async function repairPagesCache(): Promise<void> {
   );
   // Clear existing pages store to ensure we fetch fresh data
   await idb.clear("pages");
-  const wordFields = MUSHAFS[DEFAULT_MUSHAF].wordFields;
-  const mushafId = mushafIdFor(DEFAULT_MUSHAF);
+  const mushaf = readSelectedMushaf();
+  const wordFields = MUSHAFS[mushaf].wordFields;
+  const mushafId = mushafIdFor(mushaf);
   for (let page = 1; page <= TOTAL_PAGES; page++) {
     const apiVerses = (await fetchVersesByPage(
       page,
@@ -357,7 +373,7 @@ export async function repairPagesCache(): Promise<void> {
       continue;
     }
     const verses = apiVerses.map(mapApiVerseToVerse);
-    await idb.put("pages", { page, verses });
+    await idb.put("pages", { page, verses, fetchedAt: Date.now(), mushaf });
     if (page % 50 === 0) {
       console.log(`[Quran] Repaired page ${page}/${TOTAL_PAGES}`);
     }

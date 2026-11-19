@@ -93,3 +93,32 @@ describe("MushafPage glow overlay", () => {
     expect(container.querySelectorAll(".mushaf-word-glow")).toHaveLength(0);
   });
 });
+
+describe("MushafPage with words from another page's font (1405)", () => {
+  // Page 121 in the 1405 layout opens with words held by 1421 page 120.
+  const relaid: Verse[] = [
+    {
+      ...verse(1, 3),
+      words: [
+        { ...word(1, 3, "a"), glyphPage: 120 },
+        { ...word(2, 3, "b"), glyphPage: 1 },
+        { ...word(3, 3, "c"), glyphPage: 1 },
+      ],
+    },
+  ];
+
+  it("draws each word in its own page's font and palette", async () => {
+    await renderPage({ verses: relaid });
+    const spans = container.querySelectorAll<HTMLElement>("[data-verse-key]");
+    expect(spans[0].style.fontFamily).toBe("QPC_V4_P120");
+    expect(spans[0].style.fontPalette).toBe("--tw-P120-light");
+    // The page's own words inherit the container's font.
+    expect(spans[1].style.fontFamily).toBe("");
+  });
+
+  it("glows a word in its own page's palette", async () => {
+    await renderPage({ verses: relaid, glow: new Map([["1:1:1", 3]]) });
+    const overlay = container.querySelector<HTMLElement>(".mushaf-word-glow")!;
+    expect(overlay.style.fontPalette).toBe("--tw-P120-glow-light");
+  });
+});

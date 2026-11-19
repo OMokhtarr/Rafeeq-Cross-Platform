@@ -115,17 +115,6 @@ describe("MushafPage in Unicode-tajweed mode", () => {
     expect(mockEnsurePageFont).not.toHaveBeenCalled();
   });
 
-  it.each([true, false])(
-    "draws plain text whatever the tajweed setting (%s): 1405 offers no colours yet",
-    async (showTajweedColors) => {
-      select({ showTajweedColors });
-      await renderPage();
-      expect(container.querySelectorAll("[class*='mushaf-tj-']")).toHaveLength(0);
-      expect(words()[1].textContent).toBe(STRIPPED);
-      expect(container.querySelector("script")).toBeNull();
-    },
-  );
-
   it("uses the Hafs font family and no font palette on the root", async () => {
     select({});
     await renderPage();

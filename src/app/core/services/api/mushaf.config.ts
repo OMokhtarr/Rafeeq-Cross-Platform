@@ -99,13 +99,12 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
     kind: "madani_1405_tajweed",
     labelAr: "مصحف المدينة ١٤٠٥",
     labelEn: "Madani 1405",
-    wordFields: "text_uthmani,text_uthmani_tajweed,line_number,page_number",
+    // The 1421 V4 glyphs (each word's own 1421 page font, `v2_page`) laid out
+    // on the 1405 lines, so the tajweed colours are exactly 1421's.
+    wordFields: "code_v2,v2_page,text_uthmani,line_number,page_number",
     mushafId: 2,
     layout: "1405",
-    renderer: "unicode-tajweed",
-    // The API's 1405 rule tags still colour some letters wrongly; plain text
-    // until they are checked. The colouring code and colours stay ready.
-    tajweedColors: false,
+    renderer: "v4-glyph",
   },
 };
 
@@ -129,4 +128,4 @@ export function rendererFor(kind: MushafKind): MushafSpec["renderer"] {
   return MUSHAFS[kind]?.renderer ?? "v4-glyph";
 }
 
-export const DEFAULT_MUSHAF: MushafKind = "qpc_v4_tajweed";
+export const DEFAULT_MUSHAF: MushafKind = "madani_1405_tajweed";
