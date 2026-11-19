@@ -158,8 +158,9 @@ const MainRouterOutlet: React.FC = () => {
   }, []);
 
   // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
-  // (AzkarReminderReceiver), and a fasting reminder with rafeeq://tracker
-  // (FastingReminderReceiver). A cold start carries it as the launch URL; a
+  // (AzkarReminderReceiver), a fasting reminder with rafeeq://tracker
+  // (FastingReminderReceiver), and a streak reminder with rafeeq://hifz
+  // (HifzStreakReminderReceiver). A cold start carries it as the launch URL; a
   // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
   // Android's Apple sign-in in the browser; a cold start there means the
   // app was killed while the tab was open, and the code still signs in.
@@ -173,6 +174,11 @@ const MainRouterOutlet: React.FC = () => {
       // A fasting reminder (FastingReminderReceiver) opens the Worship Tracker.
       if (url === "rafeeq://tracker") {
         historyRef.current.push("/tracker");
+        return;
+      }
+      // A streak reminder (HifzStreakReminderReceiver) opens the Hifz page.
+      if (url === "rafeeq://hifz") {
+        historyRef.current.push("/hifz");
         return;
       }
       const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);

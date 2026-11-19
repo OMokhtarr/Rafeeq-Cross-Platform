@@ -724,6 +724,8 @@ export interface AppStrings {
     sessionsLeft: string;
     streakDays: string;
     streakInfoTitle: string;
+    streakReminder: string;
+    streakReminderAt: string;
     streakInfoBody: (n: number) => string;
     streakInfoOk: string;
     streakRecoverAvailable: (n: number) => string;
@@ -1497,6 +1499,8 @@ const ar: AppStrings = {
     sessionsLeft: "متبقية",
     streakDays: "يوم متتالي",
     streakInfoTitle: "سلسلة المواظبة",
+    streakReminder: "تذكير سلسلة المواظبة",
+    streakReminderAt: "ذكّرني الساعة",
     streakInfoBody: (n) =>
       `حافظ على سلسلتك بإتمام جلسة واحدة على الأقل كل يوم. إذا فاتك يوم، يمكنك استعادة السلسلة بإكمال ${n} جلسات في اليوم التالي.`,
     streakInfoOk: "حسنًا",
@@ -2277,6 +2281,8 @@ const en: AppStrings = {
     sessionsLeft: "left",
     streakDays: "day streak",
     streakInfoTitle: "Streak",
+    streakReminder: "Streak reminder",
+    streakReminderAt: "Remind me at",
     streakInfoBody: (n) =>
       `Keep your streak by completing at least one session every day. If you miss a day, you can win the streak back by completing ${n} sessions the next day.`,
     streakInfoOk: "Got it",
