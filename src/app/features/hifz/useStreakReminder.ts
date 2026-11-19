@@ -11,9 +11,13 @@ import {
   isNativeReminders,
   setStreakReminder,
 } from "../../core/services/prayer/prayer-times.service";
+import { getAlarmHealth } from "../../core/services/prayer/prayer-alarms.service";
 
 export interface StreakReminderState {
-  /** False off-device (web/iOS), where nothing should be shown. */
+  /**
+   * Whether to show the reminder at all: false off-device (web/iOS), and
+   * until native has answered, so it never flashes "off, 21:00" first.
+   */
   visible: boolean;
   enabled: boolean;
   minuteOfDay: number;
@@ -24,45 +28,63 @@ export interface StreakReminderState {
 }
 
 export function useStreakReminder(): StreakReminderState {
-  const visible = isNativeReminders();
+  const native = isNativeReminders();
+  const [loaded, setLoaded] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [minuteOfDay, setMinuteOfDay] = useState(DEFAULT_STREAK_REMINDER_MINUTE);
   const [denied, setDenied] = useState(false);
 
-  const load = useCallback(() => {
-    getStreakReminder()
-      .then((r) => {
-        setEnabled(r.enabled);
-        setMinuteOfDay(r.minuteOfDay);
-      })
-      .catch(() => {});
+  const load = useCallback(async () => {
+    try {
+      const r = await getStreakReminder();
+      setEnabled(r.enabled);
+      setMinuteOfDay(r.minuteOfDay);
+      setLoaded(true);
+    } catch {
+      // Keep what is shown; the next read may succeed.
+    }
   }, []);
 
-  // Read on mount and whenever the app comes back to the foreground.
+  // Read on mount and whenever the app comes back to the foreground. Coming
+  // back is also when the user may have allowed notifications in system
+  // settings, which retires a "denied" note (the switch itself stays off
+  // until they turn it on).
   useEffect(() => {
-    if (!visible) return;
+    if (!native) return;
     const refresh = () => {
-      if (document.visibilityState === "visible") load();
+      if (document.visibilityState !== "visible") return;
+      void load();
+      getAlarmHealth()
+        .then((health) => {
+          if (health?.notifications) setDenied(false);
+        })
+        .catch(() => {});
     };
-    load();
+    void load();
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
-  }, [visible, load]);
+  }, [native, load]);
 
   // Each write sends only the field it changes, then re-reads native: the
-  // Hifz panel and Settings each hold a copy, and either may be stale.
+  // Hifz panel and Settings each hold a copy, and either may be stale. A
+  // failed write lands on the same re-read, so the screen shows what native
+  // actually has.
   const toggle = useCallback(
     async (on: boolean) => {
-      if (on) {
-        const ok = await enableStreakReminder();
-        setDenied(!ok);
-        if (ok) setEnabled(true);
-      } else {
-        await setStreakReminder({ enabled: false });
-        setDenied(false);
-        setEnabled(false);
+      try {
+        if (on) {
+          const ok = await enableStreakReminder();
+          setDenied(!ok);
+          if (ok) setEnabled(true);
+        } else {
+          await setStreakReminder({ enabled: false });
+          setDenied(false);
+          setEnabled(false);
+        }
+      } catch {
+        // Shown state is corrected by the re-read below.
       }
-      load();
+      await load();
     },
     [load],
   );
@@ -71,11 +93,15 @@ export function useStreakReminder(): StreakReminderState {
   const setMinute = useCallback(
     async (minute: number) => {
       setMinuteOfDay(minute);
-      await setStreakReminder({ minuteOfDay: minute });
-      load();
+      try {
+        await setStreakReminder({ minuteOfDay: minute });
+      } catch {
+        // Shown state is corrected by the re-read below.
+      }
+      await load();
     },
     [load],
   );
 
-  return { visible, enabled, minuteOfDay, denied, toggle, setMinute };
+  return { visible: native && loaded, enabled, minuteOfDay, denied, toggle, setMinute };
 }
