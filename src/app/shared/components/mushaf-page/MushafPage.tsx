@@ -26,10 +26,13 @@
  * spinner. Subsequent visits to the same page hit the IDB font cache and
  * paint instantly.
  *
- * Madani 1405 (renderer "unicode-tajweed") instead draws `textTajweed` in the
- * single Uthmanic Hafs Unicode font, colours the tajweed rules with CSS
- * classes (`mushaf-tj-*`, see tajweed-markup.ts) rather than font palettes,
- * and shrinks the font when a line would overflow the page width.
+ * Madani 1405 draws the same V4 glyphs on its own line breaks: each word
+ * carries `glyphPage`, the 1421 page whose font holds it, so a page may use
+ * two fonts, and a line its glyphs overrun is condensed (`squeezeLineToFit`).
+ * The tajweed colours are therefore exactly 1421's.
+ *
+ * Unicode data (`textTajweed`, no `codeV2`) is drawn in the Uthmanic Hafs
+ * font with CSS tajweed classes (`mushaf-tj-*`, see tajweed-markup.ts).
 
 * Supports two layout modes:
  *   - bigTextMode = false: strict line‑by‑line layout (as in printed Mushaf)
@@ -120,6 +123,20 @@ const MushafPage: React.FC<Props> = ({
   // Decided by the data being drawn, not the setting, so verses fetched before
   // a mushaf switch are never drawn with the other mushaf's renderer.
   const isUnicode = isUnicodeData(verses);
+
+  // The V4 fonts this page draws with: its own, or for 1405 (whose lines
+  // regroup 1421 glyphs) every 1421 page its words come from.
+  const glyphPagesKey = React.useMemo(() => {
+    const set = new Set<number>();
+    for (const v of verses)
+      for (const w of v.words ?? []) set.add(w.glyphPage ?? page);
+    if (set.size === 0) set.add(page);
+    return Array.from(set).sort((a, b) => a - b).join(",");
+  }, [verses, page]);
+  // 1405 lines were not drawn for these glyphs, so a line can overrun.
+  const relaid = !isUnicode && verses.some((v) =>
+    v.words?.some((w) => w.glyphPage !== undefined),
+  );
 
   // Live reaction to the "Tajweed colors" toggle in Settings. The native
   // `storage` event only fires across tabs, so Settings also dispatches a
@@ -243,11 +260,14 @@ const MushafPage: React.FC<Props> = ({
   useEffect(() => {
     let cancelled = false;
     setFontReady(false);
-    const textFamily = isUnicode
-      ? HAFS_UNICODE_FONT_FAMILY
-      : fontFamilyForPage(page);
+    const glyphPages = glyphPagesKey.split(",").map(Number);
+    const textFamilies = isUnicode
+      ? [HAFS_UNICODE_FONT_FAMILY]
+      : glyphPages.map(fontFamilyForPage);
     Promise.all([
-      isUnicode ? ensureHafsUnicodeFont() : ensurePageFont(page),
+      isUnicode
+        ? ensureHafsUnicodeFont()
+        : Promise.all(glyphPages.map(ensurePageFont)),
       needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
       needsSurahNamesFont ? ensureSurahNamesFont() : Promise.resolve(),
     ])
@@ -263,7 +283,9 @@ const MushafPage: React.FC<Props> = ({
         // document.fonts.load() forces the face to be loaded *and* usable, and
         // .ready then waits for any in-flight layout work to settle.
         try {
-          await document.fonts.load(`1em "${textFamily}"`);
+          await Promise.all(
+            textFamilies.map((f) => document.fonts.load(`1em "${f}"`)),
+          );
           await document.fonts.ready;
         } catch {
           /* fall through — better to render than to hang on a font probe */
@@ -277,7 +299,7 @@ const MushafPage: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [page, needsBismillahFont, needsSurahNamesFont, isUnicode]);
+  }, [page, needsBismillahFont, needsSurahNamesFont, isUnicode, glyphPagesKey]);
 
   // Re-fits a Unicode page when its text changes; a constant null for V4,
   // whose sizing ignores the text.
@@ -326,6 +348,14 @@ const MushafPage: React.FC<Props> = ({
       const byWidth = w * 0.052;
       const px = Math.round(Math.min(byHeight, byWidth));
       setFontPx(px);
+      if (relaid) {
+        const lines = Array.from(
+          el.querySelectorAll<HTMLElement>(".mushaf-line"),
+        );
+        lines.forEach(unsqueezeLine);
+        lines.forEach(squeezeLineToFit);
+        return;
+      }
       // `byWidth` and `byHeight` are tuned to the V4 glyphs. The Unicode font
       // gets one size for every page, read back from the rendered line
       // height, and a line too long for it is condensed on its own rather
@@ -351,7 +381,7 @@ const MushafPage: React.FC<Props> = ({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fontReady, page, isUnicode, unicodeVerses]);
+  }, [fontReady, page, isUnicode, unicodeVerses, relaid, glyphPagesKey]);
 
   // Measure hidden-word spans after layout and compute one overlay bar per
   // contiguous hidden segment on each mushaf line.
@@ -618,6 +648,19 @@ const MushafPage: React.FC<Props> = ({
 
     const base = isEndMarker ? "mushaf-ayah-end" : "mushaf-word";
 
+    // A 1405 word drawn from another 1421 page's font carries that font and
+    // its palette; the page's own words inherit them from the container.
+    const glyphPage = tw.word.glyphPage ?? page;
+    const glyphStyle: React.CSSProperties | undefined =
+      !isUnicode && glyphPage !== page
+        ? {
+            fontFamily: fontFamilyForPage(glyphPage),
+            fontPalette: tajweedOn
+              ? paletteNameForPage(glyphPage, theme)
+              : paletteNameForPage(glyphPage, "mono"),
+          }
+        : undefined;
+
     const cls = [
       base,
       isTarget ? `${base}-target` : "",
@@ -657,6 +700,7 @@ const MushafPage: React.FC<Props> = ({
       <span
         key={`${lineNumber}-${idx}${isFlash ? "-f" : ""}`}
         className={cls}
+        style={glyphStyle}
         data-verse-key={key}
         {...(hiddenSegKey ? { "data-hidden-seg": hiddenSegKey } : {})}
         onClick={
@@ -716,7 +760,7 @@ const MushafPage: React.FC<Props> = ({
               key={glowGeneration}
               style={{
                 fontPalette: paletteNameForPage(
-                  page,
+                  glyphPage,
                   theme === "night" ? "glow-night" : "glow-day",
                 ),
               }}

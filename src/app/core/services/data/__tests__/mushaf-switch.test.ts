@@ -136,6 +136,7 @@ describe("applyMushafSelection", () => {
 
 describe("reconcileMushafSelection", () => {
   it("applies a mushaf written to the settings from outside, once", async () => {
+    select("qpc_v4_tajweed");
     reconcileMushafSelection();
     expect(getActivePageLayout()).toBe("1421");
 
@@ -154,6 +155,7 @@ describe("reconcileMushafSelection", () => {
 
 describe("getSurahVersesList", () => {
   it("follows the active layout's pages: surah 80 reaches page 586 under 1421", async () => {
+    select("qpc_v4_tajweed");
     mockGet.mockResolvedValue(undefined);
     const fetched: number[] = [];
     mockFetch.mockImplementation(async (page: number) => {

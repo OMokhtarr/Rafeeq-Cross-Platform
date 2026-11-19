@@ -1,4 +1,5 @@
 import {
+  DEFAULT_MUSHAF,
   MUSHAFS,
   layoutFor,
   mushafIdFor,
@@ -7,6 +8,7 @@ import {
 import { fetchVersesByPage } from "../quran-api.client";
 
 const TAJWEED = "<rule class=ham_wasl>ٱ</rule>لۡ";
+const GLYPH = "ﱁ";
 
 describe("madani_1405_tajweed mushaf kind", () => {
   it("maps kinds to their page layout", () => {
@@ -14,21 +16,24 @@ describe("madani_1405_tajweed mushaf kind", () => {
     expect(layoutFor("qpc_v4_tajweed")).toBe("1421");
   });
 
-  it("uses the unicode-tajweed renderer, and v4-glyph for the rest", () => {
-    expect(rendererFor("madani_1405_tajweed")).toBe("unicode-tajweed");
-    expect(rendererFor("qpc_v4_tajweed")).toBe("v4-glyph");
-    expect(rendererFor("uthmani")).toBe("v4-glyph");
+  it("is the default", () => {
+    expect(DEFAULT_MUSHAF).toBe("madani_1405_tajweed");
   });
 
-  it("asks the API for mushaf 2 and the tajweed word field", () => {
+  it("draws the 1421 V4 glyphs, like 1421 itself", () => {
+    expect(rendererFor("madani_1405_tajweed")).toBe("v4-glyph");
+    expect(rendererFor("qpc_v4_tajweed")).toBe("v4-glyph");
+  });
+
+  it("asks the API for mushaf 2 with each word's glyph and glyph page", () => {
     expect(mushafIdFor("madani_1405_tajweed")).toBe(2);
     expect(MUSHAFS.madani_1405_tajweed.wordFields).toBe(
-      "text_uthmani,text_uthmani_tajweed,line_number,page_number",
+      "code_v2,v2_page,text_uthmani,line_number,page_number",
     );
   });
 });
 
-describe("fetchVersesByPage tajweed text", () => {
+describe("fetchVersesByPage word fields", () => {
   const realFetch = global.fetch;
   afterEach(() => {
     global.fetch = realFetch;
@@ -61,6 +66,8 @@ describe("fetchVersesByPage tajweed text", () => {
                   char_type_name: "word",
                   text_uthmani: "ٱلۡ",
                   text_uthmani_tajweed: TAJWEED,
+                  code_v2: GLYPH,
+                  v2_page: 4,
                   line_number: 3,
                   page_number: 5,
                 },
@@ -77,5 +84,7 @@ describe("fetchVersesByPage tajweed text", () => {
       2,
     );
     expect(verses[0].words[0].textTajweed).toBe(TAJWEED);
+    expect(verses[0].words[0].codeV2).toBe(GLYPH);
+    expect(verses[0].words[0].glyphPage).toBe(4);
   });
 });

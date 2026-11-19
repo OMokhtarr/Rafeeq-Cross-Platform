@@ -35,6 +35,11 @@ export interface VerseWord {
   codeV2: string;
   /** Uthmani text with `<rule class=…>` tajweed markup (1405 mushaf only). */
   textTajweed?: string;
+  /**
+   * The 1421 page whose V4 font draws `codeV2`. Absent means this page's own
+   * font; set on 1405 pages, which lay 1421 glyphs out on their own lines.
+   */
+  glyphPage?: number;
   lineNumber: number;
   pageNumber: number;
   translation?: string; // optional
