@@ -99,7 +99,6 @@ function mapApiWord(w: any): VerseWord {
     charType: w.char_type_name === "end" ? "word" : "end",
     text_uthmani: w.text_uthmani ?? w.text ?? "",
     codeV2: w.code_v2 ?? w.codeV2 ?? "",
-    textTajweed: w.text_uthmani_tajweed ?? w.textTajweed,
     glyphPage: w.v2_page ?? w.glyphPage,
     lineNumber: w.line_number ?? w.lineNumber ?? 0,
     pageNumber: w.page_number ?? w.pageNumber ?? 0,
@@ -201,7 +200,7 @@ function refreshPageInBackground(page: number, mushaf: MushafKind): void {
 
 /**
  * A cached page written before this mushaf asked for glyphs has none, and
- * would draw in the wrong renderer: refetch it.
+ * cannot be drawn: refetch it.
  */
 function hasFieldsFor(mushaf: MushafKind, verses: Verse[]): boolean {
   if (!MUSHAFS[mushaf].wordFields.includes("code_v2")) return true;

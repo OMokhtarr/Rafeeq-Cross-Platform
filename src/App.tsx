@@ -7,13 +7,11 @@ import { initMetadata } from "./app/core/services/data/metadata.service";
 import {
   preloadAllPages,
   seedTextCorpus,
-  readSelectedMushaf,
   reconcileMushafSelection,
 } from "./app/core/services/data/quran.service";
-import { rendererFor } from "./app/core/services/api/mushaf.config";
 import {
   preloadAllPageFonts,
-  ensureHafsUnicodeFont,
+  forgetRetiredFonts,
 } from "./app/core/services/api/font.loader";
 import { useSyncRefresh } from "./app/core/hooks/useSyncRefresh";
 import { isNetworkReachable } from "./app/core/services/api/network.service";
@@ -259,6 +257,7 @@ const App: React.FC = () => {
       // safe to start regardless of connectivity. (The page layout is already
       // set: index.tsx does it before the first render.)
       initMetadata().catch(() => {});
+      forgetRetiredFonts().catch(() => {});
 
       // Only the *preloads* need the network. navigator.onLine can't be trusted
       // when true (WiFi with no internet, captive portals and dead mobile data
@@ -275,9 +274,6 @@ const App: React.FC = () => {
       });
       // Start font preload in background (doesn't block UI)
       preloadAllPageFonts().catch(() => {});
-      if (rendererFor(readSelectedMushaf()) === "unicode-tajweed") {
-        ensureHafsUnicodeFont().catch(() => {});
-      }
     })();
 
     return () => {

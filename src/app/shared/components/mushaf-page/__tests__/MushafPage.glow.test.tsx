@@ -121,4 +121,37 @@ describe("MushafPage with words from another page's font (1405)", () => {
     const overlay = container.querySelector<HTMLElement>(".mushaf-word-glow")!;
     expect(overlay.style.fontPalette).toBe("--tw-P120-glow-light");
   });
+
+  describe("line fit", () => {
+    // A 400px-wide line; three 160px words make 480px, which overruns it.
+    let wordWidth = 160;
+    const firstLine = () => container.querySelector<HTMLElement>(".mushaf-line")!;
+    beforeEach(() => {
+      wordWidth = 160;
+      jest.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
+      jest.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+      jest
+        .spyOn(Element.prototype, "getBoundingClientRect")
+        .mockImplementation(function (this: Element) {
+          const width = this.parentElement?.classList.contains("mushaf-line") ? wordWidth : 0;
+          return { width, height: 0, top: 0, left: 0, right: width, bottom: 0 } as DOMRect;
+        });
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    it("condenses only an overrunning line, keeping the page size", async () => {
+      await renderPage({ page: 3, verses: relaid });
+      expect(firstLine().style.width).toBe("480px");
+      expect(firstLine().style.transform).toMatch(/^scaleX\(0\.8333/);
+      // Height-derived V4 size: 600 / 15 = 40px slot, half of it.
+      expect(container.querySelector<HTMLElement>(".mushaf-page-glyph")!.style.fontSize).toBe("20px");
+    });
+
+    it("leaves a line that fits", async () => {
+      wordWidth = 100;
+      await renderPage({ page: 3, verses: relaid });
+      expect(firstLine().style.transform).toBe("");
+      expect(firstLine().style.width).toBe("");
+    });
+  });
 });

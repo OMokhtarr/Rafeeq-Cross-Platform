@@ -10,9 +10,9 @@
  * the clock time they ring at today, with where that falls against the
  * adhan said in words beneath ("10 min before the adhan").
  *
- * The list and the alarm editor are two views of one sheet rather than two
- * sheets, so going into an alarm and back keeps the list's scroll position
- * and never flashes the backdrop.
+ * The list, the alarm editor and the shared alarm settings (reached from the
+ * header's gear) are three views of one sheet rather than three sheets, so
+ * going in and back never flashes the backdrop.
  *
  * The page owns the alarm list (it also drives the menu status and the row
  * icons); this sheet writes through the service and asks the page to reload.
@@ -90,6 +90,17 @@ const BackArrow = () => (
   </svg>
 );
 
+const GearIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="3" />
+    <path
+      d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
     <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -111,6 +122,7 @@ const AlarmsSheet: React.FC<Props> = ({
   const tp = t.prayerTimes;
 
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [inSettings, setInSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [health, setHealth] = useState<AlarmHealth | null>(null);
@@ -124,16 +136,20 @@ const AlarmsSheet: React.FC<Props> = ({
 
   useEffect(() => setPending({}), [alarms]);
 
-  const closeEditor = useCallback(() => {
+  /** Back from the editor or the settings to the list. */
+  const backToList = useCallback(() => {
     setEditing(null);
+    setInSettings(false);
+    setChoosingSound(false);
     setError(null);
   }, []);
+  const inSubview = editing !== null || inSettings;
 
-  // Hardware back steps out of the editor first, then off the sheet.
+  // Hardware back steps out of the editor or settings first, then off the sheet.
   useEffect(() => {
     if (!open) return;
-    return registerOverlay(editing ? closeEditor : onBack);
-  }, [open, editing, closeEditor, onBack]);
+    return registerOverlay(inSubview ? backToList : onBack);
+  }, [open, inSubview, backToList, onBack]);
 
   const refreshHealth = useCallback(() => {
     getAlarmHealth().then(setHealth);
@@ -160,12 +176,8 @@ const AlarmsSheet: React.FC<Props> = ({
   }, [open, focusPrayer]);
 
   useEffect(() => {
-    if (!open) {
-      setEditing(null);
-      setError(null);
-      setChoosingSound(false);
-    }
-  }, [open]);
+    if (!open) backToList();
+  }, [open, backToList]);
 
   const isOn = (a: PrayerAlarmWithNext) => pending[a.id] ?? a.enabled;
   const nextAlarm = soonest(alarms, isOn);
@@ -312,21 +324,110 @@ const AlarmsSheet: React.FC<Props> = ({
                     "{prayer}",
                     prayerName(editing.alarm.prayer)
                   )
+                : inSettings
+                ? s.settingsTitle
                 : s.title}
             </h3>
-            {!editing && <p className="sts-desc">{s.desc}</p>}
+            {!inSubview && <p className="sts-desc">{s.desc}</p>}
           </div>
-          <button
-            className="sts-close sts-back"
-            onClick={editing ? closeEditor : onBack}
-            aria-label={editing ? s.back : tp.menuTitle}
-          >
-            <BackArrow />
-          </button>
+          <div className="as-header-actions">
+            {!inSubview && (
+              <button
+                type="button"
+                className="sts-close as-gear"
+                onClick={() => {
+                  setError(null);
+                  setInSettings(true);
+                }}
+                aria-label={s.settingsTitle}
+              >
+                <GearIcon />
+              </button>
+            )}
+            <button
+              className="sts-close sts-back"
+              onClick={inSubview ? backToList : onBack}
+              aria-label={inSubview ? s.back : tp.menuTitle}
+            >
+              <BackArrow />
+            </button>
+          </div>
         </header>
 
         <div className="sts-body">
-          {editing ? (
+          {inSettings ? (
+            <section className="as-settings">
+              {error && (
+                <p className="as-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <div className="sts-row">
+                <span className="sts-row-label">{s.sound}</span>
+                <button
+                  type="button"
+                  className="as-value-btn"
+                  aria-expanded={choosingSound}
+                  onClick={() => setChoosingSound((v) => !v)}
+                >
+                  {settings.soundName ?? s.defaultSound}
+                </button>
+              </div>
+              {choosingSound && (
+                <div className="as-sound-choices">
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
+                    onClick={() => chooseSound("system")}
+                  >
+                    {s.phoneSounds}
+                  </button>
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
+                    onClick={() => chooseSound("file")}
+                  >
+                    {s.audioFile}
+                  </button>
+                </div>
+              )}
+
+              <div className="sts-row">
+                <span className="sts-row-label">{s.snooze}</span>
+                <Segmented
+                  compact
+                  label={s.snooze}
+                  options={SNOOZE_CHOICES.map((m) => ({
+                    value: m,
+                    label: s.minutesShort.replace("{n}", num(m)),
+                  }))}
+                  value={settings.snoozeMinutes}
+                  onChange={(m) => changeSettings({ snoozeMinutes: m })}
+                />
+              </div>
+
+              <div className="sts-row">
+                <span className="sts-row-label">{s.vibrate}</span>
+                <Switch
+                  checked={settings.vibrate}
+                  onChange={(vibrate) => changeSettings({ vibrate })}
+                  label={s.vibrate}
+                />
+              </div>
+
+              <div className="as-field as-field--row-end">
+                <span className="sts-row-label">{s.ramadanStarts}</span>
+                <span className="as-hint">{s.ramadanStartsDesc}</span>
+                <Segmented
+                  label={s.ramadanStarts}
+                  options={RAMADAN_SHIFTS.map((d) => ({ value: d, label: shiftLabel[d] }))}
+                  value={settings.ramadanShiftDays}
+                  onChange={(d) => changeSettings({ ramadanShiftDays: d })}
+                />
+              </div>
+            </section>
+          ) : editing ? (
             <AlarmEditor
               key={editing.alarm.id}
               alarm={editing.alarm}
@@ -438,74 +539,6 @@ const AlarmsSheet: React.FC<Props> = ({
                   <PlusIcon />
                   {s.newTitle.replace("{prayer}", prayerName(selected))}
                 </button>
-              </section>
-
-              <section className="as-settings">
-                <h4 className="as-section-head">{s.settingsTitle}</h4>
-
-                <div className="sts-row">
-                  <span className="sts-row-label">{s.sound}</span>
-                  <button
-                    type="button"
-                    className="as-value-btn"
-                    aria-expanded={choosingSound}
-                    onClick={() => setChoosingSound((v) => !v)}
-                  >
-                    {settings.soundName ?? s.defaultSound}
-                  </button>
-                </div>
-                {choosingSound && (
-                  <div className="as-sound-choices">
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
-                      onClick={() => chooseSound("system")}
-                    >
-                      {s.phoneSounds}
-                    </button>
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--secondary rf-btn--sm as-sound-choice"
-                      onClick={() => chooseSound("file")}
-                    >
-                      {s.audioFile}
-                    </button>
-                  </div>
-                )}
-
-                <div className="sts-row">
-                  <span className="sts-row-label">{s.snooze}</span>
-                  <Segmented
-                    compact
-                    label={s.snooze}
-                    options={SNOOZE_CHOICES.map((m) => ({
-                      value: m,
-                      label: s.minutesShort.replace("{n}", num(m)),
-                    }))}
-                    value={settings.snoozeMinutes}
-                    onChange={(m) => changeSettings({ snoozeMinutes: m })}
-                  />
-                </div>
-
-                <div className="sts-row">
-                  <span className="sts-row-label">{s.vibrate}</span>
-                  <Switch
-                    checked={settings.vibrate}
-                    onChange={(vibrate) => changeSettings({ vibrate })}
-                    label={s.vibrate}
-                  />
-                </div>
-
-                <div className="as-field as-field--row-end">
-                  <span className="sts-row-label">{s.ramadanStarts}</span>
-                  <span className="as-hint">{s.ramadanStartsDesc}</span>
-                  <Segmented
-                    label={s.ramadanStarts}
-                    options={RAMADAN_SHIFTS.map((d) => ({ value: d, label: shiftLabel[d] }))}
-                    value={settings.ramadanShiftDays}
-                    onChange={(d) => changeSettings({ ramadanShiftDays: d })}
-                  />
-                </div>
               </section>
             </>
           )}

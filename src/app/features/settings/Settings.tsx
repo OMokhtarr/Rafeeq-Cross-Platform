@@ -18,7 +18,6 @@ import InlineSelect from "../../shared/components/inline-select/InlineSelect";
 import {
   MUSHAFS,
   DEFAULT_MUSHAF,
-  offersTajweedColors,
   type MushafKind,
 } from "../../core/services/api/mushaf.config";
 import { reconcileMushafSelection } from "../../core/services/data/quran.service";
@@ -882,16 +881,14 @@ const Settings: React.FC = () => {
                   onChange={(v) => set("mushaf", v as MushafKind)}
                   night={isNight}
                 />
-                {offersTajweedColors(s.mushaf) && (
-                  <ToggleRow
-                    icon={ICONS.palette}
-                    label={ts.tajweed}
-                    desc={ts.tajweedDesc}
-                    checked={s.showTajweedColors}
-                    onChange={(v) => set("showTajweedColors", v)}
-                    onInfo={() => setTajweedInfoOpen(true)}
-                  />
-                )}
+                <ToggleRow
+                  icon={ICONS.palette}
+                  label={ts.tajweed}
+                  desc={ts.tajweedDesc}
+                  checked={s.showTajweedColors}
+                  onChange={(v) => set("showTajweedColors", v)}
+                  onInfo={() => setTajweedInfoOpen(true)}
+                />
               </div>
             </div>
 

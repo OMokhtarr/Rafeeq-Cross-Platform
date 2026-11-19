@@ -238,37 +238,6 @@
   text-decoration-color: #ff6b6b;
 }
 
-/* Unicode (Madani 1405) lines: the Hafs font's tallest ink spans 1.76em
-   (1.17em above the baseline, 0.58em below, measured across the Mushaf), so
-   1.8 keeps every mark inside the line's overflow clip while leaving the font
-   ~11% more of each 1/15-page slot than the V4 2.0. fit-width.ts reads the
-   rendered size back from this value (UNICODE_LINE_HEIGHT_EM): keep in step.
-   The extra 6px inset (on top of .mushaf-page's 6px) keeps the line-start
-   words off the screen edge, as V4's narrower glyphs already are. */
-.mushaf-page-glyph.mushaf-page-unicode {
-  line-height: 1.8;
-  padding-inline: 6px;
-  /* Pure black on day, pure white on night, matching the V4 font palettes
-     and the bismillah, rather than the app's tinted body-text token. Set as
-     the token so every rule that reads it (hidden words, tajweed off) agrees. */
-  --color-mushaf-text: #000000;
-}
-
-[data-theme="night"] .mushaf-page-glyph.mushaf-page-unicode {
-  --color-mushaf-text: #ffffff;
-}
-
-/* Unicode (Madani 1405) tajweed rules: a coloured run inside a word. Inline,
-   so the Arabic letters on either side still join across it. */
-.mushaf-tj-necessary { color: var(--tajweed-necessary); }
-.mushaf-tj-obligatory { color: var(--tajweed-obligatory); }
-.mushaf-tj-permissible { color: var(--tajweed-permissible); }
-.mushaf-tj-normal { color: var(--tajweed-normal); }
-.mushaf-tj-ghunnah { color: var(--tajweed-ghunnah); }
-.mushaf-tj-qalqalah { color: var(--tajweed-qalqalah); }
-.mushaf-tj-silent { color: var(--tajweed-silent); }
-.mushaf-tj-heavy { color: var(--tajweed-heavy); }
-
 /* Recite glow: a green copy of the word (own all-green font palette, set
    inline) laid over it that holds, then fades. Never intercepts taps. */
 .mushaf-word--glowing {
@@ -282,14 +251,6 @@
   -webkit-text-stroke: 0.5px #00a33d;
   pointer-events: none;
   animation: mushaf-glow 1650ms linear forwards;
-}
-/* Unicode Mushaf: no font palette to swap, so plain `color` paints the whole
-   overlay. Kept before the night rule (same specificity) so night still gets
-   its brighter green. */
-.mushaf-page-unicode .mushaf-word-glow {
-  color: var(--tajweed-glow);
-  -webkit-text-fill-color: var(--tajweed-glow);
-  -webkit-text-stroke: 0.5px var(--tajweed-glow);
 }
 [data-theme="night"] .mushaf-word-glow {
   color: #4cff9a;

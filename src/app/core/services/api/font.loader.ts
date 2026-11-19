@@ -32,8 +32,6 @@ const V4_CDN_BASE =
   "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2";
 const BISMILLAH_CDN_URL =
   "https://cdn.jsdelivr.net/gh/quran/quran.com-images@master/res/fonts/QCF_BSML.TTF";
-const HAFS_UNICODE_CDN_URL =
-  "https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2";
 
 const FONT_CACHE_VERSION = "v4-colrv1";
 
@@ -122,26 +120,17 @@ export async function ensureBismillahFont(): Promise<void> {
 }
 
 /**
- * KFGQPC Uthmanic Hafs (v18): one Unicode font for every page, used by the
- * Madani 1405 Mushaf, which draws `text_uthmani_tajweed` with CSS colours
- * instead of the per-page V4 glyph fonts. Same CDN and the same 7-day refresh
- * duty as the V4 fonts (docs/licensing-decisions.md §1a).
+ * Fonts this app no longer draws with, still cached by older versions: the
+ * Uthmanic Hafs Unicode font (slot -1) the Madani 1405 Mushaf used before it
+ * moved to the V4 glyphs. Dropped rather than left to age, since cached QF
+ * fonts owe a re-fetch every 7 days (docs/licensing-decisions.md §1a).
  */
-export const HAFS_UNICODE_FONT_FAMILY = "UthmanicHafsV18";
+const RETIRED_FONT_SLOTS = [-1];
 
-let hafsUnicodeFont: Promise<void> | null = null;
-
-export function ensureHafsUnicodeFont(): Promise<void> {
-  if (!hafsUnicodeFont) {
-    hafsUnicodeFont = loadOrFetchSingleFont(HAFS_UNICODE_FONT)
-      .then((blob) => injectFontFace(HAFS_UNICODE_FONT_FAMILY, blob))
-      .catch((err) => {
-        // Let the next page open try again instead of caching the failure.
-        hafsUnicodeFont = null;
-        throw err;
-      });
-  }
-  return hafsUnicodeFont;
+export async function forgetRetiredFonts(): Promise<void> {
+  await Promise.all(
+    RETIRED_FONT_SLOTS.map((slot) => idb.delete("fonts", slot).catch(() => {})),
+  );
 }
 
 /**
@@ -182,13 +171,6 @@ const BISMILLAH_FONT: SingleFont = {
   url: BISMILLAH_CDN_URL,
   slot: 0,
   cacheVersion: FONT_CACHE_VERSION,
-};
-
-const HAFS_UNICODE_FONT: SingleFont = {
-  label: "uthmanic hafs",
-  url: HAFS_UNICODE_CDN_URL,
-  slot: -1,
-  cacheVersion: "uthmanic-hafs-v18",
 };
 
 async function loadOrFetchSingleFont(font: SingleFont): Promise<Blob> {
