@@ -10,6 +10,7 @@ import { STRINGS, type Lang } from "../../core/i18n/strings";
 import { Switch } from "../../shared/components/controls/Switch";
 import { formatClock } from "../prayer-times/alarmFormat";
 import { useStreakReminder } from "./useStreakReminder";
+import "./StreakReminderRow.css";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
