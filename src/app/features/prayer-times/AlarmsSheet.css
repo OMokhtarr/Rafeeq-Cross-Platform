@@ -1,11 +1,22 @@
 /* Alarms sheet — the next alarm, one tab per prayer with that prayer's
-   alarms as cards, the alarm editor, and the shared alarm settings. Shell
+   alarms as cards, the alarm editor, and the shared alarm settings behind
+   the header's gear. Shell
    and rows come from PrayerSheet.css; switches, segmented choices, buttons
    and chips are the shared Rafeeq controls (styles/controls.css).
 
    Green only fills (the chosen tab, switches that are on); text, outlines
    and tints are gold, as everywhere in the app. The ring time on each card
    is the one large element: it is the number the user sets and checks. */
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+/* The gear sits beside the back arrow and shares its round outline. */
+.as-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
 
 /* ── Next alarm ──────────────────────────────────────────────────────────── */
 
@@ -135,7 +146,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4) 0 var(--space-5);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .as-adhan {
@@ -278,14 +288,7 @@
 /* ── Settings ────────────────────────────────────────────────────────────── */
 
 .as-settings {
-  padding-top: var(--space-4);
-}
-
-.as-section-head {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--color-gold);
+  padding-top: var(--space-2);
 }
 
 /* ── Warnings ────────────────────────────────────────────────────────────── */

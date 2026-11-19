@@ -222,3 +222,32 @@ it("shows a warning with a fix when exact alarms are off", async () => {
   await renderSheet([suhoor]);
   expect(document.body.textContent).toContain(s.warnExact);
 });
+
+const gear = () => document.querySelector(`button[aria-label="${s.settingsTitle}"]`) as HTMLButtonElement | null;
+const switchLabelled = (label: string) =>
+  document.querySelector(`input[type="checkbox"][aria-label="${label}"]`) as HTMLInputElement | null;
+
+it("keeps the alarm settings behind the gear, and back returns to the list", async () => {
+  await renderSheet([suhoor], "fajr");
+  expect(switchLabelled(s.vibrate)).toBeNull();
+  expect(cards()).toEqual(["a1"]);
+
+  act(() => gear()!.click());
+  expect(document.querySelector(".sts-title")!.textContent).toBe(s.settingsTitle);
+  expect(switchLabelled(s.vibrate)).not.toBeNull();
+  expect(cards()).toEqual([]);
+  expect(gear()).toBeNull();
+
+  act(() => (document.querySelector(`button[aria-label="${s.back}"]`) as HTMLButtonElement).click());
+  expect(cards()).toEqual(["a1"]);
+  expect(switchLabelled(s.vibrate)).toBeNull();
+});
+
+it("saves a setting changed on the settings view", async () => {
+  await renderSheet([suhoor]);
+  act(() => gear()!.click());
+  await act(async () => switchLabelled(s.vibrate)!.click());
+
+  expect(mocked.setAlarmSettings).toHaveBeenCalledWith({ vibrate: false });
+  expect(onChanged).toHaveBeenCalled();
+});
