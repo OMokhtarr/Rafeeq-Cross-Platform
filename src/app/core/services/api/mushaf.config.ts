@@ -52,13 +52,18 @@ export interface MushafSpec {
   layout: PageLayout;
   /** How words are drawn: per-page V4 glyph fonts, or Unicode tajweed markup. */
   renderer: "v4-glyph" | "unicode-tajweed";
+  /**
+   * `false` draws the Mushaf in plain text and hides the Tajweed colours
+   * option while it is selected. Omitted means the colours are offered.
+   */
+  tajweedColors?: false;
 }
 
 export const MUSHAFS: Record<MushafKind, MushafSpec> = {
   qpc_v4_tajweed: {
     kind: "qpc_v4_tajweed",
-    labelAr: "مصحف التجويد (KFGQPC V4)",
-    labelEn: "Tajweed Mushaf (KFGQPC V4)",
+    labelAr: "مصحف المدينة ١٤٢١",
+    labelEn: "Madani 1421",
     wordFields: "code_v2,text_uthmani,line_number,page_number",
     mushafId: 19,
     layout: "1421",
@@ -92,14 +97,22 @@ export const MUSHAFS: Record<MushafKind, MushafSpec> = {
   },
   madani_1405_tajweed: {
     kind: "madani_1405_tajweed",
-    labelAr: "مصحف المدينة ١٤٠٥ (تجويد)",
-    labelEn: "Madani 1405 (Tajweed)",
+    labelAr: "مصحف المدينة ١٤٠٥",
+    labelEn: "Madani 1405",
     wordFields: "text_uthmani,text_uthmani_tajweed,line_number,page_number",
     mushafId: 2,
     layout: "1405",
     renderer: "unicode-tajweed",
+    // The API's 1405 rule tags still colour some letters wrongly; plain text
+    // until they are checked. The colouring code and colours stay ready.
+    tajweedColors: false,
   },
 };
+
+/** Whether a kind offers tajweed colours (see `MushafSpec.tajweedColors`). */
+export function offersTajweedColors(kind: MushafKind): boolean {
+  return MUSHAFS[kind]?.tajweedColors !== false;
+}
 
 /** Numeric Mushaf id for a kind, or undefined when the API should choose. */
 export function mushafIdFor(kind: MushafKind): number | undefined {
