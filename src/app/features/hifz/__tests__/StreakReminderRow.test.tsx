@@ -4,6 +4,7 @@ import StreakReminderRow from "../StreakReminderRow";
 import { STRINGS } from "../../../core/i18n/strings";
 import { formatClock } from "../../prayer-times/alarmFormat";
 import * as prayer from "../../../core/services/prayer/prayer-times.service";
+import * as alarms from "../../../core/services/prayer/prayer-alarms.service";
 
 jest.mock("../../../core/services/prayer/prayer-times.service", () => ({
   isNativeReminders: jest.fn(),
@@ -13,10 +14,27 @@ jest.mock("../../../core/services/prayer/prayer-times.service", () => ({
   DEFAULT_STREAK_REMINDER_MINUTE: 1260,
 }));
 
+jest.mock("../../../core/services/prayer/prayer-alarms.service", () => ({
+  getAlarmHealth: jest.fn(),
+}));
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const h = STRINGS.en.hifz;
 const mocked = prayer as jest.Mocked<typeof prayer>;
+const mockedAlarms = alarms as jest.Mocked<typeof alarms>;
+const health = (notifications: boolean) => ({
+  notifications,
+  exactAlarms: true,
+  fullScreen: true,
+  batteryUnrestricted: true,
+  aggressiveBattery: false,
+});
+
+/** The app coming back to the foreground, e.g. from system settings. */
+const returnToApp = async () => {
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+};
 const clock = (minuteOfDay: number) =>
   formatClock(new Date(2026, 0, 1, Math.floor(minuteOfDay / 60), minuteOfDay % 60), "en");
 
@@ -45,6 +63,7 @@ const pickTime = async (value: string) => {
 beforeEach(() => {
   // react-scripts runs jest with resetMocks: implementations go here, not in the factory.
   mocked.isNativeReminders.mockReturnValue(true);
+  mockedAlarms.getAlarmHealth.mockResolvedValue(health(false));
   stored = { enabled: false, minuteOfDay: 1260 };
   mocked.getStreakReminder.mockImplementation(async () => ({ ...stored }));
   mocked.setStreakReminder.mockImplementation(async (change) => {
@@ -100,6 +119,48 @@ describe("Streak reminder row", () => {
     await act(async () => reminderSwitch().click());
     expect(reminderSwitch().checked).toBe(false);
     expect(host.textContent).toContain(STRINGS.en.settings.notificationsDenied);
+  });
+
+  it("the denied note clears once notifications are allowed in system settings", async () => {
+    mocked.enableStreakReminder.mockResolvedValue(false);
+    await render();
+    await act(async () => reminderSwitch().click());
+    mockedAlarms.getAlarmHealth.mockResolvedValue(health(true));
+    await returnToApp();
+    expect(host.textContent).not.toContain(STRINGS.en.settings.notificationsDenied);
+  });
+
+  it("the denied note stays while notifications are still blocked", async () => {
+    mocked.enableStreakReminder.mockResolvedValue(false);
+    await render();
+    await act(async () => reminderSwitch().click());
+    await returnToApp();
+    expect(host.textContent).toContain(STRINGS.en.settings.notificationsDenied);
+  });
+
+  it("shows nothing until native has answered", async () => {
+    let answer: (r: prayer.StreakReminder) => void = () => {};
+    mocked.getStreakReminder.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    await render();
+    expect(host.innerHTML).toBe("");
+    await act(async () => answer({ enabled: true, minuteOfDay: 465 }));
+    expect(reminderSwitch().checked).toBe(true);
+    expect(host.textContent).toContain(clock(465));
+  });
+
+  it("a failed time write goes back to what native has", async () => {
+    await render();
+    mocked.setStreakReminder.mockRejectedValue(new Error("bridge down"));
+    await pickTime("07:45");
+    expect(host.textContent).toContain(clock(1260));
+  });
+
+  it("a failed turn-off goes back to what native has", async () => {
+    stored = { enabled: true, minuteOfDay: 1260 };
+    await render();
+    mocked.setStreakReminder.mockRejectedValue(new Error("bridge down"));
+    await act(async () => reminderSwitch().click());
+    expect(reminderSwitch().checked).toBe(true);
   });
 
   it("turning off saves off with the time", async () => {
