@@ -142,6 +142,16 @@ describe("write", () => {
     expect(JSON.parse(localStorage.getItem(key) as string)).toEqual({ fontSize: 1 });
   });
 
+  it("settings leave out this phone's fasting reminder flag and keep it on write", async () => {
+    const key = "rafiq_settings_v1";
+    localStorage.setItem(key, JSON.stringify({ fontSize: 3, fastingReminders: true }));
+    expect(await col("settings").read()).toEqual({ value: { fontSize: 3 } });
+
+    await col("settings").write({ value: { fontSize: 5, fastingReminders: false } });
+    expect(JSON.parse(localStorage.getItem(key) as string)).toEqual({ fontSize: 5, fastingReminders: true });
+    localStorage.removeItem(key);
+  });
+
   it("quiz presets live in Preferences", async () => {
     const p = { id: "p1", name: "n", ranges: [], createdAt: 1, updatedAt: 2 };
     await col("quizPresets").write({ p1: p });

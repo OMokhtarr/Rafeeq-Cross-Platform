@@ -352,7 +352,7 @@ function hifzObject<T>(
  * them with native on every open). Each phone keeps its own: synced, two
  * phones with different reminders would overwrite each other on every open.
  */
-const DEVICE_SETTINGS = ["prayerReminders", "azkarReminders"];
+const DEVICE_SETTINGS = ["prayerReminders", "azkarReminders", "fastingReminders"];
 
 const withoutDeviceSettings = (v: unknown): unknown => {
   if (!isRecord(v)) return v;
