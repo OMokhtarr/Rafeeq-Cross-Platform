@@ -11,19 +11,18 @@ The release name is only shown in Play Console, never to users.
 
 **Release name:** `23 (1.1.0)`
 
-Changes since 22 (PRs #90, #91). The Madani 1405 mushaf no longer shows
-Tajweed colours: some of its rule tags coloured letters wrongly, so it is
-plain text until they are checked, and the option is hidden while it is
-selected.
+Changes since 22 (PRs #90, #91, #92). Madani 1405 now draws the 1421 word
+glyphs on its own lines, so its Tajweed colours are exactly 1421's, and it is
+the default mushaf for anyone who has not chosen one.
 
 ```
 <en-US>
-• Madani 1405: larger, even text on every page, in pure black or white; Tajweed colours are paused for this mushaf while we check them
+• Madani 1405 is now the default mushaf, with the same Tajweed colours and letters as Madani 1421 and the same text size on every page
 • The mushaf choices are now named Madani 1421 and Madani 1405
 • Quizzes: switching tabs no longer loses your progress — the Quiz tab takes you back, and a "Continue your quiz" card shows where you stopped
 </en-US>
 <ar>
-• مصحف المدينة ١٤٠٥: خط أكبر وبحجم ثابت في كل الصفحات، بالأسود أو الأبيض الخالص؛ وأُوقفت ألوان التجويد لهذا المصحف مؤقتًا حتى نراجعها
+• أصبح مصحف المدينة ١٤٠٥ المصحف الافتراضي، بألوان التجويد والحروف نفسها في مصحف المدينة ١٤٢١ وبحجم خط ثابت في كل الصفحات
 • أصبحت خيارات المصحف: مصحف المدينة ١٤٢١ ومصحف المدينة ١٤٠٥
 • الاختبارات: التنقّل بين التبويبات لم يعد يُضيّع تقدّمك، فتبويب الاختبارات يعيدك إليه، وتظهر بطاقة «تابع اختبارك» من حيث توقّفت
 </ar>
