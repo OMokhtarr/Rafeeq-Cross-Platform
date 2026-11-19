@@ -30,9 +30,6 @@
  * carries `glyphPage`, the 1421 page whose font holds it, so a page may use
  * two fonts, and a line its glyphs overrun is condensed (`squeezeLineToFit`).
  * The tajweed colours are therefore exactly 1421's.
- *
- * Unicode data (`textTajweed`, no `codeV2`) is drawn in the Uthmanic Hafs
- * font with CSS tajweed classes (`mushaf-tj-*`, see tajweed-markup.ts).
 
 * Supports two layout modes:
  *   - bigTextMode = false: strict line‑by‑line layout (as in printed Mushaf)
@@ -45,20 +42,16 @@ import {
   ensurePageFont,
   ensureBismillahFont,
   ensureSurahNamesFont,
-  ensureHafsUnicodeFont,
   fontFamilyForPage,
   paletteNameForPage,
   setMonoPaletteColor,
   BISMILLAH_FONT_FAMILY,
-  HAFS_UNICODE_FONT_FAMILY,
 } from "../../../core/services/api/font.loader";
-import { offersTajweedColors } from "../../../core/services/api/mushaf.config";
 import { getSurahNameArabic } from "../../../core/services/data/metadata.service";
 import { useTheme } from "../../../core/context/ThemeContext";
 import { findLineGaps, gapBeforeLine } from "./page-line-gaps";
 import { measureTextZoom } from "./text-zoom";
-import { parseTajweed, stripTajweed } from "./tajweed-markup";
-import { fitUnicodeFontPx, lineSqueeze } from "./fit-width";
+import { lineSqueeze } from "./line-squeeze";
 import {
   SURAH_BANNER_PATH,
   SURAH_BANNER_VIEWBOX,
@@ -118,11 +111,6 @@ const MushafPage: React.FC<Props> = ({
   const [fontReady, setFontReady] = useState(false);
   const { theme } = useTheme();
   const [tajweedOn, setTajweedOn] = useState(readTajweedSetting);
-  // Madani 1405 draws Unicode text in one Hafs font with CSS tajweed colours;
-  // every other kind keeps the per-page V4 glyph fonts and their palettes.
-  // Decided by the data being drawn, not the setting, so verses fetched before
-  // a mushaf switch are never drawn with the other mushaf's renderer.
-  const isUnicode = isUnicodeData(verses);
 
   // The V4 fonts this page draws with: its own, or for 1405 (whose lines
   // regroup 1421 glyphs) every 1421 page its words come from.
@@ -134,7 +122,7 @@ const MushafPage: React.FC<Props> = ({
     return Array.from(set).sort((a, b) => a - b).join(",");
   }, [verses, page]);
   // 1405 lines were not drawn for these glyphs, so a line can overrun.
-  const relaid = !isUnicode && verses.some((v) =>
+  const relaid = verses.some((v) =>
     v.words?.some((w) => w.glyphPage !== undefined),
   );
 
@@ -261,13 +249,9 @@ const MushafPage: React.FC<Props> = ({
     let cancelled = false;
     setFontReady(false);
     const glyphPages = glyphPagesKey.split(",").map(Number);
-    const textFamilies = isUnicode
-      ? [HAFS_UNICODE_FONT_FAMILY]
-      : glyphPages.map(fontFamilyForPage);
+    const textFamilies = glyphPages.map(fontFamilyForPage);
     Promise.all([
-      isUnicode
-        ? ensureHafsUnicodeFont()
-        : Promise.all(glyphPages.map(ensurePageFont)),
+      Promise.all(glyphPages.map(ensurePageFont)),
       needsBismillahFont ? ensureBismillahFont() : Promise.resolve(),
       needsSurahNamesFont ? ensureSurahNamesFont() : Promise.resolve(),
     ])
@@ -299,11 +283,7 @@ const MushafPage: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [page, needsBismillahFont, needsSurahNamesFont, isUnicode, glyphPagesKey]);
-
-  // Re-fits a Unicode page when its text changes; a constant null for V4,
-  // whose sizing ignores the text.
-  const unicodeVerses = isUnicode ? verses : null;
+  }, [page, needsBismillahFont, needsSurahNamesFont, glyphPagesKey]);
 
   // Keep --slot-px in sync with the container height so the surah header and
   // bismillah always occupy exactly 1/15 of the page (no font-size fitting).
@@ -354,34 +334,13 @@ const MushafPage: React.FC<Props> = ({
         );
         lines.forEach(unsqueezeLine);
         lines.forEach(squeezeLineToFit);
-        return;
-      }
-      // `byWidth` and `byHeight` are tuned to the V4 glyphs. The Unicode font
-      // gets one size for every page, read back from the rendered line
-      // height, and a line too long for it is condensed on its own rather
-      // than shrinking the page (see fit-width.ts).
-      if (isUnicode) {
-        const lines = Array.from(
-          el.querySelectorAll<HTMLElement>(".mushaf-line"),
-        );
-        lines.forEach(unsqueezeLine);
-        // The line's own width: the Unicode page is inset (MushafPage.css),
-        // so the container's outer width would overstate the room.
-        const fitted = fitUnicodeFontPx(
-          px,
-          lines[0]?.clientWidth || w,
-          lines[0]?.getBoundingClientRect().height ?? 0,
-          slotPx,
-        );
-        if (fitted !== px) setFontPx(fitted);
-        lines.forEach(squeezeLineToFit);
       }
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fontReady, page, isUnicode, unicodeVerses, relaid, glyphPagesKey]);
+  }, [fontReady, page, relaid, glyphPagesKey]);
 
   // Measure hidden-word spans after layout and compute one overlay bar per
   // contiguous hidden segment on each mushaf line.
@@ -652,7 +611,7 @@ const MushafPage: React.FC<Props> = ({
     // its palette; the page's own words inherit them from the container.
     const glyphPage = tw.word.glyphPage ?? page;
     const glyphStyle: React.CSSProperties | undefined =
-      !isUnicode && glyphPage !== page
+      glyphPage !== page
         ? {
             fontFamily: fontFamilyForPage(glyphPage),
             fontPalette: tajweedOn
@@ -738,36 +697,24 @@ const MushafPage: React.FC<Props> = ({
             : undefined
         }
       >
-        {isUnicode
-          ? renderUnicodeText(tw.word, tajweedOn && UNICODE_TAJWEED_COLORS)
-          : tw.word.codeV2 || tw.word.text_uthmani}
-        {isGlowing &&
-          (isUnicode ? (
-            // Plain text: CSS colours the whole overlay green (--tajweed-glow).
-            <span
-              className="mushaf-word-glow"
-              aria-hidden="true"
-              key={glowGeneration}
-            >
-              {renderUnicodeText(tw.word, false)}
-            </span>
-          ) : (
-            // Own palette: CSS `color` only reaches the font's foreground layer,
-            // so the tajweed glyph layers need the all-green palette instead.
-            <span
-              className="mushaf-word-glow"
-              aria-hidden="true"
-              key={glowGeneration}
-              style={{
-                fontPalette: paletteNameForPage(
-                  glyphPage,
-                  theme === "night" ? "glow-night" : "glow-day",
-                ),
-              }}
-            >
-              {tw.word.codeV2 || tw.word.text_uthmani}
-            </span>
-          ))}
+        {tw.word.codeV2 || tw.word.text_uthmani}
+        {isGlowing && (
+          // Own palette: CSS `color` only reaches the font's foreground layer,
+          // so the tajweed glyph layers need the all-green palette instead.
+          <span
+            className="mushaf-word-glow"
+            aria-hidden="true"
+            key={glowGeneration}
+            style={{
+              fontPalette: paletteNameForPage(
+                glyphPage,
+                theme === "night" ? "glow-night" : "glow-day",
+              ),
+            }}
+          >
+            {tw.word.codeV2 || tw.word.text_uthmani}
+          </span>
+        )}
       </span>
     );
   };
@@ -882,21 +829,15 @@ const MushafPage: React.FC<Props> = ({
     <div
       className={`mushaf-page-glyph ${
         bigTextMode ? "mushaf-page-bigtext" : ""
-      } ${page <= 2 ? "mushaf-page-natural-width" : ""}${
-        isUnicode ? " mushaf-page-unicode" : ""
-      }`}
+      } ${page <= 2 ? "mushaf-page-natural-width" : ""}`}
       ref={containerRef}
-      style={
-        isUnicode
-          ? { fontFamily: HAFS_UNICODE_FONT_FAMILY, position: "relative" }
-          : {
-              fontFamily: fontFamilyForPage(page),
-              position: "relative",
-              fontPalette: tajweedOn
-                ? paletteNameForPage(page, theme)
-                : paletteNameForPage(page, "mono"),
-            }
-      }
+      style={{
+        fontFamily: fontFamilyForPage(page),
+        position: "relative",
+        fontPalette: tajweedOn
+          ? paletteNameForPage(page, theme)
+          : paletteNameForPage(page, "mono"),
+      }}
     >
       {bigTextMode ? renderWrappedFlow() : renderStrictLines()}
       {hiddenSegments.map((seg, i) => (
@@ -945,37 +886,6 @@ function readTajweedSetting(): boolean {
   return true;
 }
 
-/**
- * Whether Unicode pages honour the tajweed setting. The renderer follows the
- * data, not the setting, and 1405 is the only Mushaf drawn in Unicode.
- */
-const UNICODE_TAJWEED_COLORS = offersTajweedColors("madani_1405_tajweed");
-
-/** 1405 words carry `textTajweed` and no V4 glyph string (`codeV2`). */
-function isUnicodeData(verses: Verse[]): boolean {
-  const first = verses.find((v) => v.words?.length)?.words[0];
-  return !!first && !!first.textTajweed && !first.codeV2;
-}
-
-/**
- * A word's Unicode text: tajweed rules as coloured spans when `colored`, else
- * the tag-stripped string. End markers arrive as plain Arabic digits ("١٧"),
- * so they take the same path. Segments are text children, never parsed HTML.
- */
-function renderUnicodeText(word: VerseWord, colored: boolean): React.ReactNode {
-  const markup = word.textTajweed || word.text_uthmani;
-  if (!colored) return stripTajweed(markup);
-  return parseTajweed(markup).map((seg, i) =>
-    seg.rule ? (
-      <span key={i} className={`mushaf-tj-${seg.rule}`}>
-        {seg.text}
-      </span>
-    ) : (
-      <React.Fragment key={i}>{seg.text}</React.Fragment>
-    ),
-  );
-}
-
 /** Undo `squeezeLineToFit`, so the line can be measured at its natural size. */
 function unsqueezeLine(line: HTMLElement): void {
   line.style.removeProperty("width");
@@ -984,7 +894,7 @@ function unsqueezeLine(line: HTMLElement): void {
 }
 
 /**
- * Condense a Unicode line whose words, set edge to edge, are wider than the
+ * Condense a 1405 line whose 1421 glyphs, set edge to edge, are wider than the
  * line. The line box is widened to the words (so its overflow clip keeps them
  * whole) and scaled back to the page width from its right, RTL start edge.
  * The line box is always 100% wide (space-between), so the words are summed.

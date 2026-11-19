@@ -3,11 +3,9 @@ import {
   MUSHAFS,
   layoutFor,
   mushafIdFor,
-  rendererFor,
 } from "../mushaf.config";
 import { fetchVersesByPage } from "../quran-api.client";
 
-const TAJWEED = "<rule class=ham_wasl>ٱ</rule>لۡ";
 const GLYPH = "ﱁ";
 
 describe("madani_1405_tajweed mushaf kind", () => {
@@ -18,11 +16,6 @@ describe("madani_1405_tajweed mushaf kind", () => {
 
   it("is the default", () => {
     expect(DEFAULT_MUSHAF).toBe("madani_1405_tajweed");
-  });
-
-  it("draws the 1421 V4 glyphs, like 1421 itself", () => {
-    expect(rendererFor("madani_1405_tajweed")).toBe("v4-glyph");
-    expect(rendererFor("qpc_v4_tajweed")).toBe("v4-glyph");
   });
 
   it("asks the API for mushaf 2 with each word's glyph and glyph page", () => {
@@ -39,7 +32,7 @@ describe("fetchVersesByPage word fields", () => {
     global.fetch = realFetch;
   });
 
-  it("passes text_uthmani_tajweed through as textTajweed", async () => {
+  it("passes each word's glyph and glyph page through", async () => {
     // First call is the token broker, second the content API.
     const fetchMock = jest
       .fn()
@@ -65,7 +58,6 @@ describe("fetchVersesByPage word fields", () => {
                   position: 1,
                   char_type_name: "word",
                   text_uthmani: "ٱلۡ",
-                  text_uthmani_tajweed: TAJWEED,
                   code_v2: GLYPH,
                   v2_page: 4,
                   line_number: 3,
@@ -83,7 +75,6 @@ describe("fetchVersesByPage word fields", () => {
       MUSHAFS.madani_1405_tajweed.wordFields,
       2,
     );
-    expect(verses[0].words[0].textTajweed).toBe(TAJWEED);
     expect(verses[0].words[0].codeV2).toBe(GLYPH);
     expect(verses[0].words[0].glyphPage).toBe(4);
   });

@@ -314,7 +314,6 @@ interface ApiWord {
   text_uthmani?: string;
   code_v2?: string;
   v2_page?: number;
-  text_uthmani_tajweed?: string;
   line_number?: number;
   page_number?: number;
   translation?: { text?: string; language_name?: string };
@@ -377,7 +376,6 @@ export async function fetchVersesByPage(
       text_uthmani: w.text_uthmani || "",
       codeV2: w.code_v2 || "",
       glyphPage: w.v2_page,
-      textTajweed: w.text_uthmani_tajweed,
       lineNumber: w.line_number || 0,
       pageNumber: w.page_number || page,
       translation: w.translation?.text,
@@ -427,7 +425,6 @@ export async function fetchVersesByJuz(
       text_uthmani: w.text_uthmani || "",
       codeV2: w.code_v2 || "",
       glyphPage: w.v2_page,
-      textTajweed: w.text_uthmani_tajweed,
       lineNumber: w.line_number || 0,
       pageNumber: w.page_number || 0,
       translation: w.translation?.text,
