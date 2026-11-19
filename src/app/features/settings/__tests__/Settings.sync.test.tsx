@@ -19,13 +19,16 @@ jest.mock("../../../core/services/sync/content-sync.service", () => ({
 }));
 jest.mock("../../../core/services/prayer/prayer-times.service", () => ({
   enableAzkarReminders: async () => {},
+  enableFastingReminders: async () => {},
   enableReminders: async () => {},
   getAzkarReminders: async () => false,
+  getFastingReminders: async () => false,
   getReminderHealth: async () => null,
   getReminders: async () => ({ enabled: false }),
   openAppSettings: async () => {},
   requestExactAlarms: async () => {},
   setAzkarReminders: async () => {},
+  setFastingReminders: async () => {},
   setReminders: async () => {},
 }));
 

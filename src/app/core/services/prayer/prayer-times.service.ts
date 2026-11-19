@@ -42,6 +42,8 @@ interface RafeeqPrayerPlugin extends PrayerAlarmPlugin {
   }): Promise<void>;
   getAzkarReminders(): Promise<{ enabled: boolean }>;
   setAzkarReminders(options: { enabled: boolean }): Promise<void>;
+  getFastingReminders(): Promise<{ enabled: boolean }>;
+  setFastingReminders(options: { enabled: boolean }): Promise<void>;
   getReminderHealth(): Promise<ReminderHealth>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
   requestExactAlarm(): Promise<{ granted: boolean }>;
@@ -329,6 +331,40 @@ export async function enableAzkarReminders(): Promise<boolean> {
   if (!notificationsGranted) return false;
 
   await setAzkarReminders(true);
+
+  try {
+    await RafeeqPrayer.requestExactAlarm();
+  } catch {
+    // Reminders stay inexact.
+  }
+  return true;
+}
+
+/** Whether evening-before Sunnah fasting reminders are on; false off-device. */
+export async function getFastingReminders(): Promise<boolean> {
+  if (!isNative) return false;
+  const { enabled } = await RafeeqPrayer.getFastingReminders();
+  return enabled;
+}
+
+export async function setFastingReminders(enabled: boolean): Promise<void> {
+  if (!isNative) return;
+  await RafeeqPrayer.setFastingReminders({ enabled });
+}
+
+/**
+ * Turn fasting reminders on: the evening before each Sunnah fasting day,
+ * after Isha when a location is stored and at a fixed evening hour otherwise
+ * — so, like azkar reminders, no location is asked for. The notification
+ * permission is still required.
+ */
+export async function enableFastingReminders(): Promise<boolean> {
+  if (!isNative) return false;
+
+  const notificationsGranted = await requestNotificationPermission();
+  if (!notificationsGranted) return false;
+
+  await setFastingReminders(true);
 
   try {
     await RafeeqPrayer.requestExactAlarm();

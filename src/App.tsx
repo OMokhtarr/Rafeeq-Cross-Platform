@@ -158,6 +158,7 @@ const MainRouterOutlet: React.FC = () => {
   }, []);
 
   // Tapping an azkar reminder opens the app with rafeeq://azkar/<slot>
+  // (and a fasting reminder with rafeeq://tracker)
   // (AzkarReminderReceiver). A cold start carries it as the launch URL; a
   // running app receives it as appUrlOpen. rafeeq://auth/… is the end of
   // Android's Apple sign-in in the browser; a cold start there means the
@@ -167,6 +168,11 @@ const MainRouterOutlet: React.FC = () => {
     const open = (url: string | undefined) => {
       if (url?.startsWith("rafeeq://auth/")) {
         if (isAuthConfigured()) void completeOAuthRedirect(url);
+        return;
+      }
+      // A fasting reminder (FastingReminderReceiver) opens the Worship Tracker.
+      if (url === "rafeeq://tracker") {
+        historyRef.current.push("/tracker");
         return;
       }
       const m = url?.match(/^rafeeq:\/\/azkar\/(morning|evening)$/);
