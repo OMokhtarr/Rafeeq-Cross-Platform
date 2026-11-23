@@ -7,13 +7,42 @@ The release name is only shown in Play Console, never to users.
 
 ---
 
-## 1.1.0 (versionCode 24) — not built yet
+## 1.1.0 (versionCode 25) — not built yet
+
+**Release name:** `25 (1.1.0)`
+
+Changes since 24 (PRs #100, #101, #102). PR #102 (R8 shrinking, androidx
+edge-to-edge, `@capacitor/status-bar` removed) has no visible change but
+needs a full test of the release build.
+
+```
+<en-US>
+• Tafsir: a new Similar verses button lists verses that share three or more words in a row with the one you're reading
+• Hifz: edit the pages of a range, and overlapping ranges now merge into one
+• Lost a long Hifz streak? Earn it back with a few days in a row
+• Azkar counters now last the whole day and start fresh at Fajr
+• Recite mode now recognises numbers in verses
+• Swiping back from the edge no longer opens the verse sheet
+</en-US>
+<ar>
+• التفسير: زر «الآيات المتشابهة» يعرض الآيات التي تشترك مع الآية في ثلاث كلمات متتالية أو أكثر
+• الحفظ: عدّل صفحات أي نطاق، وتندمج النطاقات المتداخلة في نطاق واحد
+• فقدت سلسلة حفظ طويلة؟ استعدها بجلسات أيام متتالية
+• عدّادات الأذكار تبقى طوال اليوم وتبدأ من جديد عند الفجر
+• وضع التسميع يتعرّف الآن على الأعداد في الآيات
+• السحب من حافة الشاشة للرجوع لم يعد يفتح نافذة الآية
+</ar>
+```
+
+---
+
+## 1.1.0 (versionCode 24) — 2026-11-19
 
 **Release name:** `24 (1.1.0)`
 
-Changes since 23 (PRs #93, #94, #95). Written ahead of the build:
-`versionCode` in `android/app/build.gradle` is still 23 and must be bumped
-to 24 before this build is uploaded.
+Changes since 23 (PRs #93, #94, #95). The bundle was built after #96–#99
+were merged too, so 24 also shipped the Hifz streak reminder (#98, #99),
+which these notes don't mention.
 
 ```
 <en-US>
