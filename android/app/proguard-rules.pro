@@ -1,21 +1,16 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# R8 rules for the release build (minifyEnabled true in build.gradle).
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Most of the app needs no rules here:
+# - Capacitor plugins (including RafeeqAutoPlugin / RafeeqPrayerPlugin) are
+#   kept by capacitor-android's consumer rules (@CapacitorPlugin, @PluginMethod).
+# - Activities, services, receivers and widget providers are kept because the
+#   manifest names them.
+# - The bridge's @JavascriptInterface methods are kept by the default
+#   proguard-android-optimize.txt.
+# - Media3, RevenueCat and @capgo/capacitor-social-login ship their own rules.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep line numbers so crash reports point at real lines, and hide the
+# original source file names. Play maps the obfuscated names back using the
+# mapping.txt that is packaged into the AAB.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

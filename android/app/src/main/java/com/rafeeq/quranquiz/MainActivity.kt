@@ -2,9 +2,10 @@ package com.rafeeq.quranquiz
 
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -37,7 +38,7 @@ class MainActivity : BridgeActivity() {
         // from the WebView's perspective) can trigger el.play() successfully.
         bridge.webView.settings.mediaPlaybackRequiresUserGesture = false
         applyCappedTextZoom()
-        enableEdgeToEdge()
+        setUpEdgeToEdge()
         keepSafeAreaInsetsAcrossDocuments()
     }
 
@@ -175,11 +176,16 @@ class MainActivity : BridgeActivity() {
      * The pre-WebView tint is handled by the SystemBars `style: "DARK"` entry
      * in capacitor.config.ts, which matches the night default; the hook then
      * corrects it if the user's stored theme is day.
+     *
+     * Goes through androidx's `enableEdgeToEdge` rather than setting
+     * `window.statusBarColor` / `navigationBarColor` directly: those setters
+     * are deprecated in Android 15 and Play Console flags apps that call them.
+     * `SystemBarStyle.dark(TRANSPARENT)` gives transparent bars with light
+     * icons, which is the same start state as the SystemBars `DARK` config.
      */
-    private fun enableEdgeToEdge() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    private fun setUpEdgeToEdge() {
+        val transparentBars = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = transparentBars, navigationBarStyle = transparentBars)
         injectSafeAreaInsetsBelowApi35()
 
         // Android draws a translucent scrim behind a transparent navigation bar
