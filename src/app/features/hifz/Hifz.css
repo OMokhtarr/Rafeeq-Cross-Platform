@@ -134,6 +134,69 @@ ion-content::part(scroll) {
   margin-bottom: var(--space-4);
 }
 
+/* ── Streak restore card (Pro) ──────────────────────────────────────────────── */
+/* A chance with a deadline, so it sits in the page flow above the sessions
+   rather than behind the streak info button. Gold for text and border,
+   green only as the fill of a done day. */
+.hifz-restore-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-gold);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.hifz-restore-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.hifz-restore-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-primary);
+}
+
+.hifz-restore-days {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+}
+
+.hifz-restore-day {
+  flex: 1;
+  max-width: 48px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-border-card);
+}
+
+.hifz-restore-day.done {
+  background: var(--color-quran);
+}
+
+.hifz-restore-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.hifz-restore-pro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 /* ── All-sessions entry row — replaces the removed header button ───────────── */
 .hifz-all-sessions-row {
   width: 100%;
@@ -445,13 +508,51 @@ ion-content::part(scroll) {
 
 .hifz-memorized-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: var(--space-3) var(--space-4);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-md);
   gap: var(--space-3);
+}
+
+.hifz-memorized-item--editing {
+  border-color: var(--color-gold);
+}
+
+.hifz-memorized-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.hifz-edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+.hifz-edit-btn:hover,
+.hifz-edit-btn:focus-visible {
+  color: var(--color-gold);
+}
+
+.hifz-range-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hifz-range-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .hifz-memorized-label {

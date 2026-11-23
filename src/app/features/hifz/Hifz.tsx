@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useHistory } from "react-router-dom";
-import { IonPage, IonContent, useIonViewDidEnter } from "@ionic/react";
+import { IonPage, IonContent, useIonViewDidEnter, useIonToast } from "@ionic/react";
 import { useLang } from "../../core/context/LanguageContext";
 import { useTheme } from "../../core/context/ThemeContext";
 import InlineSelect from "../../shared/components/inline-select/InlineSelect";
@@ -22,6 +22,7 @@ import {
   countMemorizedPages,
   computeStreakPersistent,
   streakRecoveryInfo,
+  checkStreakRestore,
   STREAK_RECOVERY_THRESHOLD,
   recordStreakDay,
   recordHifzSession,
@@ -72,7 +73,14 @@ import { useFreezeToast } from "../../core/hooks/useFreezeToast";
 import { useStreakRefresh, useSyncRefresh } from "../../core/hooks/useSyncRefresh";
 import { usePageTour } from "../onboarding/usePageTour";
 import { tourAttr } from "../onboarding/tourCatalog";
+import { addMemorized, editMemorizedRange, pagesUnitSurah, SurahBounds } from "./memorized";
+import { NO_RESTORE } from "./streak-restore";
+import type { RestoreState } from "./streak-restore";
+import { useProGate } from "../subscription/useProGate";
+import { useSubscription } from "../../core/context/SubscriptionContext";
 import "./Hifz.css";
+
+const surahBounds: SurahBounds = (s) => ({ from: getSurahStartPage(s), to: getSurahEndPage(s) });
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -253,7 +261,12 @@ const AddMemorizedSheet: React.FC<AddSheetProps> = ({
     } else if (mode === "surah") {
       selectedSurahs.forEach((s) => units.push({ type: "surah", surah: s }));
     } else if (mode === "pages") {
-      units.push({ type: "pages", from: Math.min(fromPage, toPage), to: Math.max(fromPage, toPage) });
+      units.push({
+        type: "pages",
+        surah: pagesSurahId ?? undefined,
+        from: Math.min(fromPage, toPage),
+        to: Math.max(fromPage, toPage),
+      });
     }
     if (units.length > 0) {
       onAddMany(units);
@@ -582,14 +595,39 @@ const SetupView: React.FC<SetupViewProps> = ({
         secondary: lang === "ar" ? `ص ${from} – ${to}` : `Pg. ${from}–${to}`,
       };
     }
-    return {
-      primary: lang === "ar" ? `ص ${u.from} – ${u.to}` : `Pg. ${u.from}–${u.to}`,
-      secondary: "",
-    };
+    const pagesLabel = lang === "ar" ? `ص ${u.from} – ${u.to}` : `Pg. ${u.from}–${u.to}`;
+    const surah = pagesUnitSurah(u, surahBounds);
+    if (surah === null) return { primary: pagesLabel, secondary: "" };
+    const name = lang === "ar" ? getSurahNameArabic(surah) : getSurahNameEnglish(surah);
+    return { primary: `${lang === "ar" ? "سورة" : "Surah"} ${name}`, secondary: pagesLabel };
   };
 
   const removeUnit = (idx: number) => {
+    if (editing?.index === idx) setEditing(null);
     onUpdateMemorized(memorized.filter((_, i) => i !== idx));
+  };
+
+  // Editing a page-range row: its from/to, limited to the row's surah (or to
+  // its own pages when no single surah holds them).
+  const { isNight } = useTheme();
+  const [editing, setEditing] = useState<{ index: number; from: number; to: number } | null>(null);
+  // Any other change to the list (an add can merge rows) moves the indexes.
+  useEffect(() => setEditing(null), [memorized]);
+  const editBounds = (() => {
+    const row = editing ? memorized[editing.index] : undefined;
+    if (!row || row.type !== "pages") return null;
+    const surah = pagesUnitSurah(row, surahBounds);
+    return surah === null ? { from: row.from, to: row.to } : surahBounds(surah);
+  })();
+  const pageOptions = (from: number, to: number) =>
+    Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => ({
+      value: String(from + i),
+      label: String(from + i),
+    }));
+  const saveEdit = () => {
+    if (!editing) return;
+    onUpdateMemorized(editMemorizedRange(memorized, editing.index, editing, surahBounds));
+    setEditing(null);
   };
 
   // The box must hold a valid number too — an empty/invalid field disables generate.
@@ -615,21 +653,73 @@ const SetupView: React.FC<SetupViewProps> = ({
           <ul className="hifz-memorized-list">
             {memorized.map((u, i) => {
               const { primary, secondary } = labelForUnit(u);
+              const isEditingRow = editing?.index === i && editBounds !== null;
               return (
-                <li key={i} className="hifz-memorized-item">
-                  <span className="hifz-memorized-label">
-                    <span className="hifz-memorized-primary">{primary}</span>
-                    {secondary && (
-                      <span className="hifz-memorized-secondary">{secondary}</span>
+                <li key={i} className={"hifz-memorized-item" + (isEditingRow ? " hifz-memorized-item--editing" : "")}>
+                  <div className="hifz-memorized-row">
+                    <span className="hifz-memorized-label">
+                      <span className="hifz-memorized-primary">{primary}</span>
+                      {secondary && (
+                        <span className="hifz-memorized-secondary">{secondary}</span>
+                      )}
+                    </span>
+                    {u.type === "pages" && !isEditingRow && (
+                      <button
+                        className="hifz-edit-btn"
+                        onClick={() => setEditing({ index: i, from: u.from, to: u.to })}
+                        aria-label={h.editRange}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                        </svg>
+                      </button>
                     )}
-                  </span>
-                  <button
-                    className="hifz-remove-btn"
-                    onClick={() => removeUnit(i)}
-                    aria-label={h.remove}
-                  >
-                    ✕
-                  </button>
+                    <button
+                      className="hifz-remove-btn"
+                      onClick={() => removeUnit(i)}
+                      aria-label={h.remove}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {isEditingRow && editing && editBounds && (
+                    <div className="hifz-range-editor">
+                      <div className="hifz-pages-row">
+                        <div className="hifz-pages-col">
+                          <label className="hifz-label">{h.fromPage}</label>
+                          <InlineSelect
+                            value={String(editing.from)}
+                            options={pageOptions(editBounds.from, editBounds.to)}
+                            onChange={(v) => {
+                              const n = Number(v);
+                              setEditing({ ...editing, from: n, to: Math.max(editing.to, n) });
+                            }}
+                            night={isNight}
+                            fullWidth
+                          />
+                        </div>
+                        <div className="hifz-pages-col">
+                          <label className="hifz-label">{h.toPage}</label>
+                          <InlineSelect
+                            value={String(editing.to)}
+                            options={pageOptions(editing.from, editBounds.to)}
+                            onChange={(v) => setEditing({ ...editing, to: Number(v) })}
+                            night={isNight}
+                            fullWidth
+                          />
+                        </div>
+                      </div>
+                      <div className="hifz-range-editor-actions">
+                        <button className="rf-btn rf-btn--secondary rf-btn--sm" onClick={() => setEditing(null)}>
+                          {h.cancelEdit}
+                        </button>
+                        <button className="rf-btn rf-btn--primary rf-btn--sm" onClick={saveEdit}>
+                          {h.saveRange}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -1068,6 +1158,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [showTodayPanel, setShowTodayPanel] = useState(false);
   const [heroPage, setHeroPage] = useState(0);
 
+  // Streak restore: re-checked whenever sessions change (a completion is
+  // recorded before the plan updates). A finished restore applies here, and
+  // the re-render it causes picks up the reconnected streak.
+  const { locked: proLocked } = useProGate();
+  const { openNote } = useSubscription();
+  const [presentToast] = useIonToast();
+  const [restore, setRestore] = useState<RestoreState>(NO_RESTORE);
+  // Through a ref: neither the toast function nor the strings are promised to
+  // keep their identity, and re-running this on every render would loop.
+  const toastRestored = useRef((days: number) => {});
+  toastRestored.current = (days: number) =>
+    presentToast({
+      message: h.streakRestored(days),
+      duration: 3500,
+      position: "top",
+      cssClass: "rfq-toast-top",
+    });
+  useEffect(() => {
+    const { state, restoredTo } = checkStreakRestore(plan.sessions, !proLocked);
+    setRestore(state);
+    if (restoredTo !== null) toastRestored.current(restoredTo);
+  }, [plan.sessions, proLocked]);
+
   // Put these dialogs on the back ladder so an edge swipe dismisses the dialog
   // instead of counting toward leaving the page.
   useEffect(() => {
@@ -1331,6 +1444,40 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ── Streak restore (Pro): bring back a lost long streak ── */}
+      {restore.kind !== "none" && (
+        <section className="hifz-restore-card" aria-label={h.streakRestoreTitle(restore.lostLength)}>
+          <p className="hifz-restore-title">{h.streakRestoreTitle(restore.lostLength)}</p>
+          <p className="hifz-restore-body">
+            {restore.kind === "available"
+              ? h.streakRestoreStart(restore.needed, restore.startBy === todayStr())
+              : restore.kind === "inProgress"
+                ? h.streakRestoreProgress(restore.progress, restore.needed)
+                : h.streakRestoreComplete}
+          </p>
+          <div
+            className="hifz-restore-days"
+            role="img"
+            aria-label={h.streakRestoreProgress(restore.progress, restore.needed)}
+          >
+            {Array.from({ length: restore.needed }, (_, i) => (
+              <span key={i} className={"hifz-restore-day" + (i < restore.progress ? " done" : "")} />
+            ))}
+          </div>
+          {restore.kind !== "complete" && (
+            <p className="hifz-restore-note">{h.streakRestoreOneChance}</p>
+          )}
+          {proLocked && (
+            <div className="hifz-restore-pro">
+              {restore.kind !== "complete" && <span>{h.streakRestorePro}</span>}
+              <button className="rf-btn rf-btn--secondary rf-btn--sm" onClick={openNote}>
+                {h.streakRestoreSeePro}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── All-sessions entry — replaces the removed header button ── */}
       <button
@@ -2300,7 +2447,7 @@ const Hifz: React.FC = () => {
       </IonContent>
       {showAddSheet && (
         <AddMemorizedSheet
-          onAddMany={(units) => setMemorized((prev) => [...prev, ...units])}
+          onAddMany={(units) => setMemorized((prev) => addMemorized(prev, units, surahBounds))}
           onClose={() => setShowAddSheet(false)}
           memorized={memorized}
           lang={lang as "ar" | "en"}
