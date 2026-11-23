@@ -11,6 +11,7 @@
  */
 
 import type { SttStreamEvent, SttWord } from "./types";
+import { spellNumbersInText, spellNumbersInWords } from "./spell-numbers";
 
 export interface SonioxToken {
   text: string;
@@ -47,11 +48,13 @@ export function tokensToWords(tokens: SonioxToken[]): SttWord[] {
   return words;
 }
 
+/** Numbers are spelled out here (Soniox writes them as digits, the Quran as
+ *  words), so both the shown transcript and the matcher see words. */
 function toEvent(tokens: SonioxToken[], isFinal: boolean): SttStreamEvent {
   return {
-    text: tokens.map((t) => t.text).join("").trim(),
+    text: spellNumbersInText(tokens.map((t) => t.text).join("").trim()),
     isFinal,
-    words: tokensToWords(tokens),
+    words: spellNumbersInWords(tokensToWords(tokens)),
   };
 }
 

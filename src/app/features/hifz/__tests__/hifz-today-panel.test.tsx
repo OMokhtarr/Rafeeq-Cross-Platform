@@ -11,9 +11,11 @@ import { savePlanStrict, type HifzPlan } from "../hifz.service";
 jest.mock("@ionic/react", () => {
   const { createElement } = require("react");
   const Pass = ({ children }: { children?: unknown }) => createElement("div", null, children);
-  return { IonPage: Pass, IonContent: Pass, useIonViewDidEnter: () => {}, useIonViewWillEnter: () => {}, useIonViewWillLeave: () => {} };
+  return { IonPage: Pass, IonContent: Pass, useIonViewDidEnter: () => {}, useIonViewWillEnter: () => {}, useIonViewWillLeave: () => {}, useIonToast: () => [() => {}] };
 });
 jest.mock("../../../shared/components/bottom-nav/BottomNavBar", () => () => null);
+jest.mock("../../subscription/useProGate", () => ({ useProGate: () => ({ locked: false }) }));
+jest.mock("../../../core/context/SubscriptionContext", () => ({ useSubscription: () => ({ openNote: () => {} }) }));
 jest.mock("../../onboarding/usePageTour", () => ({ usePageTour: () => {} }));
 jest.mock("../../../core/hooks/useFreezeToast", () => ({
   useFreezeToast: () => ({ toastFrozen: () => {}, toastEarned: () => {} }),

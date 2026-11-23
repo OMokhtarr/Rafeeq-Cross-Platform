@@ -14,6 +14,8 @@ import { readCachedTafsir } from "../../../core/services/sync/adapters/tafsirs.a
 import {
   getChapters,
   estimatePageForVerse,
+  getSurahNameArabic,
+  getSurahNameEnglish,
 } from "../../../core/services/data/metadata.service";
 import { useLang } from "../../../core/context/LanguageContext";
 import { useTheme } from "../../../core/context/ThemeContext";
@@ -28,6 +30,8 @@ import { useAudioPlayer } from "../../../core/hooks/useAudioPlayer";
 import { useSheetDrag } from "../../../core/hooks/useSheetDrag";
 import { useSwipeNav } from "../../../core/hooks/useSwipeNav";
 import { registerOverlay } from "../../../core/utils/overlay-registry";
+import { findSimilarVerses } from "../../../core/services/quran/similar-verses.service";
+import type { SimilarVerse } from "../../../core/services/quran/similar-verses.service";
 import NoteModal from "../note-modal/NoteModal";
 import { tourAttr } from "../../../features/onboarding/tourCatalog";
 import "./VerseActionSheet.css";
@@ -45,6 +49,12 @@ interface Props {
 const DEFAULT_TAFSIR_ID = "16"; // التفسير الميسر
 
 const DEFAULT_RECITER = "4";
+
+const Chevron: React.FC<{ points: "left" | "right" }> = ({ points }) => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points={points === "left" ? "15 6 9 12 15 18" : "9 6 15 12 9 18"} />
+  </svg>
+);
 
 const VerseActionSheet: React.FC<Props> = ({
   open,
@@ -88,6 +98,43 @@ const VerseActionSheet: React.FC<Props> = ({
   // The verse every header action applies to. Falls back to the opening verse
   // before the first navigation.
   const activeKey = currentKey ?? verseKey;
+
+  // ── Similar verses ─────────────────────────────────────────────────────────
+  // The body shows either the tafsir or the verses sharing a phrase with the
+  // one on screen. Moving to another verse while the list is up re-runs it.
+  const [view, setView] = useState<"tafsir" | "similar">("tafsir");
+  const [similar, setSimilar] = useState<SimilarVerse[] | null>(null);
+  const [similarError, setSimilarError] = useState(false);
+
+  useEffect(() => {
+    if (!open || view !== "similar" || !activeKey) return;
+    let cancelled = false;
+    setSimilar(null);
+    setSimilarError(false);
+    findSimilarVerses(activeKey)
+      .then((list) => {
+        if (!cancelled) setSimilar(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, view, activeKey]);
+
+  // Back closes the list before the sheet. Registered after the sheet's own
+  // overlay, so it sits on top of it.
+  const closeSimilar = useCallback(() => setView("tafsir"), []);
+  useEffect(() => {
+    if (!open || pageHidden || view !== "similar") return;
+    return registerOverlay(closeSimilar);
+  }, [open, pageHidden, view, closeSimilar]);
+
+  const openSimilarVerse = useCallback((key: string) => {
+    setCurrentKey(key);
+    setView("tafsir");
+  }, []);
 
   // ── Bookmark ───────────────────────────────────────────────────────────────
   const [bookmarked, setBookmarked] = useState(false);
@@ -184,6 +231,7 @@ const VerseActionSheet: React.FC<Props> = ({
     }
     setTafsir("");
     setCurrentKey(verseKey);
+    setView("tafsir");
   }, [open, verseKey]);
 
   // ── Fetch tafsir resource list (once per open) ────────────────────────────
@@ -387,6 +435,19 @@ const VerseActionSheet: React.FC<Props> = ({
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
+            {/* Similar verses: swaps the tafsir for the list */}
+            <button
+              className={`vas-note-btn${view === "similar" ? " vas-note-btn--active" : ""}${isNight ? " vas-note-btn--night" : ""}`}
+              onClick={() => setView((v) => (v === "similar" ? "tafsir" : "similar"))}
+              disabled={!activeKey}
+              aria-label={t.mushaf.similarVerses}
+              aria-pressed={view === "similar"}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
             {/* View notes for this verse */}
             <button
               className={`vas-note-btn${isNight ? " vas-note-btn--night" : ""}`}
@@ -432,6 +493,8 @@ const VerseActionSheet: React.FC<Props> = ({
 
         {/* ── Tafsir ── */}
         {/* Resource selector — shows only downloaded tafsirs */}
+        {/* Tafsir picker — not shown over the similar verses list */}
+        {view === "tafsir" && (
         <div className={`vas-resource-bar${nightClass}`} {...tourAttr("viewer.verseSheet.tafsir")}>
           {resourcesLoading ? (
             <span
@@ -478,18 +541,22 @@ const VerseActionSheet: React.FC<Props> = ({
             </div>
           )}
         </div>
+        )}
 
         {/* Verse + nav row */}
         <div className={`vas-verse-row${nightClass}`} {...swipeHandlers} {...tourAttr("viewer.verseSheet.swipe")}>
           <div className="vas-verse-center">
             <div className="vas-nav-inline">
+              {/* Each chevron points away from the verse number, toward the
+                  side its verse lies on: the previous verse is on the right
+                  in Arabic and on the left in English. */}
               <button
                 className={`vas-nav-btn${nightClass}`}
                 onClick={goPrev}
                 disabled={!hasPrev}
-                aria-label={t.mushaf.contextPrevPage}
+                aria-label={t.mushaf.prevVerse}
               >
-                {isRTL ? "‹" : "›"}
+                <Chevron points={isRTL ? "right" : "left"} />
               </button>
               <span className={`vas-nav-key${nightClass}`}>
                 {lang === "ar"
@@ -500,9 +567,9 @@ const VerseActionSheet: React.FC<Props> = ({
                 className={`vas-nav-btn${nightClass}`}
                 onClick={goNext}
                 disabled={!hasNext}
-                aria-label={t.mushaf.contextNextPage}
+                aria-label={t.mushaf.nextVerse}
               >
-                {isRTL ? "›" : "‹"}
+                <Chevron points={isRTL ? "left" : "right"} />
               </button>
             </div>
             {verseText && (
@@ -517,8 +584,56 @@ const VerseActionSheet: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Tafsir body */}
+        {/* Tafsir body, or the similar verses list */}
         <div className="vas-body" ref={tafsirBodyRef}>
+          {view === "similar" ? (
+          <section className="vas-panel" aria-label={t.mushaf.similarVerses}>
+            {similarError ? (
+              <p className="vas-error" role="alert">{t.mushaf.similarVersesError}</p>
+            ) : similar === null ? (
+              <div className="vas-loading">
+                <span className="vas-spinner" aria-hidden="true" />
+                <span>{t.mushaf.similarVersesLoading}</span>
+              </div>
+            ) : similar.length === 0 ? (
+              <p className="vas-empty">{t.mushaf.noSimilarVerses}</p>
+            ) : (
+              <>
+                <p className={`vas-resource-label${nightClass}`}>
+                  {t.mushaf.similarVersesCount(
+                    lang === "ar" ? toHindiNumbers(similar.length) : String(similar.length),
+                  )}
+                </p>
+                <ul className="vas-similar-list">
+                  {similar.map((s) => {
+                    const shared = new Set(s.shared);
+                    const surah = lang === "ar" ? getSurahNameArabic(s.sura) : getSurahNameEnglish(s.sura);
+                    return (
+                      <li key={s.key}>
+                        <button
+                          className={`vas-similar-item${nightClass}`}
+                          onClick={() => openSimilarVerse(s.key)}
+                        >
+                          <span className={`vas-similar-ref${nightClass}`}>
+                            {surah} {lang === "ar" ? toHindiNumbers(s.aya) : s.aya}
+                          </span>
+                          <span className="vas-similar-text" dir="rtl" lang="ar">
+                            {s.words.map((w, i) => (
+                              <React.Fragment key={i}>
+                                {i > 0 && " "}
+                                {shared.has(i) ? <mark className={`vas-similar-shared${nightClass}`}>{w}</mark> : w}
+                              </React.Fragment>
+                            ))}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </section>
+          ) : (
           <section className="vas-panel" aria-label={t.mushaf.tafsir}>
             {/* Resource name label */}
             {selectedResource && (
@@ -545,6 +660,7 @@ const VerseActionSheet: React.FC<Props> = ({
               <p className="vas-empty">{t.mushaf.tafsirUnavailable}</p>
             )}
           </section>
+          )}
         </div>
       </aside>
 

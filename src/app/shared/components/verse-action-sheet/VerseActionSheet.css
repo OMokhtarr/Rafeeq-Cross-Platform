@@ -181,6 +181,20 @@
   background: rgba(212, 180, 140, 0.1);
 }
 
+/* Pressed state (similar verses list showing) — same as an active bookmark. */
+.vas-note-btn--active,
+.vas-note-btn--active:hover {
+  color: var(--color-gold, #b8860b);
+  border-color: var(--color-gold, #b8860b);
+  background: rgba(212, 180, 140, 0.12);
+}
+
+.vas-note-btn--active.vas-note-btn--night {
+  color: var(--color-gold, #d4b48c);
+  border-color: var(--color-gold, #d4b48c);
+  background: rgba(212, 180, 140, 0.1);
+}
+
 .vas-note-btn:disabled {
   opacity: 0.4;
   cursor: default;
@@ -392,8 +406,9 @@
 }
 
 .vas-nav-btn {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border-radius: var(--radius-full, 9999px);
   border: 1px solid var(--color-gold, #b8860b);
   background: transparent;
@@ -575,5 +590,72 @@
 
 .vas-tafsir-settings-link--night {
   border-color: rgba(212, 180, 140, 0.3);
+  color: var(--color-gold, #d4b48c);
+}
+
+/* ── Similar verses list ──────────────────────────────────────────────────── */
+
+.vas-similar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vas-similar-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1, 0.25rem);
+  padding: var(--space-3, 0.75rem) 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.vas-similar-list li:last-child .vas-similar-item {
+  border-bottom: none;
+}
+
+.vas-similar-item--night {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.vas-similar-item:focus-visible {
+  outline: 2px solid var(--color-gold, #b8860b);
+  outline-offset: 2px;
+}
+
+.vas-similar-ref {
+  font-size: var(--text-sm, 0.72rem);
+  font-weight: 700;
+  color: var(--color-gold, #b8860b);
+}
+
+.vas-similar-ref--night {
+  color: var(--color-gold, #d4b48c);
+}
+
+.vas-similar-text {
+  font-family: var(--font-arabic, "Scheherazade New", serif);
+  font-size: var(--text-base, 1rem);
+  line-height: var(--leading-arabic, 2.1);
+  color: var(--color-text-primary, #111111);
+  text-align: right;
+}
+
+/* The words this verse shares with the one on screen. */
+.vas-similar-shared {
+  background: transparent;
+  color: var(--color-gold, #b8860b);
+  font-weight: 700;
+}
+
+.vas-similar-shared--night {
   color: var(--color-gold, #d4b48c);
 }

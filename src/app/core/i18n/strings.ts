@@ -479,6 +479,13 @@ export interface AppStrings {
     toggleHideTitle: string;
     toggleShowTitle: string;
     nextVerseTitle: string;
+    prevVerse: string;
+    nextVerse: string;
+    similarVerses: string;
+    similarVersesCount: (n: string) => string;
+    noSimilarVerses: string;
+    similarVersesLoading: string;
+    similarVersesError: string;
     micLabel: string;
     stopLabel: string;
     listening: string;
@@ -695,6 +702,9 @@ export interface AppStrings {
     selectJuz: string;
     selectSurah: string;
     remove: string;
+    editRange: string;
+    saveRange: string;
+    cancelEdit: string;
     noMemorized: string;
     goalSection: string;
     goalSectionDesc: string;
@@ -731,6 +741,14 @@ export interface AppStrings {
     streakInfoBody: (n: number) => string;
     streakInfoOk: string;
     streakRecoverAvailable: (n: number) => string;
+    streakRestoreTitle: (days: number) => string;
+    streakRestoreStart: (needed: number, lastDay: boolean) => string;
+    streakRestoreProgress: (done: number, needed: number) => string;
+    streakRestoreOneChance: string;
+    streakRestoreComplete: string;
+    streakRestorePro: string;
+    streakRestoreSeePro: string;
+    streakRestored: (days: number) => string;
     streakRecoverNeeded: (n: number) => string;
     openInQuran: string;
     quizFromSession: string;
@@ -1244,6 +1262,13 @@ const ar: AppStrings = {
     toggleHideTitle: "إخفاء الآيات المحددة",
     toggleShowTitle: "إظهار الآيات المحددة",
     nextVerseTitle: "إظهار الآية التالية",
+    prevVerse: "الآية السابقة",
+    nextVerse: "الآية التالية",
+    similarVerses: "الآيات المتشابهة",
+    similarVersesCount: (n) => `${n} آية تشترك مع هذه الآية في ثلاث كلمات متتالية أو أكثر`,
+    noSimilarVerses: "لا توجد آية أخرى تشترك مع هذه الآية في ثلاث كلمات متتالية.",
+    similarVersesLoading: "جارٍ البحث عن الآيات المتشابهة…",
+    similarVersesError: "تعذّر البحث عن الآيات المتشابهة. حاول مرة أخرى.",
     micLabel: "المايكروفون",
     stopLabel: "إيقاف التشغيل",
     listening: "أستمع… تابع التلاوة",
@@ -1472,6 +1497,9 @@ const ar: AppStrings = {
     selectJuz: "اختر الجزء",
     selectSurah: "اختر السورة",
     remove: "حذف",
+    editRange: "تعديل الصفحات",
+    saveRange: "حفظ",
+    cancelEdit: "إلغاء",
     noMemorized: "لم تُضف محفوظات بعد",
     goalSection: "إعداد الجلسات",
     goalSectionDesc: "تُقسَّم محفوظاتك إلى جلسات متساوية. أنجز ما تستطيع منها كل يوم وفق وقتك.",
@@ -1510,6 +1538,17 @@ const ar: AppStrings = {
     streakInfoOk: "حسنًا",
     streakRecoverAvailable: (n) =>
       `فاتك يوم أمس! أكمل ${n} جلسات اليوم لاستعادة سلسلتك ومتابعتها.`,
+    streakRestoreTitle: (days) => `استعد سلسلتك (${days} يوماً)`,
+    streakRestoreStart: (needed, lastDay) =>
+      lastDay
+        ? `اليوم آخر فرصة للبدء: أكمل جلسة اليوم ثم كل يوم حتى ${needed} أيام متتالية، فتعود سلسلتك ومعها هذه الأيام.`
+        : `ابدأ اليوم أو غداً: أكمل جلسة كل يوم ${needed} أيام متتالية، فتعود سلسلتك ومعها هذه الأيام.`,
+    streakRestoreProgress: (done, needed) => `أكملت ${done} من ${needed} أيام. أكمل جلسة كل يوم حتى تعود سلسلتك.`,
+    streakRestoreOneChance: "إن فاتك يوم، تضيع هذه الفرصة.",
+    streakRestoreComplete: "أحسنت! اشترك في رفيق برو لتعود سلسلتك.",
+    streakRestorePro: "استعادة السلسلة من مزايا رفيق برو.",
+    streakRestoreSeePro: "اعرف المزيد عن رفيق برو",
+    streakRestored: (days) => `عادت سلسلتك: ${days} يوماً.`,
     streakRecoverNeeded: (n) =>
       n === 1 ? "بقيت جلسة واحدة لاستعادة السلسلة." : `بقيت ${n} جلسات لاستعادة السلسلة.`,
     openInQuran: "افتح في القرآن",
@@ -2025,6 +2064,13 @@ const en: AppStrings = {
     toggleHideTitle: "Hide selected verses",
     toggleShowTitle: "Show selected verses",
     nextVerseTitle: "Reveal next verse",
+    prevVerse: "Previous verse",
+    nextVerse: "Next verse",
+    similarVerses: "Similar verses",
+    similarVersesCount: (n) => `${n} ${n === "1" ? "verse shares" : "verses share"} three or more words in a row with this one`,
+    noSimilarVerses: "No other verse shares three words in a row with this one.",
+    similarVersesLoading: "Finding similar verses…",
+    similarVersesError: "Couldn't search for similar verses. Try again.",
     micLabel: "Microphone",
     stopLabel: "Stop playback",
     listening: "Listening… keep reciting",
@@ -2256,6 +2302,9 @@ const en: AppStrings = {
     selectJuz: "Select Juz",
     selectSurah: "Select Surah",
     remove: "Remove",
+    editRange: "Edit pages",
+    saveRange: "Save",
+    cancelEdit: "Cancel",
     noMemorized: "No memorized content added yet",
     goalSection: "Session Setup",
     goalSectionDesc: "Your memorized content is divided into equal sessions. Complete as many as you can each day at your own pace.",
@@ -2294,6 +2343,17 @@ const en: AppStrings = {
     streakInfoOk: "Got it",
     streakRecoverAvailable: (n) =>
       `You missed yesterday! Complete ${n} sessions today to recover your streak and keep it going.`,
+    streakRestoreTitle: (days) => `Restore your ${days}-day streak`,
+    streakRestoreStart: (needed, lastDay) =>
+      lastDay
+        ? `Today is the last day to start: do a session today and every day for ${needed} days in a row, and your streak comes back with those days added.`
+        : `Start today or tomorrow: do a session every day for ${needed} days in a row, and your streak comes back with those days added.`,
+    streakRestoreProgress: (done, needed) => `${done} of ${needed} days done. Do a session every day until your streak is back.`,
+    streakRestoreOneChance: "Miss a day and this chance is gone.",
+    streakRestoreComplete: "You did it. Get Rafeeq Pro to bring your streak back.",
+    streakRestorePro: "Restoring a streak is part of Rafeeq Pro.",
+    streakRestoreSeePro: "See Rafeeq Pro",
+    streakRestored: (days) => `Your streak is back: ${days} days.`,
     streakRecoverNeeded: (n) =>
       n === 1 ? "1 more session to recover your streak." : `${n} more sessions to recover your streak.`,
     openInQuran: "Open in Quran",

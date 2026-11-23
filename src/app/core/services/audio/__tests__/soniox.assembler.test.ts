@@ -89,3 +89,20 @@ describe("soniox assembler", () => {
     expect(heard(0.95)).toBe("wrong");
   });
 });
+
+describe("soniox assembler numbers", () => {
+  it("spells out a recited number in the text and words", () => {
+    const a = createSonioxAssembler();
+    const [event] = a.push([t("عليها", true), t(" ", true), t("19", true), t("<end>", true)]);
+    expect(event.text).toBe("عليها تسعة عشر");
+    expect(event.words?.map((w) => w.word)).toEqual(["عليها", "تسعة", "عشر"]);
+  });
+
+  // ثَلَـٰثَ لَيَالٍ (19:10): the digit 3 spells as ثلاثة, one letter off.
+  it("does not mark the guessed number form as a mistake", () => {
+    const a = createSonioxAssembler();
+    const [event] = a.push([t("3", true), t("<end>", true)]);
+    const [w] = event.words!;
+    expect(compareWord(uthmaniSkeleton("ثَلَـٰثَ"), w.word, w.confidence)).toBe("soundAlike");
+  });
+});

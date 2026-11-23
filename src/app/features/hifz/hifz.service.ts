@@ -1,4 +1,6 @@
 import { Capacitor } from "@capacitor/core";
+import { evaluateRestore } from "./streak-restore";
+import type { RestoreRecord, RestoreState } from "./streak-restore";
 import { idb } from "../../core/services/storage/idb.service";
 import { markStoreBroken } from "../../core/services/sync/broken-stores";
 import {
@@ -51,7 +53,9 @@ const HIFZ_STORE = "hifz";
 export type MemorizedUnit =
   | { type: "juz"; juz: number }
   | { type: "surah"; surah: number }
-  | { type: "pages"; from: number; to: number };
+  // `surah` is the surah the range was picked from; rows saved before it was
+  // stored lack it (see memorized.ts pagesUnitSurah).
+  | { type: "pages"; from: number; to: number; surah?: number };
 
 export type SessionUnit = "pages" | "rub" | "hizb" | "juz";
 
@@ -1099,6 +1103,48 @@ export function tryRecoverStreak(sessions: PlanSession[]): boolean {
     return true;
   }
   return false;
+}
+
+// ─── Streak restore (Pro) ─────────────────────────────────────────────────────
+// Rules in streak-restore.ts. The record is per device: it only says which
+// break is on offer and how it ended, so a second device can at worst offer
+// the same break again — the repaired days it writes do sync.
+
+const HIFZ_STREAK_RESTORE_KEY = "rafiq_hifz_streak_restore_v1";
+
+function loadRestoreRecord(): RestoreRecord | null {
+  try {
+    const raw = localStorage.getItem(HIFZ_STREAK_RESTORE_KEY);
+    return raw ? (JSON.parse(raw) as RestoreRecord) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The restore offer for today, saving any change to it. When a restore is
+ * finished and `allowed` (Pro), the missed days are marked repaired and
+ * `restoredTo` is the streak it brought back.
+ */
+export function checkStreakRestore(
+  sessions: PlanSession[],
+  allowed: boolean,
+): { state: RestoreState; restoredTo: number | null } {
+  const saved = loadRestoreRecord();
+  const { record, state, fill } = evaluateRestore(
+    allStreakDates(sessions),
+    saved,
+    todayStr(),
+    allowed,
+  );
+  if (record && JSON.stringify(record) !== JSON.stringify(saved)) {
+    try {
+      localStorage.setItem(HIFZ_STREAK_RESTORE_KEY, JSON.stringify(record));
+    } catch {}
+  }
+  if (fill.length === 0) return { state, restoredTo: null };
+  for (const day of fill) addFreezeDate(day);
+  return { state, restoredTo: computeStreakPersistent(sessions) };
 }
 
 // ─── Freezes ──────────────────────────────────────────────────────────────────
