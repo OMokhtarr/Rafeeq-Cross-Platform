@@ -88,8 +88,14 @@ android {
             if (keystoreProps.containsKey("storeFile")) {
                 signingConfig signingConfigs.release
             }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 shrinks, optimises and obfuscates the release DEX. Play Console
+            // flags releases whose DEX obfuscation is under 25%. Capacitor, Media3,
+            // RevenueCat and social-login ship their own keep rules; Android
+            // components are kept through the manifest. App-specific rules are in
+            // proguard-rules.pro. The AAB carries mapping.txt, so Play
+            // de-obfuscates crash stack traces on its own.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     
@@ -217,6 +223,9 @@ dependencies {
     // DOCUMENT_START_SCRIPT. capacitor-android depends on webkit too, but only
     // as `implementation`, so it is not on this module's compile classpath.
     implementation "androidx.webkit:webkit:$rootProject.ext.androidxWebkitVersion"
+    // MainActivity calls androidx's enableEdgeToEdge(). appcompat only brings an
+    // older activity version onto this module's compile classpath.
+    implementation "androidx.activity:activity:$rootProject.ext.androidxActivityVersion"
     implementation project(':capacitor-android')
     implementation "androidx.media:media:1.7.0"
     // Media3 ExoPlayer as the native Android playback engine (used behind the
