@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { useAzkarDay } from "./azkarDay";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory, useParams } from "react-router-dom";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
@@ -97,9 +98,12 @@ function favoriteAzkar(favorites: string[]) {
 }
 
 // ── Per-category persistence ─────────────────────────────────────────────────
+// Counters are kept for the azkar day they were made on (see azkarDay.ts) and
+// start fresh the next day. Saved state from another day — or from before the
+// day was stored — reads as empty.
 const stateKey = (catId: string) => `azkar:state:${catId}`;
 
-function loadCatState(catId: string): {
+function loadCatState(catId: string, day: string): {
   counters: Record<string, number>;
   completed: Record<string, boolean>;
 } {
@@ -107,10 +111,12 @@ function loadCatState(catId: string): {
     const raw = localStorage.getItem(stateKey(catId));
     if (raw) {
       const parsed = JSON.parse(raw);
-      return {
-        counters: parsed.counters ?? {},
-        completed: parsed.completed ?? {},
-      };
+      if (parsed.day === day) {
+        return {
+          counters: parsed.counters ?? {},
+          completed: parsed.completed ?? {},
+        };
+      }
     }
   } catch {
     // fall through
@@ -120,13 +126,14 @@ function loadCatState(catId: string): {
 
 function saveCatState(
   catId: string,
+  day: string,
   counters: Record<string, number>,
   completed: Record<string, boolean>,
 ) {
   try {
     localStorage.setItem(
       stateKey(catId),
-      JSON.stringify({ counters, completed }),
+      JSON.stringify({ day, counters, completed }),
     );
   } catch {
     // ignore quota errors
@@ -184,26 +191,35 @@ const Azkar: React.FC = () => {
   // Touch tracking for swipe-to-reset (per-item)
   const touchRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
-  // Load persisted state when category changes via URL
+  // Null while today's Fajr is still unknown: then nothing loads or saves.
+  const azkarDay = useAzkarDay();
+  // Which category and day the counters on screen were loaded for. Saving
+  // waits until they match the current ones, so a category or day change
+  // never writes the previous counters under the new key.
+  const [loadedFor, setLoadedFor] = useState<{ cat: string; day: string } | null>(null);
+
+  // Load persisted state when the category (URL) or the azkar day changes
   useEffect(() => {
     if (!selectedCategory) {
       setCounters({});
       setCompleted({});
+      setLoadedFor(null);
       return;
     }
-    const saved = loadCatState(selectedCategory);
+    if (!azkarDay) return;
+    const saved = loadCatState(selectedCategory, azkarDay);
     setCounters(saved.counters);
     setCompleted(saved.completed);
-  }, [selectedCategory]);
+    setLoadedFor({ cat: selectedCategory, day: azkarDay });
+  }, [selectedCategory, azkarDay]);
 
   // Persist on change
   useEffect(() => {
-    if (!selectedCategory) return;
-    saveCatState(selectedCategory, counters, completed);
-  }, [selectedCategory, counters, completed]);
+    if (!loadedFor || loadedFor.cat !== selectedCategory || loadedFor.day !== azkarDay) return;
+    saveCatState(loadedFor.cat, loadedFor.day, counters, completed);
+  }, [loadedFor, selectedCategory, azkarDay, counters, completed]);
 
   const handleCategorySelect = (catId: string) => {
-    localStorage.removeItem(stateKey(catId));
     history.push(`/azkar/${catId}`);
     window.scrollTo(0, 0);
   };
@@ -413,7 +429,8 @@ const Azkar: React.FC = () => {
           <div className="azkar-container" dir={isRTL ? "rtl" : "ltr"}>
             <div className="azkar-categories">
               {[myAzkarCat, ...azkarData].map((cat: any) => {
-                const saved = loadCatState(cat.id);
+                // No day yet (times loading): show no progress rather than guess.
+                const saved = loadCatState(cat.id, azkarDay ?? "");
                 const doneCount = cat.azkar.filter((z: any) => saved.completed[z.id]).length;
                 const pct = cat.azkar.length > 0 ? Math.round((doneCount / cat.azkar.length) * 100) : 0;
                 const isFullyDone = doneCount === cat.azkar.length && cat.azkar.length > 0;
