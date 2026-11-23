@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { IonPage, IonContent } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useTheme } from "../../core/context/ThemeContext";
@@ -53,6 +54,12 @@ import { Switch } from "../../shared/components/controls/Switch";
 import { useStreakReminder } from "../hifz/useStreakReminder";
 import { StreakReminderTime } from "../hifz/StreakReminderRow";
 import "./Settings.css";
+
+/** The "Offline content" section is a diagnostics readout: content sync runs
+ *  on its own (useContentSync, once a day on launch/resume), so release builds
+ *  hide it. Debug APKs and dev mode (npm start, tests) still show it. */
+const SHOW_CONTENT_SYNC =
+  Capacitor.DEBUG === true || process.env.NODE_ENV !== "production";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface AppSettings {
@@ -690,6 +697,7 @@ const Settings: React.FC = () => {
   // even before the user ever taps "Sync now" — sync also runs silently on
   // app resume, so this surface is the only place that record is visible.
   useEffect(() => {
+    if (!SHOW_CONTENT_SYNC) return;
     getSyncStatus().then(setSyncState).catch(() => {});
   }, []);
 
@@ -892,77 +900,79 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Offline content (Content Sync) ── */}
-            <div className="settings-section" {...tourAttr("settings.sync")}>
-              <p className="settings-section-title">{ts.sectionSync}</p>
-              <div className="settings-card">
-                <div className="settings-row">
-                  <div className="settings-row-info">
-                    <span className="settings-row-icon">{ICONS.refresh}</span>
-                    <div className="settings-row-text">
-                      <p className="settings-row-label">{ts.syncLastSynced}</p>
-                      <p className="settings-row-desc">
-                        {syncState?.lastSyncedAt
-                          ? `${relativeDays(syncState.lastSyncedAt, ts)} · ${new Date(
-                              syncState.lastSyncedAt,
-                            ).toLocaleDateString(lang === "ar" ? "ar" : "en", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}`
-                          : ts.syncNever}
-                      </p>
-                      {isSyncOverdue(syncState?.lastSyncedAt ?? null) && (
-                        <p className="settings-sync-note settings-sync-note--overdue">
-                          {ts.syncOverdue}
+            {/* ── Offline content (Content Sync) — debug/dev builds only ── */}
+            {SHOW_CONTENT_SYNC && (
+              <div className="settings-section" {...tourAttr("settings.sync")}>
+                <p className="settings-section-title">{ts.sectionSync}</p>
+                <div className="settings-card">
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-icon">{ICONS.refresh}</span>
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.syncLastSynced}</p>
+                        <p className="settings-row-desc">
+                          {syncState?.lastSyncedAt
+                            ? `${relativeDays(syncState.lastSyncedAt, ts)} · ${new Date(
+                                syncState.lastSyncedAt,
+                              ).toLocaleDateString(lang === "ar" ? "ar" : "en", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}`
+                            : ts.syncNever}
                         </p>
-                      )}
+                        {isSyncOverdue(syncState?.lastSyncedAt ?? null) && (
+                          <p className="settings-sync-note settings-sync-note--overdue">
+                            {ts.syncOverdue}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="settings-row-controls">
+                      <button
+                        type="button"
+                        className="settings-sync-btn"
+                        onClick={handleSyncNow}
+                        disabled={syncing}
+                      >
+                        {syncing ? ts.syncRunning : ts.syncNow}
+                      </button>
                     </div>
                   </div>
-                  <div className="settings-row-controls">
-                    <button
-                      type="button"
-                      className="settings-sync-btn"
-                      onClick={handleSyncNow}
-                      disabled={syncing}
-                    >
-                      {syncing ? ts.syncRunning : ts.syncNow}
-                    </button>
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <div className="settings-row-text">
+                        <p className="settings-row-label">{ts.syncTracked}</p>
+                        <p className="settings-row-desc">
+                          {syncState?.trackedResources.length ?? 0}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="settings-row">
-                  <div className="settings-row-info">
-                    <div className="settings-row-text">
-                      <p className="settings-row-label">{ts.syncTracked}</p>
-                      <p className="settings-row-desc">
-                        {syncState?.trackedResources.length ?? 0}
+                  {syncNote && (
+                    <div className="settings-row">
+                      <p
+                        className={
+                          "settings-sync-note" +
+                          (syncNote === ts.syncOffline
+                            ? " settings-sync-note--offline"
+                            : "")
+                        }
+                      >
+                        {syncNote}
                       </p>
                     </div>
-                  </div>
+                  )}
+                  {!syncNote && syncState?.lastError && (
+                    <div className="settings-row">
+                      <p className="settings-sync-note settings-sync-note--error">
+                        {ts.syncFailed}: {syncState.lastError}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                {syncNote && (
-                  <div className="settings-row">
-                    <p
-                      className={
-                        "settings-sync-note" +
-                        (syncNote === ts.syncOffline
-                          ? " settings-sync-note--offline"
-                          : "")
-                      }
-                    >
-                      {syncNote}
-                    </p>
-                  </div>
-                )}
-                {!syncNote && syncState?.lastError && (
-                  <div className="settings-row">
-                    <p className="settings-sync-note settings-sync-note--error">
-                      {ts.syncFailed}: {syncState.lastError}
-                    </p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
 
             {/* ── Azkar ── */}
             <div className="settings-section">
