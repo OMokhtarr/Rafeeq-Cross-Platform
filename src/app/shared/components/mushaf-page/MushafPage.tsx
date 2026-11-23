@@ -688,6 +688,10 @@ const MushafPage: React.FC<Props> = ({
             : onVerseTap || onVerseLongPress ? cancelPress : undefined
         }
         onTouchMove={!isEndMarker && (onVerseTap || onVerseLongPress) ? cancelPress : undefined}
+        // Android's edge-swipe Back takes the touch over: the WebView gets
+        // touchstart then touchcancel, with no move or end, so without this
+        // the timer fires and opens the verse sheet under the exit toast.
+        onTouchCancel={(onVerseTap || onVerseLongPress) ? cancelPress : undefined}
         onContextMenu={
           onVerseTap || onVerseLongPress
             ? (e) => {
